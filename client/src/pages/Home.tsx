@@ -24,6 +24,8 @@ import {
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { ProgressLogo } from "@/components/ProgressLogo";
+import { useRoute } from "wouter";
+import { trpc } from "@/lib/trpc";
 
 // Mock hospital data
 const hospitalData = {
@@ -52,10 +54,48 @@ interface Level {
 }
 
 export default function Home() {
+  const [, params] = useRoute("/org/:slug");
+  const orgSlug = params?.slug || "demo"; // Default to demo org if no slug
+  
   const [levels, setLevels] = useState<Level[]>([]);
   const [loading, setLoading] = useState(true);
   const [completedTasks, setCompletedTasks] = useState<Set<string>>(new Set());
   const [justCompleted, setJustCompleted] = useState<string | null>(null);
+  const [organizationId, setOrganizationId] = useState<number | null>(null);
+  
+  // Fetch organization data
+  const { data: organization, isLoading: orgLoading } = trpc.organizations.getBySlug.useQuery(
+    { slug: orgSlug },
+    { enabled: !!orgSlug }
+  );
+  
+  // Fetch progress data
+  const { data: progressData, isLoading: progressLoading } = trpc.organizations.getProgress.useQuery(
+    { organizationId: organizationId! },
+    { enabled: !!organizationId }
+  );
+  
+  // Task completion mutation
+  const completeTaskMutation = trpc.organizations.completeTask.useMutation();
+  
+  // Update organizationId when organization loads
+  useEffect(() => {
+    if (organization) {
+      setOrganizationId(organization.id);
+    }
+  }, [organization]);
+
+  // Load completed tasks from API when progress data loads
+  useEffect(() => {
+    if (progressData?.tasks) {
+      const completed = new Set(
+        progressData.tasks
+          .filter(t => t.completed === 1)
+          .map(t => t.taskId)
+      );
+      setCompletedTasks(completed);
+    }
+  }, [progressData]);
 
   useEffect(() => {
     // Load levels data
@@ -131,9 +171,31 @@ export default function Home() {
   };
 
   // Handle task completion
-  const completeTask = (taskId: string) => {
+  const completeTask = async (taskId: string, sectionName: string) => {
+    if (!organizationId) return;
+    
+    // Optimistically update UI
     setCompletedTasks(prev => new Set(Array.from(prev).concat(taskId)));
     setJustCompleted(taskId);
+    
+    // Save to database
+    try {
+      await completeTaskMutation.mutateAsync({
+        organizationId,
+        sectionName,
+        taskId,
+        completed: true,
+      });
+    } catch (error) {
+      console.error('Failed to save task completion:', error);
+      // Rollback on error
+      setCompletedTasks(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(taskId);
+        return newSet;
+      });
+    }
+    
     // Clear animation after 1 second
     setTimeout(() => setJustCompleted(null), 1000);
   };
@@ -143,7 +205,14 @@ export default function Home() {
   const doneForToday = isDoneForToday();
   const achievementTier = getAchievementTier();
 
-  if (loading) {
+  // Use organization data if available, otherwise use defaults
+  const hospitalData = {
+    name: organization?.name || "Memorial General Hospital",
+    contactName: organization?.contactName || "Dr. Sarah Chen",
+    goalDate: organization?.goalDate || "March 1, 2026",
+  };
+
+  if (loading || orgLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -258,7 +327,7 @@ export default function Home() {
                           "w-full transition-all",
                           justCompleted === nextTaskInfo.task.id && "animate-pulse bg-primary/80"
                         )}
-                        onClick={() => completeTask(nextTaskInfo.task.id)}
+                        onClick={() => completeTask(nextTaskInfo.task.id, nextTaskInfo.task.section)}
                       >
                         <CheckCircle2 className="w-5 h-5 mr-2" />
                         Mark as Complete

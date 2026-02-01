@@ -61,3 +61,13 @@
 - [x] Add Implementation Champion/Hero/Rock Star tier messaging
 - [x] Display achievement status based on completion speed
 - [x] Add visual badge progression in sidebar
+
+## Database Persistence & File Upload
+- [x] Update Home page to fetch organization data from API
+- [x] Wire up task completion to save to database
+- [x] Add URL-based routing (/org/:slug)
+- [x] Create demo organization seed script
+- [ ] Add file upload UI for tasks that need attachments
+- [ ] Create file upload API endpoint with S3 storage
+- [ ] Display uploaded files in task details
+- [ ] Add organization admin page for PM/Ops to create new orgs
