@@ -1,0 +1,269 @@
+{
+  "Header Info": [
+    {
+      "id": "INFO.1",
+      "task": "Client Name",
+      "fieldType": "text"
+    },
+    {
+      "id": "INFO.3",
+      "task": "Target Go-Live Date set",
+      "fieldType": "date"
+    }
+  ],
+  "Overview & Architecture": [
+    {
+      "id": "A.1",
+      "task": "Identify Administrative point(s) of contact",
+      "fieldType": "textarea"
+    },
+    {
+      "id": "A.2",
+      "task": "Identify IT point(s) of contact - Connectivity & Systems",
+      "fieldType": "textarea"
+    },
+    {
+      "id": "A.3",
+      "task": "Identify Clinical Contact(s) - Technologist/Clinical Informatics",
+      "fieldType": "textarea"
+    },
+    {
+      "id": "A.4",
+      "task": "Identify Radiologist Champion(s)",
+      "fieldType": "textarea"
+    },
+    {
+      "id": "A.5",
+      "task": "Identify Project Manager (if applicable)",
+      "fieldType": "textarea"
+    },
+    {
+      "id": "A.7",
+      "task": "Will any systems be replaced during integration (PACS RIS EHR retirement)",
+      "fieldType": "textarea"
+    },
+    {
+      "id": "A.8",
+      "task": "Will your modality worklist system be impacted during this implementation?",
+      "fieldType": "textarea"
+    },
+    {
+      "id": "A.10",
+      "task": "If you have a Router - document details",
+      "fieldType": "textarea"
+    },
+    {
+      "id": "A.12",
+      "task": "What is your Integration Engine if you have one",
+      "fieldType": "textarea"
+    },
+    {
+      "id": "A.13",
+      "task": "What is your EHR system",
+      "fieldType": "text"
+    },
+    {
+      "id": "A.14",
+      "task": "What is your current PACS",
+      "fieldType": "text"
+    }
+  ],
+  "Security & Permissions": [
+    {
+      "id": "B.1",
+      "task": "Determine if security questionnaire is required",
+      "fieldType": "radio",
+      "options": ["Yes", "No", "In Progress"]
+    },
+    {
+      "id": "B.4",
+      "task": "Determine multi-tenancy requirements (separate MRNs by organization)",
+      "fieldType": "textarea"
+    },
+    {
+      "id": "B.5",
+      "task": "Determine multi-tenancy requirements (separate DICOM studies by PACS)",
+      "fieldType": "textarea"
+    },
+    {
+      "id": "B.6",
+      "task": "Determine multi-tenancy requirements (user restrictions by tenant)",
+      "fieldType": "textarea"
+    }
+  ],
+  "Imaging Routing & Connectivity": [
+    {
+      "id": "C.1",
+      "task": "Document estimated monthly volume",
+      "fieldType": "number"
+    },
+    {
+      "id": "C.2",
+      "task": "Identify current DICOM System of Record (SOR)",
+      "fieldType": "text"
+    },
+    {
+      "id": "C.3",
+      "task": "Confirm if SOR has IOCM capabilities",
+      "fieldType": "textarea"
+    }
+  ],
+  "Data & Integration": [
+    {
+      "id": "D.1",
+      "task": "Confirm capability to configure production systems for testing prior to go-live",
+      "fieldType": "radio",
+      "options": ["Yes", "No", "Needs Discussion"]
+    },
+    {
+      "id": "D.2",
+      "task": "Confirm requested go-live date (MMDDYY)",
+      "fieldType": "date"
+    },
+    {
+      "id": "D.3",
+      "task": "Document expected volume of images ready each month",
+      "fieldType": "number"
+    },
+    {
+      "id": "D.4",
+      "task": "Document expected modalities",
+      "fieldType": "textarea"
+    },
+    {
+      "id": "D.5",
+      "task": "Document integration engines or routers in use",
+      "fieldType": "textarea"
+    },
+    {
+      "id": "D.6",
+      "task": "Document number of PACS systems to be overlayed (if overlay PACS)",
+      "fieldType": "number"
+    },
+    {
+      "id": "D.7",
+      "task": "Document current PACS system",
+      "fieldType": "text"
+    },
+    {
+      "id": "D.8",
+      "task": "Document current Reporting system",
+      "fieldType": "text"
+    },
+    {
+      "id": "D.9",
+      "task": "Document current EMR/RIS system",
+      "fieldType": "text"
+    },
+    {
+      "id": "D.10",
+      "task": "Determine Prefetch Query Retrieve",
+      "fieldType": "textarea"
+    },
+    {
+      "id": "D.11",
+      "task": "Define how comparison reports will be sent/retrieved",
+      "fieldType": "textarea"
+    }
+  ],
+  "Additional Workflows": [
+    {
+      "id": "E.2",
+      "task": "Define tech notes input method",
+      "fieldType": "textarea"
+    },
+    {
+      "id": "E.3",
+      "task": "Document required EMR/RIS integrations",
+      "fieldType": "textarea"
+    },
+    {
+      "id": "E.4",
+      "task": "Identify applications producing secondary captures or AI results",
+      "fieldType": "textarea"
+    },
+    {
+      "id": "E.5",
+      "task": "Identify DICOM SR or other data sources for auto-populating fields",
+      "fieldType": "textarea"
+    },
+    {
+      "id": "E.6",
+      "task": "Document system for DICOM SR",
+      "fieldType": "text"
+    },
+    {
+      "id": "E.7",
+      "task": "Identify universal patient ID/index for unifying patients across sites",
+      "fieldType": "textarea"
+    },
+    {
+      "id": "E.8",
+      "task": "Obtain mapping of custom procedure codes from sites",
+      "fieldType": "file"
+    },
+    {
+      "id": "E.9",
+      "task": "Define handling of studies with multiple reports/orders",
+      "fieldType": "textarea"
+    },
+    {
+      "id": "E.10",
+      "task": "Identify specific reporting criteria (MIPS site-specific footers etc.)",
+      "fieldType": "textarea"
+    },
+    {
+      "id": "E.11",
+      "task": "Document downtime procedures when EMR/RIS offline",
+      "fieldType": "file"
+    },
+    {
+      "id": "E.12",
+      "task": "Define prelim report workflow requirements",
+      "fieldType": "textarea"
+    },
+    {
+      "id": "E.13",
+      "task": "Document credentialing process for each site",
+      "fieldType": "textarea"
+    }
+  ],
+  "Rad Workflows": [
+    {
+      "id": "F.1",
+      "task": "Document QA/QC workflow for image issues",
+      "fieldType": "textarea"
+    },
+    {
+      "id": "F.2",
+      "task": "Define radiologist-to-tech communication method",
+      "fieldType": "textarea"
+    },
+    {
+      "id": "F.3",
+      "task": "Identify central technologist for radiologist communication",
+      "fieldType": "text"
+    },
+    {
+      "id": "F.4",
+      "task": "Confirm each technologist has individual PACS login",
+      "fieldType": "radio",
+      "options": ["Yes", "No", "In Progress"]
+    },
+    {
+      "id": "F.5",
+      "task": "Document Peer Review requirements",
+      "fieldType": "textarea"
+    },
+    {
+      "id": "F.6",
+      "task": "Define critical result reporting process with referring physicians",
+      "fieldType": "textarea"
+    },
+    {
+      "id": "F.7",
+      "task": "Document radiologist scheduling process",
+      "fieldType": "textarea"
+    }
+  ]
+}

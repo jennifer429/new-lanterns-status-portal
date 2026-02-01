@@ -107,6 +107,25 @@ export type FileAttachment = typeof fileAttachments.$inferSelect;
 export type InsertFileAttachment = typeof fileAttachments.$inferInsert;
 
 /**
+ * Intake responses - stores hospital answers to intake questions
+ */
+export const intakeResponses = mysqlTable("intakeResponses", {
+  id: int("id").autoincrement().primaryKey(),
+  organizationId: int("organizationId").notNull(),
+  questionId: varchar("questionId", { length: 50 }).notNull(), // e.g., "A.1", "B.4"
+  section: varchar("section", { length: 255 }).notNull(), // e.g., "Overview & Architecture"
+  response: text("response"), // Text answer
+  fileUrl: text("fileUrl"), // For file uploads
+  status: mysqlEnum("status", ["not_started", "in_progress", "complete"]).default("not_started").notNull(),
+  updatedBy: varchar("updatedBy", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type IntakeResponse = typeof intakeResponses.$inferSelect;
+export type InsertIntakeResponse = typeof intakeResponses.$inferInsert;
+
+/**
  * Activity feed - stores updates from Linear/ClickUp for client visibility
  */
 export const activityFeed = mysqlTable("activityFeed", {

@@ -119,3 +119,12 @@
 - [x] Document integration setup for PM/Ops team
 - [ ] Enable ClickUp and Linear MCP servers in project settings
 - [ ] Test complete flow with MCP servers enabled: upload file → Google Drive → ClickUp → Linear
+
+## Intake Portal Development
+- [x] Parse Munson Client Checklist Excel file
+- [x] Create intake questions database schema (sections, questions, responses)
+- [x] Build progressive intake form UI
+- [x] Create API endpoints for saving intake responses
+- [x] Add progress tracking and completion status
+- [x] Test complete intake flow
+- [ ] Copy intake checklist structure to Template Client Checklist for reuse
