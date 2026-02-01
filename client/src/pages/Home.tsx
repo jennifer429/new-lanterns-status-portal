@@ -1,6 +1,6 @@
 /**
  * Dark Theme with Purple Accents: Clean 2-column layout
- * Left: Stage details and progress
+ * Left: Stage details and progress using real Boulder/Template Client Checklist data
  * Right: Big status bar showing days to goal with intelligent shading for on-track/behind status
  */
 
@@ -8,110 +8,78 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { 
   CheckCircle2, 
   Circle, 
   Clock, 
-  AlertCircle,
   PlayCircle,
   Users,
   Calendar,
-  Timer,
   TrendingUp,
-  AlertTriangle
+  AlertTriangle,
+  Building2
 } from "lucide-react";
+import { useEffect, useState } from "react";
 
-// Mock data - client wants to go live by March 1, 2026
+// Mock hospital data - in production this would come from backend
 const hospitalData = {
   name: "Memorial General Hospital",
   contactName: "Dr. Sarah Chen",
   contactEmail: "sarah.chen@memorialgeneral.org",
   contactPhone: "(555) 123-4567",
   startDate: "January 15, 2026",
-  goalDate: "March 1, 2026", // Client's desired go-live date
+  goalDate: "March 1, 2026",
   today: "January 31, 2026",
   daysElapsed: 16,
-  totalDays: 45, // Days from start to goal
+  totalDays: 45,
   daysRemaining: 29,
-  onTrack: false, // Behind schedule based on progress vs time elapsed
 };
 
-// Stages with expected completion dates relative to goal
-const stages = [
-  {
-    id: 1,
-    name: "Information Gathering",
-    status: "complete",
-    progress: 100,
-    duration: "5 days",
-    loe: "Low",
-    expectedEnd: "January 20, 2026",
-    actualEnd: "January 22, 2026",
-    daysFromStart: 5,
-    resources: [
-      { name: "IT Administrator", time: "2 hours" },
-      { name: "Network Documentation", time: "N/A" },
-    ],
-  },
-  {
-    id: 2,
-    name: "Network Configuration",
-    status: "in-progress",
-    progress: 75,
-    duration: "10 days",
-    loe: "Medium",
-    expectedEnd: "February 5, 2026",
-    daysFromStart: 15,
-    resources: [
-      { name: "Network Administrator", time: "3 hours" },
-      { name: "Security Team", time: "1 hour" },
-    ],
-  },
-  {
-    id: 3,
-    name: "System Installation",
-    status: "in-progress",
-    progress: 25,
-    duration: "12 days",
-    loe: "High",
-    expectedEnd: "February 17, 2026",
-    daysFromStart: 27,
-    resources: [
-      { name: "IT Administrator", time: "6 hours" },
-      { name: "Server Access", time: "N/A" },
-    ],
-  },
-  {
-    id: 4,
-    name: "Testing",
-    status: "pending",
-    progress: 0,
-    duration: "7 days",
-    loe: "Medium",
-    expectedEnd: "February 24, 2026",
-    daysFromStart: 34,
-    resources: [
-      { name: "Radiology Staff", time: "4 hours" },
-      { name: "IT Administrator", time: "3 hours" },
-    ],
-  },
-  {
-    id: 5,
-    name: "Go-Live",
-    status: "pending",
-    progress: 0,
-    duration: "5 days",
-    loe: "Medium",
-    expectedEnd: "March 1, 2026",
-    daysFromStart: 39,
-    resources: [
-      { name: "All Staff", time: "2 hours training" },
-      { name: "IT Support", time: "48 hours on-call" },
-    ],
-  },
-];
+// Stage progress - maps sections to completion status
+const stageProgress: Record<string, { status: string; progress: number; daysFromStart: number; expectedEnd: string }> = {
+  "Header Info": { status: "complete", progress: 100, daysFromStart: 2, expectedEnd: "January 17, 2026" },
+  "Overview & Architecture": { status: "complete", progress: 100, daysFromStart: 5, expectedEnd: "January 20, 2026" },
+  "Security & Permissions": { status: "in-progress", progress: 75, daysFromStart: 10, expectedEnd: "February 5, 2026" },
+  "Imaging Routing & Connectivity": { status: "in-progress", progress: 60, daysFromStart: 12, expectedEnd: "February 8, 2026" },
+  "Data & Integration": { status: "in-progress", progress: 40, daysFromStart: 18, expectedEnd: "February 15, 2026" },
+  "Additional Workflows": { status: "pending", progress: 0, daysFromStart: 22, expectedEnd: "February 20, 2026" },
+  "Rad Workflows": { status: "pending", progress: 0, daysFromStart: 25, expectedEnd: "February 24, 2026" },
+  "DICOM Data Validation": { status: "pending", progress: 0, daysFromStart: 28, expectedEnd: "February 27, 2026" },
+  "Institution Group Configuration": { status: "pending", progress: 0, daysFromStart: 32, expectedEnd: "March 3, 2026" },
+  "User & Access Configuration": { status: "pending", progress: 0, daysFromStart: 35, expectedEnd: "March 6, 2026" },
+  "Template & RVU Configuration": { status: "pending", progress: 0, daysFromStart: 38, expectedEnd: "March 10, 2026" },
+  "Worklist Configuration": { status: "pending", progress: 0, daysFromStart: 40, expectedEnd: "March 12, 2026" },
+  "End-to-End Validation": { status: "pending", progress: 0, daysFromStart: 43, expectedEnd: "March 15, 2026" },
+};
+
+interface ChecklistSection {
+  section: string;
+  tasks: Array<{
+    id: string;
+    task: string;
+    owner: string;
+  }>;
+}
 
 export default function Home() {
+  const [checklistData, setChecklistData] = useState<ChecklistSection[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Load checklist data
+    fetch('/checklist.json')
+      .then(res => res.json())
+      .then(data => {
+        setChecklistData(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to load checklist:', err);
+        setLoading(false);
+      });
+  }, []);
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "complete":
@@ -134,22 +102,25 @@ export default function Home() {
     }
   };
 
-  const getLOEBadge = (loe: string) => {
-    const colors = {
-      Low: "bg-green-500/20 text-green-400 border-green-500/30",
-      Medium: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-      High: "bg-red-500/20 text-red-400 border-red-500/30",
-    };
-    return <Badge className={colors[loe as keyof typeof colors] || ""}>{loe} Effort</Badge>;
-  };
-
-  const activeStages = stages.filter(s => s.status === "in-progress");
-  const completedStages = stages.filter(s => s.status === "complete");
-
-  // Calculate if on track: expected progress based on time elapsed
+  // Calculate if on track
+  const allSections = Object.values(stageProgress);
   const expectedProgress = (hospitalData.daysElapsed / hospitalData.totalDays) * 100;
-  const actualProgress = stages.reduce((sum, stage) => sum + stage.progress, 0) / stages.length;
-  const isOnTrack = actualProgress >= expectedProgress - 5; // 5% tolerance
+  const actualProgress = allSections.reduce((sum, stage) => sum + stage.progress, 0) / allSections.length;
+  const isOnTrack = actualProgress >= expectedProgress - 5;
+
+  const activeSections = checklistData.filter(s => stageProgress[s.section]?.status === "in-progress");
+  const completedSections = checklistData.filter(s => stageProgress[s.section]?.status === "complete");
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading checklist...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -199,74 +170,84 @@ export default function Home() {
               </CardHeader>
             </Card>
 
-            {/* Stages */}
-            <div className="space-y-4">
-              {stages.map((stage) => (
-                <Card 
-                  key={stage.id} 
-                  className={`${
-                    stage.status === "in-progress" 
-                      ? "border-primary/30 bg-primary/5" 
-                      : stage.status === "complete"
-                      ? "border-primary/20 bg-primary/5"
-                      : ""
-                  }`}
-                >
-                  <CardHeader className="pb-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3 flex-1">
-                        {getStatusIcon(stage.status)}
-                        <div>
-                          <div className="flex items-center gap-2 flex-wrap mb-1">
-                            <h3 className="text-lg font-bold">{stage.name}</h3>
-                            {getStatusBadge(stage.status)}
-                          </div>
-                          <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
-                            <div className="flex items-center gap-1">
-                              <Timer className="w-3 h-3" />
-                              {stage.duration}
+            {/* Sections Accordion */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Implementation Checklist</CardTitle>
+                <CardDescription>
+                  {completedSections.length} of {checklistData.length} sections complete • {activeSections.length} in progress
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Accordion type="multiple" className="w-full">
+                  {checklistData.map((section, index) => {
+                    const progress = stageProgress[section.section] || { status: "pending", progress: 0, expectedEnd: "TBD" };
+                    
+                    return (
+                      <AccordionItem key={index} value={`section-${index}`}>
+                        <AccordionTrigger className="hover:no-underline">
+                          <div className="flex items-center justify-between w-full pr-4">
+                            <div className="flex items-center gap-3 flex-1">
+                              {getStatusIcon(progress.status)}
+                              <div className="text-left">
+                                <div className="font-semibold text-sm">{section.section}</div>
+                                <div className="text-xs text-muted-foreground">{section.tasks.length} tasks</div>
+                              </div>
                             </div>
-                            {getLOEBadge(stage.loe)}
-                            {stage.expectedEnd && (
-                              <div className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3" />
-                                Target: {stage.expectedEnd}
+                            <div className="flex items-center gap-3">
+                              {progress.status !== "pending" && (
+                                <span className="text-sm font-bold text-primary">{progress.progress}%</span>
+                              )}
+                              {getStatusBadge(progress.status)}
+                            </div>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="space-y-4 pt-4">
+                            {progress.status !== "pending" && (
+                              <div className="px-4">
+                                <Progress value={progress.progress} className="h-2 mb-4" />
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
+                                  <Calendar className="w-3 h-3" />
+                                  <span>Target completion: {progress.expectedEnd}</span>
+                                </div>
                               </div>
                             )}
+                            
+                            {/* Tasks */}
+                            <div className="space-y-2 px-4">
+                              {section.tasks.map((task, taskIndex) => (
+                                <div key={taskIndex} className="flex items-start justify-between p-3 rounded-lg bg-muted/30 border border-border hover:bg-muted/50 transition-colors">
+                                  <div className="flex items-start gap-3 flex-1">
+                                    <Circle className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium">{task.task}</p>
+                                      <p className="text-xs text-muted-foreground mt-1">ID: {task.id}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2 ml-3 flex-shrink-0">
+                                    {task.owner === "Client" ? (
+                                      <Badge variant="outline" className="text-xs">
+                                        <Building2 className="w-3 h-3 mr-1" />
+                                        Client
+                                      </Badge>
+                                    ) : (
+                                      <Badge className="bg-primary/20 text-primary border-primary/30 text-xs">
+                                        New Lantern
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                      {stage.status !== "pending" && (
-                        <div className="text-right ml-4">
-                          <div className="text-2xl font-bold text-primary">{stage.progress}%</div>
-                        </div>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {stage.status !== "pending" && (
-                      <Progress value={stage.progress} className="h-2" />
-                    )}
-                    
-                    {/* Resources Needed */}
-                    <div>
-                      <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                        <Users className="w-4 h-4 text-primary" />
-                        Resources Needed
-                      </h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {stage.resources.map((resource, index) => (
-                          <div key={index} className="p-2 rounded-lg bg-muted/30 border border-border">
-                            <p className="text-xs font-medium">{resource.name}</p>
-                            <p className="text-xs text-muted-foreground">{resource.time}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    );
+                  })}
+                </Accordion>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Right Column - Big Status Bar */}
@@ -302,18 +283,20 @@ export default function Home() {
                       />
                       
                       {/* Stage markers */}
-                      {stages.map((stage) => {
-                        const position = (stage.daysFromStart / hospitalData.totalDays) * 100;
+                      {Object.entries(stageProgress).map(([section, data]) => {
+                        const position = (data.daysFromStart / hospitalData.totalDays) * 100;
+                        if (position > 100) return null;
+                        
                         return (
                           <div
-                            key={stage.id}
+                            key={section}
                             className="absolute top-0 bottom-0 w-0.5 bg-card"
                             style={{ left: `${position}%` }}
                           >
                             <div className="absolute -top-1 left-1/2 -translate-x-1/2">
-                              {stage.status === "complete" ? (
+                              {data.status === "complete" ? (
                                 <CheckCircle2 className="w-3 h-3 text-primary" />
-                              ) : stage.status === "in-progress" ? (
+                              ) : data.status === "in-progress" ? (
                                 <PlayCircle className="w-3 h-3 text-primary fill-primary/20" />
                               ) : (
                                 <Circle className="w-3 h-3 text-muted-foreground" />
@@ -381,27 +364,30 @@ export default function Home() {
 
                 <Separator />
 
-                {/* Stage Breakdown */}
+                {/* Section Summary */}
                 <div>
-                  <h4 className="font-semibold text-sm mb-3">Stage Status</h4>
-                  <div className="space-y-3">
-                    {stages.map((stage) => (
-                      <div key={stage.id} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          {getStatusIcon(stage.status)}
-                          <span className="text-sm truncate">{stage.name}</span>
+                  <h4 className="font-semibold text-sm mb-3">Section Status</h4>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {checklistData.slice(0, 8).map((section) => {
+                      const progress = stageProgress[section.section] || { status: "pending", progress: 0 };
+                      return (
+                        <div key={section.section} className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            {getStatusIcon(progress.status)}
+                            <span className="truncate">{section.section}</span>
+                          </div>
+                          <div className="ml-2 flex-shrink-0">
+                            {progress.status === "complete" ? (
+                              <CheckCircle2 className="w-4 h-4 text-primary" />
+                            ) : progress.status === "in-progress" ? (
+                              <span className="font-bold text-primary">{progress.progress}%</span>
+                            ) : (
+                              <Circle className="w-4 h-4 text-muted-foreground" />
+                            )}
+                          </div>
                         </div>
-                        <div className="ml-2">
-                          {stage.status === "complete" ? (
-                            <CheckCircle2 className="w-4 h-4 text-primary" />
-                          ) : stage.status === "in-progress" ? (
-                            <span className="text-xs font-bold text-primary">{stage.progress}%</span>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">{stage.expectedEnd}</span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 

@@ -1,0 +1,502 @@
+[
+  {
+    "section": "Header Info",
+    "tasks": [
+      {
+        "id": "INFO.1",
+        "task": "Client Name",
+        "owner": "Client"
+      },
+      {
+        "id": "INFO.3",
+        "task": "Target Go-Live Date set",
+        "owner": "Client"
+      }
+    ]
+  },
+  {
+    "section": "Imaging Routing & Connectivity",
+    "tasks": [
+      {
+        "id": "C.1",
+        "task": "Document estimated monthly volume",
+        "owner": "Client"
+      },
+      {
+        "id": "C.2",
+        "task": "Identify current DICOM System of Record (SOR)",
+        "owner": "Client"
+      },
+      {
+        "id": "C.3",
+        "task": "Confirm if SOR has IOCM capabilities",
+        "owner": "Client"
+      }
+    ]
+  },
+  {
+    "section": "Overview & Architecture",
+    "tasks": [
+      {
+        "id": "A.1",
+        "task": "Identify Administrative point(s) of contact",
+        "owner": "Client"
+      },
+      {
+        "id": "A.2",
+        "task": "Identify IT point(s) of contact - Connectivity & Systems",
+        "owner": "Client"
+      },
+      {
+        "id": "A.3",
+        "task": "Identify Clinical Contact(s) - Technologist/Clinical Informatics",
+        "owner": "Client"
+      },
+      {
+        "id": "A.4",
+        "task": "Identify Radiologist Champion(s)",
+        "owner": "Client"
+      },
+      {
+        "id": "A.5",
+        "task": "Identify Project Manager (if applicable)",
+        "owner": "Client"
+      },
+      {
+        "id": "A.7",
+        "task": "Will any systems be replaced during integration (PACS, RIS, EHR retirement)",
+        "owner": "Client"
+      },
+      {
+        "id": "A.8",
+        "task": "Will your modality worklist system be impacted during this implementation?",
+        "owner": "Client"
+      },
+      {
+        "id": "A.10",
+        "task": "If you have a Router -  document details",
+        "owner": "Client"
+      },
+      {
+        "id": "A.12",
+        "task": "What is your Integration Engine if you have one",
+        "owner": "Client"
+      },
+      {
+        "id": "A.13",
+        "task": "What is your EHR system ",
+        "owner": "Client"
+      },
+      {
+        "id": "A.14",
+        "task": "What is your current PACS",
+        "owner": "Client"
+      }
+    ]
+  },
+  {
+    "section": "Security & Permissions",
+    "tasks": [
+      {
+        "id": "B.1",
+        "task": "Determine if security questionnaire is required as New Lantern is not yet SOC 2 certified",
+        "owner": "Client"
+      },
+      {
+        "id": "B.4",
+        "task": "Determine multi-tenancy requirements (separate MRNs by organization)",
+        "owner": "Client"
+      },
+      {
+        "id": "B.5",
+        "task": "Determine multi-tenancy requirements (separate DICOM studies by PACS)",
+        "owner": "Client"
+      },
+      {
+        "id": "B.6",
+        "task": "Determine multi-tenancy requirements (user restrictions by tenant)",
+        "owner": "Client"
+      }
+    ]
+  },
+  {
+    "section": "Data & Integration",
+    "tasks": [
+      {
+        "id": "D.1",
+        "task": "Confirm capability to configure production systems for testing prior to go-live",
+        "owner": "Client"
+      },
+      {
+        "id": "D.2",
+        "task": "Confirm requested go-live date (MMDDYY)",
+        "owner": "Client"
+      },
+      {
+        "id": "D.3",
+        "task": "Document expected volume of images ready each month",
+        "owner": "Client"
+      },
+      {
+        "id": "D.4",
+        "task": "Document expected modalities",
+        "owner": "Client"
+      },
+      {
+        "id": "D.5",
+        "task": "Document integration engines or routers in use",
+        "owner": "Client"
+      },
+      {
+        "id": "D.6",
+        "task": "Document number of PACS systems to be overlayed (if overlay PACS)",
+        "owner": "Client"
+      },
+      {
+        "id": "D.7",
+        "task": "Document current PACS system",
+        "owner": "Client"
+      },
+      {
+        "id": "D.8",
+        "task": "Document current Reporting system",
+        "owner": "Client"
+      },
+      {
+        "id": "D.9",
+        "task": "Document current EMR/RIS system",
+        "owner": "Client"
+      },
+      {
+        "id": "D.10",
+        "task": "Determine Prefetch Query Retrieve - Where will the rules live for automtion or will it be manual? What PACs will be used",
+        "owner": "Client"
+      },
+      {
+        "id": "D.11",
+        "task": "Define how comparison reports will be sent/retrieved (HL7 ORU, versus flat file) share 4 weeks prior to go-live.   What RIS will be used",
+        "owner": "Client"
+      }
+    ]
+  },
+  {
+    "section": "Additional Workflows",
+    "tasks": [
+      {
+        "id": "E.2",
+        "task": "Define tech notes input method (HL7, Manually type in, or PDF upload to New Lantern and if any modalities will come in as a DICOM)",
+        "owner": "Client"
+      },
+      {
+        "id": "E.3",
+        "task": "Document required EMR/RIS integrations",
+        "owner": "Client"
+      },
+      {
+        "id": "E.4",
+        "task": "Identify applications producing secondary captures or AI results (Viz.ai, etc.)",
+        "owner": "Client"
+      },
+      {
+        "id": "E.5",
+        "task": "Identify DICOM SR or other data sources for auto-populating merge fields",
+        "owner": "Client"
+      },
+      {
+        "id": "E.6",
+        "task": "Document system for DICOM SR (Modlink, LaurelBridge, other)",
+        "owner": "Client"
+      },
+      {
+        "id": "E.7",
+        "task": "Identify universal patient ID/index for unifying patients across sites",
+        "owner": "Client"
+      },
+      {
+        "id": "E.8",
+        "task": "Obtain mapping of custom procedure codes from sites",
+        "owner": "Client"
+      },
+      {
+        "id": "E.9",
+        "task": "Define handling of studies with multiple reports/orders",
+        "owner": "Client"
+      },
+      {
+        "id": "E.10",
+        "task": "Identify specific reporting criteria (MIPS, site-specific footers, etc.)",
+        "owner": "Client"
+      },
+      {
+        "id": "E.11",
+        "task": "Document downtime procedures when EMR/RIS offline",
+        "owner": "Client"
+      },
+      {
+        "id": "E.12",
+        "task": "Define prelim report workflow requirements",
+        "owner": "Client"
+      },
+      {
+        "id": "E.13",
+        "task": "Document credentialing process for each site",
+        "owner": "Client"
+      }
+    ]
+  },
+  {
+    "section": "Rad Workflows",
+    "tasks": [
+      {
+        "id": "F.1",
+        "task": "Document QA/QC workflow for image issues (missing images, incorrect notes)",
+        "owner": "Client"
+      },
+      {
+        "id": "F.2",
+        "task": "Define radiologist-to-tech communication method (phone, PACS, Teams, etc.)",
+        "owner": "Client"
+      },
+      {
+        "id": "F.3",
+        "task": "Identify central technologist for radiologist communication (if applicable)",
+        "owner": "Client"
+      },
+      {
+        "id": "F.4",
+        "task": "Confirm each technologist has individual PACS login",
+        "owner": "Client"
+      },
+      {
+        "id": "F.5",
+        "task": "Document Peer Review requirements",
+        "owner": "Client"
+      },
+      {
+        "id": "F.6",
+        "task": "Define critical result reporting process with referring physicians",
+        "owner": "Client"
+      },
+      {
+        "id": "F.7",
+        "task": "Document radiologist scheduling process",
+        "owner": "Client"
+      },
+      {
+        "id": "F.8",
+        "task": "Configure worklists per requirements",
+        "owner": "Client"
+      }
+    ]
+  },
+  {
+    "section": "DICOM Data Validation",
+    "tasks": [
+      {
+        "id": "G.1",
+        "task": "Validate Patient ID Match - Tag (0010,0020) - Expected: Exact match to HL7 PID-3",
+        "owner": "Client"
+      },
+      {
+        "id": "G.2",
+        "task": "Validate Accession Number Match - Tag (0008,0050) - Expected: Exact match to HL7 OBR-2 or OBR-3",
+        "owner": "Client"
+      },
+      {
+        "id": "G.3",
+        "task": "Validate Study Description - Tag (0008,1030) - Expected: Matches or derived from OBR-4",
+        "owner": "Client"
+      },
+      {
+        "id": "G.4",
+        "task": "Validate Modality - Tag (0008,0060) - Expected: Maps to correct worklist category",
+        "owner": "Client"
+      },
+      {
+        "id": "G.5",
+        "task": "Validate Institution Name - Tag (0008,0080) - Expected: Good Practice",
+        "owner": "Client"
+      },
+      {
+        "id": "G.6",
+        "task": "Validate Institution Department Name - Tag (0008,1040) - Expected: Maps to correct Institution Group",
+        "owner": "Client"
+      },
+      {
+        "id": "G.7",
+        "task": "Validate Station Name/AE Title - Tag (0008,1010) - Expected: Known station from expected source",
+        "owner": "Client"
+      },
+      {
+        "id": "G.8",
+        "task": "Validate Study Date/Time - Tag (0008,0020/0030) - Expected: Within expected range; timezone correct",
+        "owner": "Client"
+      },
+      {
+        "id": "G.9",
+        "task": "Validate Series Count - Expected: Expected series present for exam type",
+        "owner": "Client"
+      },
+      {
+        "id": "G.10",
+        "task": "Validate Image Count - Expected: Complete study (not truncated)",
+        "owner": "Client"
+      }
+    ]
+  },
+  {
+    "section": "Institution Group Configuration",
+    "tasks": [
+      {
+        "id": "H.1",
+        "task": "Configure Institution Group Name",
+        "owner": "New Lantern"
+      },
+      {
+        "id": "H.2",
+        "task": "Configure Timezone",
+        "owner": "New Lantern"
+      },
+      {
+        "id": "H.3",
+        "task": "Configure Report Footer",
+        "owner": "New Lantern"
+      },
+      {
+        "id": "H.4",
+        "task": "Configure ORU Destination",
+        "owner": "New Lantern"
+      }
+    ]
+  },
+  {
+    "section": "User & Access Configuration",
+    "tasks": [
+      {
+        "id": "I.1",
+        "task": "Create Radiologist Accounts",
+        "owner": "New Lantern"
+      },
+      {
+        "id": "I.2",
+        "task": "Assign Radiologist Group",
+        "owner": "New Lantern"
+      },
+      {
+        "id": "I.3",
+        "task": "Create Admin Accounts",
+        "owner": "New Lantern"
+      },
+      {
+        "id": "I.4",
+        "task": "Create Tech Accounts (if applicable)",
+        "owner": "New Lantern"
+      },
+      {
+        "id": "I.5",
+        "task": "Configure Worklist Visibility",
+        "owner": "New Lantern"
+      },
+      {
+        "id": "I.6",
+        "task": "Configure Dashboard Access",
+        "owner": "New Lantern"
+      }
+    ]
+  },
+  {
+    "section": "Template & RVU Configuration",
+    "tasks": [
+      {
+        "id": "J.1",
+        "task": "Assign High-Volume Procedure Templates",
+        "owner": "Client"
+      },
+      {
+        "id": "J.2",
+        "task": "Replicate Templates",
+        "owner": "Client"
+      },
+      {
+        "id": "J.3",
+        "task": "Remove Junk Templates",
+        "owner": "Client"
+      },
+      {
+        "id": "J.4",
+        "task": "Configure RVU Values",
+        "owner": "Client"
+      },
+      {
+        "id": "J.5",
+        "task": "Assign Default Template",
+        "owner": "Client"
+      }
+    ]
+  },
+  {
+    "section": "Worklist Configuration",
+    "tasks": [
+      {
+        "id": "K.1",
+        "task": "Configure Main Worklist View",
+        "owner": "Client"
+      },
+      {
+        "id": "K.2",
+        "task": "Configure Modality Filters",
+        "owner": "Client"
+      },
+      {
+        "id": "K.3",
+        "task": "Configure Priority Sorting",
+        "owner": "Client"
+      },
+      {
+        "id": "K.4",
+        "task": "Configure STAT Indicator",
+        "owner": "Client"
+      },
+      {
+        "id": "K.5",
+        "task": "Configure Site Filter",
+        "owner": "Client"
+      },
+      {
+        "id": "K.6",
+        "task": "Configure Auto-Refresh",
+        "owner": "Client"
+      }
+    ]
+  },
+  {
+    "section": "End-to-End Validation",
+    "tasks": [
+      {
+        "id": "L.1",
+        "task": "ORM to Worklist Test",
+        "owner": "Client"
+      },
+      {
+        "id": "L.2",
+        "task": "DICOM to Images Test",
+        "owner": "Client"
+      },
+      {
+        "id": "L.3",
+        "task": "Template Selection Test",
+        "owner": "Client"
+      },
+      {
+        "id": "L.4",
+        "task": "Report to ORU Test",
+        "owner": "Client"
+      },
+      {
+        "id": "L.5",
+        "task": "Prior Association Test",
+        "owner": "Client"
+      }
+    ]
+  }
+]
