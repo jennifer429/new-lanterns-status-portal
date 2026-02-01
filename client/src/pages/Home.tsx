@@ -26,6 +26,9 @@ import { cn } from "@/lib/utils";
 import { ProgressLogo } from "@/components/ProgressLogo";
 import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { FileUpload } from "@/components/FileUpload";
+import { FileList } from "@/components/FileList";
+import { Separator } from "@/components/ui/separator";
 
 // Mock hospital data
 const hospitalData = {
@@ -320,6 +323,26 @@ export default function Home() {
                         <p className="text-sm font-medium mb-2">What you'll do:</p>
                         <p className="text-sm text-muted-foreground">{nextTaskInfo.task.originalTask}</p>
                       </div>
+
+                      <Separator className="my-4" />
+                      
+                      <div className="space-y-3">
+                        <p className="text-sm font-medium">Attachments</p>
+                        <FileList 
+                          organizationId={organizationId!}
+                          taskId={nextTaskInfo.task.id}
+                        />
+                        <FileUpload
+                          organizationId={organizationId!}
+                          taskId={nextTaskInfo.task.id}
+                          taskName={nextTaskInfo.task.friendlyTask}
+                          onUploadComplete={() => {
+                            // Refetch files list
+                          }}
+                        />
+                      </div>
+
+                      <Separator className="my-4" />
 
                       <Button 
                         size="lg" 

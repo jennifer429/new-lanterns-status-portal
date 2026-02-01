@@ -82,3 +82,22 @@ export const taskCompletion = mysqlTable("taskCompletion", {
 
 export type TaskCompletion = typeof taskCompletion.$inferSelect;
 export type InsertTaskCompletion = typeof taskCompletion.$inferInsert;
+
+/**
+ * File attachments - stores uploaded files for tasks
+ */
+export const fileAttachments = mysqlTable("fileAttachments", {
+  id: int("id").autoincrement().primaryKey(),
+  organizationId: int("organizationId").notNull(),
+  taskId: varchar("taskId", { length: 50 }).notNull(),
+  fileName: varchar("fileName", { length: 255 }).notNull(),
+  fileUrl: text("fileUrl").notNull(), // S3 URL
+  fileKey: varchar("fileKey", { length: 500 }).notNull(), // S3 key
+  fileSize: int("fileSize"), // bytes
+  mimeType: varchar("mimeType", { length: 100 }),
+  uploadedBy: varchar("uploadedBy", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type FileAttachment = typeof fileAttachments.$inferSelect;
+export type InsertFileAttachment = typeof fileAttachments.$inferInsert;

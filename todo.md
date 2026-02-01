@@ -67,9 +67,12 @@
 - [x] Wire up task completion to save to database
 - [x] Add URL-based routing (/org/:slug)
 - [x] Create demo organization seed script
-- [ ] Add file upload UI for tasks that need attachments
-- [ ] Create file upload API endpoint with S3 storage
-- [ ] Display uploaded files in task details
+- [x] Add file attachments table to database schema
+- [x] Create file upload API endpoint with S3 storage
+- [x] Push database schema changes
+- [x] Add file upload UI component for tasks
+- [x] Display uploaded files in task details
+- [x] Trigger ClickUp task when file is uploaded
 - [ ] Add organization admin page for PM/Ops to create new orgs
 
 ## ClickUp Webhook Integration
