@@ -101,3 +101,19 @@ export const fileAttachments = mysqlTable("fileAttachments", {
 
 export type FileAttachment = typeof fileAttachments.$inferSelect;
 export type InsertFileAttachment = typeof fileAttachments.$inferInsert;
+
+/**
+ * Activity feed - stores updates from Linear/ClickUp for client visibility
+ */
+export const activityFeed = mysqlTable("activityFeed", {
+  id: int("id").autoincrement().primaryKey(),
+  organizationId: int("organizationId").notNull(),
+  source: mysqlEnum("source", ["linear", "clickup", "manual"]).notNull(),
+  sourceId: varchar("sourceId", { length: 100 }), // Linear issue ID or ClickUp task ID
+  author: varchar("author", { length: 255 }),
+  message: text("message").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ActivityFeed = typeof activityFeed.$inferSelect;
+export type InsertActivityFeed = typeof activityFeed.$inferInsert;

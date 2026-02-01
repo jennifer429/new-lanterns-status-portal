@@ -29,6 +29,7 @@ import { trpc } from "@/lib/trpc";
 import { FileUpload } from "@/components/FileUpload";
 import { FileList } from "@/components/FileList";
 import { Separator } from "@/components/ui/separator";
+import { ActivityFeed } from "@/components/ActivityFeed";
 
 // Mock hospital data
 const hospitalData = {
@@ -451,6 +452,11 @@ export default function Home() {
                 </Card>
               );
             })}
+
+            {/* Activity Feed */}
+            {organizationId && (
+              <ActivityFeed organizationId={organizationId} />
+            )}
 
             {/* Help Card */}
             <Card className="bg-muted/30">

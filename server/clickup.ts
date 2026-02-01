@@ -33,7 +33,15 @@ export async function createClickUpTask(
     )}'`;
 
     const { stdout: listOutput } = await execAsync(listLookupCmd);
-    const listResult = JSON.parse(listOutput);
+    // Extract JSON from MCP CLI output (may contain "Tool execution..." prefix)
+    const listJsonMatch = listOutput.match(/\{[\s\S]*\}/);
+    if (!listJsonMatch) {
+      return {
+        success: false,
+        error: "Failed to parse ClickUp response",
+      };
+    }
+    const listResult = JSON.parse(listJsonMatch[0]);
 
     if (!listResult.content || listResult.content.length === 0) {
       return {
@@ -76,7 +84,15 @@ export async function createClickUpTask(
     ).replace(/'/g, "'\\''")}'`;
 
     const { stdout: taskOutput } = await execAsync(createTaskCmd);
-    const taskResult = JSON.parse(taskOutput);
+    // Extract JSON from MCP CLI output
+    const taskJsonMatch = taskOutput.match(/\{[\s\S]*\}/);
+    if (!taskJsonMatch) {
+      return {
+        success: false,
+        error: "Failed to parse ClickUp response",
+      };
+    }
+    const taskResult = JSON.parse(taskJsonMatch[0]);
 
     if (!taskResult.content || taskResult.content.length === 0) {
       return {
@@ -117,7 +133,9 @@ export async function ensureOrganizationList(
 
     try {
       const { stdout } = await execAsync(checkCmd);
-      const result = JSON.parse(stdout);
+      const jsonMatch = stdout.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("No JSON in response");
+      const result = JSON.parse(jsonMatch[0]);
       if (result.content && result.content.length > 0) {
         // List exists
         return { success: true, listName };

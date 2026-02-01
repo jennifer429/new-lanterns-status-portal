@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { organizations, sectionProgress, taskCompletion } from "../../drizzle/schema";
-import { eq, and } from "drizzle-orm";
+import { organizations, sectionProgress, taskCompletion, activityFeed } from "../../drizzle/schema";
+import { eq, and, desc } from "drizzle-orm";
 import { createSectionCompletionTask } from "../clickup";
 
 /**
@@ -222,4 +222,20 @@ export const organizationsRouter = router({
     const orgs = await db.select().from(organizations);
     return orgs;
   }),
+
+  /**
+   * Get activity feed for an organization
+   */
+  getActivityFeed: publicProcedure
+    .input(z.object({ organizationId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      const activities = await db
+        .select()
+        .from(activityFeed)
+        .where(eq(activityFeed.organizationId, input.organizationId))
+        .orderBy(desc(activityFeed.createdAt));
+      return activities;
+    }),
 });

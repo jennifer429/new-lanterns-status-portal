@@ -91,3 +91,11 @@
 - [x] Attach link to ClickUp task
 - [x] Attach link to Linear issue
 - [x] Update file upload API to handle Google Drive + ClickUp + Linear
+
+## Zapier Linear Feedback Integration
+- [x] Add activity feed table to database schema
+- [x] Create webhook endpoint to receive Linear comments
+- [x] Parse @Client tag from comment body
+- [x] Save activity updates to database
+- [x] Display activity feed in client portal
+- [ ] Create Zapier setup documentation
