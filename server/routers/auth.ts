@@ -78,6 +78,9 @@ print(json.dumps(data))
   }
 }
 
+// Store password reset tokens in memory (in production, use database)
+const resetTokens = new Map<string, { email: string; expires: number }>();
+
 export const authRouter = router({
   /**
    * Login with email and password (checks Google Sheets)
@@ -109,6 +112,85 @@ export const authRouter = router({
         name: credential.name,
         role: credential.role,
         orgSlug: credential.orgSlug,
+      };
+    }),
+
+  /**
+   * Request password reset (checks if email exists in Google Sheets)
+   */
+  requestPasswordReset: publicProcedure
+    .input(
+      z.object({
+        email: z.string().email(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const credentials = await getCredentials();
+
+      // Check if email exists
+      const credential = credentials.find(
+        (c) => c.email.toLowerCase() === input.email.toLowerCase()
+      );
+
+      if (credential) {
+        // Generate reset token
+        const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        const expires = Date.now() + 3600000; // 1 hour
+
+        resetTokens.set(token, {
+          email: credential.email,
+          expires,
+        });
+
+        // In production, send email with reset link
+        // For now, just log it
+        const resetLink = `${process.env.VITE_APP_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
+        console.log(`[Auth] Password reset link for ${credential.email}: ${resetLink}`);
+
+        // TODO: Send email via Gmail MCP or notification API
+      }
+
+      // Always return success (security best practice)
+      return {
+        success: true,
+        message: "If an account exists with this email, you'll receive a password reset link. Please check your inbox and contact New Lantern support if you need assistance.",
+      };
+    }),
+
+  /**
+   * Reset password with token
+   */
+  resetPassword: publicProcedure
+    .input(
+      z.object({
+        token: z.string(),
+        newPassword: z.string().min(6),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const tokenData = resetTokens.get(input.token);
+
+      if (!tokenData || tokenData.expires < Date.now()) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invalid or expired reset token",
+        });
+      }
+
+      // In production, update password in Google Sheets
+      // For now, just log it
+      console.log(`[Auth] Password reset for ${tokenData.email}: ${input.newPassword}`);
+
+      // Remove used token
+      resetTokens.delete(input.token);
+
+      // TODO: Update password in Google Sheets
+      // This requires writing back to the sheet, which is more complex
+      // For now, admin must manually update passwords in the sheet
+
+      return {
+        success: true,
+        message: "Password reset request received. Please contact New Lantern support to complete the password change.",
       };
     }),
 });

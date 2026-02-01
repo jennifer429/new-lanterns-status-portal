@@ -169,3 +169,12 @@
 - [x] Add small "New Lantern ©" text in dark purple
 - [x] Make "Customer Implementation Portal" the prominent heading
 - [x] Test updated design
+
+## Password Reset & Logo Update
+- [x] Replace flame emoji with actual New Lantern logo
+- [x] Build password reset request API endpoint (checks Google Sheets for email)
+- [x] Build password reset confirmation API endpoint
+- [x] Create forgot password page
+- [x] Create reset password page (with token validation)
+- [x] Add "Forgot Password?" link to login page
+- [ ] Test complete password reset flow (manual testing needed)

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
 
@@ -50,8 +50,8 @@ export default function Login() {
       <Card className="w-full max-w-md border-purple-500/20 bg-black/40 backdrop-blur-xl">
         <CardHeader className="space-y-6 pb-8">
           <div className="flex flex-col items-center gap-3">
-            {/* Flame Icon */}
-            <div className="text-7xl">🔥</div>
+            {/* New Lantern Logo */}
+            <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-16 w-16 object-contain" />
             
             {/* Small New Lantern Copyright */}
             <div className="text-xs text-purple-900 font-medium tracking-wide">
@@ -102,6 +102,14 @@ export default function Login() {
                 autoComplete="current-password"
                 className="bg-purple-950/30 border-purple-500/30 text-white placeholder:text-gray-500 focus:border-purple-400"
               />
+            </div>
+
+            <div className="flex justify-end">
+              <Link href="/forgot-password">
+                <Button variant="link" className="text-purple-300 hover:text-purple-200 p-0 h-auto text-sm">
+                  Forgot Password?
+                </Button>
+              </Link>
             </div>
 
             <Button
