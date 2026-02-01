@@ -151,3 +151,15 @@
 - [ ] Add user creation form with organization assignment and password
 - [ ] Test admin creating users and organizations
 - [ ] Create Munson organization as example
+
+## Login Page Redesign
+- [x] Update login page with dark purple background
+- [x] Emphasize "IMPLEMENTATION" in branding/messaging
+- [x] Test updated design
+
+## Admin Dashboard with Client Links
+- [x] Update auth system to read from "New Lantern Implementation Site - Authentication.xlsx"
+- [x] Create organizations for all client sites (Munson, JCRHC, Baycare, Boulder, SouthCenter, Intellirad)
+- [x] Build admin dashboard showing list of all clients
+- [x] Add clickable links to each client portal
+- [ ] Test admin login with jennifer@newlantern.ai credentials (manual testing needed)

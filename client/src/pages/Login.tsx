@@ -1,5 +1,5 @@
 /**
- * Login page - email/password authentication with New Lantern branding
+ * Login page - dark purple background with IMPLEMENTATION focus
  */
 
 import { Button } from "@/components/ui/button";
@@ -41,29 +41,41 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-4">
+    <div 
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{
+        background: "linear-gradient(135deg, #1a0b2e 0%, #2d1b4e 50%, #1a0b2e 100%)"
+      }}
+    >
+      <Card className="w-full max-w-md border-purple-500/20 bg-black/40 backdrop-blur-xl">
+        <CardHeader className="space-y-6 pb-8">
           <div className="flex justify-center">
-            <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-12" />
+            <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-16" />
           </div>
-          <div className="text-center">
-            <CardTitle className="text-2xl">Welcome Back</CardTitle>
-            <CardDescription>
-              Sign in to access your implementation portal
+          <div className="text-center space-y-3">
+            <div className="space-y-1">
+              <h1 className="text-4xl font-bold text-white tracking-tight">
+                PACS
+              </h1>
+              <h2 className="text-5xl font-bold bg-gradient-to-r from-purple-400 via-purple-300 to-purple-400 bg-clip-text text-transparent">
+                IMPLEMENTATION
+              </h2>
+            </div>
+            <CardDescription className="text-gray-300 text-base">
+              Portal Access
             </CardDescription>
           </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
+              <Alert variant="destructive" className="bg-red-950/50 border-red-500/50">
+                <AlertDescription className="text-red-200">{error}</AlertDescription>
               </Alert>
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-gray-200">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -72,11 +84,12 @@ export default function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="email"
+                className="bg-purple-950/30 border-purple-500/30 text-white placeholder:text-gray-500 focus:border-purple-400"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-gray-200">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -85,31 +98,30 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
+                className="bg-purple-950/30 border-purple-500/30 text-white placeholder:text-gray-500 focus:border-purple-400"
               />
             </div>
 
-
-
             <Button
               type="submit"
-              className="w-full"
+              className="w-full bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white font-semibold py-6 text-lg"
               disabled={loginMutation.isPending}
             >
               {loginMutation.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
               )}
-              Sign In
+              Access Portal
             </Button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-muted-foreground">
+          <div className="mt-8 text-center text-sm text-gray-400 border-t border-purple-500/20 pt-6">
             <p>
-              Need help?{" "}
+              Need assistance?{" "}
               <a
                 href="mailto:support@newlantern.com"
-                className="text-primary hover:underline"
+                className="text-purple-400 hover:text-purple-300 font-medium"
               >
-                Contact New Lantern Support
+                Contact Support
               </a>
             </p>
           </div>

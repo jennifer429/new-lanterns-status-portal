@@ -9,7 +9,7 @@ import { execSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 
-const CREDENTIALS_FILE = "New Lanterns Portal/credentials-template.csv";
+const CREDENTIALS_FILE = "New Lantern Implementation Site - Authentication.xlsx";
 const RCLONE_CONFIG = "/home/ubuntu/.gdrive-rclone.ini";
 
 interface Credential {
@@ -26,30 +26,44 @@ interface Credential {
 async function getCredentials(): Promise<Credential[]> {
   try {
     // Download credentials file from Google Drive
-    const tempFile = path.join("/tmp", `credentials-${Date.now()}.csv`);
     execSync(
       `rclone copy "manus_google_drive:${CREDENTIALS_FILE}" /tmp --config ${RCLONE_CONFIG}`,
       { stdio: "pipe" }
     );
 
-    // Read the file
-    const csvContent = fs.readFileSync(
-      "/tmp/credentials-template.csv",
-      "utf-8"
-    );
-    const lines = csvContent.trim().split("\n");
+    // Read Excel file using Python
+    const pythonScript = `
+import pandas as pd
+import json
+df = pd.read_excel('/tmp/New Lantern Implementation Site - Authentication.xlsx')
+data = df.to_dict('records')
+print(json.dumps(data))
+`;
+    const result = execSync(`python3 -c "${pythonScript.replace(/"/g, '\\"')}"`, { encoding: 'utf-8' });
+    const rows = JSON.parse(result);
 
-    // Parse CSV (skip header)
+    // Parse credentials
     const credentials: Credential[] = [];
-    for (let i = 1; i < lines.length; i++) {
-      const [email, password, orgSlug, role, name] = lines[i].split(",");
+    for (const row of rows) {
+      const email = row['User'];
+      const password = row['Password'];
+      const siteName = row['Intake Site'];
+      
       if (email && password) {
+        // Determine role and org slug
+        const role = siteName === 'Admin Page' ? 'admin' : 'user';
+        const orgSlug = siteName === 'Admin Page' ? 'admin' : 
+          siteName.toLowerCase()
+            .replace(/^.* - /, '') // Remove prefix like "RadOne - "
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+        
         credentials.push({
           email: email.trim(),
           password: password.trim(),
-          orgSlug: orgSlug.trim(),
-          role: role.trim(),
-          name: name.trim(),
+          orgSlug,
+          role,
+          name: email.split('@')[0], // Use email prefix as name
         });
       }
     }
