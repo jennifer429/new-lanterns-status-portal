@@ -82,3 +82,12 @@
 - [x] Auto-create organization-specific lists in ClickUp
 - [ ] Test task creation in ClickUp with demo organization
 - [ ] Document ClickUp setup for ops team
+
+## Bug Fixes & File Upload Updates
+- [x] Fix null organizationId error in FileList component
+- [x] Update file upload to store in Google Drive and share links
+- [x] Upload file to Google Drive
+- [x] Generate shareable link from Google Drive
+- [x] Attach link to ClickUp task
+- [x] Attach link to Linear issue
+- [x] Update file upload API to handle Google Drive + ClickUp + Linear

@@ -324,25 +324,29 @@ export default function Home() {
                         <p className="text-sm text-muted-foreground">{nextTaskInfo.task.originalTask}</p>
                       </div>
 
-                      <Separator className="my-4" />
-                      
-                      <div className="space-y-3">
-                        <p className="text-sm font-medium">Attachments</p>
-                        <FileList 
-                          organizationId={organizationId!}
-                          taskId={nextTaskInfo.task.id}
-                        />
-                        <FileUpload
-                          organizationId={organizationId!}
-                          taskId={nextTaskInfo.task.id}
-                          taskName={nextTaskInfo.task.friendlyTask}
-                          onUploadComplete={() => {
-                            // Refetch files list
-                          }}
-                        />
-                      </div>
+                      {organizationId && (
+                        <>
+                          <Separator className="my-4" />
+                          
+                          <div className="space-y-3">
+                            <p className="text-sm font-medium">Attachments</p>
+                            <FileList 
+                              organizationId={organizationId}
+                              taskId={nextTaskInfo.task.id}
+                            />
+                            <FileUpload
+                              organizationId={organizationId}
+                              taskId={nextTaskInfo.task.id}
+                              taskName={nextTaskInfo.task.friendlyTask}
+                              onUploadComplete={() => {
+                                // Refetch files list
+                              }}
+                            />
+                          </div>
 
-                      <Separator className="my-4" />
+                          <Separator className="my-4" />
+                        </>
+                      )}
 
                       <Button 
                         size="lg" 

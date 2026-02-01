@@ -3,16 +3,97 @@ import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { fileAttachments, organizations } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
-import { storagePut } from "../storage";
-import { createFileUploadTask } from "../clickup";
 import { nanoid } from "nanoid";
+import { exec } from "child_process";
+import { promisify } from "util";
+import { writeFile, unlink } from "fs/promises";
+import path from "path";
+import os from "os";
+
+const execAsync = promisify(exec);
+
+/**
+ * Upload file to Google Drive and get shareable link
+ */
+async function uploadToGoogleDrive(
+  fileName: string,
+  fileBuffer: Buffer,
+  organizationName: string
+): Promise<string> {
+  // Create temp file
+  const tempDir = os.tmpdir();
+  const tempFilePath = path.join(tempDir, `${nanoid()}-${fileName}`);
+  
+  try {
+    await writeFile(tempFilePath, fileBuffer);
+    
+    // Create organization folder in Google Drive if it doesn't exist
+    const folderPath = `manus_google_drive:Implementation Files/${organizationName}`;
+    
+    // Upload file to Google Drive
+    await execAsync(
+      `rclone copy "${tempFilePath}" "${folderPath}" --config /home/ubuntu/.gdrive-rclone.ini`
+    );
+    
+    // Get shareable link
+    const remotePath = `${folderPath}/${fileName}`;
+    const { stdout } = await execAsync(
+      `rclone link "${remotePath}" --config /home/ubuntu/.gdrive-rclone.ini`
+    );
+    
+    const shareableLink = stdout.trim();
+    
+    // Clean up temp file
+    await unlink(tempFilePath);
+    
+    return shareableLink;
+  } catch (error) {
+    // Clean up temp file on error
+    try {
+      await unlink(tempFilePath);
+    } catch {}
+    throw error;
+  }
+}
+
+/**
+ * Attach file link to ClickUp task
+ */
+async function attachToClickUp(
+  taskId: string,
+  fileName: string,
+  fileUrl: string
+): Promise<void> {
+  await execAsync(
+    `manus-mcp-cli tool call clickup_create_task_comment --server clickup --input '${JSON.stringify({
+      task_id: taskId,
+      comment_text: `📎 File uploaded: [${fileName}](${fileUrl})`
+    })}'`
+  );
+}
+
+/**
+ * Attach file link to Linear issue
+ */
+async function attachToLinear(
+  issueId: string,
+  fileName: string,
+  fileUrl: string
+): Promise<void> {
+  await execAsync(
+    `manus-mcp-cli tool call create_comment --server linear --input '${JSON.stringify({
+      issueId,
+      body: `📎 File uploaded: [${fileName}](${fileUrl})`
+    })}'`
+  );
+}
 
 /**
  * Files router - handles file uploads and attachments
  */
 export const filesRouter = router({
   /**
-   * Upload a file to S3 and save metadata to database
+   * Upload a file to Google Drive and attach links to ClickUp and Linear
    */
   upload: publicProcedure
     .input(
@@ -24,6 +105,8 @@ export const filesRouter = router({
         fileData: z.string(), // base64 encoded file data
         mimeType: z.string(),
         uploadedBy: z.string().optional(),
+        clickupTaskId: z.string().optional(),
+        linearIssueId: z.string().optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -34,16 +117,20 @@ export const filesRouter = router({
       const fileBuffer = Buffer.from(input.fileData, "base64");
       const fileSize = fileBuffer.length;
 
-      // Generate unique file key
-      const fileExtension = input.fileName.split(".").pop() || "";
-      const uniqueId = nanoid(10);
-      const fileKey = `org-${input.organizationId}/task-${input.taskId}/${uniqueId}-${input.fileName}`;
+      // Get organization name
+      const [org] = await db
+        .select()
+        .from(organizations)
+        .where(eq(organizations.id, input.organizationId))
+        .limit(1);
 
-      // Upload to S3
-      const { url: fileUrl } = await storagePut(
-        fileKey,
+      if (!org) throw new Error("Organization not found");
+
+      // Upload to Google Drive and get shareable link
+      const fileUrl = await uploadToGoogleDrive(
+        input.fileName,
         fileBuffer,
-        input.mimeType
+        org.name
       );
 
       // Save metadata to database
@@ -52,28 +139,22 @@ export const filesRouter = router({
         taskId: input.taskId,
         fileName: input.fileName,
         fileUrl,
-        fileKey,
+        fileKey: `gdrive://${org.name}/${input.fileName}`,
         fileSize,
         mimeType: input.mimeType,
         uploadedBy: input.uploadedBy,
       });
 
-      // Get organization name for ClickUp task
-      const [org] = await db
-        .select()
-        .from(organizations)
-        .where(eq(organizations.id, input.organizationId))
-        .limit(1);
+      // Attach to ClickUp and Linear asynchronously
+      if (input.clickupTaskId) {
+        attachToClickUp(input.clickupTaskId, input.fileName, fileUrl).catch((error) => {
+          console.error("[ClickUp] Failed to attach file:", error);
+        });
+      }
 
-      if (org) {
-        // Trigger ClickUp task creation asynchronously
-        createFileUploadTask(
-          org.name,
-          input.fileName,
-          input.taskName,
-          fileUrl
-        ).catch((error) => {
-          console.error("[ClickUp] Failed to create file upload task:", error);
+      if (input.linearIssueId) {
+        attachToLinear(input.linearIssueId, input.fileName, fileUrl).catch((error) => {
+          console.error("[Linear] Failed to attach file:", error);
         });
       }
 
@@ -141,7 +222,7 @@ export const filesRouter = router({
         throw new Error("File not found or access denied");
       }
 
-      // Delete from database (S3 file remains for audit trail)
+      // Delete from database (Google Drive file remains for audit trail)
       await db.delete(fileAttachments).where(eq(fileAttachments.id, input.fileId));
 
       return { success: true };
