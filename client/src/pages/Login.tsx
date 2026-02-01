@@ -49,21 +49,23 @@ export default function Login() {
     >
       <Card className="w-full max-w-md border-purple-500/20 bg-black/40 backdrop-blur-xl">
         <CardHeader className="space-y-6 pb-8">
-          <div className="flex justify-center">
-            <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-16" />
-          </div>
-          <div className="text-center space-y-3">
-            <div className="space-y-1">
-              <h1 className="text-4xl font-bold text-white tracking-tight">
-                PACS
-              </h1>
-              <h2 className="text-5xl font-bold bg-gradient-to-r from-purple-400 via-purple-300 to-purple-400 bg-clip-text text-transparent">
-                IMPLEMENTATION
-              </h2>
+          <div className="flex flex-col items-center gap-3">
+            {/* Flame Icon */}
+            <div className="text-7xl">🔥</div>
+            
+            {/* Small New Lantern Copyright */}
+            <div className="text-xs text-purple-900 font-medium tracking-wide">
+              New Lantern ©
             </div>
-            <CardDescription className="text-gray-300 text-base">
-              Portal Access
-            </CardDescription>
+            
+            {/* Main Heading */}
+            <h1 className="text-4xl font-bold text-center leading-tight">
+              <span className="text-white">Customer</span>
+              <br />
+              <span className="bg-gradient-to-r from-purple-400 via-purple-300 to-purple-400 bg-clip-text text-transparent">
+                Implementation Portal
+              </span>
+            </h1>
           </div>
         </CardHeader>
         <CardContent>

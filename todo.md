@@ -163,3 +163,9 @@
 - [x] Build admin dashboard showing list of all clients
 - [x] Add clickable links to each client portal
 - [ ] Test admin login with jennifer@newlantern.ai credentials (manual testing needed)
+
+## Login Page Header Redesign
+- [x] Replace pixelated logo with flame icon
+- [x] Add small "New Lantern ©" text in dark purple
+- [x] Make "Customer Implementation Portal" the prominent heading
+- [x] Test updated design
