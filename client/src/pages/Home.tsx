@@ -128,9 +128,12 @@ export default function Home() {
       <header className="border-b border-border bg-card/50 backdrop-blur-sm">
         <div className="container py-6">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">New Lanterns PACS</h1>
-              <p className="text-sm text-muted-foreground mt-1">Onboarding Status Portal</p>
+            <div className="flex items-center gap-4">
+              <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-8" />
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">PACS Onboarding</h1>
+                <p className="text-sm text-muted-foreground mt-1">Status Portal</p>
+              </div>
             </div>
             <div className="text-right">
               <p className="text-sm font-medium text-foreground">{hospitalData.name}</p>
