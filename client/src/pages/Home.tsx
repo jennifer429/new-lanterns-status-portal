@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { ProgressLogo } from "@/components/ProgressLogo";
 
 // Mock hospital data
 const hospitalData = {
@@ -82,6 +83,27 @@ export default function Home() {
   };
 
   // Calculate progress
+  // Calculate achievement tier based on progress and speed
+  const getAchievementTier = () => {
+    const progress = calculateProgress();
+    const tasksCompleted = completedTasks.size;
+    
+    // Mock: assume 30 days total, calculate days elapsed based on tasks
+    // In production, this would use actual dates
+    const totalTasks = levels.reduce((sum, level) => sum + level.tasks.length, 0);
+    const daysElapsed = Math.round((tasksCompleted / totalTasks) * 30);
+    const expectedDays = Math.round((tasksCompleted / totalTasks) * 30);
+    
+    if (progress === 100 && daysElapsed <= 30) {
+      return { tier: "Implementation Champion", icon: "⭐", color: "text-yellow-400" };
+    } else if (progress >= 50 && daysElapsed < expectedDays - 7) {
+      return { tier: "Implementation Hero", icon: "🔥", color: "text-orange-400" };
+    } else if (progress >= 25 && daysElapsed < expectedDays - 3) {
+      return { tier: "Rock Star Pace", icon: "⚡", color: "text-primary" };
+    }
+    return { tier: "On Track", icon: "✓", color: "text-primary" };
+  };
+
   const calculateProgress = () => {
     const totalTasks = levels.reduce((sum, level) => sum + level.tasks.length, 0);
     const completed = completedTasks.size;
@@ -119,6 +141,7 @@ export default function Home() {
   const nextTaskInfo = getNextTask();
   const overallProgress = calculateProgress();
   const doneForToday = isDoneForToday();
+  const achievementTier = getAchievementTier();
 
   if (loading) {
     return (
@@ -154,22 +177,48 @@ export default function Home() {
 
       {/* Main Content */}
       <div className="container py-8">
-        {/* Overall Progress */}
-        <Card className="mb-8 border-primary/30">
+        {/* Overall Progress with Achievement Badge */}
+        <Card className="border-primary/20">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-2xl font-bold">{overallProgress}% Complete</h2>
-                <p className="text-sm text-muted-foreground">{completedTasks.size} tasks done</p>
+            <div className="flex items-center gap-6 mb-4">
+              {/* Progress Logo Badge */}
+              <div className="flex-shrink-0">
+                <ProgressLogo 
+                  progress={overallProgress} 
+                  size={80} 
+                  showGlow={overallProgress === 100}
+                />
               </div>
-              {doneForToday && (
-                <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30 animate-pulse">
-                  <PartyPopper className="w-5 h-5 text-primary" />
-                  <span className="text-sm font-medium text-primary">Wow! You're crushing this! 🔥</span>
+              
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <h2 className="text-2xl font-bold">{overallProgress}% Complete</h2>
+                    <p className="text-sm text-muted-foreground">{completedTasks.size} tasks done</p>
+                  </div>
+                  {doneForToday && (
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30 animate-pulse">
+                      <PartyPopper className="w-5 h-5 text-primary" />
+                      <span className="text-sm font-medium text-primary">Wow! You're crushing this! 🔥</span>
+                    </div>
+                  )}
                 </div>
-              )}
+                <Progress value={overallProgress} className="h-3 mb-3" />
+                
+                {/* Achievement Tier */}
+                <div className="flex items-center gap-2">
+                  <span className={cn("text-lg", achievementTier.color)}>{achievementTier.icon}</span>
+                  <span className={cn("text-sm font-semibold", achievementTier.color)}>
+                    {achievementTier.tier}
+                  </span>
+                  {achievementTier.tier !== "On Track" && (
+                    <span className="text-xs text-muted-foreground ml-2">
+                      • Keep this pace!
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
-            <Progress value={overallProgress} className="h-3" />
           </CardContent>
         </Card>
 
