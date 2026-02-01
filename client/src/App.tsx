@@ -7,15 +7,17 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Admin from "./pages/Admin";
 import Intake from "./pages/Intake";
+import Login from "./pages/Login";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
+      <Route path="/login" component={Login} />
       <Route path="/admin" component={Admin} />
       <Route path="/org/:slug/intake" component={Intake} />
       <Route path="/org/:slug" component={Home} />
-      <Route path={"/"} component={Home} />
+      <Route path={"/"} component={Login} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

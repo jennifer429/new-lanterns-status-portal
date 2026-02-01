@@ -6,6 +6,7 @@ import { organizationsRouter } from "./routers/organizations";
 import { filesRouter } from "./routers/files";
 import { webhooksRouter } from "./routers/webhooks";
 import { intakeRouter } from "./routers/intake";
+import { authRouter } from "./routers/auth";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -19,6 +20,8 @@ export const appRouter = router({
         success: true,
       } as const;
     }),
+    // Email/password authentication
+    ...authRouter._def.procedures,
   }),
 
   // Feature routers

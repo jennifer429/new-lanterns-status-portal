@@ -132,3 +132,22 @@
 ## Navigation to Intake Form
 - [x] Add prominent link/button on main portal page to access intake form
 - [x] Test navigation flow from portal to intake form
+
+## Google Sheets Authentication System
+- [x] Create Google Sheets credentials template (Email, Password, OrgSlug, Role)
+- [x] Build login API endpoint that reads from Google Sheets
+- [x] Update login page to work with Google Sheets auth
+- [x] Add redirect logic based on org slug from sheets
+- [x] Add routes for login page
+- [x] Create example Munson user in Google Sheets
+- [x] Create Munson organization in database
+- [ ] Test complete login flow (manual testing needed)
+- [ ] Document Google Sheets setup for PM
+
+## Admin Dashboard & User Management
+- [ ] Build admin dashboard homepage with organization list
+- [ ] Build organization creation form in admin
+- [ ] Build user management page in admin
+- [ ] Add user creation form with organization assignment and password
+- [ ] Test admin creating users and organizations
+- [ ] Create Munson organization as example
