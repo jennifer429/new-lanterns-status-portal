@@ -1,6 +1,6 @@
 /**
- * Clinical Modernism Design: Deep teal primary, amber accents, asymmetric 30/70 layout
- * Left timeline navigation, data-first information architecture, medical-grade precision
+ * Dark Theme with Purple Accents: Deep purple primary, dark backgrounds, parallel workflow support
+ * Stages can run in parallel - multiple stages can be active simultaneously
  */
 
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   CheckCircle2, 
   Circle, 
@@ -17,11 +18,12 @@ import {
   Phone, 
   ChevronRight,
   Download,
-  AlertCircle
+  AlertCircle,
+  PlayCircle
 } from "lucide-react";
 import { useState } from "react";
 
-// Mock data for demonstration
+// Mock data for demonstration - now with parallel execution support
 const hospitalData = {
   name: "Memorial General Hospital",
   contactName: "Dr. Sarah Chen",
@@ -29,10 +31,10 @@ const hospitalData = {
   contactPhone: "(555) 123-4567",
   submissionDate: "January 15, 2026",
   estimatedGoLive: "March 20, 2026",
-  currentStage: "Network Configuration",
-  overallProgress: 35,
+  overallProgress: 42,
 };
 
+// Stages can now be in-progress simultaneously
 const stages = [
   {
     id: 1,
@@ -40,6 +42,7 @@ const stages = [
     status: "complete",
     description: "Technical specifications and requirements collected",
     completedDate: "January 22, 2026",
+    progress: 100,
     tasks: [
       { name: "Onboarding form submitted", status: "complete" },
       { name: "Technical specifications reviewed", status: "complete" },
@@ -52,22 +55,23 @@ const stages = [
     name: "Network Configuration",
     status: "in-progress",
     description: "Setting up network infrastructure and connectivity",
+    progress: 75,
     tasks: [
       { name: "Firewall rules configured", status: "complete" },
       { name: "VPN connection established", status: "complete" },
-      { name: "Bandwidth testing", status: "in-progress" },
-      { name: "Security audit", status: "pending" },
+      { name: "Bandwidth testing", status: "complete" },
+      { name: "Security audit", status: "in-progress" },
     ],
   },
   {
     id: 3,
     name: "System Installation",
-    status: "pending",
+    status: "in-progress",
     description: "PACS server deployment and workstation setup",
-    estimatedStart: "February 10, 2026",
+    progress: 25,
     tasks: [
-      { name: "Server deployment", status: "pending" },
-      { name: "Workstation software installation", status: "pending" },
+      { name: "Server deployment", status: "complete" },
+      { name: "Workstation software installation", status: "in-progress" },
       { name: "User account configuration", status: "pending" },
       { name: "Integration setup", status: "pending" },
     ],
@@ -78,6 +82,7 @@ const stages = [
     status: "pending",
     description: "Comprehensive system testing and validation",
     estimatedStart: "February 25, 2026",
+    progress: 0,
     tasks: [
       { name: "Connectivity testing", status: "pending" },
       { name: "Image transfer validation", status: "pending" },
@@ -91,6 +96,7 @@ const stages = [
     status: "pending",
     description: "Final training and system launch",
     estimatedStart: "March 15, 2026",
+    progress: 0,
     tasks: [
       { name: "Staff training sessions", status: "pending" },
       { name: "Documentation delivery", status: "pending" },
@@ -109,8 +115,8 @@ const documents = [
 const recentUpdates = [
   {
     date: "January 30, 2026",
-    title: "Bandwidth Testing In Progress",
-    description: "Our team is conducting bandwidth tests to ensure optimal performance for your imaging workload.",
+    title: "System Installation Started in Parallel",
+    description: "While network configuration continues, we've begun server deployment to accelerate your timeline.",
   },
   {
     date: "January 28, 2026",
@@ -120,19 +126,19 @@ const recentUpdates = [
   {
     date: "January 22, 2026",
     title: "Information Gathering Complete",
-    description: "All technical specifications have been reviewed and validated. Moving to Network Configuration stage.",
+    description: "All technical specifications have been reviewed and validated. Multiple stages now active.",
   },
 ];
 
 export default function Home() {
-  const [selectedStage, setSelectedStage] = useState(2);
+  const [selectedTab, setSelectedTab] = useState("overview");
 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "complete":
-        return <CheckCircle2 className="w-5 h-5 text-[oklch(0.75_0.15_65)]" />;
+        return <CheckCircle2 className="w-5 h-5 text-primary" />;
       case "in-progress":
-        return <Clock className="w-5 h-5 text-primary" />;
+        return <PlayCircle className="w-5 h-5 text-primary fill-primary/20" />;
       default:
         return <Circle className="w-5 h-5 text-muted-foreground" />;
     }
@@ -141,20 +147,21 @@ export default function Home() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "complete":
-        return <Badge className="bg-[oklch(0.75_0.15_65)] text-[oklch(0.2_0.02_65)] hover:bg-[oklch(0.75_0.15_65)]">Complete</Badge>;
+        return <Badge className="bg-primary/20 text-primary border-primary/30">Complete</Badge>;
       case "in-progress":
         return <Badge className="bg-primary text-primary-foreground">In Progress</Badge>;
       default:
-        return <Badge variant="outline" className="text-muted-foreground">Pending</Badge>;
+        return <Badge variant="outline" className="text-muted-foreground border-muted">Pending</Badge>;
     }
   };
 
-  const currentStageData = stages[selectedStage - 1];
+  const activeStages = stages.filter(s => s.status === "in-progress");
+  const completedStages = stages.filter(s => s.status === "complete");
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border bg-card">
+      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container py-6">
           <div className="flex items-center justify-between">
             <div>
@@ -174,7 +181,7 @@ export default function Home() {
       {/* Main Content */}
       <div className="container py-8">
         {/* Overall Progress Card */}
-        <Card className="mb-8 shadow-sm">
+        <Card className="mb-8 shadow-lg border-primary/20 bg-gradient-to-br from-card to-card/50">
           <CardHeader>
             <div className="flex items-start justify-between">
               <div>
@@ -184,163 +191,99 @@ export default function Home() {
                 </CardDescription>
               </div>
               <div className="text-right">
-                <div className="text-3xl font-bold text-primary">{hospitalData.overallProgress}%</div>
+                <div className="text-4xl font-bold text-primary">{hospitalData.overallProgress}%</div>
                 <p className="text-xs text-muted-foreground mt-1">Complete</p>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <Progress value={hospitalData.overallProgress} className="h-3" />
-            <div className="mt-4 flex items-center gap-2 text-sm">
+            <Progress value={hospitalData.overallProgress} className="h-3 mb-4" />
+            <div className="flex items-center gap-6 text-sm flex-wrap">
               <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-primary" />
-                <span className="font-medium">Current Stage:</span>
-                <span className="text-muted-foreground">{hospitalData.currentStage}</span>
+                <CheckCircle2 className="w-4 h-4 text-primary" />
+                <span className="font-medium">{completedStages.length} Completed</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <PlayCircle className="w-4 h-4 text-primary fill-primary/20" />
+                <span className="font-medium">{activeStages.length} Active</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/30">
+                <AlertCircle className="w-4 h-4 text-primary" />
+                <span className="font-medium text-primary">Parallel Execution Enabled</span>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-[350px_1fr] gap-8">
-          {/* Left Column: Timeline Navigation */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold mb-4">Onboarding Stages</h2>
-            <div className="space-y-2 relative">
-              {/* Vertical line */}
-              <div className="absolute left-[11px] top-6 bottom-6 w-0.5 bg-border" />
-              
-              {stages.map((stage, index) => (
-                <button
-                  key={stage.id}
-                  onClick={() => setSelectedStage(stage.id)}
-                  className={`w-full text-left p-4 rounded-lg transition-all relative ${
-                    selectedStage === stage.id
-                      ? "bg-primary/5 border-2 border-primary"
-                      : "bg-card border border-border hover:border-primary/30"
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="relative z-10 bg-background">
-                      {getStatusIcon(stage.status)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <h3 className="font-semibold text-sm">{stage.name}</h3>
-                        {getStatusBadge(stage.status)}
+        {/* Tabs for different views */}
+        <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3 lg:w-[500px]">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="active">Active Stages</TabsTrigger>
+            <TabsTrigger value="all">All Stages</TabsTrigger>
+          </TabsList>
+
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Active Stages */}
+              <Card className="border-primary/30">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <PlayCircle className="w-5 h-5 text-primary" />
+                    Active Stages
+                  </CardTitle>
+                  <CardDescription>Currently in progress</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {activeStages.map((stage) => (
+                    <div key={stage.id} className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <h3 className="font-semibold text-foreground">{stage.name}</h3>
+                          <p className="text-xs text-muted-foreground mt-1">{stage.description}</p>
+                        </div>
+                        <span className="text-sm font-bold text-primary">{stage.progress}%</span>
                       </div>
-                      {stage.completedDate && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Completed {stage.completedDate}
-                        </p>
-                      )}
-                      {stage.estimatedStart && stage.status === "pending" && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Est. start {stage.estimatedStart}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            {/* Contact Card */}
-            <Card className="mt-8">
-              <CardHeader>
-                <CardTitle className="text-base">Need Help?</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <Mail className="w-4 h-4 text-muted-foreground" />
-                  <a href={`mailto:${hospitalData.contactEmail}`} className="text-primary hover:underline">
-                    {hospitalData.contactEmail}
-                  </a>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Phone className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-foreground">{hospitalData.contactPhone}</span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Right Column: Stage Details */}
-          <div className="space-y-6">
-            {/* Stage Header */}
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <h2 className="text-3xl font-bold">{currentStageData.name}</h2>
-                {getStatusBadge(currentStageData.status)}
-              </div>
-              <p className="text-muted-foreground">{currentStageData.description}</p>
-            </div>
-
-            {/* Tasks */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Tasks</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {currentStageData.tasks.map((task, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                      <div className="flex items-center gap-3">
-                        {getStatusIcon(task.status)}
-                        <span className="text-sm font-medium">{task.name}</span>
+                      <Progress value={stage.progress} className="h-2" />
+                      <div className="mt-3 space-y-1">
+                        {stage.tasks.filter(t => t.status !== "pending").map((task, idx) => (
+                          <div key={idx} className="flex items-center gap-2 text-xs">
+                            {getStatusIcon(task.status)}
+                            <span className="text-muted-foreground">{task.name}</span>
+                          </div>
+                        ))}
                       </div>
-                      {getStatusBadge(task.status)}
                     </div>
                   ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Next Steps */}
-            {currentStageData.status === "in-progress" && (
-              <Card className="border-primary/30 bg-primary/5">
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="w-5 h-5 text-primary" />
-                    <CardTitle>Next Steps</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm mb-4">
-                    Our network engineer will reach out within 2 business days to complete the bandwidth testing. 
-                    Please ensure your IT administrator is available for a brief call.
-                  </p>
-                  <Button className="w-full sm:w-auto">
-                    Schedule Configuration Call
-                    <ChevronRight className="w-4 h-4 ml-2" />
-                  </Button>
                 </CardContent>
               </Card>
-            )}
 
-            {/* Recent Updates */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Updates</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {recentUpdates.map((update, index) => (
-                    <div key={index}>
-                      <div className="flex items-start gap-3">
-                        <div className="w-2 h-2 rounded-full bg-primary mt-2" />
-                        <div className="flex-1">
-                          <p className="text-xs text-muted-foreground mb-1">{update.date}</p>
-                          <h4 className="font-semibold text-sm mb-1">{update.title}</h4>
-                          <p className="text-sm text-muted-foreground">{update.description}</p>
+              {/* Recent Updates */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Recent Updates</CardTitle>
+                  <CardDescription>Latest activity on your onboarding</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {recentUpdates.map((update, index) => (
+                      <div key={index}>
+                        <div className="flex items-start gap-3">
+                          <div className="w-2 h-2 rounded-full bg-primary mt-2" />
+                          <div className="flex-1">
+                            <p className="text-xs text-muted-foreground mb-1">{update.date}</p>
+                            <h4 className="font-semibold text-sm mb-1">{update.title}</h4>
+                            <p className="text-sm text-muted-foreground">{update.description}</p>
+                          </div>
                         </div>
+                        {index < recentUpdates.length - 1 && <Separator className="mt-4" />}
                       </div>
-                      {index < recentUpdates.length - 1 && <Separator className="mt-4" />}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
             {/* Documents */}
             <Card>
@@ -349,27 +292,144 @@ export default function Home() {
                 <CardDescription>Download configuration summaries and documentation</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   {documents.map((doc, index) => (
                     <button
                       key={index}
-                      className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors text-left"
+                      className="flex flex-col items-start p-4 rounded-lg hover:bg-primary/5 border border-border hover:border-primary/30 transition-all text-left"
                     >
-                      <div className="flex items-center gap-3">
-                        <FileText className="w-5 h-5 text-primary" />
-                        <div>
-                          <p className="text-sm font-medium">{doc.name}</p>
-                          <p className="text-xs text-muted-foreground">{doc.date} • {doc.size}</p>
-                        </div>
+                      <FileText className="w-6 h-6 text-primary mb-3" />
+                      <p className="text-sm font-medium mb-1">{doc.name}</p>
+                      <p className="text-xs text-muted-foreground mb-3">{doc.date} • {doc.size}</p>
+                      <div className="flex items-center gap-1 text-xs text-primary">
+                        <Download className="w-3 h-3" />
+                        Download
                       </div>
-                      <Download className="w-4 h-4 text-muted-foreground" />
                     </button>
                   ))}
                 </div>
               </CardContent>
             </Card>
-          </div>
-        </div>
+
+            {/* Contact Card */}
+            <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/30">
+              <CardHeader>
+                <CardTitle>Need Help?</CardTitle>
+                <CardDescription>Our team is here to support you</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/20">
+                    <Mail className="w-4 h-4 text-primary" />
+                  </div>
+                  <a href={`mailto:${hospitalData.contactEmail}`} className="text-sm text-primary hover:underline">
+                    {hospitalData.contactEmail}
+                  </a>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/20">
+                    <Phone className="w-4 h-4 text-primary" />
+                  </div>
+                  <span className="text-sm text-foreground">{hospitalData.contactPhone}</span>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Active Stages Tab */}
+          <TabsContent value="active" className="space-y-6">
+            {activeStages.map((stage) => (
+              <Card key={stage.id} className="border-primary/30">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-3 mb-2">
+                        <h2 className="text-2xl font-bold">{stage.name}</h2>
+                        {getStatusBadge(stage.status)}
+                      </div>
+                      <p className="text-muted-foreground">{stage.description}</p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-primary">{stage.progress}%</div>
+                      <p className="text-xs text-muted-foreground">Progress</p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Progress value={stage.progress} className="h-3 mb-6" />
+                  <h3 className="font-semibold mb-4">Tasks</h3>
+                  <div className="space-y-3">
+                    {stage.tasks.map((task, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border">
+                        <div className="flex items-center gap-3">
+                          {getStatusIcon(task.status)}
+                          <span className="text-sm font-medium">{task.name}</span>
+                        </div>
+                        {getStatusBadge(task.status)}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+
+            {activeStages.length === 0 && (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No Active Stages</h3>
+                  <p className="text-sm text-muted-foreground">All stages are either completed or pending.</p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* All Stages Tab */}
+          <TabsContent value="all" className="space-y-4">
+            {stages.map((stage) => (
+              <Card key={stage.id} className={stage.status === "in-progress" ? "border-primary/30" : ""}>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        {getStatusIcon(stage.status)}
+                        <h3 className="text-xl font-bold">{stage.name}</h3>
+                        {getStatusBadge(stage.status)}
+                      </div>
+                      <p className="text-sm text-muted-foreground">{stage.description}</p>
+                      {stage.completedDate && (
+                        <p className="text-xs text-primary mt-2">Completed {stage.completedDate}</p>
+                      )}
+                      {stage.estimatedStart && stage.status === "pending" && (
+                        <p className="text-xs text-muted-foreground mt-2">Est. start {stage.estimatedStart}</p>
+                      )}
+                    </div>
+                    {stage.status !== "pending" && (
+                      <div className="text-right ml-4">
+                        <div className="text-2xl font-bold text-primary">{stage.progress}%</div>
+                      </div>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {stage.status !== "pending" && (
+                    <Progress value={stage.progress} className="h-2 mb-4" />
+                  )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {stage.tasks.map((task, index) => (
+                      <div key={index} className="flex items-center gap-2 p-2 rounded text-sm">
+                        {getStatusIcon(task.status)}
+                        <span className={task.status === "complete" ? "text-muted-foreground" : "text-foreground"}>
+                          {task.name}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
