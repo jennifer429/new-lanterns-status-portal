@@ -49,3 +49,9 @@
 - [x] Add "You're done for today" stopping points
 - [x] Implement level locking (complete to unlock next)
 - [ ] Add per-role progress tracking (IT/Clinical/Admin)
+
+## Celebratory Messaging Updates
+- [x] Replace "done for today" with motivating messages
+- [x] Add "crushing it" and competitive language
+- [x] Show user performance vs other users
+- [x] Add celebration animations

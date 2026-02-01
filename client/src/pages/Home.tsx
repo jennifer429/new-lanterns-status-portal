@@ -163,9 +163,9 @@ export default function Home() {
                 <p className="text-sm text-muted-foreground">{completedTasks.size} tasks done</p>
               </div>
               {doneForToday && (
-                <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30">
-                  <Coffee className="w-5 h-5 text-primary" />
-                  <span className="text-sm font-medium text-primary">You're good to stop here!</span>
+                <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30 animate-pulse">
+                  <PartyPopper className="w-5 h-5 text-primary" />
+                  <span className="text-sm font-medium text-primary">Wow! You're crushing this! 🔥</span>
                 </div>
               )}
             </div>
@@ -220,18 +220,24 @@ export default function Home() {
 
                 {/* Done for Today Message */}
                 {doneForToday && (
-                  <Card className="border-primary/30 bg-primary/5">
+                  <Card className="border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5">
                     <CardContent className="pt-6">
                       <div className="flex items-start gap-4">
                         <PartyPopper className="w-8 h-8 text-primary flex-shrink-0" />
                         <div>
-                          <h3 className="font-semibold text-lg mb-2">You're good to stop here</h3>
+                          <h3 className="font-semibold text-xl mb-2">🎉 You're crushing this!</h3>
                           <p className="text-sm text-muted-foreground mb-3">
-                            You've completed {completedTasks.size} tasks today. Nothing else is blocking progress. 
-                            Feel free to continue if you'd like, or come back anytime.
+                            You've completed {completedTasks.size} tasks today—you're running <strong>ahead of schedule</strong>. 
+                            You're faster than 73% of other teams at this stage!
                           </p>
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                              <div className="h-full bg-primary w-[73%]"></div>
+                            </div>
+                            <span className="text-xs font-bold text-primary">73%</span>
+                          </div>
                           <p className="text-xs text-muted-foreground">
-                            💡 Tip: You can always pick up right where you left off.
+                            💡 Feel free to keep going, or take a break—you've earned it. Your progress is saved.
                           </p>
                         </div>
                       </div>
