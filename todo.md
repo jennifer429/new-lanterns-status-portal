@@ -71,3 +71,11 @@
 - [ ] Create file upload API endpoint with S3 storage
 - [ ] Display uploaded files in task details
 - [ ] Add organization admin page for PM/Ops to create new orgs
+
+## ClickUp Webhook Integration
+- [x] Explore ClickUp MCP to understand available tools
+- [x] Create ClickUp integration module in server
+- [x] Add webhook trigger when section completes
+- [x] Auto-create organization-specific lists in ClickUp
+- [ ] Test task creation in ClickUp with demo organization
+- [ ] Document ClickUp setup for ops team

@@ -3,6 +3,7 @@ import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { organizations, sectionProgress, taskCompletion } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
+import { createSectionCompletionTask } from "../clickup";
 
 /**
  * Organizations router - handles organization CRUD and data access
@@ -169,6 +170,44 @@ export const organizationsRouter = router({
           completedBy: input.completedBy,
           notes: input.notes,
         });
+      }
+
+      // Check if section is now complete and trigger ClickUp webhook
+      if (input.completed) {
+        // Get all tasks for this section
+        const sectionTasks = await db
+          .select()
+          .from(taskCompletion)
+          .where(
+            and(
+              eq(taskCompletion.organizationId, input.organizationId),
+              eq(taskCompletion.sectionName, input.sectionName)
+            )
+          );
+
+        const completedCount = sectionTasks.filter(t => t.completed === 1).length;
+        const totalCount = sectionTasks.length;
+
+        // If all tasks in section are complete, create ClickUp task
+        if (completedCount === totalCount && totalCount > 0) {
+          const [org] = await db
+            .select()
+            .from(organizations)
+            .where(eq(organizations.id, input.organizationId))
+            .limit(1);
+
+          if (org) {
+            // Trigger ClickUp task creation asynchronously (don't block response)
+            createSectionCompletionTask(
+              org.name,
+              input.sectionName,
+              completedCount,
+              totalCount
+            ).catch(error => {
+              console.error("[ClickUp] Failed to create section completion task:", error);
+            });
+          }
+        }
       }
 
       return { success: true };
