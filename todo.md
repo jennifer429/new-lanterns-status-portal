@@ -99,3 +99,15 @@
 - [x] Save activity updates to database
 - [x] Display activity feed in client portal
 - [ ] Create Zapier setup documentation
+
+## Two-Way Linear Communication
+- [x] Add linearIssueId field to organizations table
+- [x] Add clickupListId and googleDriveFolderId fields to organizations table
+- [x] Create API endpoint to post hospital replies to Linear issue
+- [x] Add reply button to ActivityFeed component
+- [x] Build reply modal/form for hospital users
+- [x] Tag hospital replies in Linear with organization name
+- [x] Update organization creation to accept Linear/ClickUp/Drive IDs
+- [x] Create admin page for PM to set up new organizations
+- [x] Test two-way communication flow with demo organization
+- [ ] Update ops documentation with simplified setup process

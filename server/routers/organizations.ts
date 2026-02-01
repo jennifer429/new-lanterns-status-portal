@@ -4,6 +4,7 @@ import { getDb } from "../db";
 import { organizations, sectionProgress, taskCompletion, activityFeed } from "../../drizzle/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { createSectionCompletionTask } from "../clickup";
+import { postLinearComment } from "../linear";
 
 /**
  * Organizations router - handles organization CRUD and data access
@@ -22,6 +23,9 @@ export const organizationsRouter = router({
         contactPhone: z.string().optional(),
         startDate: z.string().optional(),
         goalDate: z.string().optional(),
+        linearIssueId: z.string().optional(),
+        clickupListId: z.string().optional(),
+        googleDriveFolderId: z.string().optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -237,5 +241,54 @@ export const organizationsRouter = router({
         .where(eq(activityFeed.organizationId, input.organizationId))
         .orderBy(desc(activityFeed.createdAt));
       return activities;
+    }),
+
+  /**
+   * Post a reply from hospital to Linear issue
+   */
+  postReply: publicProcedure
+    .input(
+      z.object({
+        organizationId: z.number(),
+        message: z.string().min(1),
+        authorName: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // Get organization with Linear issue ID
+      const [org] = await db
+        .select()
+        .from(organizations)
+        .where(eq(organizations.id, input.organizationId))
+        .limit(1);
+
+      if (!org) {
+        throw new Error("Organization not found");
+      }
+
+      if (!org.linearIssueId) {
+        throw new Error("No Linear issue configured for this organization");
+      }
+
+      // Post comment to Linear
+      const author = input.authorName || org.contactName || "Hospital Team";
+      const result = await postLinearComment(org.linearIssueId, input.message, author);
+
+      if (!result.success) {
+        throw new Error(`Failed to post to Linear: ${result.error}`);
+      }
+
+      // Also save to activity feed for local display
+      await db.insert(activityFeed).values({
+        organizationId: input.organizationId,
+        source: "manual",
+        author: author,
+        message: input.message,
+      });
+
+      return { success: true, commentId: result.commentId };
     }),
 });

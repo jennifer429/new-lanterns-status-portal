@@ -39,6 +39,10 @@ export const organizations = mysqlTable("organizations", {
   startDate: varchar("startDate", { length: 50 }),
   goalDate: varchar("goalDate", { length: 50 }),
   status: mysqlEnum("status", ["active", "completed", "paused"]).default("active").notNull(),
+  // Integration IDs (set by PM during org creation)
+  linearIssueId: varchar("linearIssueId", { length: 100 }), // Linear issue ID for two-way communication
+  clickupListId: varchar("clickupListId", { length: 100 }), // ClickUp list ID for tasks
+  googleDriveFolderId: varchar("googleDriveFolderId", { length: 100 }), // Google Drive folder ID for files
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
