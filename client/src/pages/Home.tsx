@@ -1,6 +1,7 @@
 /**
  * Dark Theme with Purple Accents: Deep purple primary, dark backgrounds, parallel workflow support
  * Stages can run in parallel - multiple stages can be active simultaneously
+ * Now includes: Completed/Not Started sections, Resources Needed, Time/LOE estimates
  */
 
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +20,13 @@ import {
   ChevronRight,
   Download,
   AlertCircle,
-  PlayCircle
+  PlayCircle,
+  Users,
+  Server,
+  Wifi,
+  Shield,
+  Calendar,
+  Timer
 } from "lucide-react";
 import { useState } from "react";
 
@@ -43,11 +50,17 @@ const stages = [
     description: "Technical specifications and requirements collected",
     completedDate: "January 22, 2026",
     progress: 100,
+    duration: "5 business days",
+    loe: "Low",
     tasks: [
       { name: "Onboarding form submitted", status: "complete" },
       { name: "Technical specifications reviewed", status: "complete" },
       { name: "Network requirements validated", status: "complete" },
       { name: "Integration points identified", status: "complete" },
+    ],
+    resources: [
+      { name: "IT Administrator", description: "Complete onboarding form with technical details" },
+      { name: "Network Documentation", description: "Firewall rules, IP ranges, VPN requirements" },
     ],
   },
   {
@@ -56,11 +69,19 @@ const stages = [
     status: "in-progress",
     description: "Setting up network infrastructure and connectivity",
     progress: 75,
+    duration: "7-10 business days",
+    loe: "Medium",
+    estimatedCompletion: "February 8, 2026",
     tasks: [
       { name: "Firewall rules configured", status: "complete" },
       { name: "VPN connection established", status: "complete" },
       { name: "Bandwidth testing", status: "complete" },
       { name: "Security audit", status: "in-progress" },
+    ],
+    resources: [
+      { name: "Network Administrator", description: "2-3 hours for firewall configuration and testing" },
+      { name: "VPN Credentials", description: "Access to network infrastructure" },
+      { name: "Security Team", description: "1 hour for security audit review" },
     ],
   },
   {
@@ -69,11 +90,20 @@ const stages = [
     status: "in-progress",
     description: "PACS server deployment and workstation setup",
     progress: 25,
+    duration: "10-15 business days",
+    loe: "High",
+    estimatedCompletion: "February 20, 2026",
     tasks: [
       { name: "Server deployment", status: "complete" },
       { name: "Workstation software installation", status: "in-progress" },
       { name: "User account configuration", status: "pending" },
       { name: "Integration setup", status: "pending" },
+    ],
+    resources: [
+      { name: "IT Administrator", description: "4-6 hours for workstation setup coordination" },
+      { name: "Server Access", description: "Admin credentials for server configuration" },
+      { name: "Workstation List", description: "List of all workstations requiring software installation" },
+      { name: "Active Directory", description: "User account information for configuration" },
     ],
   },
   {
@@ -83,11 +113,18 @@ const stages = [
     description: "Comprehensive system testing and validation",
     estimatedStart: "February 25, 2026",
     progress: 0,
+    duration: "5-7 business days",
+    loe: "Medium",
     tasks: [
       { name: "Connectivity testing", status: "pending" },
       { name: "Image transfer validation", status: "pending" },
       { name: "User acceptance testing", status: "pending" },
       { name: "Performance benchmarking", status: "pending" },
+    ],
+    resources: [
+      { name: "Radiology Staff", description: "3-4 hours for user acceptance testing" },
+      { name: "IT Administrator", description: "2-3 hours for technical validation" },
+      { name: "Test Images", description: "Sample DICOM images for transfer testing" },
     ],
   },
   {
@@ -97,11 +134,18 @@ const stages = [
     description: "Final training and system launch",
     estimatedStart: "March 15, 2026",
     progress: 0,
+    duration: "3-5 business days",
+    loe: "Medium",
     tasks: [
       { name: "Staff training sessions", status: "pending" },
       { name: "Documentation delivery", status: "pending" },
       { name: "Go-live support", status: "pending" },
       { name: "30-day check-in scheduled", status: "pending" },
+    ],
+    resources: [
+      { name: "All Radiology Staff", description: "2-hour training session per group" },
+      { name: "IT Administrator", description: "Available for first 48 hours post-launch" },
+      { name: "Conference Room", description: "Space for training sessions" },
     ],
   },
 ];
@@ -132,6 +176,7 @@ const recentUpdates = [
 
 export default function Home() {
   const [selectedTab, setSelectedTab] = useState("overview");
+  const [expandedStage, setExpandedStage] = useState<number | null>(null);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -151,12 +196,22 @@ export default function Home() {
       case "in-progress":
         return <Badge className="bg-primary text-primary-foreground">In Progress</Badge>;
       default:
-        return <Badge variant="outline" className="text-muted-foreground border-muted">Pending</Badge>;
+        return <Badge variant="outline" className="text-muted-foreground border-muted">Not Started</Badge>;
     }
+  };
+
+  const getLOEBadge = (loe: string) => {
+    const colors = {
+      Low: "bg-green-500/20 text-green-400 border-green-500/30",
+      Medium: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+      High: "bg-red-500/20 text-red-400 border-red-500/30",
+    };
+    return <Badge className={colors[loe as keyof typeof colors] || ""}>{loe} Effort</Badge>;
   };
 
   const activeStages = stages.filter(s => s.status === "in-progress");
   const completedStages = stages.filter(s => s.status === "complete");
+  const notStartedStages = stages.filter(s => s.status === "pending");
 
   return (
     <div className="min-h-screen bg-background">
@@ -207,6 +262,10 @@ export default function Home() {
                 <PlayCircle className="w-4 h-4 text-primary fill-primary/20" />
                 <span className="font-medium">{activeStages.length} Active</span>
               </div>
+              <div className="flex items-center gap-2">
+                <Circle className="w-4 h-4 text-muted-foreground" />
+                <span className="font-medium">{notStartedStages.length} Not Started</span>
+              </div>
               <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/30">
                 <AlertCircle className="w-4 h-4 text-primary" />
                 <span className="font-medium text-primary">Parallel Execution Enabled</span>
@@ -217,16 +276,17 @@ export default function Home() {
 
         {/* Tabs for different views */}
         <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 lg:w-[500px]">
+          <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="active">Active Stages</TabsTrigger>
-            <TabsTrigger value="all">All Stages</TabsTrigger>
+            <TabsTrigger value="active">Active ({activeStages.length})</TabsTrigger>
+            <TabsTrigger value="completed">Completed ({completedStages.length})</TabsTrigger>
+            <TabsTrigger value="not-started">Not Started ({notStartedStages.length})</TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Active Stages */}
+              {/* Active Stages Summary */}
               <Card className="border-primary/30">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -239,21 +299,20 @@ export default function Home() {
                   {activeStages.map((stage) => (
                     <div key={stage.id} className="p-4 rounded-lg bg-primary/5 border border-primary/20">
                       <div className="flex items-start justify-between mb-3">
-                        <div>
+                        <div className="flex-1">
                           <h3 className="font-semibold text-foreground">{stage.name}</h3>
                           <p className="text-xs text-muted-foreground mt-1">{stage.description}</p>
+                          <div className="flex items-center gap-3 mt-2 flex-wrap">
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Timer className="w-3 h-3" />
+                              {stage.duration}
+                            </div>
+                            {getLOEBadge(stage.loe)}
+                          </div>
                         </div>
-                        <span className="text-sm font-bold text-primary">{stage.progress}%</span>
+                        <span className="text-sm font-bold text-primary ml-2">{stage.progress}%</span>
                       </div>
                       <Progress value={stage.progress} className="h-2" />
-                      <div className="mt-3 space-y-1">
-                        {stage.tasks.filter(t => t.status !== "pending").map((task, idx) => (
-                          <div key={idx} className="flex items-center gap-2 text-xs">
-                            {getStatusIcon(task.status)}
-                            <span className="text-muted-foreground">{task.name}</span>
-                          </div>
-                        ))}
-                      </div>
                     </div>
                   ))}
                 </CardContent>
@@ -342,32 +401,67 @@ export default function Home() {
               <Card key={stage.id} className="border-primary/30">
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center gap-3 mb-2">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2 flex-wrap">
                         <h2 className="text-2xl font-bold">{stage.name}</h2>
                         {getStatusBadge(stage.status)}
+                        {getLOEBadge(stage.loe)}
                       </div>
-                      <p className="text-muted-foreground">{stage.description}</p>
+                      <p className="text-muted-foreground mb-3">{stage.description}</p>
+                      <div className="flex items-center gap-4 text-sm flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <Timer className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Duration: {stage.duration}</span>
+                        </div>
+                        {stage.estimatedCompletion && (
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">Est. completion: {stage.estimatedCompletion}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right ml-4">
                       <div className="text-3xl font-bold text-primary">{stage.progress}%</div>
                       <p className="text-xs text-muted-foreground">Progress</p>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <Progress value={stage.progress} className="h-3 mb-6" />
-                  <h3 className="font-semibold mb-4">Tasks</h3>
-                  <div className="space-y-3">
-                    {stage.tasks.map((task, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border">
-                        <div className="flex items-center gap-3">
-                          {getStatusIcon(task.status)}
-                          <span className="text-sm font-medium">{task.name}</span>
+                <CardContent className="space-y-6">
+                  <div>
+                    <Progress value={stage.progress} className="h-3" />
+                  </div>
+
+                  {/* Tasks */}
+                  <div>
+                    <h3 className="font-semibold mb-4">Tasks</h3>
+                    <div className="space-y-3">
+                      {stage.tasks.map((task, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border">
+                          <div className="flex items-center gap-3">
+                            {getStatusIcon(task.status)}
+                            <span className="text-sm font-medium">{task.name}</span>
+                          </div>
+                          {getStatusBadge(task.status)}
                         </div>
-                        {getStatusBadge(task.status)}
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Resources Needed */}
+                  <div>
+                    <h3 className="font-semibold mb-4 flex items-center gap-2">
+                      <Users className="w-5 h-5 text-primary" />
+                      Resources Needed from Your Team
+                    </h3>
+                    <div className="space-y-3">
+                      {stage.resources.map((resource, index) => (
+                        <div key={index} className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                          <h4 className="font-semibold text-sm mb-1">{resource.name}</h4>
+                          <p className="text-xs text-muted-foreground">{resource.description}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -384,50 +478,125 @@ export default function Home() {
             )}
           </TabsContent>
 
-          {/* All Stages Tab */}
-          <TabsContent value="all" className="space-y-4">
-            {stages.map((stage) => (
-              <Card key={stage.id} className={stage.status === "in-progress" ? "border-primary/30" : ""}>
+          {/* Completed Stages Tab */}
+          <TabsContent value="completed" className="space-y-4">
+            {completedStages.map((stage) => (
+              <Card key={stage.id} className="border-primary/20 bg-primary/5">
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        {getStatusIcon(stage.status)}
+                      <div className="flex items-center gap-3 mb-2 flex-wrap">
+                        <CheckCircle2 className="w-6 h-6 text-primary" />
                         <h3 className="text-xl font-bold">{stage.name}</h3>
                         {getStatusBadge(stage.status)}
                       </div>
-                      <p className="text-sm text-muted-foreground">{stage.description}</p>
-                      {stage.completedDate && (
-                        <p className="text-xs text-primary mt-2">Completed {stage.completedDate}</p>
-                      )}
-                      {stage.estimatedStart && stage.status === "pending" && (
-                        <p className="text-xs text-muted-foreground mt-2">Est. start {stage.estimatedStart}</p>
-                      )}
-                    </div>
-                    {stage.status !== "pending" && (
-                      <div className="text-right ml-4">
-                        <div className="text-2xl font-bold text-primary">{stage.progress}%</div>
+                      <p className="text-sm text-muted-foreground mb-2">{stage.description}</p>
+                      <div className="flex items-center gap-4 text-sm flex-wrap">
+                        <p className="text-xs text-primary">Completed {stage.completedDate}</p>
+                        <div className="flex items-center gap-2">
+                          <Timer className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">Duration: {stage.duration}</span>
+                        </div>
+                        {getLOEBadge(stage.loe)}
                       </div>
-                    )}
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {stage.status !== "pending" && (
-                    <Progress value={stage.progress} className="h-2 mb-4" />
-                  )}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {stage.tasks.map((task, index) => (
                       <div key={index} className="flex items-center gap-2 p-2 rounded text-sm">
-                        {getStatusIcon(task.status)}
-                        <span className={task.status === "complete" ? "text-muted-foreground" : "text-foreground"}>
-                          {task.name}
-                        </span>
+                        <CheckCircle2 className="w-4 h-4 text-primary" />
+                        <span className="text-muted-foreground">{task.name}</span>
                       </div>
                     ))}
                   </div>
                 </CardContent>
               </Card>
             ))}
+
+            {completedStages.length === 0 && (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <CheckCircle2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No Completed Stages Yet</h3>
+                  <p className="text-sm text-muted-foreground">Completed stages will appear here.</p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* Not Started Stages Tab */}
+          <TabsContent value="not-started" className="space-y-4">
+            {notStartedStages.map((stage) => (
+              <Card key={stage.id}>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2 flex-wrap">
+                        <Circle className="w-6 h-6 text-muted-foreground" />
+                        <h3 className="text-xl font-bold">{stage.name}</h3>
+                        {getStatusBadge(stage.status)}
+                        {getLOEBadge(stage.loe)}
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-3">{stage.description}</p>
+                      <div className="flex items-center gap-4 text-sm flex-wrap">
+                        {stage.estimatedStart && (
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">Est. start: {stage.estimatedStart}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <Timer className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Duration: {stage.duration}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Planned Tasks */}
+                  <div>
+                    <h4 className="font-semibold mb-3 text-sm">Planned Tasks</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {stage.tasks.map((task, index) => (
+                        <div key={index} className="flex items-center gap-2 p-2 rounded text-sm">
+                          <Circle className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">{task.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Resources Needed */}
+                  <div>
+                    <h4 className="font-semibold mb-3 text-sm flex items-center gap-2">
+                      <Users className="w-5 h-5 text-muted-foreground" />
+                      Resources You'll Need to Provide
+                    </h4>
+                    <div className="space-y-2">
+                      {stage.resources.map((resource, index) => (
+                        <div key={index} className="p-3 rounded-lg bg-muted/30 border border-border">
+                          <h5 className="font-semibold text-sm mb-1">{resource.name}</h5>
+                          <p className="text-xs text-muted-foreground">{resource.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+
+            {notStartedStages.length === 0 && (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <CheckCircle2 className="w-12 h-12 text-primary mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">All Stages Started!</h3>
+                  <p className="text-sm text-muted-foreground">There are no pending stages remaining.</p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </div>
