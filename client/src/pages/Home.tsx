@@ -1,7 +1,7 @@
 /**
  * Dark Theme with Purple Accents: Deep purple primary, dark backgrounds, parallel workflow support
  * Stages can run in parallel - multiple stages can be active simultaneously
- * Now includes: Completed/Not Started sections, Resources Needed, Time/LOE estimates
+ * Now includes: Completed/Not Started sections, Resources Needed, Time/LOE estimates, Thermometer & Gantt visualization
  */
 
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +26,8 @@ import {
   Wifi,
   Shield,
   Calendar,
-  Timer
+  Timer,
+  TrendingUp
 } from "lucide-react";
 import { useState } from "react";
 
@@ -39,9 +40,12 @@ const hospitalData = {
   submissionDate: "January 15, 2026",
   estimatedGoLive: "March 20, 2026",
   overallProgress: 42,
+  daysElapsed: 16,
+  totalDays: 64,
+  daysRemaining: 48,
 };
 
-// Stages can now be in-progress simultaneously
+// Stages with date ranges for Gantt visualization
 const stages = [
   {
     id: 1,
@@ -49,6 +53,8 @@ const stages = [
     status: "complete",
     description: "Technical specifications and requirements collected",
     completedDate: "January 22, 2026",
+    startDate: "January 15, 2026",
+    endDate: "January 22, 2026",
     progress: 100,
     duration: "5 business days",
     loe: "Low",
@@ -68,6 +74,8 @@ const stages = [
     name: "Network Configuration",
     status: "in-progress",
     description: "Setting up network infrastructure and connectivity",
+    startDate: "January 23, 2026",
+    endDate: "February 8, 2026",
     progress: 75,
     duration: "7-10 business days",
     loe: "Medium",
@@ -89,6 +97,8 @@ const stages = [
     name: "System Installation",
     status: "in-progress",
     description: "PACS server deployment and workstation setup",
+    startDate: "January 28, 2026",
+    endDate: "February 20, 2026",
     progress: 25,
     duration: "10-15 business days",
     loe: "High",
@@ -111,6 +121,8 @@ const stages = [
     name: "Testing",
     status: "pending",
     description: "Comprehensive system testing and validation",
+    startDate: "February 25, 2026",
+    endDate: "March 5, 2026",
     estimatedStart: "February 25, 2026",
     progress: 0,
     duration: "5-7 business days",
@@ -132,6 +144,8 @@ const stages = [
     name: "Go-Live",
     status: "pending",
     description: "Final training and system launch",
+    startDate: "March 15, 2026",
+    endDate: "March 20, 2026",
     estimatedStart: "March 15, 2026",
     progress: 0,
     duration: "3-5 business days",
@@ -176,7 +190,6 @@ const recentUpdates = [
 
 export default function Home() {
   const [selectedTab, setSelectedTab] = useState("overview");
-  const [expandedStage, setExpandedStage] = useState<number | null>(null);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -213,6 +226,9 @@ export default function Home() {
   const completedStages = stages.filter(s => s.status === "complete");
   const notStartedStages = stages.filter(s => s.status === "pending");
 
+  // Calculate thermometer fill percentage
+  const thermometerProgress = (hospitalData.daysElapsed / hospitalData.totalDays) * 100;
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -235,370 +251,521 @@ export default function Home() {
 
       {/* Main Content */}
       <div className="container py-8">
-        {/* Overall Progress Card */}
-        <Card className="mb-8 shadow-lg border-primary/20 bg-gradient-to-br from-card to-card/50">
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div>
-                <CardTitle className="text-2xl">Onboarding Progress</CardTitle>
-                <CardDescription className="mt-2">
-                  Submitted on {hospitalData.submissionDate} • Estimated Go-Live: {hospitalData.estimatedGoLive}
-                </CardDescription>
-              </div>
-              <div className="text-right">
-                <div className="text-4xl font-bold text-primary">{hospitalData.overallProgress}%</div>
-                <p className="text-xs text-muted-foreground mt-1">Complete</p>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Progress value={hospitalData.overallProgress} className="h-3 mb-4" />
-            <div className="flex items-center gap-6 text-sm flex-wrap">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-primary" />
-                <span className="font-medium">{completedStages.length} Completed</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <PlayCircle className="w-4 h-4 text-primary fill-primary/20" />
-                <span className="font-medium">{activeStages.length} Active</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Circle className="w-4 h-4 text-muted-foreground" />
-                <span className="font-medium">{notStartedStages.length} Not Started</span>
-              </div>
-              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/30">
-                <AlertCircle className="w-4 h-4 text-primary" />
-                <span className="font-medium text-primary">Parallel Execution Enabled</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-8">
+          {/* Left Column - Main Content */}
+          <div className="space-y-8">
+            {/* Overall Progress Card */}
+            <Card className="shadow-lg border-primary/20 bg-gradient-to-br from-card to-card/50">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-2xl">Onboarding Progress</CardTitle>
+                    <CardDescription className="mt-2">
+                      Submitted on {hospitalData.submissionDate} • Estimated Go-Live: {hospitalData.estimatedGoLive}
+                    </CardDescription>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-4xl font-bold text-primary">{hospitalData.overallProgress}%</div>
+                    <p className="text-xs text-muted-foreground mt-1">Complete</p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Progress value={hospitalData.overallProgress} className="h-3 mb-4" />
+                <div className="flex items-center gap-6 text-sm flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-primary" />
+                    <span className="font-medium">{completedStages.length} Completed</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <PlayCircle className="w-4 h-4 text-primary fill-primary/20" />
+                    <span className="font-medium">{activeStages.length} Active</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Circle className="w-4 h-4 text-muted-foreground" />
+                    <span className="font-medium">{notStartedStages.length} Not Started</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/30">
+                    <AlertCircle className="w-4 h-4 text-primary" />
+                    <span className="font-medium text-primary">Parallel Execution Enabled</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-        {/* Tabs for different views */}
-        <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="active">Active ({activeStages.length})</TabsTrigger>
-            <TabsTrigger value="completed">Completed ({completedStages.length})</TabsTrigger>
-            <TabsTrigger value="not-started">Not Started ({notStartedStages.length})</TabsTrigger>
-          </TabsList>
+            {/* Gantt-style Timeline */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-primary" />
+                  Timeline Overview
+                </CardTitle>
+                <CardDescription>Visual representation of all stages and their timelines</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {stages.map((stage) => (
+                    <div key={stage.id} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          {getStatusIcon(stage.status)}
+                          <span className="font-semibold text-sm truncate">{stage.name}</span>
+                          {getStatusBadge(stage.status)}
+                        </div>
+                        <div className="text-xs text-muted-foreground ml-4 whitespace-nowrap">
+                          {stage.startDate} - {stage.endDate}
+                        </div>
+                      </div>
+                      <div className="relative h-8 bg-muted/30 rounded-lg overflow-hidden">
+                        {stage.status === "complete" && (
+                          <div className="absolute inset-0 bg-primary/30 border-2 border-primary/50 rounded-lg flex items-center px-3">
+                            <span className="text-xs font-medium text-primary">100% Complete</span>
+                          </div>
+                        )}
+                        {stage.status === "in-progress" && (
+                          <div 
+                            className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary to-primary/70 border-2 border-primary rounded-lg flex items-center px-3"
+                            style={{ width: `${stage.progress}%` }}
+                          >
+                            <span className="text-xs font-medium text-primary-foreground whitespace-nowrap">{stage.progress}% Complete</span>
+                          </div>
+                        )}
+                        {stage.status === "pending" && (
+                          <div className="absolute inset-0 border-2 border-dashed border-muted rounded-lg flex items-center px-3">
+                            <span className="text-xs text-muted-foreground">Scheduled</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
 
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Active Stages Summary */}
-              <Card className="border-primary/30">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <PlayCircle className="w-5 h-5 text-primary" />
-                    Active Stages
-                  </CardTitle>
-                  <CardDescription>Currently in progress</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {activeStages.map((stage) => (
-                    <div key={stage.id} className="p-4 rounded-lg bg-primary/5 border border-primary/20">
-                      <div className="flex items-start justify-between mb-3">
+            {/* Tabs for different views */}
+            <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="active">Active ({activeStages.length})</TabsTrigger>
+                <TabsTrigger value="completed">Completed ({completedStages.length})</TabsTrigger>
+                <TabsTrigger value="not-started">Not Started ({notStartedStages.length})</TabsTrigger>
+              </TabsList>
+
+              {/* Overview Tab */}
+              <TabsContent value="overview" className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Active Stages Summary */}
+                  <Card className="border-primary/30">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <PlayCircle className="w-5 h-5 text-primary" />
+                        Active Stages
+                      </CardTitle>
+                      <CardDescription>Currently in progress</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {activeStages.map((stage) => (
+                        <div key={stage.id} className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-foreground">{stage.name}</h3>
+                              <p className="text-xs text-muted-foreground mt-1">{stage.description}</p>
+                              <div className="flex items-center gap-3 mt-2 flex-wrap">
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  <Timer className="w-3 h-3" />
+                                  {stage.duration}
+                                </div>
+                                {getLOEBadge(stage.loe)}
+                              </div>
+                            </div>
+                            <span className="text-sm font-bold text-primary ml-2">{stage.progress}%</span>
+                          </div>
+                          <Progress value={stage.progress} className="h-2" />
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+
+                  {/* Recent Updates */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Recent Updates</CardTitle>
+                      <CardDescription>Latest activity on your onboarding</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {recentUpdates.map((update, index) => (
+                          <div key={index}>
+                            <div className="flex items-start gap-3">
+                              <div className="w-2 h-2 rounded-full bg-primary mt-2" />
+                              <div className="flex-1">
+                                <p className="text-xs text-muted-foreground mb-1">{update.date}</p>
+                                <h4 className="font-semibold text-sm mb-1">{update.title}</h4>
+                                <p className="text-sm text-muted-foreground">{update.description}</p>
+                              </div>
+                            </div>
+                            {index < recentUpdates.length - 1 && <Separator className="mt-4" />}
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Documents */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Documents</CardTitle>
+                    <CardDescription>Download configuration summaries and documentation</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {documents.map((doc, index) => (
+                        <button
+                          key={index}
+                          className="flex flex-col items-start p-4 rounded-lg hover:bg-primary/5 border border-border hover:border-primary/30 transition-all text-left"
+                        >
+                          <FileText className="w-6 h-6 text-primary mb-3" />
+                          <p className="text-sm font-medium mb-1">{doc.name}</p>
+                          <p className="text-xs text-muted-foreground mb-3">{doc.date} • {doc.size}</p>
+                          <div className="flex items-center gap-1 text-xs text-primary">
+                            <Download className="w-3 h-3" />
+                            Download
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Contact Card */}
+                <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/30">
+                  <CardHeader>
+                    <CardTitle>Need Help?</CardTitle>
+                    <CardDescription>Our team is here to support you</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-primary/20">
+                        <Mail className="w-4 h-4 text-primary" />
+                      </div>
+                      <a href={`mailto:${hospitalData.contactEmail}`} className="text-sm text-primary hover:underline">
+                        {hospitalData.contactEmail}
+                      </a>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-primary/20">
+                        <Phone className="w-4 h-4 text-primary" />
+                      </div>
+                      <span className="text-sm text-foreground">{hospitalData.contactPhone}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Active Stages Tab */}
+              <TabsContent value="active" className="space-y-6">
+                {activeStages.map((stage) => (
+                  <Card key={stage.id} className="border-primary/30">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
                         <div className="flex-1">
-                          <h3 className="font-semibold text-foreground">{stage.name}</h3>
-                          <p className="text-xs text-muted-foreground mt-1">{stage.description}</p>
-                          <div className="flex items-center gap-3 mt-2 flex-wrap">
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Timer className="w-3 h-3" />
-                              {stage.duration}
+                          <div className="flex items-center gap-3 mb-2 flex-wrap">
+                            <h2 className="text-2xl font-bold">{stage.name}</h2>
+                            {getStatusBadge(stage.status)}
+                            {getLOEBadge(stage.loe)}
+                          </div>
+                          <p className="text-muted-foreground mb-3">{stage.description}</p>
+                          <div className="flex items-center gap-4 text-sm flex-wrap">
+                            <div className="flex items-center gap-2">
+                              <Timer className="w-4 h-4 text-muted-foreground" />
+                              <span className="text-muted-foreground">Duration: {stage.duration}</span>
+                            </div>
+                            {stage.estimatedCompletion && (
+                              <div className="flex items-center gap-2">
+                                <Calendar className="w-4 h-4 text-muted-foreground" />
+                                <span className="text-muted-foreground">Est. completion: {stage.estimatedCompletion}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right ml-4">
+                          <div className="text-3xl font-bold text-primary">{stage.progress}%</div>
+                          <p className="text-xs text-muted-foreground">Progress</p>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <div>
+                        <Progress value={stage.progress} className="h-3" />
+                      </div>
+
+                      {/* Tasks */}
+                      <div>
+                        <h3 className="font-semibold mb-4">Tasks</h3>
+                        <div className="space-y-3">
+                          {stage.tasks.map((task, index) => (
+                            <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border">
+                              <div className="flex items-center gap-3">
+                                {getStatusIcon(task.status)}
+                                <span className="text-sm font-medium">{task.name}</span>
+                              </div>
+                              {getStatusBadge(task.status)}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Resources Needed */}
+                      <div>
+                        <h3 className="font-semibold mb-4 flex items-center gap-2">
+                          <Users className="w-5 h-5 text-primary" />
+                          Resources Needed from Your Team
+                        </h3>
+                        <div className="space-y-3">
+                          {stage.resources.map((resource, index) => (
+                            <div key={index} className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                              <h4 className="font-semibold text-sm mb-1">{resource.name}</h4>
+                              <p className="text-xs text-muted-foreground">{resource.description}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+
+                {activeStages.length === 0 && (
+                  <Card>
+                    <CardContent className="py-12 text-center">
+                      <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">No Active Stages</h3>
+                      <p className="text-sm text-muted-foreground">All stages are either completed or pending.</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+
+              {/* Completed Stages Tab */}
+              <TabsContent value="completed" className="space-y-4">
+                {completedStages.map((stage) => (
+                  <Card key={stage.id} className="border-primary/20 bg-primary/5">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2 flex-wrap">
+                            <CheckCircle2 className="w-6 h-6 text-primary" />
+                            <h3 className="text-xl font-bold">{stage.name}</h3>
+                            {getStatusBadge(stage.status)}
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-2">{stage.description}</p>
+                          <div className="flex items-center gap-4 text-sm flex-wrap">
+                            <p className="text-xs text-primary">Completed {stage.completedDate}</p>
+                            <div className="flex items-center gap-2">
+                              <Timer className="w-3 h-3 text-muted-foreground" />
+                              <span className="text-xs text-muted-foreground">Duration: {stage.duration}</span>
                             </div>
                             {getLOEBadge(stage.loe)}
                           </div>
                         </div>
-                        <span className="text-sm font-bold text-primary ml-2">{stage.progress}%</span>
                       </div>
-                      <Progress value={stage.progress} className="h-2" />
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {stage.tasks.map((task, index) => (
+                          <div key={index} className="flex items-center gap-2 p-2 rounded text-sm">
+                            <CheckCircle2 className="w-4 h-4 text-primary" />
+                            <span className="text-muted-foreground">{task.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
 
-              {/* Recent Updates */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Updates</CardTitle>
-                  <CardDescription>Latest activity on your onboarding</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {recentUpdates.map((update, index) => (
-                      <div key={index}>
-                        <div className="flex items-start gap-3">
-                          <div className="w-2 h-2 rounded-full bg-primary mt-2" />
-                          <div className="flex-1">
-                            <p className="text-xs text-muted-foreground mb-1">{update.date}</p>
-                            <h4 className="font-semibold text-sm mb-1">{update.title}</h4>
-                            <p className="text-sm text-muted-foreground">{update.description}</p>
+                {completedStages.length === 0 && (
+                  <Card>
+                    <CardContent className="py-12 text-center">
+                      <CheckCircle2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">No Completed Stages Yet</h3>
+                      <p className="text-sm text-muted-foreground">Completed stages will appear here.</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+
+              {/* Not Started Stages Tab */}
+              <TabsContent value="not-started" className="space-y-4">
+                {notStartedStages.map((stage) => (
+                  <Card key={stage.id}>
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2 flex-wrap">
+                            <Circle className="w-6 h-6 text-muted-foreground" />
+                            <h3 className="text-xl font-bold">{stage.name}</h3>
+                            {getStatusBadge(stage.status)}
+                            {getLOEBadge(stage.loe)}
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-3">{stage.description}</p>
+                          <div className="flex items-center gap-4 text-sm flex-wrap">
+                            {stage.estimatedStart && (
+                              <div className="flex items-center gap-2">
+                                <Calendar className="w-4 h-4 text-muted-foreground" />
+                                <span className="text-muted-foreground">Est. start: {stage.estimatedStart}</span>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2">
+                              <Timer className="w-4 h-4 text-muted-foreground" />
+                              <span className="text-muted-foreground">Duration: {stage.duration}</span>
+                            </div>
                           </div>
                         </div>
-                        {index < recentUpdates.length - 1 && <Separator className="mt-4" />}
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      {/* Planned Tasks */}
+                      <div>
+                        <h4 className="font-semibold mb-3 text-sm">Planned Tasks</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {stage.tasks.map((task, index) => (
+                            <div key={index} className="flex items-center gap-2 p-2 rounded text-sm">
+                              <Circle className="w-4 h-4 text-muted-foreground" />
+                              <span className="text-muted-foreground">{task.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
 
-            {/* Documents */}
-            <Card>
+                      {/* Resources Needed */}
+                      <div>
+                        <h4 className="font-semibold mb-3 text-sm flex items-center gap-2">
+                          <Users className="w-5 h-5 text-muted-foreground" />
+                          Resources You'll Need to Provide
+                        </h4>
+                        <div className="space-y-2">
+                          {stage.resources.map((resource, index) => (
+                            <div key={index} className="p-3 rounded-lg bg-muted/30 border border-border">
+                              <h5 className="font-semibold text-sm mb-1">{resource.name}</h5>
+                              <p className="text-xs text-muted-foreground">{resource.description}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+
+                {notStartedStages.length === 0 && (
+                  <Card>
+                    <CardContent className="py-12 text-center">
+                      <CheckCircle2 className="w-12 h-12 text-primary mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">All Stages Started!</h3>
+                      <p className="text-sm text-muted-foreground">There are no pending stages remaining.</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          {/* Right Column - Thermometer Progress Indicator */}
+          <div className="space-y-6">
+            <Card className="sticky top-24 border-primary/30 bg-gradient-to-b from-card to-card/50">
               <CardHeader>
-                <CardTitle>Documents</CardTitle>
-                <CardDescription>Download configuration summaries and documentation</CardDescription>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <TrendingUp className="w-5 h-5 text-primary" />
+                  Timeline Progress
+                </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {documents.map((doc, index) => (
-                    <button
-                      key={index}
-                      className="flex flex-col items-start p-4 rounded-lg hover:bg-primary/5 border border-border hover:border-primary/30 transition-all text-left"
+              <CardContent className="space-y-6">
+                {/* Thermometer Visualization */}
+                <div className="flex flex-col items-center">
+                  <div className="relative w-20 h-64 bg-muted/30 rounded-full overflow-hidden border-2 border-border">
+                    {/* Thermometer fill */}
+                    <div 
+                      className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-primary via-primary/80 to-primary/60 transition-all duration-1000"
+                      style={{ height: `${thermometerProgress}%` }}
                     >
-                      <FileText className="w-6 h-6 text-primary mb-3" />
-                      <p className="text-sm font-medium mb-1">{doc.name}</p>
-                      <p className="text-xs text-muted-foreground mb-3">{doc.date} • {doc.size}</p>
-                      <div className="flex items-center gap-1 text-xs text-primary">
-                        <Download className="w-3 h-3" />
-                        Download
+                      {/* Animated bubbles effect */}
+                      <div className="absolute inset-0 opacity-30">
+                        <div className="absolute bottom-2 left-1/2 w-2 h-2 bg-white rounded-full animate-ping" style={{ animationDuration: '2s' }} />
+                        <div className="absolute bottom-8 left-1/3 w-1.5 h-1.5 bg-white rounded-full animate-ping" style={{ animationDuration: '3s', animationDelay: '0.5s' }} />
+                        <div className="absolute bottom-14 left-2/3 w-1 h-1 bg-white rounded-full animate-ping" style={{ animationDuration: '2.5s', animationDelay: '1s' }} />
                       </div>
-                    </button>
-                  ))}
+                    </div>
+                    {/* Thermometer bulb */}
+                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-16 -mb-4 bg-primary rounded-full border-4 border-card shadow-lg flex items-center justify-center">
+                      <span className="text-xs font-bold text-primary-foreground">{Math.round(thermometerProgress)}%</span>
+                    </div>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
 
-            {/* Contact Card */}
-            <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/30">
-              <CardHeader>
-                <CardTitle>Need Help?</CardTitle>
-                <CardDescription>Our team is here to support you</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/20">
-                    <Mail className="w-4 h-4 text-primary" />
+                <Separator />
+
+                {/* Stats */}
+                <div className="space-y-4">
+                  <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-muted-foreground">Days Elapsed</span>
+                      <Clock className="w-4 h-4 text-primary" />
+                    </div>
+                    <div className="text-2xl font-bold text-primary">{hospitalData.daysElapsed}</div>
+                    <p className="text-xs text-muted-foreground mt-1">Since {hospitalData.submissionDate}</p>
                   </div>
-                  <a href={`mailto:${hospitalData.contactEmail}`} className="text-sm text-primary hover:underline">
-                    {hospitalData.contactEmail}
-                  </a>
+
+                  <div className="p-4 rounded-lg bg-muted/30 border border-border">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-muted-foreground">Days Remaining</span>
+                      <Calendar className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                    <div className="text-2xl font-bold text-foreground">{hospitalData.daysRemaining}</div>
+                    <p className="text-xs text-muted-foreground mt-1">Until {hospitalData.estimatedGoLive}</p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-muted/30 border border-border">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-muted-foreground">Total Duration</span>
+                      <Timer className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                    <div className="text-2xl font-bold text-foreground">{hospitalData.totalDays}</div>
+                    <p className="text-xs text-muted-foreground mt-1">Business days</p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/20">
-                    <Phone className="w-4 h-4 text-primary" />
-                  </div>
-                  <span className="text-sm text-foreground">{hospitalData.contactPhone}</span>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
 
-          {/* Active Stages Tab */}
-          <TabsContent value="active" className="space-y-6">
-            {activeStages.map((stage) => (
-              <Card key={stage.id} className="border-primary/30">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2 flex-wrap">
-                        <h2 className="text-2xl font-bold">{stage.name}</h2>
-                        {getStatusBadge(stage.status)}
-                        {getLOEBadge(stage.loe)}
-                      </div>
-                      <p className="text-muted-foreground mb-3">{stage.description}</p>
-                      <div className="flex items-center gap-4 text-sm flex-wrap">
-                        <div className="flex items-center gap-2">
-                          <Timer className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">Duration: {stage.duration}</span>
-                        </div>
-                        {stage.estimatedCompletion && (
-                          <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-muted-foreground">Est. completion: {stage.estimatedCompletion}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-right ml-4">
-                      <div className="text-3xl font-bold text-primary">{stage.progress}%</div>
-                      <p className="text-xs text-muted-foreground">Progress</p>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div>
-                    <Progress value={stage.progress} className="h-3" />
-                  </div>
+                <Separator />
 
-                  {/* Tasks */}
-                  <div>
-                    <h3 className="font-semibold mb-4">Tasks</h3>
-                    <div className="space-y-3">
-                      {stage.tasks.map((task, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border">
-                          <div className="flex items-center gap-3">
-                            {getStatusIcon(task.status)}
-                            <span className="text-sm font-medium">{task.name}</span>
-                          </div>
-                          {getStatusBadge(task.status)}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Resources Needed */}
-                  <div>
-                    <h3 className="font-semibold mb-4 flex items-center gap-2">
-                      <Users className="w-5 h-5 text-primary" />
-                      Resources Needed from Your Team
-                    </h3>
-                    <div className="space-y-3">
-                      {stage.resources.map((resource, index) => (
-                        <div key={index} className="p-4 rounded-lg bg-primary/5 border border-primary/20">
-                          <h4 className="font-semibold text-sm mb-1">{resource.name}</h4>
-                          <p className="text-xs text-muted-foreground">{resource.description}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-
-            {activeStages.length === 0 && (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Active Stages</h3>
-                  <p className="text-sm text-muted-foreground">All stages are either completed or pending.</p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          {/* Completed Stages Tab */}
-          <TabsContent value="completed" className="space-y-4">
-            {completedStages.map((stage) => (
-              <Card key={stage.id} className="border-primary/20 bg-primary/5">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2 flex-wrap">
-                        <CheckCircle2 className="w-6 h-6 text-primary" />
-                        <h3 className="text-xl font-bold">{stage.name}</h3>
-                        {getStatusBadge(stage.status)}
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2">{stage.description}</p>
-                      <div className="flex items-center gap-4 text-sm flex-wrap">
-                        <p className="text-xs text-primary">Completed {stage.completedDate}</p>
-                        <div className="flex items-center gap-2">
-                          <Timer className="w-3 h-3 text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground">Duration: {stage.duration}</span>
-                        </div>
-                        {getLOEBadge(stage.loe)}
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {stage.tasks.map((task, index) => (
-                      <div key={index} className="flex items-center gap-2 p-2 rounded text-sm">
+                {/* Stage Breakdown */}
+                <div>
+                  <h4 className="font-semibold text-sm mb-3">Stage Status</h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
                         <CheckCircle2 className="w-4 h-4 text-primary" />
-                        <span className="text-muted-foreground">{task.name}</span>
+                        <span>Completed</span>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-
-            {completedStages.length === 0 && (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <CheckCircle2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Completed Stages Yet</h3>
-                  <p className="text-sm text-muted-foreground">Completed stages will appear here.</p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          {/* Not Started Stages Tab */}
-          <TabsContent value="not-started" className="space-y-4">
-            {notStartedStages.map((stage) => (
-              <Card key={stage.id}>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2 flex-wrap">
-                        <Circle className="w-6 h-6 text-muted-foreground" />
-                        <h3 className="text-xl font-bold">{stage.name}</h3>
-                        {getStatusBadge(stage.status)}
-                        {getLOEBadge(stage.loe)}
+                      <span className="font-bold">{completedStages.length}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <PlayCircle className="w-4 h-4 text-primary fill-primary/20" />
+                        <span>Active</span>
                       </div>
-                      <p className="text-sm text-muted-foreground mb-3">{stage.description}</p>
-                      <div className="flex items-center gap-4 text-sm flex-wrap">
-                        {stage.estimatedStart && (
-                          <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-muted-foreground">Est. start: {stage.estimatedStart}</span>
-                          </div>
-                        )}
-                        <div className="flex items-center gap-2">
-                          <Timer className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">Duration: {stage.duration}</span>
-                        </div>
+                      <span className="font-bold">{activeStages.length}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <Circle className="w-4 h-4 text-muted-foreground" />
+                        <span>Not Started</span>
                       </div>
+                      <span className="font-bold">{notStartedStages.length}</span>
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Planned Tasks */}
-                  <div>
-                    <h4 className="font-semibold mb-3 text-sm">Planned Tasks</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {stage.tasks.map((task, index) => (
-                        <div key={index} className="flex items-center gap-2 p-2 rounded text-sm">
-                          <Circle className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">{task.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Resources Needed */}
-                  <div>
-                    <h4 className="font-semibold mb-3 text-sm flex items-center gap-2">
-                      <Users className="w-5 h-5 text-muted-foreground" />
-                      Resources You'll Need to Provide
-                    </h4>
-                    <div className="space-y-2">
-                      {stage.resources.map((resource, index) => (
-                        <div key={index} className="p-3 rounded-lg bg-muted/30 border border-border">
-                          <h5 className="font-semibold text-sm mb-1">{resource.name}</h5>
-                          <p className="text-xs text-muted-foreground">{resource.description}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-
-            {notStartedStages.length === 0 && (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <CheckCircle2 className="w-12 h-12 text-primary mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">All Stages Started!</h3>
-                  <p className="text-sm text-muted-foreground">There are no pending stages remaining.</p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-        </Tabs>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </div>
   );
