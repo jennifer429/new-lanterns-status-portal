@@ -131,8 +131,8 @@ export default function Home() {
             <div className="flex items-center gap-4">
               <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-8" />
               <div>
-                <h1 className="text-2xl font-bold text-foreground">PACS Onboarding</h1>
-                <p className="text-sm text-muted-foreground mt-1">Status Portal</p>
+                <h1 className="text-2xl font-bold text-foreground">Implementation Portal</h1>
+                <p className="text-sm text-muted-foreground mt-1">PACS Onboarding & Configuration</p>
               </div>
             </div>
             <div className="text-right">
