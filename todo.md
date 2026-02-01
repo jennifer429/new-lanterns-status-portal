@@ -128,3 +128,7 @@
 - [x] Add progress tracking and completion status
 - [x] Test complete intake flow
 - [ ] Copy intake checklist structure to Template Client Checklist for reuse
+
+## Navigation to Intake Form
+- [x] Add prominent link/button on main portal page to access intake form
+- [x] Test navigation flow from portal to intake form

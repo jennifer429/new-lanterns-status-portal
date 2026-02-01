@@ -19,12 +19,13 @@ import {
   Lock,
   ChevronRight,
   PartyPopper,
-  Coffee
+  Coffee,
+  ClipboardList
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { ProgressLogo } from "@/components/ProgressLogo";
-import { useRoute } from "wouter";
+import { useRoute, Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { FileUpload } from "@/components/FileUpload";
 import { FileList } from "@/components/FileList";
@@ -240,9 +241,17 @@ export default function Home() {
                 <p className="text-xs text-muted-foreground">PACS Onboarding & Configuration</p>
               </div>
             </div>
-            <div className="text-right">
-              <p className="text-sm font-medium text-foreground">{hospitalData.name}</p>
-              <p className="text-xs text-muted-foreground">Goal: {hospitalData.goalDate}</p>
+            <div className="flex items-center gap-4">
+              <Link href={`/org/${orgSlug}/intake`}>
+                <Button variant="outline" className="gap-2">
+                  <ClipboardList className="w-4 h-4" />
+                  Complete Intake Form
+                </Button>
+              </Link>
+              <div className="text-right">
+                <p className="text-sm font-medium text-foreground">{hospitalData.name}</p>
+                <p className="text-xs text-muted-foreground">Goal: {hospitalData.goalDate}</p>
+              </div>
             </div>
           </div>
         </div>
