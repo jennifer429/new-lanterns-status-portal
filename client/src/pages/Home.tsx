@@ -339,6 +339,8 @@ export default function Home() {
                               organizationId={organizationId}
                               taskId={nextTaskInfo.task.id}
                               taskName={nextTaskInfo.task.friendlyTask}
+                              clickupListId={organization?.clickupListId || undefined}
+                              linearIssueId={organization?.linearIssueId || undefined}
                               onUploadComplete={() => {
                                 // Refetch files list
                               }}

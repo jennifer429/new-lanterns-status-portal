@@ -111,3 +111,11 @@
 - [x] Create admin page for PM to set up new organizations
 - [x] Test two-way communication flow with demo organization
 - [ ] Update ops documentation with simplified setup process
+
+## Core Integration Flow Verification
+- [x] Verify Google Drive file upload is working correctly
+- [x] Update FileUpload component to pass clickupListId and linearIssueId
+- [x] Verify ClickUp/Linear integration code is in place (requires MCP servers to be enabled)
+- [x] Document integration setup for PM/Ops team
+- [ ] Enable ClickUp and Linear MCP servers in project settings
+- [ ] Test complete flow with MCP servers enabled: upload file → Google Drive → ClickUp → Linear

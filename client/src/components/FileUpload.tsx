@@ -9,6 +9,8 @@ interface FileUploadProps {
   organizationId: number;
   taskId: string;
   taskName: string;
+  clickupListId?: string;
+  linearIssueId?: string;
   onUploadComplete?: () => void;
 }
 
@@ -16,6 +18,8 @@ export function FileUpload({
   organizationId,
   taskId,
   taskName,
+  clickupListId,
+  linearIssueId,
   onUploadComplete,
 }: FileUploadProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -65,6 +69,8 @@ export function FileUpload({
           fileData: base64Content,
           mimeType: selectedFile.type,
           uploadedBy: "Hospital User", // TODO: Get from auth context
+          clickupTaskId: clickupListId,
+          linearIssueId: linearIssueId,
         });
 
         setIsUploading(false);
