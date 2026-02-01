@@ -39,3 +39,13 @@
 - [ ] Filter for @Client tagged comments
 - [ ] Display activity feed in portal
 - [ ] Document Zapier setup in ops guide
+
+## Tetris-Inspired UX Redesign
+- [x] Restructure checklist into 4 levels (Identity, Flow, Validation, Confidence)
+- [x] Break down tasks into 10-15 minute bite-sized actions
+- [x] Rewrite all task language to be supportive and plain English
+- [x] Design "Next Task" prominent panel
+- [x] Add visual completion with tiles/progress bars
+- [x] Add "You're done for today" stopping points
+- [x] Implement level locking (complete to unlock next)
+- [ ] Add per-role progress tracking (IT/Clinical/Admin)
