@@ -238,3 +238,11 @@
 - [x] Update header/titles to work for both radiology groups and healthcare orgs
 - [x] Review all user-facing text for organization-type assumptions
 - [x] Test updated language with both organization types in mind
+
+## Post-Login User Experience Improvements
+- [x] Analyze Google Sheet questionnaire structure
+- [x] Design single-page collapsible questionnaire with status bar
+- [x] Implement conditional question logic based on dropdown answers
+- [x] Add section completion tracking
+- [x] Remove confusing gamification/levels system
+- [x] Test improved single-page UX
