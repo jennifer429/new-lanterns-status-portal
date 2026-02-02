@@ -68,7 +68,7 @@ export function FileUpload({
           fileName: selectedFile.name,
           fileData: base64Content,
           mimeType: selectedFile.type,
-          uploadedBy: "Hospital User", // TODO: Get from auth context
+          uploadedBy: "User", // TODO: Get from auth context
           clickupTaskId: clickupListId,
           linearIssueId: linearIssueId,
         });

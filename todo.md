@@ -232,3 +232,9 @@
 - [x] Move "Forgot Password" link below Access Portal button
 - [x] Update support email to support@newlantern.ai across all pages
 - [x] Test tab order: Email → Password → Access Portal button
+
+## Portal Language Updates
+- [x] Replace "hospital" references with flexible organization terminology
+- [x] Update header/titles to work for both radiology groups and healthcare orgs
+- [x] Review all user-facing text for organization-type assumptions
+- [x] Test updated language with both organization types in mind

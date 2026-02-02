@@ -211,7 +211,7 @@ export function ActivityFeed({ organizationId }: ActivityFeedProps) {
                           : "bg-green-500/10 text-green-400 border-green-500/30"
                       }
                     >
-                      {activity.source === "linear" ? "Development" : activity.source === "clickup" ? "PM Team" : "Hospital"}
+                      {activity.source === "linear" ? "Development" : activity.source === "clickup" ? "PM Team" : "Client"}
                     </Badge>
                   </div>
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">

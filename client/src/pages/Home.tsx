@@ -32,10 +32,10 @@ import { FileList } from "@/components/FileList";
 import { Separator } from "@/components/ui/separator";
 import { ActivityFeed } from "@/components/ActivityFeed";
 
-// Mock hospital data
-const hospitalData = {
-  name: "Memorial General Hospital",
-  contactName: "Dr. Sarah Chen",
+// Mock organization data
+const defaultOrgData = {
+  name: "Your Organization",
+  contactName: "Contact Name",
   goalDate: "March 1, 2026",
 };
 
@@ -211,9 +211,9 @@ export default function Home() {
   const achievementTier = getAchievementTier();
 
   // Use organization data if available, otherwise use defaults
-  const hospitalData = {
-    name: organization?.name || "Memorial General Hospital",
-    contactName: organization?.contactName || "Dr. Sarah Chen",
+  const orgData = {
+    name: organization?.name || "Your Organization",
+    contactName: organization?.contactName || "Contact Name",
     goalDate: organization?.goalDate || "March 1, 2026",
   };
 
@@ -249,8 +249,8 @@ export default function Home() {
                 </Button>
               </Link>
               <div className="text-right">
-                <p className="text-sm font-medium text-foreground">{hospitalData.name}</p>
-                <p className="text-xs text-muted-foreground">Goal: {hospitalData.goalDate}</p>
+                <p className="text-sm font-medium text-foreground">{orgData.name}</p>
+                <p className="text-xs text-muted-foreground">Goal: {orgData.goalDate}</p>
               </div>
             </div>
           </div>
