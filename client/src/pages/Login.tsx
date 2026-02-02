@@ -99,14 +99,6 @@ export default function Login() {
               />
             </div>
 
-            <div className="flex justify-end">
-              <Link href="/forgot-password">
-                <Button variant="link" className="text-purple-300 hover:text-purple-200 p-0 h-auto text-sm">
-                  Forgot Password?
-                </Button>
-              </Link>
-            </div>
-
             <Button
               type="submit"
               className="w-full bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white font-semibold py-6 text-lg"
@@ -117,13 +109,21 @@ export default function Login() {
               )}
               Access Portal
             </Button>
+
+            <div className="text-center mt-4">
+              <Link href="/forgot-password">
+                <Button variant="link" className="text-purple-300 hover:text-purple-200 p-0 h-auto text-sm">
+                  Forgot Password?
+                </Button>
+              </Link>
+            </div>
           </form>
 
           <div className="mt-8 text-center text-sm text-gray-400 border-t border-purple-500/20 pt-6">
             <p>
               Need assistance?{" "}
               <a
-                href="mailto:support@newlantern.com"
+                href="mailto:support@newlantern.ai"
                 className="text-purple-400 hover:text-purple-300 font-medium"
               >
                 Contact Support

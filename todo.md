@@ -227,3 +227,8 @@
 - [x] Add filter/search by organization
 - [x] Write vitest tests for user management endpoints
 - [ ] Test complete user management flow
+
+## Login Page UX Improvements
+- [x] Move "Forgot Password" link below Access Portal button
+- [x] Update support email to support@newlantern.ai across all pages
+- [x] Test tab order: Email → Password → Access Portal button
