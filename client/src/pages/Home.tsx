@@ -235,7 +235,7 @@ export default function Home() {
         <div className="container py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-8" />
+              <img src="/images/flame-icon.png" alt="New Lantern" className="h-8 w-8" />
               <div>
                 <h1 className="text-xl font-bold text-foreground">Implementation Portal</h1>
                 <p className="text-xs text-muted-foreground">PACS Onboarding & Configuration</p>

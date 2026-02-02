@@ -53,7 +53,7 @@ export default function Intake() {
         <div className="container py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-8" />
+              <img src="/images/flame-icon.png" alt="New Lantern" className="h-8 w-8" />
               <div>
                 <h1 className="text-2xl font-bold text-foreground">Implementation Intake</h1>
                 <p className="text-sm text-muted-foreground mt-1">{organization.name}</p>

@@ -51,12 +51,7 @@ export default function Login() {
         <CardHeader className="space-y-6 pb-8">
           <div className="flex flex-col items-center gap-3">
             {/* New Lantern Logo */}
-            <img src="/images/new-lantern-logo-hd.png" alt="New Lantern" className="h-16 w-auto object-contain" />
-            
-            {/* Small New Lantern Copyright */}
-            <div className="text-xs text-purple-900 font-medium tracking-wide">
-              New Lantern ©
-            </div>
+            <img src="/images/flame-icon.png" alt="New Lantern" className="h-16 w-16 object-contain" />
             
             {/* Main Heading */}
             <h1 className="text-4xl font-bold text-center leading-tight">
@@ -137,6 +132,11 @@ export default function Login() {
           </div>
         </CardContent>
       </Card>
+      
+      {/* Copyright footer */}
+      <div className="absolute bottom-4 text-center w-full">
+        <p className="text-xs text-purple-400/60">New Lantern ©</p>
+      </div>
     </div>
   );
 }

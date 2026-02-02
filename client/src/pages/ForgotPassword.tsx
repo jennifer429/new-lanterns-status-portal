@@ -104,6 +104,11 @@ export default function ForgotPassword() {
           </form>
         </CardContent>
       </Card>
+      
+      {/* Copyright footer */}
+      <div className="absolute bottom-4 text-center w-full">
+        <p className="text-xs text-purple-400/60">New Lantern ©</p>
+      </div>
     </div>
   );
 }
