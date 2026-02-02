@@ -246,3 +246,13 @@
 - [x] Add section completion tracking
 - [x] Remove confusing gamification/levels system
 - [x] Test improved single-page UX
+
+## Wizard-Style Questionnaire Redesign
+- [x] Analyze ChatGPT wireframe concept and requirements
+- [x] Redesign questionnaire as step-by-step wizard (not single page)
+- [x] Simplify questions to yes/no format with conditional follow-ups
+- [x] Implement step progression (Basics → Systems → Data → Validation → Go-Live)
+- [x] Add conditional task generation based on answers
+- [x] Create task board showing generated tasks
+- [x] Build completion screen with next steps
+- [x] Test wizard flow end-to-end
