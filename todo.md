@@ -217,3 +217,13 @@
 - [ ] If email doesn't exist, show "Contact Support" message
 - [ ] Remove email/token logic from password reset flow
 - [ ] Test complete forgot password flow
+
+## User Management Interface
+- [x] Create user management API endpoints (list all users, create user, update user, delete user)
+- [x] Build user management UI in admin dashboard with table showing all users
+- [x] Add "Create User" form with fields: email, password, name, organization, role
+- [x] Add edit user functionality
+- [x] Add delete user functionality with confirmation
+- [x] Add filter/search by organization
+- [x] Write vitest tests for user management endpoints
+- [ ] Test complete user management flow

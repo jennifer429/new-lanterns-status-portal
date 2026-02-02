@@ -9,8 +9,12 @@ import { trpc } from "@/lib/trpc";
 import { Link } from "wouter";
 import { ExternalLink, Building2, Calendar, CheckCircle2, Clock, Users, TrendingUp, Activity } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { UserManagement } from "@/components/UserManagement";
+import { useState } from "react";
 
 export default function Admin() {
+  const [activeTab, setActiveTab] = useState("organizations");
   const { data: metrics, isLoading } = trpc.organizations.getMetrics.useQuery();
 
   if (isLoading) {
@@ -40,6 +44,19 @@ export default function Admin() {
 
       {/* Main Content */}
       <div className="container py-8">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="bg-black/40 border border-purple-500/20 mb-6">
+            <TabsTrigger value="organizations" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-gray-300">
+              <Building2 className="w-4 h-4 mr-2" />
+              Organizations
+            </TabsTrigger>
+            <TabsTrigger value="users" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-gray-300">
+              <Users className="w-4 h-4 mr-2" />
+              Users
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="organizations">
         <Card className="border-purple-500/20 bg-black/40 backdrop-blur-xl">
           <CardHeader>
             <CardTitle className="text-white text-xl">Client Portals</CardTitle>
@@ -127,6 +144,12 @@ export default function Admin() {
             )}
           </CardContent>
         </Card>
+          </TabsContent>
+
+          <TabsContent value="users">
+            <UserManagement />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
