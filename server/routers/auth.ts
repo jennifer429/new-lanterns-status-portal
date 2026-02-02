@@ -10,9 +10,6 @@ import { users, organizations } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
-// Store password reset tokens in memory (in production, use database table)
-const resetTokens = new Map<string, { email: string; expires: number }>();
-
 export const authRouter = router({
   /**
    * Login with email and password (checks database)
@@ -76,9 +73,9 @@ export const authRouter = router({
     }),
 
   /**
-   * Request password reset (checks if email exists in database)
+   * Check if email exists (for forgot password flow)
    */
-  requestPasswordReset: publicProcedure
+  checkEmail: publicProcedure
     .input(
       z.object({
         email: z.string().email(),
@@ -95,53 +92,39 @@ export const authRouter = router({
         .where(eq(users.email, input.email.toLowerCase()))
         .limit(1);
 
-      if (user) {
-        // Generate reset token
-        const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-        const expires = Date.now() + 3600000; // 1 hour
-
-        resetTokens.set(token, {
-          email: user.email || "",
-          expires,
-        });
-
-        // In production, send email with reset link
-        // For now, just log it
-        const resetLink = `${process.env.VITE_APP_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
-        console.log(`[Auth] Password reset link for ${user.email || 'unknown'}: ${resetLink}`);
-
-        // TODO: Send email via Gmail MCP or notification API
-      }
-
-      // Always return success (security best practice)
       return {
-        success: true,
-        message: "If an account exists with this email, you'll receive a password reset link. Please check your inbox and contact New Lantern support if you need assistance.",
+        exists: !!user,
+        email: input.email,
       };
     }),
 
   /**
-   * Reset password with token
+   * Reset password directly (no token needed)
    */
-  resetPassword: publicProcedure
+  resetPasswordDirect: publicProcedure
     .input(
       z.object({
-        token: z.string(),
+        email: z.string().email(),
         newPassword: z.string().min(6),
       })
     )
     .mutation(async ({ input }) => {
-      const tokenData = resetTokens.get(input.token);
-
-      if (!tokenData || tokenData.expires < Date.now()) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Invalid or expired reset token",
-        });
-      }
-
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // Verify email exists
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, input.email.toLowerCase()))
+        .limit(1);
+
+      if (!user) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Please contact New Lantern support",
+        });
+      }
 
       // Hash new password
       const passwordHash = await bcrypt.hash(input.newPassword, 10);
@@ -150,10 +133,7 @@ export const authRouter = router({
       await db
         .update(users)
         .set({ passwordHash })
-        .where(eq(users.email, tokenData.email));
-
-      // Remove used token
-      resetTokens.delete(input.token);
+        .where(eq(users.email, input.email.toLowerCase()));
 
       return {
         success: true,

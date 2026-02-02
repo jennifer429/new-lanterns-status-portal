@@ -1,5 +1,5 @@
 /**
- * Reset Password Page (with token)
+ * Reset Password Page (direct reset with email)
  */
 
 import { Button } from "@/components/ui/button";
@@ -14,28 +14,28 @@ import { ArrowLeft, CheckCircle2 } from "lucide-react";
 
 export default function ResetPassword() {
   const [, setLocation] = useLocation();
-  const [token, setToken] = useState("");
+  const [email, setEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
 
-  // Get token from URL
+  // Get email from URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const tokenParam = params.get("token");
-    if (tokenParam) {
-      setToken(tokenParam);
+    const emailParam = params.get("email");
+    if (emailParam) {
+      setEmail(emailParam);
     } else {
       setError("Invalid reset link");
     }
   }, []);
 
-  const resetMutation = trpc.auth.resetPassword.useMutation({
-    onSuccess: (data) => {
+  const resetMutation = trpc.auth.resetPasswordDirect.useMutation({
+    onSuccess: () => {
       setSuccess(true);
     },
-    onError: (err) => {
+    onError: (err: { message: string }) => {
       setError(err.message);
     },
   });
@@ -54,7 +54,7 @@ export default function ResetPassword() {
       return;
     }
 
-    resetMutation.mutate({ token, newPassword });
+    resetMutation.mutate({ email, newPassword });
   };
 
   return (
@@ -68,7 +68,7 @@ export default function ResetPassword() {
         <CardHeader className="space-y-6 pb-8">
           <div className="flex flex-col items-center gap-3">
             {/* New Lantern Logo */}
-            <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-16 w-16 object-contain" />
+            <img src="/images/new-lantern-logo-hires.png" alt="New Lantern" className="h-16 w-16 object-contain" />
             
             {/* Small New Lantern Copyright */}
             <div className="text-xs text-purple-900 font-medium tracking-wide">
@@ -92,9 +92,9 @@ export default function ResetPassword() {
           {success ? (
             <div className="space-y-6">
               <Alert className="bg-green-950/50 border-green-500/50">
-                <CheckCircle2 className="h-4 h-4 text-green-400" />
+                <CheckCircle2 className="h-4 w-4 text-green-400" />
                 <AlertDescription className="text-green-100">
-                  {resetMutation.data?.message}
+                  Password has been reset successfully. You can now log in with your new password.
                 </AlertDescription>
               </Alert>
               <Link href="/login">
@@ -110,6 +110,19 @@ export default function ResetPassword() {
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
+
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-gray-200">
+                  Email
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  disabled
+                  className="bg-black/30 border-purple-500/30 text-gray-400"
+                />
+              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="newPassword" className="text-gray-200">
@@ -146,7 +159,7 @@ export default function ResetPassword() {
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white font-medium"
-                disabled={resetMutation.isPending || !token}
+                disabled={resetMutation.isPending || !email}
               >
                 {resetMutation.isPending ? "Resetting..." : "Reset Password"}
               </Button>

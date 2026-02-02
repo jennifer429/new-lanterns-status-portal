@@ -210,3 +210,10 @@
 - [x] Upscale logo to 4x resolution (672x128 pixels)
 - [x] Replace logo in login page and admin dashboard
 - [x] Test logo display quality
+
+## Simplified Forgot Password Flow
+- [ ] Update forgot password API to check if email exists in database
+- [ ] If email exists, redirect to reset password page (no email needed)
+- [ ] If email doesn't exist, show "Contact Support" message
+- [ ] Remove email/token logic from password reset flow
+- [ ] Test complete forgot password flow
