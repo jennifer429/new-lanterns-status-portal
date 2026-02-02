@@ -178,3 +178,11 @@
 - [x] Create reset password page (with token validation)
 - [x] Add "Forgot Password?" link to login page
 - [ ] Test complete password reset flow (manual testing needed)
+
+## Migrate to Database Authentication
+- [x] Update auth system to use database instead of Google Sheets
+- [x] Add password hashing with bcrypt
+- [x] Migrate existing admin user (jennifer@newlantern.ai) to database
+- [ ] Build admin user management UI (add, edit, delete users)
+- [ ] Test login with database auth (manual testing needed)
+- [ ] Test user management in admin UI
