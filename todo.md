@@ -191,3 +191,12 @@
 - [x] Debug login error - found duplicate users in database
 - [x] Delete duplicate users and recreate single admin user
 - [ ] Test login with jennifer@newlantern.ai credentials (manual testing needed)
+
+## Admin Dashboard Metrics
+- [x] Add lastLoginAt field to users table
+- [x] Update login endpoint to record last login timestamp
+- [x] Create API endpoint to calculate intake completion percentage per organization
+- [x] Create API endpoint to get user count per organization
+- [x] Create API endpoint to get last login date per organization
+- [x] Update admin dashboard UI to display metrics in organization cards
+- [ ] Test metrics display with real data (manual testing needed)

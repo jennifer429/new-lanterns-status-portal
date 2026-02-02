@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { organizations, sectionProgress, taskCompletion, activityFeed } from "../../drizzle/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { organizations, sectionProgress, taskCompletion, activityFeed, users, intakeResponses } from "../../drizzle/schema";
+import { eq, and, desc, count, sql } from "drizzle-orm";
 import { createSectionCompletionTask } from "../clickup";
 import { postLinearComment } from "../linear";
 
@@ -242,6 +242,67 @@ export const organizationsRouter = router({
         .orderBy(desc(activityFeed.createdAt));
       return activities;
     }),
+
+  /**
+   * Get metrics for all organizations (for admin dashboard)
+   */
+  getMetrics: publicProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+
+    const orgs = await db.select().from(organizations);
+    
+    const metrics = await Promise.all(
+      orgs.map(async (org) => {
+        // Get user count for this organization
+        const [userCountResult] = await db
+          .select({ count: count() })
+          .from(users)
+          .where(eq(users.organizationId, org.id));
+        const userCount = userCountResult?.count || 0;
+
+        // Get last login date for this organization
+        const [lastLoginResult] = await db
+          .select({ lastLoginAt: users.lastLoginAt })
+          .from(users)
+          .where(eq(users.organizationId, org.id))
+          .orderBy(desc(users.lastLoginAt))
+          .limit(1);
+        const lastLoginAt = lastLoginResult?.lastLoginAt || null;
+
+        // Calculate intake completion percentage
+        const [totalQuestionsResult] = await db
+          .select({ count: count() })
+          .from(intakeResponses)
+          .where(eq(intakeResponses.organizationId, org.id));
+        const totalQuestions = totalQuestionsResult?.count || 0;
+
+        const [completedQuestionsResult] = await db
+          .select({ count: count() })
+          .from(intakeResponses)
+          .where(
+            and(
+              eq(intakeResponses.organizationId, org.id),
+              sql`${intakeResponses.response} IS NOT NULL AND ${intakeResponses.response} != ''`
+            )
+          );
+        const completedQuestions = completedQuestionsResult?.count || 0;
+
+        const completionPercentage = totalQuestions > 0 
+          ? Math.round((completedQuestions / totalQuestions) * 100)
+          : 0;
+
+        return {
+          ...org,
+          userCount,
+          lastLoginAt,
+          completionPercentage,
+        };
+      })
+    );
+
+    return metrics;
+  }),
 
   /**
    * Post a reply from hospital to Linear issue

@@ -51,6 +51,9 @@ export const authRouter = router({
         });
       }
 
+      // Update last login timestamp
+      await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
+
       // Get organization slug if user has organizationId
       let orgSlug = "admin";
       if (user.organizationId) {
