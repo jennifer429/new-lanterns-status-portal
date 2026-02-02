@@ -200,3 +200,7 @@
 - [x] Create API endpoint to get last login date per organization
 - [x] Update admin dashboard UI to display metrics in organization cards
 - [ ] Test metrics display with real data (manual testing needed)
+
+## Always Show Last Login Date
+- [x] Update admin dashboard to always display last login date (show "Never" when no data)
+- [x] Test display with organizations that have no logins

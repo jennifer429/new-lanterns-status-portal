@@ -90,12 +90,14 @@ export default function Admin() {
                     </div>
 
                     {/* Last Login */}
-                    {org.lastLoginAt && (
-                      <div className="flex items-center gap-2 text-xs text-gray-300 border-t border-purple-500/20 pt-2">
-                        <Activity className="w-3 h-3 text-purple-400" />
-                        <span>Last login: {formatDistanceToNow(new Date(org.lastLoginAt), { addSuffix: true })}</span>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2 text-xs text-gray-300 border-t border-purple-500/20 pt-2">
+                      <Activity className="w-3 h-3 text-purple-400" />
+                      <span>
+                        Last login: {org.lastLoginAt 
+                          ? formatDistanceToNow(new Date(org.lastLoginAt), { addSuffix: true })
+                          : "Never"}
+                      </span>
+                    </div>
 
                     {/* Goal Date */}
                     <div className="text-sm text-gray-300 flex items-center gap-2">
