@@ -204,3 +204,9 @@
 ## Always Show Last Login Date
 - [x] Update admin dashboard to always display last login date (show "Never" when no data)
 - [x] Test display with organizations that have no logins
+
+## Fix Fuzzy Logo
+- [x] Check current logo file resolution and format
+- [x] Upscale logo to 4x resolution (672x128 pixels)
+- [x] Replace logo in login page and admin dashboard
+- [x] Test logo display quality

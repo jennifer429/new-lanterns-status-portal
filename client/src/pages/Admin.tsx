@@ -28,7 +28,7 @@ export default function Admin() {
         <div className="container py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-10" />
+              <img src="/images/new-lantern-logo-hd.png" alt="New Lantern" className="h-10" />
               <div>
                 <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
                 <p className="text-sm text-purple-300 mt-1">PACS Implementation Portal</p>
