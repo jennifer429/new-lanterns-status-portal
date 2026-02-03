@@ -293,3 +293,24 @@
 - [x] Improve wizard form spacing and layout
 - [x] Make wizard form more professional and readable
 - [x] Test wizard form and tasks page
+
+## Rebuild Intake Form with Real Questions
+- [x] Parse real questionnaire CSV into proper data structure
+- [ ] Build tabbed single-page layout (Overview, Security, Imaging, Data, Workflows, etc.)
+- [ ] Add file upload capability for each question that needs documents
+- [ ] Create file library view showing all uploaded documents
+- [ ] Add backend S3 file storage integration
+- [ ] Test complete intake form with file uploads
+
+## Tabbed Intake Form Redesign with Real Questions
+- [x] Parse all 69 real questions from Dr. K's Google Sheet
+- [x] Create intake-questions.ts shared file with structured question data
+- [x] Build tabbed single-page layout (6 sections: Overview, Security, Imaging, Data, Workflows, Rad Workflows)
+- [x] Implement auto-save functionality with debounced saves
+- [x] Add progress tracking per section and overall
+- [x] Support multiple question types (text, multiline, yesno, select, date, contact)
+- [x] Add file upload capability embedded in questions
+- [x] Test tab switching and data persistence
+- [ ] Implement S3 file upload backend
+- [ ] Add admin review interface for viewing all organization responses
+- [ ] Test complete intake flow with file uploads

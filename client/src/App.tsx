@@ -6,7 +6,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Admin from "./pages/Admin";
-import Intake from "./pages/Intake";
+import IntakeNew from "./pages/IntakeNew";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
@@ -20,7 +20,7 @@ function Router() {
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/admin" component={Admin} />
-      <Route path="/org/:slug/intake" component={Intake} />
+      <Route path="/org/:slug/intake" component={IntakeNew} />
       <Route path="/org/:slug/tasks" component={Tasks} />
       <Route path="/org/:slug" component={Home} />
       <Route path={"/"} component={Login} />

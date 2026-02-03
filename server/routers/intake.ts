@@ -108,6 +108,81 @@ export const intakeRouter = router({
     }),
 
   /**
+   * Save multiple responses at once (batch save for auto-save)
+   */
+  saveResponses: publicProcedure
+    .input(
+      z.object({
+        organizationSlug: z.string(),
+        responses: z.record(z.string(), z.any()),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Get organization by slug
+      const [org] = await db
+        .select()
+        .from(organizations)
+        .where(eq(organizations.slug, input.organizationSlug))
+        .limit(1);
+
+      if (!org) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      }
+
+      // Process each response
+      const results = [];
+      for (const [questionId, response] of Object.entries(input.responses)) {
+        // Skip empty responses
+        if (!response || response === '' || response === null) continue;
+
+        // Convert response to string for storage
+        const responseStr = typeof response === 'object' ? JSON.stringify(response) : String(response);
+
+        // Check if response already exists
+        const [existing] = await db
+          .select()
+          .from(intakeResponses)
+          .where(
+            and(
+              eq(intakeResponses.organizationId, org.id),
+              eq(intakeResponses.questionId, questionId)
+            )
+          )
+          .limit(1);
+
+        if (existing) {
+          // Update existing response
+          await db
+            .update(intakeResponses)
+            .set({
+              response: responseStr,
+              status: "complete",
+              updatedAt: new Date(),
+            })
+            .where(eq(intakeResponses.id, existing.id));
+          results.push({ questionId, action: "updated" });
+        } else {
+          // Insert new response - need to determine section from questionId
+          // For now, we'll extract section from questionId prefix
+          const section = questionId.split('_')[0] || 'unknown';
+          await db.insert(intakeResponses).values({
+            organizationId: org.id,
+            questionId,
+            section,
+            response: responseStr,
+            status: "complete",
+          });
+          results.push({ questionId, action: "created" });
+        }
+      }
+
+      return { success: true, saved: results.length };
+    }),
+
+  /**
    * Get intake progress summary
    */
   getProgress: publicProcedure
