@@ -370,3 +370,24 @@
 ## Update Google Drive Upload Folder
 - [x] Change upload path to upload to Google Drive root with org prefix
 - [x] Test file appears in Google Drive (ready to publish)
+
+## Implement Comprehensive Radiology One Questionnaire
+- [x] Parse 11-section questionnaire document into structured data
+- [x] Create question configuration file with all 100+ questions
+- [x] Database schema already supports all question types via JSON responses
+- [x] Update frontend to render all 11 sections with proper input components
+- [x] Add file upload capability to relevant questions
+- [ ] Test all question types and data persistence
+- [ ] Verify auto-save works for all input types
+
+## Submit Button and Completion Tracking
+- [x] Add Submit button to intake form
+- [x] Track submission status in state
+- [x] Show completion confirmation to user
+
+## Enhanced Admin Dashboard
+- [x] Show % complete for each organization
+- [x] Display section-by-section progress
+- [x] Show number of files uploaded per organization
+- [x] Display file names with download links
+- [x] Update backend API to return file tracking data

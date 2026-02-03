@@ -293,11 +293,38 @@ export const organizationsRouter = router({
           ? Math.round((completedQuestions / totalQuestions) * 100)
           : 0;
 
+        // Get section-by-section progress
+        const allResponses = await db
+          .select()
+          .from(intakeResponses)
+          .where(eq(intakeResponses.organizationId, org.id));
+
+        const sectionStats: Record<string, { total: number; completed: number }> = {};
+        allResponses.forEach((resp) => {
+          if (!sectionStats[resp.section]) {
+            sectionStats[resp.section] = { total: 0, completed: 0 };
+          }
+          sectionStats[resp.section].total++;
+          if (resp.response && resp.response !== '') {
+            sectionStats[resp.section].completed++;
+          }
+        });
+
+        // Get file uploads
+        const filesWithUrls = allResponses.filter(r => r.fileUrl).map(r => ({
+          questionId: r.questionId,
+          fileName: r.fileUrl?.split('/').pop() || 'Unknown',
+          url: r.fileUrl
+        }));
+
         return {
           ...org,
           userCount,
           lastLoginAt,
           completionPercentage,
+          sectionProgress: sectionStats,
+          fileCount: filesWithUrls.length,
+          files: filesWithUrls,
         };
       })
     );

@@ -86,7 +86,7 @@ export default function Admin() {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {/* Metrics */}
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       {/* Completion Percentage */}
                       <div className="flex items-center gap-2 text-sm">
                         <TrendingUp className="w-4 h-4 text-purple-400" />
@@ -104,7 +104,56 @@ export default function Admin() {
                           <div className="text-xs text-gray-400">Users</div>
                         </div>
                       </div>
+
+                      {/* File Count */}
+                      <div className="flex items-center gap-2 text-sm">
+                        <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                        <div>
+                          <div className="text-white font-semibold">{org.fileCount || 0}</div>
+                          <div className="text-xs text-gray-400">Files</div>
+                        </div>
+                      </div>
                     </div>
+
+                    {/* Section Progress */}
+                    {org.sectionProgress && Object.keys(org.sectionProgress).length > 0 && (
+                      <div className="border-t border-purple-500/20 pt-2">
+                        <div className="text-xs text-gray-400 mb-2">Section Progress:</div>
+                        <div className="space-y-1 max-h-32 overflow-y-auto">
+                          {Object.entries(org.sectionProgress).map(([section, stats]: [string, any]) => (
+                            <div key={section} className="flex items-center justify-between text-xs">
+                              <span className="text-gray-300 truncate flex-1">{section}</span>
+                              <span className="text-white font-mono ml-2">
+                                {stats.completed}/{stats.total}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Uploaded Files */}
+                    {org.files && org.files.length > 0 && (
+                      <div className="border-t border-purple-500/20 pt-2">
+                        <div className="text-xs text-gray-400 mb-2">Uploaded Files:</div>
+                        <div className="space-y-1 max-h-24 overflow-y-auto">
+                          {org.files.map((file: any, idx: number) => (
+                            <a
+                              key={idx}
+                              href={file.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 text-xs text-purple-300 hover:text-purple-200 transition-colors"
+                            >
+                              <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                              <span className="truncate">{file.fileName}</span>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Last Login */}
                     <div className="flex items-center gap-2 text-xs text-gray-300 border-t border-purple-500/20 pt-2">

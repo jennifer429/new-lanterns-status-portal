@@ -1,279 +1,348 @@
-import { useState, useEffect } from "react";
-import { useParams, useLocation } from "wouter";
+import { useState, useEffect, useCallback } from "react";
+import { useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileText, CheckCircle2, Circle, Loader2 } from "lucide-react";
-import { intakeSections, type Question } from "@shared/intake-questions";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, FileText, CheckCircle2, Send } from "lucide-react";
+import { questionnaireData, type Question, type Section } from "@shared/questionnaireData";
 
 export default function IntakeNew() {
-  const { slug: orgSlug } = useParams();
-  const [, navigate] = useLocation();
-  
+  const { slug } = useParams();
   const [responses, setResponses] = useState<Record<string, any>>({});
-  const [files, setFiles] = useState<Record<string, File[]>>({});
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
-  const [activeTab, setActiveTab] = useState(intakeSections[0].id);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [activeTab, setActiveTab] = useState(questionnaireData[0]?.id || "");
+  const [isSubmitted, setIsSubmitted] = useState(false);
+
+  // Fetch organization and existing responses
+  const { data: existingResponses, isLoading: orgLoading } = trpc.intake.getResponses.useQuery(
+    { organizationSlug: slug || "" },
+    { enabled: !!slug }
+  );
 
   // Load existing responses
-  const { data: existingData, isLoading } = trpc.intake.getResponses.useQuery({ organizationSlug: orgSlug! });
-  
-  // Auto-save mutation
-  const saveMutation = trpc.intake.saveResponses.useMutation();
-  
-  // File upload mutation
-  const uploadFileMutation = trpc.intake.uploadFile.useMutation();
-
-  // Load existing responses into state
   useEffect(() => {
-    if (existingData) {
-      // Transform array of responses into object keyed by questionId
-      const responsesObj: Record<string, any> = {};
-      existingData.forEach(item => {
-        if (item.response) {
-          try {
-            // Try to parse JSON responses (for contact fields, etc.)
-            responsesObj[item.questionId] = JSON.parse(item.response);
-          } catch {
-            // If not JSON, use as-is
-            responsesObj[item.questionId] = item.response;
-          }
+    if (existingResponses) {
+      const loadedResponses: Record<string, any> = {};
+      existingResponses.forEach((resp) => {
+        try {
+          const value = typeof resp.response === 'string' ? JSON.parse(resp.response) : resp.response;
+          loadedResponses[resp.questionId] = value;
+        } catch {
+          loadedResponses[resp.questionId] = resp.response;
         }
       });
-      setResponses(responsesObj);
+      setResponses(loadedResponses);
     }
-  }, [existingData]);
+  }, [existingResponses]);
 
-  // Auto-save debounced
+  // Auto-save mutation
+  const saveMutation = trpc.intake.saveResponses.useMutation();
+
+  // Debounced auto-save
   useEffect(() => {
-    if (Object.keys(responses).length === 0) return;
+    if (!slug || isSubmitted) return;
     
-    setSaveStatus('saving');
     const timer = setTimeout(() => {
-      saveMutation.mutate(
-        { organizationSlug: orgSlug!, responses },
-        {
-          onSuccess: () => setSaveStatus('saved'),
-          onError: () => setSaveStatus('idle')
-        }
-      );
+      if (Object.keys(responses).length > 0) {
+        setSaveStatus("saving");
+
+        saveMutation.mutate(
+          { organizationSlug: slug, responses },
+          {
+            onSuccess: () => setSaveStatus("saved"),
+            onError: () => setSaveStatus("idle")
+          }
+        );
+      }
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [responses, orgSlug, saveMutation]);
+  }, [responses, slug, isSubmitted]);
 
-  const handleResponseChange = (questionId: string, value: any) => {
-    setResponses(prev => ({ ...prev, [questionId]: value }));
-  };
+  // File upload mutation
+  const uploadFileMutation = trpc.intake.uploadFile.useMutation();
 
-  const handleFileSelect = async (questionId: string, fileList: FileList | null) => {
-    if (!fileList || !orgSlug) return;
-    
-    const newFiles = Array.from(fileList);
-    setFiles(prev => ({
-      ...prev,
-      [questionId]: [...(prev[questionId] || []), ...newFiles]
-    }));
+  const handleFileUpload = useCallback(async (questionId: string, file: File) => {
+    if (!slug) return;
 
-    // Upload each file
-    for (const file of newFiles) {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const base64 = e.target?.result as string;
+      const base64Data = base64.split(',')[1];
+
       try {
-        // Convert file to base64
-        const reader = new FileReader();
-        const base64Promise = new Promise<string>((resolve, reject) => {
-          reader.onload = () => {
-            const base64 = reader.result as string;
-            // Remove data URL prefix (e.g., "data:image/png;base64,")
-            const base64Data = base64.split(',')[1];
-            resolve(base64Data);
-          };
-          reader.onerror = reject;
-        });
-        reader.readAsDataURL(file);
-        const fileData = await base64Promise;
-
-        // Upload to backend
-        await uploadFileMutation.mutateAsync({
-          organizationSlug: orgSlug,
+        const result = await uploadFileMutation.mutateAsync({
+          organizationSlug: slug,
           questionId,
           fileName: file.name,
-          fileData,
-          mimeType: file.type,
+          fileData: base64Data,
+          mimeType: file.type
         });
-      } catch (error) {
-        console.error('Failed to upload file:', error);
+
+        // Store file info in responses
+        const currentFiles = responses[questionId] || [];
+        setResponses(prev => ({
+          ...prev,
+          [questionId]: [...currentFiles, { fileName: file.name, url: result.fileUrl }]
+        }));
+      } catch (error: any) {
+        alert(`Failed to upload file: ${error.message}`);
       }
-    }
-  };
+    };
+    reader.readAsDataURL(file);
+  }, [slug, responses, uploadFileMutation]);
 
-  const calculateSectionProgress = (sectionId: string) => {
-    const section = intakeSections.find(s => s.id === sectionId);
-    if (!section) return 0;
-    
-    const answeredCount = section.questions.filter(q => {
-      const answer = responses[q.id];
-      return answer !== undefined && answer !== '' && answer !== null;
+  // Calculate progress per section
+  const calculateSectionProgress = (section: Section) => {
+    const requiredQuestions = section.questions.filter(q => q.required);
+    if (requiredQuestions.length === 0) return 100;
+
+    const answeredCount = requiredQuestions.filter(q => {
+      const value = responses[q.id];
+      if (Array.isArray(value)) return value.length > 0;
+      if (typeof value === 'string') return value.trim().length > 0;
+      return value !== undefined && value !== null && value !== '';
     }).length;
-    
-    return Math.round((answeredCount / section.questions.length) * 100);
+
+    return Math.round((answeredCount / requiredQuestions.length) * 100);
   };
 
+  // Calculate overall progress
   const calculateOverallProgress = () => {
-    const totalQuestions = intakeSections.reduce((sum, section) => sum + section.questions.length, 0);
-    const answeredQuestions = Object.values(responses).filter(v => v !== undefined && v !== '' && v !== null).length;
-    return Math.round((answeredQuestions / totalQuestions) * 100);
+    const sectionProgresses = questionnaireData.map(calculateSectionProgress);
+    return Math.round(sectionProgresses.reduce((a, b) => a + b, 0) / questionnaireData.length);
   };
 
-  const shouldShowQuestion = (question: Question): boolean => {
-    if (!question.conditionalOn) return true;
-    const dependentAnswer = responses[question.conditionalOn.questionId];
-    return dependentAnswer?.toLowerCase() === question.conditionalOn.answer.toLowerCase();
+  // Handle submit
+  const handleSubmit = () => {
+    const overallProgress = calculateOverallProgress();
+    if (overallProgress < 100) {
+      const confirmed = window.confirm(
+        `Your questionnaire is ${overallProgress}% complete. Some required fields may be missing. Do you want to submit anyway?`
+      );
+      if (!confirmed) return;
+    }
+
+    setIsSubmitted(true);
+    alert("Thank you! Your questionnaire has been submitted successfully. The New Lantern team will review your responses and contact you soon.");
   };
 
+  // Render question based on type
   const renderQuestion = (question: Question) => {
-    if (!shouldShowQuestion(question)) return null;
+    const value = responses[question.id];
 
-    const value = responses[question.id] || '';
-
-    return (
-      <div key={question.id} className="space-y-3 p-4 rounded-lg border border-border bg-card/50">
-        <div className="space-y-2">
-          <Label htmlFor={question.id} className="text-base font-medium">
-            {question.question}
-            {question.required && <span className="text-destructive ml-1">*</span>}
-          </Label>
-          {question.helpText && (
-            <p className="text-sm text-muted-foreground">{question.helpText}</p>
-          )}
-        </div>
-
-        {question.type === 'text' && (
+    switch (question.type) {
+      case 'text':
+        return (
           <Input
-            id={question.id}
-            value={value}
-            onChange={(e) => handleResponseChange(question.id, e.target.value)}
-            placeholder="Enter your answer"
-            className="text-base"
+            value={value || ''}
+            onChange={(e) => setResponses(prev => ({ ...prev, [question.id]: e.target.value }))}
+            placeholder={question.placeholder}
+            required={question.required}
+            disabled={isSubmitted}
           />
-        )}
+        );
 
-        {question.type === 'multiline' && (
+      case 'textarea':
+        return (
           <Textarea
-            id={question.id}
-            value={value}
-            onChange={(e) => handleResponseChange(question.id, e.target.value)}
-            placeholder="Enter your answer"
+            value={value || ''}
+            onChange={(e) => setResponses(prev => ({ ...prev, [question.id]: e.target.value }))}
+            placeholder={question.placeholder}
+            required={question.required}
             rows={4}
-            className="text-base"
+            disabled={isSubmitted}
           />
-        )}
+        );
 
-        {question.type === 'yesno' && (
-          <RadioGroup
-            value={value}
-            onValueChange={(val) => handleResponseChange(question.id, val)}
+      case 'dropdown':
+        return (
+          <Select
+            value={value || ''}
+            onValueChange={(val) => setResponses(prev => ({ ...prev, [question.id]: val }))}
+            disabled={isSubmitted}
           >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="yes" id={`${question.id}-yes`} />
-              <Label htmlFor={`${question.id}-yes`} className="font-normal cursor-pointer">Yes</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="no" id={`${question.id}-no`} />
-              <Label htmlFor={`${question.id}-no`} className="font-normal cursor-pointer">No</Label>
-            </div>
-          </RadioGroup>
-        )}
-
-        {question.type === 'select' && question.options && (
-          <Select value={value} onValueChange={(val) => handleResponseChange(question.id, val)}>
-            <SelectTrigger className="text-base">
+            <SelectTrigger>
               <SelectValue placeholder="Select an option" />
             </SelectTrigger>
             <SelectContent>
-              {question.options.map((option) => (
-                <SelectItem key={option} value={option}>{option}</SelectItem>
+              {question.options?.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
-        )}
+        );
 
-        {question.type === 'date' && (
-          <Input
-            id={question.id}
-            type="date"
-            value={value}
-            onChange={(e) => handleResponseChange(question.id, e.target.value)}
-            className="text-base"
-          />
-        )}
-
-        {question.type === 'contact' && (
-          <div className="space-y-3">
-            <Input
-              placeholder="Name"
-              value={value?.name || ''}
-              onChange={(e) => handleResponseChange(question.id, { ...value, name: e.target.value })}
-              className="text-base"
-            />
-            <Input
-              placeholder="Email"
-              type="email"
-              value={value?.email || ''}
-              onChange={(e) => handleResponseChange(question.id, { ...value, email: e.target.value })}
-              className="text-base"
-            />
-            <Input
-              placeholder="Phone"
-              type="tel"
-              value={value?.phone || ''}
-              onChange={(e) => handleResponseChange(question.id, { ...value, phone: e.target.value })}
-              className="text-base"
-            />
+      case 'multi-select':
+        const selectedValues = value || [];
+        return (
+          <div className="space-y-2">
+            {question.options?.map((option) => (
+              <div key={option} className="flex items-center space-x-2">
+                <Checkbox
+                  checked={selectedValues.includes(option)}
+                  onCheckedChange={(checked) => {
+                    if (isSubmitted) return;
+                    const newValues = checked
+                      ? [...selectedValues, option]
+                      : selectedValues.filter((v: string) => v !== option);
+                    setResponses(prev => ({ ...prev, [question.id]: newValues }));
+                  }}
+                  disabled={isSubmitted}
+                />
+                <label className="text-sm">{option}</label>
+              </div>
+            ))}
           </div>
-        )}
+        );
 
-        {question.acceptsFiles && (
-          <div className="mt-3 space-y-2">
-            <Label htmlFor={`${question.id}-file`} className="text-sm font-medium">
-              Upload Supporting Documents
-            </Label>
-            <div className="flex items-center gap-2">
-              <Input
-                id={`${question.id}-file`}
-                type="file"
-                multiple
-                onChange={(e) => handleFileSelect(question.id, e.target.files)}
-                className="text-sm"
-              />
-              <Upload className="w-4 h-4 text-muted-foreground" />
+      case 'yes-no':
+        return (
+          <RadioGroup
+            value={value || ''}
+            onValueChange={(val) => setResponses(prev => ({ ...prev, [question.id]: val }))}
+            disabled={isSubmitted}
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="yes" id={`${question.id}-yes`} />
+              <Label htmlFor={`${question.id}-yes`}>Yes</Label>
             </div>
-            {files[question.id] && files[question.id].length > 0 && (
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="no" id={`${question.id}-no`} />
+              <Label htmlFor={`${question.id}-no`}>No</Label>
+            </div>
+          </RadioGroup>
+        );
+
+      case 'date':
+        return (
+          <Input
+            type="date"
+            value={value || ''}
+            onChange={(e) => setResponses(prev => ({ ...prev, [question.id]: e.target.value }))}
+            required={question.required}
+            disabled={isSubmitted}
+          />
+        );
+
+      case 'table':
+        const tableData = value || [];
+        return (
+          <div className="space-y-2">
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-muted">
+                  <tr>
+                    {question.tableColumns?.map((col, idx) => (
+                      <th key={idx} className="p-2 text-left text-sm font-medium">
+                        {col}
+                      </th>
+                    ))}
+                    {!isSubmitted && <th className="p-2 w-20"></th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {tableData.map((row: any, rowIdx: number) => (
+                    <tr key={rowIdx} className="border-t">
+                      {question.tableColumns?.map((col, colIdx) => (
+                        <td key={colIdx} className="p-2">
+                          <Input
+                            value={row[col] || ''}
+                            onChange={(e) => {
+                              const newTableData = [...tableData];
+                              newTableData[rowIdx] = { ...newTableData[rowIdx], [col]: e.target.value };
+                              setResponses(prev => ({ ...prev, [question.id]: newTableData }));
+                            }}
+                            placeholder={col}
+                            className="w-full"
+                            disabled={isSubmitted}
+                          />
+                        </td>
+                      ))}
+                      {!isSubmitted && (
+                        <td className="p-2">
+                          <button
+                            onClick={() => {
+                              const newTableData = tableData.filter((_: any, idx: number) => idx !== rowIdx);
+                              setResponses(prev => ({ ...prev, [question.id]: newTableData }));
+                            }}
+                            className="text-red-500 text-sm hover:underline"
+                          >
+                            Remove
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {!isSubmitted && (
+              <button
+                onClick={() => {
+                  const newRow: any = {};
+                  question.tableColumns?.forEach(col => newRow[col] = '');
+                  setResponses(prev => ({ ...prev, [question.id]: [...tableData, newRow] }));
+                }}
+                className="text-sm text-primary hover:underline"
+              >
+                + Add Row
+              </button>
+            )}
+          </div>
+        );
+
+      case 'file':
+        const files = value || [];
+        return (
+          <div className="space-y-2">
+            {!isSubmitted && (
+              <div className="border-2 border-dashed rounded-lg p-4">
+                <input
+                  type="file"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload(question.id, file);
+                  }}
+                  className="w-full"
+                />
+              </div>
+            )}
+            {files.length > 0 && (
               <div className="space-y-1">
-                {files[question.id].map((file, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-sm text-muted-foreground">
+                {files.map((file: any, idx: number) => (
+                  <div key={idx} className="flex items-center gap-2 text-sm">
                     <FileText className="w-4 h-4" />
-                    <span>{file.name}</span>
+                    <a href={file.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                      {file.fileName}
+                    </a>
                   </div>
                 ))}
               </div>
             )}
           </div>
-        )}
-      </div>
-    );
+        );
+
+      default:
+        return null;
+    }
   };
 
-  if (isLoading) {
+  if (orgLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin" />
       </div>
     );
   }
@@ -283,59 +352,67 @@ export default function IntakeNew() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container py-4">
           <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold">Radiology One New Site Onboarding</h1>
+              <p className="text-sm text-muted-foreground mt-1">{slug}</p>
+            </div>
             <div className="flex items-center gap-4">
-              <img src="/images/flame-icon.png" alt="New Lantern" className="h-8" />
-              <div>
-                <h1 className="text-xl font-bold">PACS Implementation Questionnaire</h1>
-                <p className="text-sm text-muted-foreground">
-                  {saveStatus === 'saving' && 'Saving...'}
-                  {saveStatus === 'saved' && 'All changes saved'}
-                  {saveStatus === 'idle' && 'Ready'}
-                </p>
+              <div className="text-right">
+                <p className="text-sm font-medium">Overall Progress</p>
+                <p className="text-2xl font-bold text-primary">{overallProgress}%</p>
+              </div>
+              <div className="flex items-center gap-2">
+                {isSubmitted ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 text-green-500" />
+                    <span className="text-sm text-green-500">Submitted</span>
+                  </>
+                ) : saveStatus === "saving" ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Saving...</span>
+                  </>
+                ) : saveStatus === "saved" ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 text-green-500" />
+                    <span className="text-sm text-green-500">Saved</span>
+                  </>
+                ) : (
+                  <span className="text-sm text-muted-foreground">Ready</span>
+                )}
               </div>
             </div>
-            <Button variant="outline" onClick={() => navigate(`/org/${orgSlug}`)}>
-              Back to Portal
-            </Button>
           </div>
-          
-          {/* Overall Progress */}
-          <div className="mt-4 space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="font-medium">Overall Progress</span>
-              <span className="text-muted-foreground">{overallProgress}% Complete</span>
-            </div>
-            <Progress value={overallProgress} className="h-2" />
-          </div>
+          <Progress value={overallProgress} className="mt-4 h-2" />
         </div>
       </header>
 
       {/* Main Content */}
       <div className="container py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid grid-cols-6 w-full">
-            {intakeSections.map((section) => {
-              const progress = calculateSectionProgress(section.id);
+          <TabsList className="grid grid-cols-3 lg:grid-cols-6 xl:grid-cols-11 gap-2 h-auto p-2">
+            {questionnaireData.map((section, idx) => {
+              const progress = calculateSectionProgress(section);
               return (
-                <TabsTrigger key={section.id} value={section.id} className="flex flex-col items-start gap-1 p-3">
-                  <div className="flex items-center gap-2 w-full">
-                    {progress === 100 ? (
-                      <CheckCircle2 className="w-4 h-4 text-primary" />
-                    ) : (
-                      <Circle className="w-4 h-4 text-muted-foreground" />
-                    )}
-                    <span className="text-sm font-medium truncate">{section.title}</span>
-                  </div>
-                  <span className="text-xs text-muted-foreground">{progress}%</span>
+                <TabsTrigger
+                  key={section.id}
+                  value={section.id}
+                  className="flex flex-col items-start p-3 h-auto data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
+                  <span className="text-xs font-medium">Section {idx + 1}</span>
+                  <span className="text-xs mt-1 line-clamp-2">{section.title}</span>
+                  <Badge variant={progress === 100 ? "default" : "outline"} className="mt-2">
+                    {progress}%
+                  </Badge>
                 </TabsTrigger>
               );
             })}
           </TabsList>
 
-          {intakeSections.map((section) => (
+          {questionnaireData.map((section) => (
             <TabsContent key={section.id} value={section.id} className="space-y-6">
               <Card>
                 <CardHeader>
@@ -345,20 +422,52 @@ export default function IntakeNew() {
                   )}
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {section.questions.map(renderQuestion)}
+                  {section.questions.map((question) => (
+                    <div key={question.id} className="space-y-2">
+                      <Label className="text-base">
+                        {question.question}
+                        {question.required && <span className="text-red-500 ml-1">*</span>}
+                      </Label>
+                      {question.helpText && (
+                        <p className="text-sm text-muted-foreground">{question.helpText}</p>
+                      )}
+                      {renderQuestion(question)}
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
             </TabsContent>
           ))}
         </Tabs>
-      </div>
 
-      {/* Footer */}
-      <footer className="border-t border-border bg-card/50 py-4">
-        <div className="container text-center text-sm text-muted-foreground">
-          New Lantern ©
-        </div>
-      </footer>
+        {/* Submit Button */}
+        {!isSubmitted && (
+          <div className="mt-8 flex justify-center">
+            <Button
+              size="lg"
+              onClick={handleSubmit}
+              className="min-w-[200px]"
+            >
+              <Send className="w-4 h-4 mr-2" />
+              Submit Questionnaire
+            </Button>
+          </div>
+        )}
+
+        {isSubmitted && (
+          <div className="mt-8 p-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+            <div className="flex items-center gap-3">
+              <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <div>
+                <h3 className="font-semibold text-green-900 dark:text-green-100">Questionnaire Submitted</h3>
+                <p className="text-sm text-green-700 dark:text-green-300 mt-1">
+                  Thank you for completing the Radiology One onboarding questionnaire. Our team will review your responses and contact you soon to discuss next steps.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
