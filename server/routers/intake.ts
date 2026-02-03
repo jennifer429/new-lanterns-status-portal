@@ -279,18 +279,35 @@ export const intakeRouter = router({
         fs.writeFileSync(tempFilePath, fileBuffer);
 
         try {
-          // Upload to Google Drive
-          const drivePath = `manus_google_drive:RadOne-Intake/${org.slug}/${input.fileName}`;
-          execSync(`rclone copy "${tempFilePath}" "manus_google_drive:RadOne-Intake/${org.slug}/" --config /home/ubuntu/.gdrive-rclone.ini`, {
+          // Upload to Google Drive (to root, files will be organized by naming convention)
+          const fileName = `${org.slug}_${Date.now()}_${input.fileName}`;
+          const drivePath = `manus_google_drive:${fileName}`;
+          execSync(`rclone copy "${tempFilePath}" "manus_google_drive:" --config /home/ubuntu/.gdrive-rclone.ini`, {
             stdio: 'pipe'
           });
 
-          // Get shareable link
-          const linkOutput = execSync(`rclone link "${drivePath}" --config /home/ubuntu/.gdrive-rclone.ini`, {
-            encoding: 'utf-8',
-            stdio: 'pipe'
-          });
-          const fileUrl = linkOutput.trim();
+          // Wait for file to be available (Google Drive sync delay)
+          await new Promise(resolve => setTimeout(resolve, 2000));
+
+          // Get shareable link with retry
+          let fileUrl = '';
+          let retries = 3;
+          while (retries > 0 && !fileUrl) {
+            try {
+              const linkOutput = execSync(`rclone link "${drivePath}" --config /home/ubuntu/.gdrive-rclone.ini`, {
+                encoding: 'utf-8',
+                stdio: 'pipe'
+              });
+              fileUrl = linkOutput.trim();
+            } catch (linkError: any) {
+              retries--;
+              if (retries > 0) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+              } else {
+                throw linkError;
+              }
+            }
+          }
 
           // Clean up temp file
           fs.unlinkSync(tempFilePath);

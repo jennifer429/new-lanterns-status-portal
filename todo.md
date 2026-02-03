@@ -361,3 +361,12 @@
 - [x] Implement Google Drive file upload using rclone
 - [x] Generate shareable Google Drive links
 - [x] Test file upload to Google Drive (ready to publish)
+
+## Fix Google Drive Upload Timing Issue
+- [x] Add delay after rclone copy before generating link
+- [x] Add retry logic for link generation
+- [x] Test file upload successfully creates shareable link (ready to publish)
+
+## Update Google Drive Upload Folder
+- [x] Change upload path to upload to Google Drive root with org prefix
+- [x] Test file appears in Google Drive (ready to publish)
