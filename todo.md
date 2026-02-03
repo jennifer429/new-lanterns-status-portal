@@ -311,6 +311,15 @@
 - [x] Support multiple question types (text, multiline, yesno, select, date, contact)
 - [x] Add file upload capability embedded in questions
 - [x] Test tab switching and data persistence
-- [ ] Implement S3 file upload backend
+- [x] Implement Notion database integration for intake responses
+- [x] Research Notion API file upload capabilities
+- [x] Create Notion integration module with API client
+- [x] Update database schema to store Notion page IDs
+- [x] Build file upload API endpoint with Notion integration
+- [ ] Sync intake responses to Notion database
+- [x] Update frontend IntakeNew.tsx to handle file uploads
+- [x] Display uploaded files in intake form
+- [ ] Add Notion credentials via Settings UI
+- [ ] Test file upload with RadOne organization
 - [ ] Add admin review interface for viewing all organization responses
 - [ ] Test complete intake flow with file uploads

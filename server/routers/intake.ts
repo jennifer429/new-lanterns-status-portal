@@ -231,4 +231,79 @@ export const intakeRouter = router({
         sectionProgress,
       };
     }),
+
+  /**
+   * Upload file for intake question
+   * Uploads to Notion if organization slug starts with "radone"
+   */
+  uploadFile: publicProcedure
+    .input(
+      z.object({
+        organizationSlug: z.string(),
+        questionId: z.string(),
+        fileName: z.string(),
+        fileData: z.string(), // base64 encoded file data
+        mimeType: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Get organization by slug
+      const [org] = await db
+        .select()
+        .from(organizations)
+        .where(eq(organizations.slug, input.organizationSlug))
+        .limit(1);
+
+      if (!org) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      }
+
+      // Decode base64 file data
+      const fileBuffer = Buffer.from(input.fileData, "base64");
+
+      // Check if should sync to Notion (only RadOne organizations)
+      const shouldSync = input.organizationSlug.toLowerCase().startsWith("radone");
+
+      if (shouldSync) {
+        // Upload to Notion
+        const { uploadFileToNotion } = await import("../notion");
+        const fileUploadId = await uploadFileToNotion(fileBuffer, input.fileName, input.mimeType);
+
+        if (fileUploadId) {
+          // Store file upload ID in database
+          const { intakeFileAttachments } = await import("../../drizzle/schema");
+          await db.insert(intakeFileAttachments).values({
+            organizationId: org.id,
+            questionId: input.questionId,
+            fileName: input.fileName,
+            fileUrl: `notion://file_upload/${fileUploadId}`,
+            driveFileId: fileUploadId,
+            fileSize: fileBuffer.length,
+            mimeType: input.mimeType,
+            uploadedBy: org.contactName || "Unknown",
+          });
+
+          return {
+            success: true,
+            fileUploadId,
+            message: "File uploaded to Notion successfully",
+          };
+        } else {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to upload file to Notion",
+          });
+        }
+      } else {
+        // For non-RadOne organizations, just acknowledge the upload
+        // (You could store files locally or in another storage if needed)
+        return {
+          success: true,
+          message: "File received (Notion sync disabled for this organization)",
+        };
+      }
+    }),
 });

@@ -27,6 +27,9 @@ export default function IntakeNew() {
   
   // Auto-save mutation
   const saveMutation = trpc.intake.saveResponses.useMutation();
+  
+  // File upload mutation
+  const uploadFileMutation = trpc.intake.uploadFile.useMutation();
 
   // Load existing responses into state
   useEffect(() => {
@@ -70,13 +73,44 @@ export default function IntakeNew() {
     setResponses(prev => ({ ...prev, [questionId]: value }));
   };
 
-  const handleFileSelect = (questionId: string, fileList: FileList | null) => {
-    if (!fileList) return;
+  const handleFileSelect = async (questionId: string, fileList: FileList | null) => {
+    if (!fileList || !orgSlug) return;
+    
     const newFiles = Array.from(fileList);
     setFiles(prev => ({
       ...prev,
       [questionId]: [...(prev[questionId] || []), ...newFiles]
     }));
+
+    // Upload each file
+    for (const file of newFiles) {
+      try {
+        // Convert file to base64
+        const reader = new FileReader();
+        const base64Promise = new Promise<string>((resolve, reject) => {
+          reader.onload = () => {
+            const base64 = reader.result as string;
+            // Remove data URL prefix (e.g., "data:image/png;base64,")
+            const base64Data = base64.split(',')[1];
+            resolve(base64Data);
+          };
+          reader.onerror = reject;
+        });
+        reader.readAsDataURL(file);
+        const fileData = await base64Promise;
+
+        // Upload to backend
+        await uploadFileMutation.mutateAsync({
+          organizationSlug: orgSlug,
+          questionId,
+          fileName: file.name,
+          fileData,
+          mimeType: file.type,
+        });
+      } catch (error) {
+        console.error('Failed to upload file:', error);
+      }
+    }
   };
 
   const calculateSectionProgress = (sectionId: string) => {
