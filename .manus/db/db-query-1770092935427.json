@@ -1,0 +1,60 @@
+{
+  "query": "SELECT id, name, slug FROM organizations WHERE slug NOT LIKE 'radone%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, name, slug FROM organizations WHERE slug NOT LIKE 'radone%';",
+  "rows": [
+    {
+      "id": "60006",
+      "name": "Intellirad",
+      "slug": "intellirad"
+    },
+    {
+      "id": "60010",
+      "name": "SRV - Boulder",
+      "slug": "srv-boulder"
+    },
+    {
+      "id": "60011",
+      "name": "Caima - SouthCenter",
+      "slug": "caima-southcenter"
+    },
+    {
+      "id": "90001",
+      "name": "Test AutoSave Org",
+      "slug": "test-autosave-org"
+    },
+    {
+      "id": "90003",
+      "name": "Test AutoSave Org",
+      "slug": "test-autosave-1770086497775"
+    },
+    {
+      "id": "90004",
+      "name": "Test AutoSave Org",
+      "slug": "test-autosave-1770086515425"
+    },
+    {
+      "id": "90005",
+      "name": "Test AutoSave Org",
+      "slug": "test-autosave-1770086537661"
+    },
+    {
+      "id": "90006",
+      "name": "Test Login Org",
+      "slug": "test-login-1770087575278"
+    },
+    {
+      "id": "90007",
+      "name": "Test Login Org",
+      "slug": "test-login-1770092643505"
+    },
+    {
+      "id": "90008",
+      "name": "Test AutoSave Org",
+      "slug": "test-autosave-1770092643499"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tslug\n60006\tIntellirad\tintellirad\n60010\tSRV - Boulder\tsrv-boulder\n60011\tCaima - SouthCenter\tcaima-southcenter\n90001\tTest AutoSave Org\ttest-autosave-org\n90003\tTest AutoSave Org\ttest-autosave-1770086497775\n90004\tTest AutoSave Org\ttest-autosave-1770086515425\n90005\tTest AutoSave Org\ttest-autosave-1770086537661\n90006\tTest Login Org\ttest-login-1770087575278\n90007\tTest Login Org\ttest-login-1770092643505\n90008\tTest AutoSave Org\ttest-autosave-1770092643499\n",
+  "stderr": "",
+  "execution_time_ms": 153
+}

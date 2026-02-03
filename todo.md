@@ -323,3 +323,13 @@
 - [ ] Test file upload with RadOne organization
 - [ ] Add admin review interface for viewing all organization responses
 - [ ] Test complete intake flow with file uploads
+
+## Database Cleanup - Remove Non-RadOne Organizations
+- [x] Query database to identify all non-RadOne organizations
+- [x] Delete users associated with non-RadOne organizations (preserve admin users)
+- [x] Delete intake responses for non-RadOne organizations
+- [x] Delete file attachments for non-RadOne organizations
+- [x] Delete section progress for non-RadOne organizations
+- [x] Delete task completion records for non-RadOne organizations
+- [x] Delete non-RadOne organizations (deleted 10 organizations)
+- [x] Verify only RadOne organizations remain (verified: only RadOne orgs in database)
