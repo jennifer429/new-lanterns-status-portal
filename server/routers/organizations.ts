@@ -250,7 +250,8 @@ export const organizationsRouter = router({
     const db = await getDb();
     if (!db) throw new Error("Database not available");
 
-    const orgs = await db.select().from(organizations);
+    // Only show RadOne organizations
+    const orgs = await db.select().from(organizations).where(sql`${organizations.slug} LIKE 'radone%'`);
     
     const metrics = await Promise.all(
       orgs.map(async (org) => {
