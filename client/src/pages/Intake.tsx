@@ -305,41 +305,44 @@ export default function IntakeWizard() {
     }
 
     const value = responses[question.id] || '';
+    const label = question.text || question.question;
 
     return (
-      <div key={question.id} className="space-y-3 p-4 rounded-lg bg-purple-950/20 border border-purple-500/20">
+      <div key={question.id} className="space-y-4 p-6 rounded-lg bg-purple-950/20 border border-purple-500/20">
         <div>
-          <Label className="text-white text-base font-semibold">
-            {question.text}
+          <Label htmlFor={question.id} className="text-white text-base font-semibold block mb-2">
+            {label}
             {question.required && <span className="text-red-400 ml-1">*</span>}
           </Label>
           {question.helpText && (
-            <p className="text-sm text-gray-400 mt-1">{question.helpText}</p>
+            <p className="text-sm text-gray-400 mt-1 mb-2">{question.helpText}</p>
           )}
         </div>
 
         {question.type === 'text' && (
           <Input
+            id={question.id}
             value={value}
             onChange={(e) => handleResponseChange(question.id, e.target.value)}
             placeholder={question.placeholder}
-            className="bg-black/40 border-purple-500/30 text-white"
+            className="bg-black/40 border-purple-500/30 text-white placeholder:text-gray-500 h-12 text-base"
           />
         )}
 
         {question.type === 'textarea' && (
           <Textarea
+            id={question.id}
             value={value}
             onChange={(e) => handleResponseChange(question.id, e.target.value)}
             placeholder={question.placeholder}
             rows={4}
-            className="bg-black/40 border-purple-500/30 text-white"
+            className="bg-black/40 border-purple-500/30 text-white placeholder:text-gray-500 text-base"
           />
         )}
 
         {question.type === 'select' && question.options && (
           <Select value={value} onValueChange={(val) => handleResponseChange(question.id, val)}>
-            <SelectTrigger className="bg-black/40 border-purple-500/30 text-white">
+            <SelectTrigger id={question.id} className="bg-black/40 border-purple-500/30 text-white h-12 text-base">
               <SelectValue placeholder={question.placeholder || "Select..."} />
             </SelectTrigger>
             <SelectContent>
@@ -358,10 +361,11 @@ export default function IntakeWizard() {
 
         {question.type === 'date' && (
           <Input
+            id={question.id}
             type="date"
             value={value}
             onChange={(e) => handleResponseChange(question.id, e.target.value)}
-            className="bg-black/40 border-purple-500/30 text-white"
+            className="bg-black/40 border-purple-500/30 text-white h-12 text-base"
           />
         )}
       </div>

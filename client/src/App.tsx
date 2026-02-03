@@ -10,6 +10,7 @@ import Intake from "./pages/Intake";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import Tasks from "./pages/Tasks";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -20,6 +21,7 @@ function Router() {
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/admin" component={Admin} />
       <Route path="/org/:slug/intake" component={Intake} />
+      <Route path="/org/:slug/tasks" component={Tasks} />
       <Route path="/org/:slug" component={Home} />
       <Route path={"/"} component={Login} />
       <Route path={"/404"} component={NotFound} />
