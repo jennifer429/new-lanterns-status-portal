@@ -16,9 +16,11 @@ export interface ConditionalFollowUp {
   type: QuestionType;
   question: string;
   id: string;
+  text?: string;
   required?: boolean;
-  options?: Array<{ value: string; label: string }>;
+  options?: Array<string | { value: string; label: string }>;
   placeholder?: string;
+  helpText?: string;
 }
 
 export interface Question {
@@ -36,8 +38,10 @@ export interface Question {
   noTasks?: Task[];
   
   // For non-yes/no questions
-  options?: Array<{ value: string; label: string }>;
+  options?: Array<string | { value: string; label: string }>;
   placeholder?: string;
+  text?: string;
+  helpText?: string;
 }
 
 export interface WizardStep {

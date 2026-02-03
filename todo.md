@@ -267,3 +267,13 @@
 - [x] Fix "Invalid email or password" login authentication error (removed duplicate users)
 - [x] Test admin page loads correctly
 - [x] Test login with existing user credentials
+
+## Wizard Auto-Save and Answer Persistence
+- [x] Create tRPC endpoint to save wizard responses (already exists)
+- [x] Create tRPC endpoint to load existing wizard responses (already exists)
+- [x] Implement auto-save on input change with debouncing
+- [x] Add visual feedback (Saving.../Saved indicators)
+- [x] Load previous answers when user returns to wizard
+- [x] Allow users to navigate back and edit previous answers
+- [x] Test auto-save functionality
+- [x] Test answer persistence across sessions
