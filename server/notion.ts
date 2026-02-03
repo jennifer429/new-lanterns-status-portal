@@ -101,14 +101,12 @@ export async function syncIntakeResponseToNotion(
   }
 
   try {
-    // Search for existing page for this organization
-    const searchResponse = await (client.databases as any).query({
-      database_id: ENV.notionDatabaseId,
+    // Search for existing page for this organization using search API
+    const searchResponse = await client.search({
+      query: organizationSlug,
       filter: {
-        property: "Organization Slug",
-        rich_text: {
-          equals: organizationSlug,
-        },
+        property: "object",
+        value: "page",
       },
     });
 

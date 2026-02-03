@@ -234,7 +234,7 @@ export const intakeRouter = router({
 
   /**
    * Upload file for intake question
-   * Uploads to Notion if organization slug starts with "radone"
+   * Uploads to Google Drive for RadOne organizations
    */
   uploadFile: publicProcedure
     .input(
@@ -264,23 +264,45 @@ export const intakeRouter = router({
       // Decode base64 file data
       const fileBuffer = Buffer.from(input.fileData, "base64");
 
-      // Check if should sync to Notion (only RadOne organizations)
-      const shouldSync = input.organizationSlug.toLowerCase().startsWith("radone");
+      // Check if should upload to Google Drive (only RadOne organizations)
+      const shouldUpload = input.organizationSlug.toLowerCase().startsWith("radone");
 
-      if (shouldSync) {
-        // Upload to Notion
-        const { uploadFileToNotion } = await import("../notion");
-        const fileUploadId = await uploadFileToNotion(fileBuffer, input.fileName, input.mimeType);
+      if (shouldUpload) {
+        // Upload to Google Drive using rclone
+        const { execSync } = await import("child_process");
+        const fs = await import("fs");
+        const path = await import("path");
+        
+        // Create temp file
+        const tempDir = "/tmp";
+        const tempFilePath = path.join(tempDir, `${Date.now()}-${input.fileName}`);
+        fs.writeFileSync(tempFilePath, fileBuffer);
 
-        if (fileUploadId) {
-          // Store file upload ID in database
+        try {
+          // Upload to Google Drive
+          const drivePath = `manus_google_drive:RadOne-Intake/${org.slug}/${input.fileName}`;
+          execSync(`rclone copy "${tempFilePath}" "manus_google_drive:RadOne-Intake/${org.slug}/" --config /home/ubuntu/.gdrive-rclone.ini`, {
+            stdio: 'pipe'
+          });
+
+          // Get shareable link
+          const linkOutput = execSync(`rclone link "${drivePath}" --config /home/ubuntu/.gdrive-rclone.ini`, {
+            encoding: 'utf-8',
+            stdio: 'pipe'
+          });
+          const fileUrl = linkOutput.trim();
+
+          // Clean up temp file
+          fs.unlinkSync(tempFilePath);
+
+          // Store file info in database
           const { intakeFileAttachments } = await import("../../drizzle/schema");
           await db.insert(intakeFileAttachments).values({
             organizationId: org.id,
             questionId: input.questionId,
             fileName: input.fileName,
-            fileUrl: `notion://file_upload/${fileUploadId}`,
-            driveFileId: fileUploadId,
+            fileUrl,
+            driveFileId: drivePath,
             fileSize: fileBuffer.length,
             mimeType: input.mimeType,
             uploadedBy: org.contactName || "Unknown",
@@ -288,13 +310,15 @@ export const intakeRouter = router({
 
           return {
             success: true,
-            fileUploadId,
-            message: "File uploaded to Notion successfully",
+            fileUrl,
+            message: "File uploaded to Google Drive successfully",
           };
-        } else {
+        } catch (error: any) {
+          // Clean up temp file on error
+          try { fs.unlinkSync(tempFilePath); } catch {}
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
-            message: "Failed to upload file to Notion",
+            message: `Failed to upload file to Google Drive: ${error.message}`,
           });
         }
       } else {

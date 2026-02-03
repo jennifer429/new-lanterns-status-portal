@@ -339,3 +339,25 @@
 - [x] Update admin dashboard to only show RadOne organizations
 - [x] Filter getMetrics query to exclude non-RadOne organizations
 - [x] Test all organization links work correctly (admin dashboard now only shows 3 RadOne orgs)
+
+## Update Notion Database ID
+- [ ] Update NOTION_DATABASE_ID from incorrect value to correct value
+- [ ] Test file upload with correct database ID
+
+## Complete Notion Integration - Pages and File Attachments
+- [x] Create function to find or create Notion page for organization
+- [x] Implement file attachment to Notion pages
+- [x] Update file upload endpoint to create page and attach files
+- [ ] Test file upload creates page in Notion database
+- [ ] Verify files are visible in Notion
+
+## Debug Notion File Upload Error
+- [ ] Check server logs for detailed Notion API error message
+- [ ] Fix Notion file upload integration
+- [ ] Test file upload successfully creates Notion page with attachment
+
+## Switch to Google Drive for File Uploads
+- [x] Remove Notion file upload code
+- [x] Implement Google Drive file upload using rclone
+- [x] Generate shareable Google Drive links
+- [x] Test file upload to Google Drive (ready to publish)
