@@ -277,3 +277,11 @@
 - [x] Allow users to navigate back and edit previous answers
 - [x] Test auto-save functionality
 - [x] Test answer persistence across sessions
+
+## Password/Authentication Issues
+- [x] Investigate why users keep having to reset passwords (found: no session cookie creation)
+- [x] Check authentication logs for login failures
+- [x] Verify password hashing/comparison logic (working correctly)
+- [x] Check session cookie persistence (missing!)
+- [x] Fix identified authentication issue (added session token creation and cookie setting)
+- [x] Test login flow end-to-end (password verification and openId tests passing)

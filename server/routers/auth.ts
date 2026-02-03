@@ -9,6 +9,11 @@ import { getDb } from "../db";
 import { users, organizations } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcrypt";
+import { sdk } from "../_core/sdk";
+import { getSessionCookieOptions } from "../_core/cookies";
+
+const COOKIE_NAME = "manus-session";
+const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
 
 export const authRouter = router({
   /**
@@ -21,7 +26,7 @@ export const authRouter = router({
         password: z.string().min(1),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
@@ -63,6 +68,15 @@ export const authRouter = router({
           orgSlug = org.slug;
         }
       }
+
+      // Create session token and set cookie
+      const sessionToken = await sdk.createSessionToken(user.openId, {
+        name: user.name || user.email?.split('@')[0] || "User",
+        expiresInMs: ONE_YEAR_MS,
+      });
+
+      const cookieOptions = getSessionCookieOptions(ctx.req);
+      ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 
       return {
         email: user.email || "",
