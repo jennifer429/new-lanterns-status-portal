@@ -125,11 +125,23 @@ export default function IntakeNew() {
   // Handle submit
   const handleSubmit = () => {
     const overallProgress = calculateOverallProgress();
+    
     if (overallProgress < 100) {
-      const confirmed = window.confirm(
-        `Your questionnaire is ${overallProgress}% complete. Some required fields may be missing. Do you want to submit anyway?`
+      // Find incomplete sections
+      const incompleteSections = questionnaireData
+        .map(section => ({
+          title: section.title,
+          progress: calculateSectionProgress(section)
+        }))
+        .filter(s => s.progress < 100)
+        .map(s => `• ${s.title} (${s.progress}% complete)`)
+        .join('\n');
+
+      alert(
+        `Cannot submit: Questionnaire is only ${overallProgress}% complete.\n\n` +
+        `Please complete the following sections:\n\n${incompleteSections}`
       );
-      if (!confirmed) return;
+      return;
     }
 
     setIsSubmitted(true);
@@ -209,20 +221,19 @@ export default function IntakeNew() {
 
       case 'yes-no':
         return (
-          <RadioGroup
+          <Select
             value={value || ''}
             onValueChange={(val) => setResponses(prev => ({ ...prev, [question.id]: val }))}
             disabled={isSubmitted}
           >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="yes" id={`${question.id}-yes`} />
-              <Label htmlFor={`${question.id}-yes`}>Yes</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="no" id={`${question.id}-no`} />
-              <Label htmlFor={`${question.id}-no`}>No</Label>
-            </div>
-          </RadioGroup>
+            <SelectTrigger>
+              <SelectValue placeholder="Select Yes or No" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Yes">Yes</SelectItem>
+              <SelectItem value="No">No</SelectItem>
+            </SelectContent>
+          </Select>
         );
 
       case 'date':

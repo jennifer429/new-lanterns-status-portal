@@ -391,3 +391,15 @@
 - [x] Show number of files uploaded per organization
 - [x] Display file names with download links
 - [x] Update backend API to return file tracking data
+
+## Fix Questionnaire Issues (User Feedback)
+- [x] Replace all questions with exact questions from source document (pasted_content_2.txt)
+- [x] Convert Yes/No questions to proper dropdowns (not text inputs)
+- [x] Convert all appropriate fields to dropdowns with predefined options
+- [x] Remove any hallucinated questions not in source document
+- [x] Assume Router = DataFirst for all overlay situations
+
+## Block Submission Until Complete
+- [x] Prevent submission if progress < 100%
+- [x] Show which sections are incomplete when user tries to submit
+- [x] Display clear message directing user to complete missing sections

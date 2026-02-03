@@ -1,6 +1,7 @@
 /**
  * Radiology One New Site Onboarding Questionnaire
- * Comprehensive 11-section questionnaire for PACS implementation
+ * Based on Boulder/Template Client Checklist
+ * Note: Router = DataFirst (Silverback) for all overlay situations
  */
 
 export interface Question {
@@ -23,633 +24,753 @@ export interface Section {
 
 export const questionnaireData: Section[] = [
   {
-    id: 'section-1',
-    title: 'Site Information & Contacts',
-    description: 'Basic facility information and primary contact details',
+    id: 'section-header',
+    title: 'Header Info',
+    description: 'Basic client information',
     questions: [
       {
-        id: '1.1.1',
-        question: 'Site/Facility Name',
+        id: 'INFO.1',
+        question: 'Client Name',
         type: 'text',
         required: true,
-        placeholder: 'Enter the complete legal name of your facility'
+        placeholder: 'Enter client organization name'
       },
       {
-        id: '1.1.2',
-        question: 'Healthcare System/Parent Organization',
-        type: 'text',
-        placeholder: 'If your site is part of a larger health system, please enter the organization name'
-      },
-      {
-        id: '1.1.3',
-        question: 'Site Address',
-        type: 'textarea',
+        id: 'INFO.3',
+        question: 'Target Go-Live Date',
+        type: 'date',
         required: true,
-        placeholder: 'Street address, city, state, ZIP code'
-      },
-      {
-        id: '1.1.4',
-        question: 'Site Website',
-        type: 'text',
-        placeholder: 'www.example.com or leave blank if not applicable'
-      },
-      {
-        id: '1.1.5',
-        question: 'Facility Type',
-        type: 'text',
-        required: true,
-        placeholder: 'Examples: Outpatient only, Rural Hospital, Ambulatory Surgery Center, Urban Hospital, Academic Medical Center, Community Hospital, Diagnostic Imaging Center, etc.'
-      },
-      {
-        id: '1.2',
-        question: 'Primary Contacts',
-        type: 'table',
-        required: true,
-        tableColumns: ['Contact Role', 'Name', 'Email', 'Phone'],
-        helpText: 'Please provide contact information for: Administrative Point of Contact, IT/Systems Contact, Clinical/Operations Contact'
+        placeholder: 'MM/DD/YYYY'
       }
     ]
   },
   {
-    id: 'section-2',
-    title: 'Site Systems & New Lantern Integration Points',
-    description: 'Understanding your current systems and integration requirements',
+    id: 'section-overview',
+    title: 'Overview & Architecture',
+    description: 'Key contacts and system architecture',
     questions: [
       {
-        id: '2.1',
-        question: 'Systems at Your Site',
-        type: 'table',
+        id: 'A.1',
+        question: 'Administrative point(s) of contact',
+        type: 'textarea',
         required: true,
-        tableColumns: ['System Component', 'System Name/Vendor', 'Version (if known)', 'Enter "N/A" if not applicable'],
-        helpText: 'List: Radiology Information System (RIS), PACS, Electronic Health Record (EHR), Reporting/Dictation System, Other Systems Requiring Integration'
+        placeholder: 'Name, title, email, phone'
       },
       {
-        id: '2.2.1',
-        question: 'Where will radiology orders originate for New Lantern?',
+        id: 'A.2',
+        question: 'IT point(s) of contact - Connectivity & Systems',
+        type: 'textarea',
+        required: true,
+        placeholder: 'Name, title, email, phone'
+      },
+      {
+        id: 'A.3',
+        question: 'Clinical Contact(s) - Technologist/Clinical Informatics',
+        type: 'textarea',
+        required: true,
+        placeholder: 'Name, title, email, phone'
+      },
+      {
+        id: 'A.4',
+        question: 'Radiologist Champion(s)',
+        type: 'textarea',
+        placeholder: 'Name, title, email, phone'
+      },
+      {
+        id: 'A.5',
+        question: 'Project Manager (if applicable)',
+        type: 'textarea',
+        placeholder: 'Name, title, email, phone'
+      },
+      {
+        id: 'A.7',
+        question: 'Will any systems be replaced during integration (PACS, RIS, EHR retirement)?',
         type: 'dropdown',
         required: true,
-        options: [
-          'From EHR',
-          'From RIS',
-          'From external order entry system',
-          'From paper (manual entry into New Lantern)',
-          'Other (please specify)'
-        ]
+        options: ['Yes', 'No - overlay integration with existing systems']
       },
       {
-        id: '2.2.2',
-        question: 'Will your site need to receive/view incoming orders within New Lantern?',
-        type: 'yes-no',
-        required: true
-      },
-      {
-        id: '2.3.1',
-        question: 'Where should New Lantern send completed reports?',
-        type: 'textarea',
-        required: true,
-        placeholder: 'Examples: Back to EHR, back to RIS, external portal, provider inbox, etc.'
-      },
-      {
-        id: '2.3.2',
-        question: 'Will New Lantern reports need to integrate with any other systems at your site?',
-        type: 'yes-no',
-        required: true
-      },
-      {
-        id: '2.3.3',
-        question: 'If yes, which systems?',
-        type: 'textarea',
-        placeholder: 'List all systems that need report integration'
-      }
-    ]
-  },
-  {
-    id: 'section-3',
-    title: 'DICOM & Imaging Capability',
-    description: 'Your imaging infrastructure and DICOM capabilities',
-    questions: [
-      {
-        id: '3.1.1',
-        question: 'Do your imaging modalities (CT, MRI, Ultrasound, X-ray, etc.) currently send DICOM images?',
-        type: 'yes-no',
-        required: true
-      },
-      {
-        id: '3.1.2',
-        question: 'Which imaging modalities do you have at this site? (Select all that apply)',
-        type: 'multi-select',
-        required: true,
-        options: [
-          'Radiography (X-ray)',
-          'Computed Tomography (CT)',
-          'Magnetic Resonance Imaging (MRI)',
-          'Ultrasound',
-          'Mammography',
-          'Nuclear Medicine',
-          'Fluoroscopy',
-          'PET/CT',
-          'Other (please specify)'
-        ]
-      },
-      {
-        id: '3.1.3',
-        question: 'DICOM export capability: Can your imaging equipment directly export DICOM images to external systems?',
-        type: 'yes-no',
-        required: true
-      },
-      {
-        id: '3.1.4',
-        question: 'Approximate daily volume of imaging studies',
-        type: 'text',
-        required: true,
-        placeholder: 'Numeric value (number of studies)'
-      },
-      {
-        id: '3.1.5',
-        question: 'Are your DICOM images currently being sent to an external location?',
-        type: 'yes-no',
-        required: true
-      },
-      {
-        id: '3.1.6',
-        question: 'Current external DICOM destinations (if applicable)',
-        type: 'textarea',
-        placeholder: 'List systems/vendors receiving DICOM data'
-      }
-    ]
-  },
-  {
-    id: 'section-4',
-    title: 'Workflow & Integration Requirements',
-    description: 'Order flow and report delivery workflows',
-    questions: [
-      {
-        id: '4.1.1',
-        question: 'Where do radiology orders originate? (Primary source)',
+        id: 'A.8',
+        question: 'Will your modality worklist system be impacted during this implementation?',
         type: 'dropdown',
         required: true,
-        options: [
-          'EHR',
-          'RIS',
-          'Paper requisition',
-          'Standalone order entry system',
-          'Multiple sources (please specify)',
-          'Other (please specify)'
-        ]
+        options: ['Yes', 'No']
       },
       {
-        id: '4.1.2',
-        question: 'Do you currently send orders to an external vendor/service?',
-        type: 'yes-no',
-        required: true
-      },
-      {
-        id: '4.1.3',
-        question: 'If yes to 4.1.2, what vendor/service?',
-        type: 'text',
-        placeholder: 'Vendor name'
-      },
-      {
-        id: '4.1.4',
-        question: 'Are there any intermediary systems between your order source and New Lantern?',
-        type: 'yes-no',
-        required: true,
-        helpText: 'Examples: DataFirst, middleware, translation services'
-      },
-      {
-        id: '4.1.5',
-        question: 'If yes to 4.1.4, please name the intermediary system(s)',
+        id: 'A.10',
+        question: 'Router details (DataFirst/Silverback)',
         type: 'textarea',
-        placeholder: 'List all intermediary systems'
-      },
-      {
-        id: '4.1.6',
-        question: 'Where should completed radiology reports be delivered?',
-        type: 'multi-select',
         required: true,
-        options: [
-          'Back to originating EHR',
-          'RIS',
-          'External provider portal',
-          'Fax (phone number required)',
-          'Email (email address required)',
-          'Both EHR and external portal',
-          'Other (please specify)'
-        ]
+        helpText: 'Document routing intermediary for HL7/DICOM. Assume Router = DataFirst for overlay situations.',
+        placeholder: 'Example: Silverback (DataFirst) - routing intermediary for HL7/DICOM'
       },
       {
-        id: '4.1.7',
-        question: 'Do you currently use an external dictation service?',
-        type: 'yes-no',
-        required: true
-      },
-      {
-        id: '4.1.8',
-        question: 'If yes to 4.1.7, which service?',
+        id: 'A.12',
+        question: 'Integration Engine (if applicable)',
         type: 'text',
-        placeholder: 'Examples: Radiology One, Radtech, Nuance Dragon, etc.'
+        placeholder: 'Example: Laurel Bridge, Mirth, etc.'
+      },
+      {
+        id: 'A.13',
+        question: 'EHR system',
+        type: 'text',
+        required: true,
+        placeholder: 'Example: Cerner, Epic, etc.'
+      },
+      {
+        id: 'A.14',
+        question: 'Current PACS',
+        type: 'text',
+        required: true,
+        placeholder: 'Example: Cerner Cam 7, GE Centricity, etc.'
       }
     ]
   },
   {
-    id: 'section-5',
-    title: 'Clinical Workflows & Specialties',
-    description: 'Imaging specialties and worklist configuration',
+    id: 'section-security',
+    title: 'Security & Permissions',
+    description: 'Security requirements and multi-tenancy configuration',
     questions: [
       {
-        id: '5.1.1',
-        question: 'Which radiology specialties do you perform at this site? (Select all that apply)',
+        id: 'B.1',
+        question: 'Is security questionnaire required?',
+        type: 'dropdown',
+        required: true,
+        options: ['Yes', 'No', 'Completed']
+      },
+      {
+        id: 'B.4',
+        question: 'Multi-tenancy requirements: Separate MRNs by organization?',
+        type: 'dropdown',
+        required: true,
+        options: ['Yes', 'No']
+      },
+      {
+        id: 'B.4-details',
+        question: 'If multi-tenancy or MRN issues exist, provide details',
+        type: 'textarea',
+        placeholder: 'Example: Historical multi-MRN issue, Laurel Bridge handles MRN normalization, etc.'
+      },
+      {
+        id: 'B.5',
+        question: 'Multi-tenancy requirements: Separate DICOM studies by PACS?',
+        type: 'dropdown',
+        required: true,
+        options: ['Yes', 'No', 'N/A']
+      },
+      {
+        id: 'B.6',
+        question: 'Multi-tenancy requirements: User restrictions by tenant?',
+        type: 'dropdown',
+        required: true,
+        options: ['Yes', 'No', 'N/A']
+      }
+    ]
+  },
+  {
+    id: 'section-imaging',
+    title: 'Imaging Routing & Connectivity',
+    description: 'DICOM configuration and volume estimates',
+    questions: [
+      {
+        id: 'C.1',
+        question: 'Estimated monthly volume',
+        type: 'text',
+        required: true,
+        placeholder: 'Number of studies per month'
+      },
+      {
+        id: 'C.2',
+        question: 'Current DICOM System of Record (SOR)',
+        type: 'text',
+        required: true,
+        placeholder: 'Example: Cerner Cam 7, GE Centricity, etc.'
+      },
+      {
+        id: 'C.3',
+        question: 'Does SOR have IOCM capabilities (prior image routing/prefetch)?',
+        type: 'dropdown',
+        required: true,
+        options: ['Yes', 'No', 'Handled by integration engine']
+      },
+      {
+        id: 'C.3-details',
+        question: 'If IOCM/prefetch is available, provide details',
+        type: 'textarea',
+        placeholder: 'Example: Laurel Bridge handles prior image routing/prefetch'
+      }
+    ]
+  },
+  {
+    id: 'section-data',
+    title: 'Data & Integration',
+    description: 'System integration and data exchange configuration',
+    questions: [
+      {
+        id: 'D.1',
+        question: 'Can production systems be configured for testing prior to go-live?',
+        type: 'dropdown',
+        required: true,
+        options: ['Yes', 'No']
+      },
+      {
+        id: 'D.2',
+        question: 'Confirmed go-live date',
+        type: 'date',
+        required: true,
+        placeholder: 'MM/DD/YYYY'
+      },
+      {
+        id: 'D.3',
+        question: 'Expected volume of images ready each month',
+        type: 'text',
+        required: true,
+        placeholder: 'Number of images'
+      },
+      {
+        id: 'D.4',
+        question: 'Expected modalities',
         type: 'multi-select',
         required: true,
         options: [
-          'General Radiology/Radiography',
           'CT',
           'MRI',
+          'X-Ray',
           'Ultrasound',
           'Mammography',
           'Nuclear Medicine',
-          'Interventional Radiology',
-          'Emergency Radiology',
-          'Pediatric Radiology',
-          'Other (please specify)'
+          'PET/CT',
+          'Fluoroscopy',
+          'Other'
         ]
       },
       {
-        id: '5.1.2',
-        question: 'Do you have different radiologist groups/providers for different specialties?',
-        type: 'yes-no',
-        required: true
-      },
-      {
-        id: '5.1.3',
-        question: 'How many radiologists typically work at this site at one time?',
-        type: 'text',
-        required: true,
-        placeholder: 'Numeric value (average during business hours)'
-      },
-      {
-        id: '5.1.4',
-        question: 'What are your primary clinical service lines?',
+        id: 'D.5',
+        question: 'Integration engines or routers in use',
         type: 'textarea',
         required: true,
-        placeholder: 'Examples: Emergency Department, Inpatient Medicine, Surgery, Orthopedics, etc.'
+        placeholder: 'Example: Silverback (router); Laurel Bridge (integration engine)'
       },
       {
-        id: '5.1.5',
-        question: 'Do you need studies organized by specialty in separate worklists?',
-        type: 'yes-no',
-        required: true
-      },
-      {
-        id: '5.1.6',
-        question: 'If yes to 5.1.5, list the specialties that need separate worklists',
-        type: 'textarea',
-        placeholder: 'List specialties requiring separate worklists'
-      },
-      {
-        id: '5.1.7',
-        question: 'Do you use priority levels (STAT, Routine, etc.) for studies?',
-        type: 'yes-no',
-        required: true
-      },
-      {
-        id: '5.1.8',
-        question: 'If yes to 5.1.7, what priority levels do you use?',
+        id: 'D.6',
+        question: 'Number of PACS systems to be overlayed (if overlay PACS)',
         type: 'text',
-        placeholder: 'Examples: STAT, URGENT, HIGH, ROUTINE, SCHEDULED'
+        required: true,
+        placeholder: 'Example: 1'
+      },
+      {
+        id: 'D.7',
+        question: 'Current PACS system',
+        type: 'text',
+        required: true,
+        placeholder: 'Example: Cerner Cam 7'
+      },
+      {
+        id: 'D.8',
+        question: 'Current Reporting system',
+        type: 'text',
+        required: true,
+        placeholder: 'Example: Intellirad, PowerScribe, etc.'
+      },
+      {
+        id: 'D.9',
+        question: 'Current EMR/RIS system',
+        type: 'text',
+        required: true,
+        placeholder: 'Example: Cerner, Epic, etc.'
+      },
+      {
+        id: 'D.10',
+        question: 'Prefetch Query Retrieve configuration',
+        type: 'textarea',
+        required: true,
+        helpText: 'Define prefetch rules and which system handles it',
+        placeholder: 'Example: Client handles prefetch via Laurel Bridge. Rules based on first name, last name, DOB, gender (not MRN due to multi-MRN issues).'
+      },
+      {
+        id: 'D.11',
+        question: 'How will comparison reports be sent/retrieved?',
+        type: 'textarea',
+        required: true,
+        placeholder: 'Example: Export of prior imaging reports (ORU) from existing reporting system'
       }
     ]
   },
   {
-    id: 'section-6',
-    title: 'Technical Requirements & Integration',
-    description: 'Connectivity, authentication, and data exchange protocols',
+    id: 'section-workflows',
+    title: 'Additional Workflows',
+    description: 'Integration workflows and special requirements',
     questions: [
       {
-        id: '6.1.1',
-        question: 'What is your primary internet connectivity for sending/receiving medical data?',
-        type: 'dropdown',
-        required: true,
-        options: [
-          'Direct internet connection',
-          'VPN',
-          'Dedicated line (T1, etc.)',
-          'MPLS/Private network',
-          'Combination (please specify)',
-          'Other (please specify)'
-        ]
+        id: 'E.2',
+        question: 'Tech notes input method',
+        type: 'textarea',
+        placeholder: 'How will technologists enter notes?'
       },
       {
-        id: '6.1.2',
-        question: 'What is your estimated internet upload/download speed (Mbps)?',
+        id: 'E.3',
+        question: 'Required EMR/RIS integrations',
+        type: 'textarea',
+        required: true,
+        placeholder: 'Example: HL7: ADT (A34 only - patient merge); ORM; ORU. All messages from Cerner forked to Radiology One via Silverback.'
+      },
+      {
+        id: 'E.4',
+        question: 'Applications producing secondary captures or AI results',
+        type: 'textarea',
+        placeholder: 'Example: Viz AI; Heart Flow - updates come through PACS as DICOM updates'
+      },
+      {
+        id: 'E.5',
+        question: 'DICOM SR or other data sources for auto-populating fields',
+        type: 'textarea',
+        placeholder: 'List any DICOM Structured Report sources'
+      },
+      {
+        id: 'E.6',
+        question: 'System for DICOM SR',
         type: 'text',
-        required: true,
-        placeholder: 'Format: Upload X Mbps / Download Y Mbps'
+        placeholder: 'Which system generates DICOM SR?'
       },
       {
-        id: '6.1.3',
-        question: 'Do you have a DMZ or separate network segment for external integrations?',
-        type: 'yes-no',
-        required: true
-      },
-      {
-        id: '6.1.4',
-        question: 'Are there any firewall or network restrictions we should be aware of?',
+        id: 'E.7',
+        question: 'Universal patient ID/index for unifying patients across sites',
         type: 'textarea',
-        placeholder: 'Describe any relevant network policies, port restrictions, etc.'
+        placeholder: 'Example: Multi-MRN issue being addressed. All MRNs included in every HL7 message.'
       },
       {
-        id: '6.2.1',
-        question: 'What authentication method would you prefer for New Lantern integration?',
-        type: 'dropdown',
-        required: true,
-        options: [
-          'HL7 with shared secret key',
-          'API Key',
-          'OAuth 2.0',
-          'SAML',
-          'Other (please specify)',
-          'No preference / Let Radiology One decide'
-        ]
-      },
-      {
-        id: '6.2.2',
-        question: 'Do you have specific HIPAA compliance or audit requirements beyond standard compliance?',
-        type: 'yes-no',
-        required: true
-      },
-      {
-        id: '6.2.3',
-        question: 'If yes to 6.2.2, please describe',
+        id: 'E.8',
+        question: 'Mapping of custom procedure codes from sites',
         type: 'textarea',
-        placeholder: 'Describe specific compliance requirements'
+        required: true,
+        placeholder: 'Example: CPT crosswalk on OBR44'
       },
       {
-        id: '6.3.1',
-        question: 'Does your system support SFTP file transfer?',
-        type: 'yes-no',
-        required: true
+        id: 'E.9',
+        question: 'Handling of studies with multiple reports/orders',
+        type: 'textarea',
+        placeholder: 'How should multi-report studies be handled?'
       },
       {
-        id: '6.3.2',
-        question: 'Does your system support REST/HTTPS API?',
-        type: 'yes-no',
-        required: true
+        id: 'E.10',
+        question: 'Specific reporting criteria (MIPS, site-specific footers, etc.)',
+        type: 'textarea',
+        placeholder: 'Any special reporting requirements'
       },
       {
-        id: '6.file-upload',
-        question: 'Upload Supporting Documents',
-        type: 'file',
-        helpText: 'Upload network diagrams, system documentation, or compliance certificates'
+        id: 'E.11',
+        question: 'Downtime procedures when EMR/RIS offline',
+        type: 'textarea',
+        required: true,
+        placeholder: 'Document downtime workflow'
+      },
+      {
+        id: 'E.12',
+        question: 'Prelim report workflow requirements',
+        type: 'textarea',
+        placeholder: 'How should preliminary reports be handled?'
+      },
+      {
+        id: 'E.13',
+        question: 'Credentialing process for each site',
+        type: 'textarea',
+        required: true,
+        placeholder: 'Document credentialing timeline and requirements'
       }
     ]
   },
   {
-    id: 'section-7',
-    title: 'Image Handling & Annotations',
-    description: 'DICOM handling and annotation requirements',
+    id: 'section-rad-workflows',
+    title: 'Rad Workflows',
+    description: 'Radiologist and technologist workflow configuration',
     questions: [
       {
-        id: '7.1.1',
-        question: 'Do your radiologists use any annotation or markup tools on DICOM images?',
-        type: 'yes-no',
-        required: true
+        id: 'F.1',
+        question: 'QA/QC workflow for image issues',
+        type: 'textarea',
+        placeholder: 'How should image quality issues be escalated?'
       },
       {
-        id: '7.1.2',
-        question: 'If yes to 7.1.1, what types of annotations do you use? (Select all that apply)',
+        id: 'F.2',
+        question: 'Radiologist-to-tech communication method',
+        type: 'textarea',
+        placeholder: 'How do radiologists communicate with techs?'
+      },
+      {
+        id: 'F.3',
+        question: 'Central technologist for radiologist communication',
+        type: 'text',
+        placeholder: 'Name and contact info'
+      },
+      {
+        id: 'F.4',
+        question: 'Does each technologist have individual PACS login?',
+        type: 'dropdown',
+        required: true,
+        options: ['Yes', 'No']
+      },
+      {
+        id: 'F.5',
+        question: 'Peer Review requirements',
+        type: 'textarea',
+        placeholder: 'Document peer review workflow if applicable'
+      },
+      {
+        id: 'F.6',
+        question: 'Critical result reporting process with referring physicians',
+        type: 'textarea',
+        placeholder: 'How are critical results communicated?'
+      },
+      {
+        id: 'F.7',
+        question: 'Radiologist scheduling process',
+        type: 'textarea',
+        required: true,
+        placeholder: 'Example: QGenda used by both Rad1 and client. Visibility to schedule through New Lantern.'
+      },
+      {
+        id: 'F.8',
+        question: 'Worklist configuration requirements',
+        type: 'textarea',
+        required: true,
+        placeholder: 'Document worklist preferences, filters, sorting, etc.'
+      }
+    ]
+  },
+  {
+    id: 'section-dicom-validation',
+    title: 'DICOM Data Validation',
+    description: 'DICOM tag validation and testing',
+    questions: [
+      {
+        id: 'G.1',
+        question: 'Patient ID Match - Tag (0010,0020)',
+        type: 'dropdown',
+        required: true,
+        options: ['Validated', 'Pending Testing', 'Issues Found']
+      },
+      {
+        id: 'G.2',
+        question: 'Accession Number Match - Tag (0008,0050)',
+        type: 'dropdown',
+        required: true,
+        options: ['Validated', 'Pending Testing', 'Issues Found']
+      },
+      {
+        id: 'G.3',
+        question: 'Study Description - Tag (0008,1030)',
+        type: 'dropdown',
+        required: true,
+        options: ['Validated', 'Pending Testing', 'Issues Found']
+      },
+      {
+        id: 'G.4',
+        question: 'Modality - Tag (0008,0060)',
+        type: 'dropdown',
+        required: true,
+        options: ['Validated', 'Pending Testing', 'Issues Found']
+      },
+      {
+        id: 'G.5',
+        question: 'Institution Name - Tag (0008,0080)',
+        type: 'dropdown',
+        required: true,
+        options: ['Validated', 'Pending Testing', 'Issues Found']
+      },
+      {
+        id: 'G.6',
+        question: 'Institution Department Name - Tag (0008,1040)',
+        type: 'dropdown',
+        required: true,
+        options: ['Validated', 'Pending Testing', 'Issues Found']
+      },
+      {
+        id: 'G.7',
+        question: 'Station Name/AE Title - Tag (0008,1010)',
+        type: 'dropdown',
+        required: true,
+        options: ['Validated', 'Pending Testing', 'Issues Found']
+      },
+      {
+        id: 'G.7-details',
+        question: 'AE Title details (if validated)',
+        type: 'text',
+        placeholder: 'Example: MUNSON'
+      },
+      {
+        id: 'G.8',
+        question: 'Study Date/Time - Tag (0008,0020/0030)',
+        type: 'dropdown',
+        required: true,
+        options: ['Validated', 'Pending Testing', 'Issues Found']
+      },
+      {
+        id: 'G.9',
+        question: 'Series Count',
+        type: 'dropdown',
+        required: true,
+        options: ['Validated', 'Pending Testing', 'Issues Found']
+      },
+      {
+        id: 'G.10',
+        question: 'Image Count',
+        type: 'dropdown',
+        required: true,
+        options: ['Validated', 'Pending Testing', 'Issues Found']
+      }
+    ]
+  },
+  {
+    id: 'section-institution',
+    title: 'Institution Group Configuration',
+    description: 'Site-specific configuration settings',
+    questions: [
+      {
+        id: 'H.1',
+        question: 'Institution Group Name',
+        type: 'text',
+        required: true,
+        placeholder: 'Example: MUNSON'
+      },
+      {
+        id: 'H.2',
+        question: 'Timezone',
+        type: 'dropdown',
+        required: true,
+        options: [
+          'Eastern Time (ET)',
+          'Central Time (CT)',
+          'Mountain Time (MT)',
+          'Pacific Time (PT)',
+          'Alaska Time (AKT)',
+          'Hawaii Time (HT)'
+        ],
+        helpText: 'ORUs come out of New Lantern as UTC by default. Silverback/DataFirst will convert to site-specific timezone.'
+      },
+      {
+        id: 'H.3',
+        question: 'Report Footer',
+        type: 'textarea',
+        required: true,
+        placeholder: 'Custom footer text for reports'
+      },
+      {
+        id: 'H.4',
+        question: 'ORU Destination',
+        type: 'text',
+        required: true,
+        placeholder: 'Where should ORU messages be sent?'
+      }
+    ]
+  },
+  {
+    id: 'section-users',
+    title: 'User & Access Configuration',
+    description: 'User accounts and permissions setup',
+    questions: [
+      {
+        id: 'I.1',
+        question: 'Radiologist Accounts - Provide list of radiologists',
+        type: 'textarea',
+        required: true,
+        placeholder: 'Name, email for each radiologist'
+      },
+      {
+        id: 'I.2',
+        question: 'Radiologist Group assignment',
+        type: 'text',
+        required: true,
+        placeholder: 'Which radiologist group?'
+      },
+      {
+        id: 'I.3',
+        question: 'Admin Accounts - Provide list of admins',
+        type: 'textarea',
+        required: true,
+        placeholder: 'Name, email for each admin'
+      },
+      {
+        id: 'I.4',
+        question: 'Tech Accounts - Provide list of technologists (if applicable)',
+        type: 'textarea',
+        placeholder: 'Name, email for each tech'
+      },
+      {
+        id: 'I.5',
+        question: 'Worklist Visibility preferences',
+        type: 'textarea',
+        required: true,
+        placeholder: 'Which users should see which worklists?'
+      },
+      {
+        id: 'I.6',
+        question: 'Dashboard Access preferences',
+        type: 'textarea',
+        required: true,
+        placeholder: 'Which users should have dashboard access?'
+      }
+    ]
+  },
+  {
+    id: 'section-templates',
+    title: 'Template & RVU Configuration',
+    description: 'Report templates and RVU setup',
+    questions: [
+      {
+        id: 'J.1',
+        question: 'High-Volume Procedure Templates needed',
+        type: 'textarea',
+        required: true,
+        placeholder: 'List procedures that need templates'
+      },
+      {
+        id: 'J.2',
+        question: 'Should templates be replicated from existing system?',
+        type: 'dropdown',
+        required: true,
+        options: ['Yes', 'No', 'N/A']
+      },
+      {
+        id: 'J.3',
+        question: 'Are there junk templates that should be removed?',
+        type: 'dropdown',
+        required: true,
+        options: ['Yes', 'No', 'N/A']
+      },
+      {
+        id: 'J.4',
+        question: 'RVU Values configuration',
+        type: 'textarea',
+        required: true,
+        placeholder: 'Document RVU requirements'
+      },
+      {
+        id: 'J.5',
+        question: 'Default Template assignment',
+        type: 'textarea',
+        required: true,
+        placeholder: 'Which template should be default?'
+      }
+    ]
+  },
+  {
+    id: 'section-worklist',
+    title: 'Worklist Configuration',
+    description: 'Worklist views and filters',
+    questions: [
+      {
+        id: 'K.1',
+        question: 'Main Worklist View preferences',
+        type: 'textarea',
+        required: true,
+        placeholder: 'How should the main worklist be configured?'
+      },
+      {
+        id: 'K.2',
+        question: 'Modality Filters needed',
         type: 'multi-select',
-        options: [
-          'Drawing/pointer tools (lines, circles, arrows)',
-          'Measurements',
-          'Text overlays',
-          'Lesion markers',
-          'Other (please specify)'
-        ]
-      },
-      {
-        id: '7.1.3',
-        question: 'Is it critical that annotations/markups persist across systems?',
-        type: 'yes-no',
-        required: true
-      },
-      {
-        id: '7.1.4',
-        question: 'Do you need DICOM images viewable directly within your EHR or worklist?',
-        type: 'yes-no',
-        required: true
-      },
-      {
-        id: '7.1.5',
-        question: 'Are there specific DICOM secondary capture or image format requirements?',
-        type: 'yes-no',
-        required: true
-      },
-      {
-        id: '7.1.6',
-        question: 'If yes to 7.1.5, please specify',
-        type: 'textarea',
-        placeholder: 'Describe DICOM format requirements'
-      }
-    ]
-  },
-  {
-    id: 'section-8',
-    title: 'Volume & Capacity Planning',
-    description: 'Expected volumes and turnaround time requirements',
-    questions: [
-      {
-        id: '8.1.1',
-        question: 'Expected number of imaging studies per month',
-        type: 'text',
         required: true,
-        placeholder: 'Numeric value'
+        options: ['CT', 'MRI', 'X-Ray', 'Ultrasound', 'Mammography', 'Nuclear Medicine', 'PET/CT', 'Fluoroscopy', 'All']
       },
       {
-        id: '8.1.2',
-        question: 'Expected number of reports per month',
-        type: 'text',
-        required: true,
-        placeholder: 'Numeric value'
-      },
-      {
-        id: '8.1.3',
-        question: 'What percentage of studies are STAT/Urgent?',
-        type: 'text',
-        required: true,
-        placeholder: 'Percentage (0-100%)'
-      },
-      {
-        id: '8.1.4',
-        question: 'What is your expected turnaround time requirement for report delivery?',
+        id: 'K.3',
+        question: 'Priority Sorting preferences',
         type: 'dropdown',
         required: true,
-        options: [
-          'Real-time (within minutes)',
-          'Within 1 hour',
-          'Within 4 hours',
-          'Within 24 hours',
-          'Next business day',
-          'Varies by priority level',
-          'Other (please specify)'
-        ]
-      }
-    ]
-  },
-  {
-    id: 'section-9',
-    title: 'Go-Live Planning',
-    description: 'Timeline, implementation approach, and training needs',
-    questions: [
-      {
-        id: '9.1.1',
-        question: 'What is your target go-live date?',
-        type: 'date',
-        required: true,
-        placeholder: 'MM/DD/YYYY'
+        options: ['STAT first', 'Oldest first', 'Newest first', 'Custom']
       },
       {
-        id: '9.1.2',
-        question: 'What is your preferred go-live approach?',
+        id: 'K.4',
+        question: 'STAT Indicator - How should STAT studies be marked?',
+        type: 'text',
+        required: true,
+        placeholder: 'Example: Red flag, bold text, etc.'
+      },
+      {
+        id: 'K.5',
+        question: 'Site Filter - Should worklist be filterable by site?',
         type: 'dropdown',
         required: true,
-        options: [
-          'Cutover (switch all studies at once)',
-          'Phased by modality',
-          'Phased by clinic/department',
-          'Pilot group first, then all',
-          'Other (please specify)'
-        ]
+        options: ['Yes', 'No']
       },
       {
-        id: '9.1.3',
-        question: 'Will you need downtime for this cutover?',
-        type: 'yes-no',
-        required: true
-      },
-      {
-        id: '9.1.4',
-        question: 'If yes to 9.1.3, how long of a downtime window can you accommodate?',
-        type: 'text',
-        placeholder: 'Examples: 1 hour, 2 hours, weekend, etc.'
-      },
-      {
-        id: '9.1.5',
-        question: 'How many staff members will need training?',
-        type: 'text',
+        id: 'K.6',
+        question: 'Auto-Refresh interval',
+        type: 'dropdown',
         required: true,
-        placeholder: 'Numeric value'
-      },
-      {
-        id: '9.1.6',
-        question: 'What roles need training? (Select all that apply)',
-        type: 'multi-select',
-        required: true,
-        options: [
-          'Radiologists',
-          'Technologists',
-          'Administrative staff',
-          'IT staff',
-          'Clinical staff',
-          'Front desk/Registration',
-          'Other (please specify)'
-        ]
-      },
-      {
-        id: '9.1.7',
-        question: 'What is your preferred training method?',
-        type: 'multi-select',
-        required: true,
-        options: [
-          'On-site training',
-          'Remote/Virtual training',
-          'Self-paced online modules',
-          'Documentation/manuals',
-          'Combination (please specify)'
-        ]
+        options: ['30 seconds', '1 minute', '2 minutes', '5 minutes', 'Manual only']
       }
     ]
   },
   {
-    id: 'section-10',
-    title: 'Additional Information',
-    description: 'Special considerations and compliance requirements',
+    id: 'section-validation',
+    title: 'End-to-End Validation',
+    description: 'Testing and validation tasks',
     questions: [
       {
-        id: '10.1.1',
-        question: 'Are there any known integration challenges or special requirements we should be aware of?',
-        type: 'textarea',
-        placeholder: 'Describe any special considerations'
-      },
-      {
-        id: '10.1.2',
-        question: 'Do you have any pending system upgrades or changes that might affect integration timing?',
-        type: 'yes-no',
-        required: true
-      },
-      {
-        id: '10.1.3',
-        question: 'If yes to 10.1.2, please describe',
-        type: 'textarea',
-        placeholder: 'Describe pending system changes'
-      },
-      {
-        id: '10.1.4',
-        question: 'Are there any compliance requirements specific to your facility (state-specific, accreditation, etc.)?',
-        type: 'yes-no',
-        required: true
-      },
-      {
-        id: '10.1.5',
-        question: 'If yes to 10.1.4, please describe',
-        type: 'textarea',
-        placeholder: 'Describe specific compliance requirements'
-      },
-      {
-        id: '10.1.6',
-        question: 'Is there any other information we should know to successfully onboard your facility?',
-        type: 'textarea',
-        placeholder: 'Any additional information'
-      },
-      {
-        id: '10.file-upload',
-        question: 'Upload Additional Documentation',
-        type: 'file',
-        helpText: 'Upload any additional documents that may help with onboarding'
-      }
-    ]
-  },
-  {
-    id: 'section-11',
-    title: 'Acknowledgment',
-    description: 'Confirmation and authorization',
-    questions: [
-      {
-        id: '11.1',
-        question: 'I confirm that the information provided is accurate and complete to the best of my knowledge.',
-        type: 'yes-no',
-        required: true
-      },
-      {
-        id: '11.2',
-        question: 'Authorized Representative Name',
-        type: 'text',
+        id: 'L.1',
+        question: 'ORM to Worklist Test - Status',
+        type: 'dropdown',
         required: true,
-        placeholder: 'Full name'
+        options: ['Passed', 'Failed', 'Pending', 'Not Started']
       },
       {
-        id: '11.3',
-        question: 'Authorized Representative Title',
-        type: 'text',
-        required: true,
-        placeholder: 'Job title'
+        id: 'L.1-notes',
+        question: 'ORM to Worklist Test - Notes',
+        type: 'textarea',
+        placeholder: 'Document test results and any issues'
       },
       {
-        id: '11.4',
-        question: 'Date Submitted',
-        type: 'date',
+        id: 'L.2',
+        question: 'DICOM to Images Test - Status',
+        type: 'dropdown',
         required: true,
-        placeholder: 'MM/DD/YYYY'
+        options: ['Passed', 'Failed', 'Pending', 'Not Started']
+      },
+      {
+        id: 'L.2-notes',
+        question: 'DICOM to Images Test - Notes',
+        type: 'textarea',
+        placeholder: 'Document test results and any issues'
+      },
+      {
+        id: 'L.3',
+        question: 'Template Selection Test - Status',
+        type: 'dropdown',
+        required: true,
+        options: ['Passed', 'Failed', 'Pending', 'Not Started']
+      },
+      {
+        id: 'L.3-notes',
+        question: 'Template Selection Test - Notes',
+        type: 'textarea',
+        placeholder: 'Document test results and any issues'
+      },
+      {
+        id: 'L.4',
+        question: 'Report to ORU Test - Status',
+        type: 'dropdown',
+        required: true,
+        options: ['Passed', 'Failed', 'Pending', 'Not Started']
+      },
+      {
+        id: 'L.4-notes',
+        question: 'Report to ORU Test - Notes',
+        type: 'textarea',
+        placeholder: 'Document test results and any issues'
+      },
+      {
+        id: 'L.5',
+        question: 'Prior Association Test - Status',
+        type: 'dropdown',
+        required: true,
+        options: ['Passed', 'Failed', 'Pending', 'Not Started']
+      },
+      {
+        id: 'L.5-notes',
+        question: 'Prior Association Test - Notes',
+        type: 'textarea',
+        placeholder: 'Document test results and any issues'
       }
     ]
   }
