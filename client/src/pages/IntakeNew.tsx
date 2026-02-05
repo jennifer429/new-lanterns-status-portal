@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useParams } from "wouter";
+import { useParams, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,19 +11,24 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, FileText, CheckCircle2, Send, Download, Upload } from "lucide-react";
+import { Loader2, Download, Upload, CheckCircle2, Circle, Clock, ArrowLeft, ChevronRight } from "lucide-react";
 import { questionnaireData, type Question, type Section } from "@shared/questionnaireData";
 
 export default function IntakeNew() {
   const { slug } = useParams();
+  const [, setLocation] = useLocation();
   const [responses, setResponses] = useState<Record<string, any>>({});
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
-  const [activeTab, setActiveTab] = useState(questionnaireData[0]?.id || "");
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [currentSection, setCurrentSection] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch organization and existing responses
+  // Fetch organization
+  const { data: org } = trpc.organizations.getBySlug.useQuery(
+    { slug: slug || "" },
+    { enabled: !!slug }
+  );
+
+  // Fetch existing responses
   const { data: existingResponses, isLoading: orgLoading } = trpc.intake.getResponses.useQuery(
     { organizationSlug: slug || "" },
     { enabled: !!slug }
@@ -50,57 +55,59 @@ export default function IntakeNew() {
 
   // Debounced auto-save
   useEffect(() => {
-    if (!slug || isSubmitted) return;
-    
-    const timer = setTimeout(() => {
-      if (Object.keys(responses).length > 0) {
-        setSaveStatus("saving");
+    if (Object.keys(responses).length === 0) return;
 
-        saveMutation.mutate(
-          { organizationSlug: slug, responses },
-          {
-            onSuccess: () => setSaveStatus("saved"),
-            onError: () => setSaveStatus("idle")
-          }
-        );
+    setSaveStatus("saving");
+    const timer = setTimeout(async () => {
+      try {
+        await saveMutation.mutateAsync({
+          organizationSlug: slug || "",
+          responses: Object.entries(responses).map(([questionId, response]) => ({
+            questionId,
+            response: typeof response === 'object' ? JSON.stringify(response) : String(response),
+            section: questionnaireData.find(s => s.questions.some(q => q.id === questionId))?.title || "",
+          })),
+        });
+        setSaveStatus("saved");
+        setTimeout(() => setSaveStatus("idle"), 2000);
+      } catch (error) {
+        console.error("Auto-save failed:", error);
+        setSaveStatus("idle");
       }
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [responses, slug, isSubmitted]);
+  }, [responses, slug, saveMutation]);
 
   // File upload mutation
-  const uploadFileMutation = trpc.intake.uploadFile.useMutation();
+  const uploadFileMutation = trpc.files.upload.useMutation();
 
+  // Handle file upload
   const handleFileUpload = useCallback(async (questionId: string, file: File) => {
-    if (!slug) return;
-
+    if (!org) {
+      alert("Organization not found");
+      return;
+    }
     const reader = new FileReader();
     reader.onload = async (e) => {
       const base64 = e.target?.result as string;
-      const base64Data = base64.split(',')[1];
-
       try {
         const result = await uploadFileMutation.mutateAsync({
-          organizationSlug: slug,
-          questionId,
+          organizationId: org.id,
+          taskId: questionId,
+          taskName: questionnaireData.flatMap(s => s.questions).find(q => q.id === questionId)?.text || questionId,
           fileName: file.name,
-          fileData: base64Data,
-          mimeType: file.type
+          fileData: base64,
+          mimeType: file.type,
         });
-
-        // Store file info in responses
-        const currentFiles = responses[questionId] || [];
-        setResponses(prev => ({
-          ...prev,
-          [questionId]: [...currentFiles, { fileName: file.name, url: result.fileUrl }]
-        }));
-      } catch (error: any) {
-        alert(`Failed to upload file: ${error.message}`);
+        setResponses(prev => ({ ...prev, [questionId]: result.fileUrl }));
+      } catch (error) {
+        console.error("File upload failed:", error);
+        alert("File upload failed. Please try again.");
       }
     };
     reader.readAsDataURL(file);
-  }, [slug, responses, uploadFileMutation]);
+  }, [org, uploadFileMutation]);
 
   // Calculate progress per section
   const calculateSectionProgress = (section: Section) => {
@@ -209,33 +216,27 @@ export default function IntakeNew() {
     URL.revokeObjectURL(url);
   };
 
-  // Handle submit
-  const handleSubmit = () => {
-    const overallProgress = calculateOverallProgress();
-    
-    if (overallProgress < 100) {
-      // Find incomplete sections
-      const incompleteSections = questionnaireData
-        .map(section => ({
-          title: section.title,
-          progress: calculateSectionProgress(section)
-        }))
-        .filter(s => s.progress < 100)
-        .map(s => `• ${s.title} (${s.progress}% complete)`)
-        .join('\n');
-
-      alert(
-        `Cannot submit: Questionnaire is only ${overallProgress}% complete.\n\n` +
-        `Please complete the following sections:\n\n${incompleteSections}`
-      );
-      return;
-    }
-
-    setIsSubmitted(true);
-    alert("Thank you! Your questionnaire has been submitted successfully. The New Lantern team will review your responses and contact you soon.");
+  // Get section status
+  const getSectionStatus = (section: Section) => {
+    const progress = calculateSectionProgress(section);
+    if (progress === 100) return "complete";
+    if (progress > 0) return "in-progress";
+    return "not-started";
   };
 
-  // Render question based on type
+  // Get status icon
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "complete":
+        return <CheckCircle2 className="w-5 h-5 text-green-500" />;
+      case "in-progress":
+        return <Clock className="w-5 h-5 text-orange-500" />;
+      default:
+        return <Circle className="w-5 h-5 text-gray-400" />;
+    }
+  };
+
+  // Render question input
   const renderQuestion = (question: Question) => {
     const value = responses[question.id];
 
@@ -246,7 +247,6 @@ export default function IntakeNew() {
             value={value || ''}
             onChange={(e) => setResponses(prev => ({ ...prev, [question.id]: e.target.value }))}
             placeholder={question.placeholder}
-            disabled={isSubmitted}
           />
         );
 
@@ -257,7 +257,6 @@ export default function IntakeNew() {
             onChange={(e) => setResponses(prev => ({ ...prev, [question.id]: e.target.value }))}
             placeholder={question.placeholder}
             rows={4}
-            disabled={isSubmitted}
           />
         );
 
@@ -266,10 +265,9 @@ export default function IntakeNew() {
           <Select
             value={value || ''}
             onValueChange={(val) => setResponses(prev => ({ ...prev, [question.id]: val }))}
-            disabled={isSubmitted}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select an option" />
+              <SelectValue placeholder={question.placeholder || "Select an option"} />
             </SelectTrigger>
             <SelectContent>
               {question.options?.map((option) => (
@@ -282,21 +280,26 @@ export default function IntakeNew() {
         );
 
       case 'multi-select':
-        const selectedValues = value || [];
+        const selectedValues = Array.isArray(value) ? value : [];
         return (
           <div className="space-y-2">
             {question.options?.map((option) => (
-              <div key={option} className="flex items-center space-x-2">
+              <div key={option} className="flex items-center gap-2">
                 <Checkbox
                   checked={selectedValues.includes(option)}
                   onCheckedChange={(checked) => {
-                    if (isSubmitted) return;
-                    const newValues = checked
-                      ? [...selectedValues, option]
-                      : selectedValues.filter((v: string) => v !== option);
-                    setResponses(prev => ({ ...prev, [question.id]: newValues }));
+                    if (checked) {
+                      setResponses(prev => ({
+                        ...prev,
+                        [question.id]: [...selectedValues, option]
+                      }));
+                    } else {
+                      setResponses(prev => ({
+                        ...prev,
+                        [question.id]: selectedValues.filter(v => v !== option)
+                      }));
+                    }
                   }}
-                  disabled={isSubmitted}
                 />
                 <label className="text-sm">{option}</label>
               </div>
@@ -304,49 +307,60 @@ export default function IntakeNew() {
           </div>
         );
 
-
-
       case 'date':
         return (
           <Input
             type="date"
             value={value || ''}
             onChange={(e) => setResponses(prev => ({ ...prev, [question.id]: e.target.value }))}
-            disabled={isSubmitted}
-            placeholder={question.placeholder}
           />
         );
 
-
-
       case 'upload':
-      case 'upload-download':
-        const files = value || [];
         return (
           <div className="space-y-2">
-            {!isSubmitted && (
-              <div className="border-2 border-dashed rounded-lg p-4">
-                <input
-                  type="file"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFileUpload(question.id, file);
-                  }}
-                  className="w-full"
-                />
-              </div>
+            <Input
+              type="file"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFileUpload(question.id, file);
+              }}
+            />
+            {value && (
+              <p className="text-sm text-green-600">✓ File uploaded: {value.split('/').pop()}</p>
             )}
-            {files.length > 0 && (
-              <div className="space-y-1">
-                {files.map((file: any, idx: number) => (
-                  <div key={idx} className="flex items-center gap-2 text-sm">
-                    <FileText className="w-4 h-4" />
-                    <a href={file.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                      {file.fileName}
-                    </a>
-                  </div>
-                ))}
-              </div>
+          </div>
+        );
+
+      case 'upload-download':
+        return (
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  // Download template
+                  const link = document.createElement('a');
+                  link.href = '/templates/vpn-form-template.pdf';
+                  link.download = 'vpn-form-template.pdf';
+                  link.click();
+                }}
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Download Template
+              </Button>
+              <Input
+                type="file"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFileUpload(question.id, file);
+                }}
+                className="flex-1"
+              />
+            </div>
+            {value && (
+              <p className="text-sm text-green-600">✓ File uploaded: {value.split('/').pop()}</p>
             )}
           </div>
         );
@@ -365,25 +379,29 @@ export default function IntakeNew() {
   }
 
   const overallProgress = calculateOverallProgress();
+  const currentSectionData = currentSection ? questionnaireData.find(s => s.id === currentSection) : null;
 
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">Radiology One New Site Onboarding</h1>
-              <p className="text-sm text-muted-foreground mt-1">{slug}</p>
-            </div>
-            <div className="flex items-center gap-4">
+  // Dashboard view
+  if (!currentSection) {
+    return (
+      <div className="min-h-screen bg-background">
+        {/* Header */}
+        <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+          <div className="container py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-10" />
+                <div>
+                  <h1 className="text-2xl font-bold">Radiology One - {slug}</h1>
+                  <p className="text-sm text-muted-foreground mt-1">New Site Onboarding</p>
+                </div>
+              </div>
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleImportCSV}
                   className="gap-2"
-                  disabled={isSubmitted}
                 >
                   <Upload className="w-4 h-4" />
                   Import
@@ -405,112 +423,232 @@ export default function IntakeNew() {
                   className="hidden"
                 />
               </div>
-              <div className="text-right">
-                <p className="text-sm font-medium">Overall Progress</p>
-                <p className="text-2xl font-bold text-primary">{overallProgress}%</p>
-              </div>
-              <div className="flex items-center gap-2">
-                {isSubmitted ? (
-                  <>
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                    <span className="text-sm text-green-500">Submitted</span>
-                  </>
-                ) : saveStatus === "saving" ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Saving...</span>
-                  </>
-                ) : saveStatus === "saved" ? (
-                  <>
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                    <span className="text-sm text-green-500">Saved</span>
-                  </>
-                ) : (
-                  <span className="text-sm text-muted-foreground">Ready</span>
-                )}
-              </div>
             </div>
           </div>
-          <Progress value={overallProgress} className="mt-4 h-2" />
-        </div>
-      </header>
+        </header>
 
-      {/* Main Content */}
-      <div className="container py-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid grid-cols-3 lg:grid-cols-6 xl:grid-cols-11 gap-2 h-auto p-2">
-            {questionnaireData.map((section, idx) => {
-              const progress = calculateSectionProgress(section);
-              return (
-                <TabsTrigger
-                  key={section.id}
-                  value={section.id}
-                  className="flex flex-col items-start p-3 h-auto data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                >
-                  <span className="text-xs font-medium">Section {idx + 1}</span>
-                  <span className="text-xs mt-1 line-clamp-2">{section.title}</span>
-                  <Badge variant={progress === 100 ? "default" : "outline"} className="mt-2">
-                    {progress}%
-                  </Badge>
-                </TabsTrigger>
-              );
-            })}
-          </TabsList>
+        {/* Main Content */}
+        <div className="container py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-8">
+            {/* Left: Section Cards */}
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-xl font-semibold mb-2">Implementation Checklist</h2>
+                <p className="text-sm text-muted-foreground">Complete all sections to proceed with go-live</p>
+              </div>
 
-          {questionnaireData.map((section) => (
-            <TabsContent key={section.id} value={section.id} className="space-y-6">
-              <Card>
+              <div className="grid gap-4">
+                {questionnaireData.map((section, idx) => {
+                  const progress = calculateSectionProgress(section);
+                  const status = getSectionStatus(section);
+                  const answeredCount = section.questions.filter(q => {
+                    const value = responses[q.id];
+                    if (Array.isArray(value)) return value.length > 0;
+                    if (typeof value === 'string') return value.trim().length > 0;
+                    return value !== undefined && value !== null && value !== '';
+                  }).length;
+
+                  return (
+                    <Card
+                      key={section.id}
+                      className="cursor-pointer hover:border-primary transition-colors"
+                      onClick={() => setCurrentSection(section.id)}
+                    >
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              {getStatusIcon(status)}
+                              <CardTitle className="text-lg">
+                                {idx + 1}. {section.title}
+                              </CardTitle>
+                            </div>
+                            <CardDescription>{section.description}</CardDescription>
+                          </div>
+                          <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">
+                              {answeredCount} of {section.questions.length} questions answered
+                            </span>
+                            <span className="font-semibold text-primary">{progress}%</span>
+                          </div>
+                          <Progress value={progress} className="h-2" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Right: Progress Panel */}
+            <div className="space-y-4">
+              <Card className="sticky top-24">
                 <CardHeader>
-                  <CardTitle>{section.title}</CardTitle>
-                  {section.description && (
-                    <CardDescription>{section.description}</CardDescription>
-                  )}
+                  <CardTitle>Overall Progress</CardTitle>
+                  <CardDescription>
+                    {questionnaireData.filter(s => calculateSectionProgress(s) === 100).length} of {questionnaireData.length} sections complete
+                  </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  {section.questions.map((question) => (
-                    <div key={question.id} className="space-y-2">
-                      <Label className="text-base">
-                        {question.text}
-                      </Label>
-                      {question.notes && (
-                        <p className="text-sm text-muted-foreground">{question.notes}</p>
-                      )}
-                      {renderQuestion(question)}
-                    </div>
-                  ))}
+                <CardContent className="space-y-4">
+                  <div className="text-center p-6 rounded-lg bg-primary/10 border-2 border-primary/30">
+                    <div className="text-5xl font-bold text-primary mb-2">{overallProgress}%</div>
+                    <p className="text-sm text-muted-foreground">Complete</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    {questionnaireData.map((section) => {
+                      const progress = calculateSectionProgress(section);
+                      const status = getSectionStatus(section);
+                      return (
+                        <div key={section.id} className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            {status === "complete" ? (
+                              <CheckCircle2 className="w-4 h-4 text-green-500" />
+                            ) : status === "in-progress" ? (
+                              <Clock className="w-4 h-4 text-orange-500" />
+                            ) : (
+                              <Circle className="w-4 h-4 text-gray-400" />
+                            )}
+                            <span className="truncate">{section.title}</span>
+                          </div>
+                          <span className="font-medium">{progress}%</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex items-center gap-2 text-sm">
+                    {saveStatus === "saving" ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                        <span className="text-muted-foreground">Saving...</span>
+                      </>
+                    ) : saveStatus === "saved" ? (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 text-green-500" />
+                        <span className="text-green-500">All changes saved</span>
+                      </>
+                    ) : (
+                      <span className="text-muted-foreground">Ready</span>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
-            </TabsContent>
-          ))}
-        </Tabs>
-
-        {/* Submit Button */}
-        {!isSubmitted && (
-          <div className="mt-8 flex justify-center">
-            <Button
-              size="lg"
-              onClick={handleSubmit}
-              className="min-w-[200px]"
-            >
-              <Send className="w-4 h-4 mr-2" />
-              Submit Questionnaire
-            </Button>
+            </div>
           </div>
-        )}
+        </div>
+      </div>
+    );
+  }
 
-        {isSubmitted && (
-          <div className="mt-8 p-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-            <div className="flex items-center gap-3">
-              <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
+  // Section detail view
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+        <div className="container py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setCurrentSection(null)}
+                className="gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to Dashboard
+              </Button>
+              <div className="h-6 w-px bg-border" />
               <div>
-                <h3 className="font-semibold text-green-900 dark:text-green-100">Questionnaire Submitted</h3>
-                <p className="text-sm text-green-700 dark:text-green-300 mt-1">
-                  Thank you for completing the Radiology One onboarding questionnaire. Our team will review your responses and contact you soon to discuss next steps.
+                <h1 className="text-xl font-bold">{currentSectionData?.title}</h1>
+                <p className="text-sm text-muted-foreground">
+                  {currentSectionData?.questions.filter(q => {
+                    const value = responses[q.id];
+                    if (Array.isArray(value)) return value.length > 0;
+                    if (typeof value === 'string') return value.trim().length > 0;
+                    return value !== undefined && value !== null && value !== '';
+                  }).length} of {currentSectionData?.questions.length} questions answered
                 </p>
               </div>
             </div>
+            <div className="flex items-center gap-2">
+              {saveStatus === "saving" ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Saving...</span>
+                </>
+              ) : saveStatus === "saved" ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  <span className="text-sm text-green-500">Saved</span>
+                </>
+              ) : (
+                <span className="text-sm text-muted-foreground">Ready</span>
+              )}
+            </div>
           </div>
-        )}
+          {currentSectionData && (
+            <Progress value={calculateSectionProgress(currentSectionData)} className="mt-4 h-2" />
+          )}
+        </div>
+      </header>
+
+      {/* Section Content */}
+      <div className="container py-8 max-w-4xl">
+        <Card>
+          <CardHeader>
+            <CardTitle>{currentSectionData?.title}</CardTitle>
+            {currentSectionData?.description && (
+              <CardDescription>{currentSectionData.description}</CardDescription>
+            )}
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {currentSectionData?.questions.map((question) => (
+              <div key={question.id} className="space-y-2">
+                <Label htmlFor={question.id} className="text-base font-medium">
+                  {question.text}
+                  <span className="text-red-500 ml-1">*</span>
+                </Label>
+                {question.notes && (
+                  <p className="text-sm text-muted-foreground">{question.notes}</p>
+                )}
+                {renderQuestion(question)}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-between mt-6">
+          <Button
+            variant="outline"
+            onClick={() => setCurrentSection(null)}
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Dashboard
+          </Button>
+          <Button
+            onClick={() => {
+              const currentIdx = questionnaireData.findIndex(s => s.id === currentSection);
+              if (currentIdx < questionnaireData.length - 1) {
+                setCurrentSection(questionnaireData[currentIdx + 1].id);
+              } else {
+                setCurrentSection(null);
+              }
+            }}
+          >
+            {questionnaireData.findIndex(s => s.id === currentSection) === questionnaireData.length - 1
+              ? "Back to Dashboard"
+              : "Save & Continue"}
+            {questionnaireData.findIndex(s => s.id === currentSection) < questionnaireData.length - 1 && (
+              <ChevronRight className="w-4 h-4 ml-2" />
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );

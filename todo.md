@@ -507,3 +507,14 @@
 - [ ] Test complete flow: fill form, export CSV, import CSV, verify data
 - [x] Ensure organization name displays prominently
 - [ ] Use correct New Lantern logo throughout
+
+## Rebuild UI to Match Mockups
+- [x] Fix admin page "Organization not found" error
+- [x] Replace tabs layout with section cards dashboard
+- [x] Show 6 section cards with progress, estimated time, status icons
+- [x] Add right sidebar with Overall Progress panel
+- [ ] Add right sidebar with Files & Documents panel
+- [x] Create section detail view when clicking on a card
+- [x] Add breadcrumb navigation (Dashboard > Section Name)
+- [x] Add Save & Continue and Back buttons in section detail view
+- [x] Match mockup styling and layout exactly

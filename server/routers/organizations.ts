@@ -255,21 +255,9 @@ export const organizationsRouter = router({
     
     const metrics = await Promise.all(
       orgs.map(async (org) => {
-        // Get user count for this organization
-        const [userCountResult] = await db
-          .select({ count: count() })
-          .from(users)
-          .where(eq(users.organizationId, org.id));
-        const userCount = userCountResult?.count || 0;
-
-        // Get last login date for this organization
-        const [lastLoginResult] = await db
-          .select({ lastLoginAt: users.lastLoginAt })
-          .from(users)
-          .where(eq(users.organizationId, org.id))
-          .orderBy(desc(users.lastLoginAt))
-          .limit(1);
-        const lastLoginAt = lastLoginResult?.lastLoginAt || null;
+        // Note: User management is separate from organizations in this system
+        const userCount = 0;
+        const lastLoginAt = null;
 
         // Calculate intake completion percentage
         const [totalQuestionsResult] = await db
