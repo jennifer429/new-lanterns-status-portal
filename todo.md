@@ -403,3 +403,107 @@
 - [x] Prevent submission if progress < 100%
 - [x] Show which sections are incomplete when user tries to submit
 - [x] Display clear message directing user to complete missing sections
+
+## Create UX Redesign Mockup
+- [ ] Generate visual mockup showing priority tiers layout
+- [ ] Show go-live readiness panel design
+- [ ] Show global file management panel
+- [ ] Get user feedback on mockup before implementation
+
+## Questionnaire UX Redesign - Priority Tiers & Skip-Friendly Navigation
+- [ ] Replace section grid with 3 visual tiers (Required/Optional/Validation)
+- [ ] Add "Required for Go-Live" tier with 5 sections (Header, Security, Imaging, Data, Rad Workflows)
+- [ ] Add "Configuration (Optional)" tier with 3 sections (Institution Groups, Templates, Worklists)
+- [ ] Add "Validation & QA" tier with 2 sections (DICOM Validation, End-to-End Validation)
+- [ ] Show status badges (Not started / In progress / Complete) on each section
+- [ ] Add estimated time per section
+- [ ] Make all sections clickable in any order (no forced sequence)
+
+## Go-Live Readiness Panel
+- [ ] Add persistent right-side panel showing "What's blocking go-live"
+- [ ] List incomplete required sections with red indicators
+- [ ] Show completed sections with green checkmarks
+- [ ] Add messaging: "You can complete sections in any order"
+- [ ] Update panel dynamically as sections are completed
+
+## Global File Management System
+- [ ] Create global file store (files belong to onboarding, not sections)
+- [ ] Add persistent "Files & Documents" panel (right-side desktop, bottom drawer mobile)
+- [ ] Show all uploaded files with: name, used in section, required/optional, status
+- [ ] Add actions for each file: Replace, Remove, Go to section
+- [ ] Implement file reference system (sections store fileId, not file data)
+- [ ] Allow "Upload new" or "Choose existing" when section requests file
+- [ ] Make file replacement non-destructive (preserve fileId, update all references)
+- [ ] Show warnings in sections when required files are missing
+- [ ] Add file upload badge showing count and red indicator for missing required files
+
+## Skip-Friendly Progress Tracking
+- [ ] Replace percentage with "X of Y sections started / complete"
+- [ ] Show per-section progress (3/7 questions answered)
+- [ ] Add "Suggested Next" CTA with estimated time
+- [ ] Add copy: "You don't need to complete this in order"
+- [ ] Remove total time estimate from homepage
+- [ ] Add per-section time estimates
+- [ ] Show "Your progress is saved" when jumping between sections
+- [ ] Add section sidebar inside questionnaire showing all sections with status icons
+
+## File Download & Questionnaire Export Features
+- [ ] Add "Download" button to each file in Files & Documents panel
+- [ ] Add "Download All Files" button to Files & Documents panel (creates zip archive)
+- [ ] Add "Export Questionnaire" button to main interface
+- [ ] Export format: Pipe-delimited file (|) with columns: Section, Question ID, Question Text, Answer, Required, Completed
+- [ ] Include metadata in export: Organization name, export date, completion percentage
+- [ ] Export file naming: {organization-slug}_questionnaire_{date}.txt
+- [ ] Allow export at any time (even if incomplete)
+- [ ] Show incomplete questions as empty values in export
+
+## Logo and Organization Name Display
+- [ ] Use actual New Lantern logo (from /client/public/images/new-lantern-logo.png)
+- [ ] Display organization name prominently (e.g., "Radiology One - Munson")
+- [ ] Keep organization name in same location across all pages
+- [ ] Add organization name to header/navigation area
+
+## Category Reorganization
+- [ ] Create CSV file mapping all questions to proposed categories
+- [ ] Review category assignments with user
+- [ ] Reorganize questions based on feedback
+- [ ] Update priority tier assignments (Required/Optional/Validation)
+
+## Simplified Questionnaire Design (No Priority Tiers)
+- [ ] Remove 3-tier priority system (all sections are equal and required)
+- [ ] Display 6 sections as equal cards in grid layout
+- [ ] Show progress for each section (X/Y questions answered, percentage)
+- [ ] Show status icons (complete/in-progress/not-started)
+- [ ] Allow completing sections in any order
+- [ ] Keep "Export Questionnaire" button for CSV download anytime
+- [ ] Block final submission until 100% complete
+- [ ] Use actual New Lantern logo from project files
+- [ ] Display organization name prominently (e.g., "Radiology One - Munson")
+- [ ] Replace old 13-section questionnaire with new 6-section structure from pasted_content_4.txt
+
+## Section Form Mockups
+- [ ] Create mockup for Section 1: Organization Information (18 questions)
+- [ ] Create mockup for Section 2: Overview & Architecture (10 questions)
+- [ ] Create mockup for Section 3: Data & Integration (12 questions)
+- [ ] Create mockup for Section 4: Configuration Files (5 file uploads)
+- [ ] Create mockup for Section 5: Connectivity (3 questions)
+- [ ] Create mockup for Section 6: DICOM Data Validation (2 questions)
+- [ ] Show section navigation sidebar on left
+- [ ] Show progress indicator for current section
+- [ ] Show Save & Continue and Back to Overview buttons
+
+## Implement Complete Redesigned Questionnaire
+- [x] Replace questionnaireData.ts with new 6-section structure from pasted_content_4.txt
+- [ ] Update database schema to support new question structure
+- [x] Implement CSV export: pipe-delimited format with all questions and answers
+- [x] Implement CSV import: parse pipe-delimited file and populate answers
+- [x] Update IntakeNew.tsx to show section overview cards
+- [x] Create section detail view component with form fields
+- [x] Add file upload functionality for Configuration Files section
+- [x] Add VPN form upload/download for Connectivity section
+- [x] Update progress calculation for 6 sections (51 total questions)
+- [x] Add Export Questionnaire button in header
+- [x] Add Import Questionnaire button/functionality
+- [ ] Test complete flow: fill form, export CSV, import CSV, verify data
+- [x] Ensure organization name displays prominently
+- [ ] Use correct New Lantern logo throughout

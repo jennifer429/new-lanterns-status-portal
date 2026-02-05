@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, FileText, CheckCircle2, Send } from "lucide-react";
+import { Loader2, FileText, CheckCircle2, Send, Download, Upload } from "lucide-react";
 import { questionnaireData, type Question, type Section } from "@shared/questionnaireData";
 
 export default function IntakeNew() {
@@ -21,6 +21,7 @@ export default function IntakeNew() {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [activeTab, setActiveTab] = useState(questionnaireData[0]?.id || "");
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch organization and existing responses
   const { data: existingResponses, isLoading: orgLoading } = trpc.intake.getResponses.useQuery(
@@ -103,23 +104,109 @@ export default function IntakeNew() {
 
   // Calculate progress per section
   const calculateSectionProgress = (section: Section) => {
-    const requiredQuestions = section.questions.filter(q => q.required);
-    if (requiredQuestions.length === 0) return 100;
+    const totalQuestions = section.questions.length;
+    if (totalQuestions === 0) return 100;
 
-    const answeredCount = requiredQuestions.filter(q => {
+    const answeredCount = section.questions.filter(q => {
       const value = responses[q.id];
       if (Array.isArray(value)) return value.length > 0;
       if (typeof value === 'string') return value.trim().length > 0;
       return value !== undefined && value !== null && value !== '';
     }).length;
 
-    return Math.round((answeredCount / requiredQuestions.length) * 100);
+    return Math.round((answeredCount / totalQuestions) * 100);
   };
 
   // Calculate overall progress
   const calculateOverallProgress = () => {
     const sectionProgresses = questionnaireData.map(calculateSectionProgress);
     return Math.round(sectionProgresses.reduce((a, b) => a + b, 0) / questionnaireData.length);
+  };
+
+  // Handle CSV import
+  const handleImportCSV = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      const lines = content.split('\n');
+      
+      // Skip header lines (first 2 lines)
+      const dataLines = lines.slice(2);
+      
+      const importedResponses: Record<string, any> = {};
+      
+      dataLines.forEach(line => {
+        if (!line.trim()) return;
+        
+        const parts = line.split('|');
+        if (parts.length < 4) return;
+        
+        const questionId = parts[1]?.trim();
+        const answer = parts[3]?.trim();
+        
+        if (questionId && answer) {
+          // Try to parse as JSON for arrays/objects
+          try {
+            importedResponses[questionId] = JSON.parse(answer);
+          } catch {
+            importedResponses[questionId] = answer;
+          }
+        }
+      });
+      
+      setResponses(prev => ({ ...prev, ...importedResponses }));
+      alert(`Successfully imported ${Object.keys(importedResponses).length} responses!`);
+    };
+    
+    reader.readAsText(file);
+    
+    // Reset input so same file can be selected again
+    e.target.value = '';
+  };
+
+  // Handle CSV export
+  const handleExportCSV = () => {
+    const today = new Date().toISOString().split('T')[0];
+    const filename = `${slug}_questionnaire_${today}.txt`;
+    
+    // Build CSV content
+    let csvContent = `Organization: ${slug} | Export Date: ${today} | Completion: ${calculateOverallProgress()}%\n`;
+    csvContent += `Section|Question ID|Question Text|Answer|Completed\n`;
+    
+    questionnaireData.forEach(section => {
+      section.questions.forEach(question => {
+        const answer = responses[question.id];
+        let answerStr = '';
+        
+        if (Array.isArray(answer)) {
+          answerStr = answer.join('; ');
+        } else if (typeof answer === 'object' && answer !== null) {
+          answerStr = JSON.stringify(answer);
+        } else {
+          answerStr = answer || '';
+        }
+        
+        const completed = answer && (Array.isArray(answer) ? answer.length > 0 : String(answer).trim().length > 0) ? 'Yes' : 'No';
+        
+        csvContent += `${section.title}|${question.id}|${question.text}|${answerStr}|${completed}\n`;
+      });
+    });
+    
+    // Download file
+    const blob = new Blob([csvContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   // Handle submit
@@ -159,7 +246,6 @@ export default function IntakeNew() {
             value={value || ''}
             onChange={(e) => setResponses(prev => ({ ...prev, [question.id]: e.target.value }))}
             placeholder={question.placeholder}
-            required={question.required}
             disabled={isSubmitted}
           />
         );
@@ -170,7 +256,6 @@ export default function IntakeNew() {
             value={value || ''}
             onChange={(e) => setResponses(prev => ({ ...prev, [question.id]: e.target.value }))}
             placeholder={question.placeholder}
-            required={question.required}
             rows={4}
             disabled={isSubmitted}
           />
@@ -219,22 +304,7 @@ export default function IntakeNew() {
           </div>
         );
 
-      case 'yes-no':
-        return (
-          <Select
-            value={value || ''}
-            onValueChange={(val) => setResponses(prev => ({ ...prev, [question.id]: val }))}
-            disabled={isSubmitted}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select Yes or No" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Yes">Yes</SelectItem>
-              <SelectItem value="No">No</SelectItem>
-            </SelectContent>
-          </Select>
-        );
+
 
       case 'date':
         return (
@@ -242,79 +312,15 @@ export default function IntakeNew() {
             type="date"
             value={value || ''}
             onChange={(e) => setResponses(prev => ({ ...prev, [question.id]: e.target.value }))}
-            required={question.required}
             disabled={isSubmitted}
+            placeholder={question.placeholder}
           />
         );
 
-      case 'table':
-        const tableData = value || [];
-        return (
-          <div className="space-y-2">
-            <div className="border rounded-lg overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-muted">
-                  <tr>
-                    {question.tableColumns?.map((col, idx) => (
-                      <th key={idx} className="p-2 text-left text-sm font-medium">
-                        {col}
-                      </th>
-                    ))}
-                    {!isSubmitted && <th className="p-2 w-20"></th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {tableData.map((row: any, rowIdx: number) => (
-                    <tr key={rowIdx} className="border-t">
-                      {question.tableColumns?.map((col, colIdx) => (
-                        <td key={colIdx} className="p-2">
-                          <Input
-                            value={row[col] || ''}
-                            onChange={(e) => {
-                              const newTableData = [...tableData];
-                              newTableData[rowIdx] = { ...newTableData[rowIdx], [col]: e.target.value };
-                              setResponses(prev => ({ ...prev, [question.id]: newTableData }));
-                            }}
-                            placeholder={col}
-                            className="w-full"
-                            disabled={isSubmitted}
-                          />
-                        </td>
-                      ))}
-                      {!isSubmitted && (
-                        <td className="p-2">
-                          <button
-                            onClick={() => {
-                              const newTableData = tableData.filter((_: any, idx: number) => idx !== rowIdx);
-                              setResponses(prev => ({ ...prev, [question.id]: newTableData }));
-                            }}
-                            className="text-red-500 text-sm hover:underline"
-                          >
-                            Remove
-                          </button>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {!isSubmitted && (
-              <button
-                onClick={() => {
-                  const newRow: any = {};
-                  question.tableColumns?.forEach(col => newRow[col] = '');
-                  setResponses(prev => ({ ...prev, [question.id]: [...tableData, newRow] }));
-                }}
-                className="text-sm text-primary hover:underline"
-              >
-                + Add Row
-              </button>
-            )}
-          </div>
-        );
 
-      case 'file':
+
+      case 'upload':
+      case 'upload-download':
         const files = value || [];
         return (
           <div className="space-y-2">
@@ -371,6 +377,34 @@ export default function IntakeNew() {
               <p className="text-sm text-muted-foreground mt-1">{slug}</p>
             </div>
             <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleImportCSV}
+                  className="gap-2"
+                  disabled={isSubmitted}
+                >
+                  <Upload className="w-4 h-4" />
+                  Import
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportCSV}
+                  className="gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Export
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".txt,.csv"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+              </div>
               <div className="text-right">
                 <p className="text-sm font-medium">Overall Progress</p>
                 <p className="text-2xl font-bold text-primary">{overallProgress}%</p>
@@ -436,11 +470,10 @@ export default function IntakeNew() {
                   {section.questions.map((question) => (
                     <div key={question.id} className="space-y-2">
                       <Label className="text-base">
-                        {question.question}
-                        {question.required && <span className="text-red-500 ml-1">*</span>}
+                        {question.text}
                       </Label>
-                      {question.helpText && (
-                        <p className="text-sm text-muted-foreground">{question.helpText}</p>
+                      {question.notes && (
+                        <p className="text-sm text-muted-foreground">{question.notes}</p>
                       )}
                       {renderQuestion(question)}
                     </div>
