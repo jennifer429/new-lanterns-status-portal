@@ -670,3 +670,9 @@
 - [x] Update frontend router to handle base path correctly (Vite handles automatically)
 - [x] Update API endpoint paths if needed (API paths remain absolute)
 - [ ] Test all routes work under /implementation/
+
+## Fix White Screen on Published Site
+- [ ] Remove /implementation base path from vite.config.ts (causing deployment issues)
+- [ ] Test site loads correctly without base path
+- [ ] Republish and verify production site works
+- [ ] Document that base path should only be added after confirming domain setup
