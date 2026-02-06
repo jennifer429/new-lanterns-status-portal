@@ -539,3 +539,9 @@
 - [x] Check saveResponses mutation input schema in intake router
 - [x] Fix IntakeNew.tsx auto-save to send correct data format (record vs array)
 - [ ] Test auto-save functionality after fix
+
+## Fix File Upload to Google Drive
+- [x] Check file upload router implementation in server/routers/files.ts
+- [x] Fix file upload to properly save files to Google Drive before creating shareable links
+- [x] Handle "object not found" error when creating rclone links
+- [ ] Test file upload with actual files

@@ -35,13 +35,31 @@ async function uploadToGoogleDrive(
       `rclone copy "${tempFilePath}" "${folderPath}" --config /home/ubuntu/.gdrive-rclone.ini`
     );
     
-    // Get shareable link
-    const remotePath = `${folderPath}/${fileName}`;
-    const { stdout } = await execAsync(
-      `rclone link "${remotePath}" --config /home/ubuntu/.gdrive-rclone.ini`
-    );
+    // Wait for file to sync (Google Drive needs time to process)
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
-    const shareableLink = stdout.trim();
+    // Get shareable link with retry logic
+    const remotePath = `${folderPath}/${fileName}`;
+    let shareableLink = '';
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    while (attempts < maxAttempts) {
+      try {
+        const { stdout } = await execAsync(
+          `rclone link "${remotePath}" --config /home/ubuntu/.gdrive-rclone.ini`
+        );
+        shareableLink = stdout.trim();
+        break;
+      } catch (error) {
+        attempts++;
+        if (attempts >= maxAttempts) {
+          throw new Error(`Failed to create shareable link after ${maxAttempts} attempts: ${error}`);
+        }
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+      }
+    }
     
     // Clean up temp file
     await unlink(tempFilePath);
