@@ -51,7 +51,7 @@ export default function Login() {
         <CardHeader className="space-y-6 pb-8">
           <div className="flex flex-col items-center gap-3">
             {/* New Lantern Logo */}
-            <img src="/images/flame-icon.png" alt="New Lantern" className="h-16 w-16 object-contain" />
+            <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-16 w-16 object-contain" />
             
             {/* Main Heading */}
             <h1 className="text-4xl font-bold text-center leading-tight">

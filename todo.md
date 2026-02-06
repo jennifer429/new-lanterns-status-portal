@@ -518,3 +518,19 @@
 - [x] Add breadcrumb navigation (Dashboard > Section Name)
 - [x] Add Save & Continue and Back buttons in section detail view
 - [x] Match mockup styling and layout exactly
+
+## Fix Login Page and Admin Dashboard (Priority)
+- [x] Rebuild login page with clean, professional design
+- [x] Add New Lantern logo to login page
+- [x] Improve login page styling and layout
+- [x] Rebuild admin dashboard with clean organization cards
+- [x] Show organization name, completion %, last activity on each card
+- [x] Add search/filter functionality to admin dashboard
+- [x] Match mockup styling for both screens
+- [ ] Test login flow from login page to admin dashboard
+
+## Fix File Upload/Download (Lower Priority)
+- [ ] Debug file upload functionality
+- [ ] Debug file download functionality
+- [ ] Fix file upload to work with all question types
+- [ ] Test complete file upload/download flow
