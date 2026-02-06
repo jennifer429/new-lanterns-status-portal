@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { Link } from "wouter";
-import { ExternalLink, Building2, Calendar, CheckCircle2, Clock, Users, TrendingUp, Activity } from "lucide-react";
+import { ExternalLink, Building2, Calendar, CheckCircle2, Clock, Users, TrendingUp, Activity, FileText, Download, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserManagement } from "@/components/UserManagement";
+import { FilesManagement } from "@/components/FilesManagement";
 import { useState } from "react";
 
 export default function Admin() {
@@ -53,6 +54,10 @@ export default function Admin() {
             <TabsTrigger value="users" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-gray-300">
               <Users className="w-4 h-4 mr-2" />
               Users
+            </TabsTrigger>
+            <TabsTrigger value="files" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-gray-300">
+              <FileText className="w-4 h-4 mr-2" />
+              Files
             </TabsTrigger>
           </TabsList>
 
@@ -235,6 +240,10 @@ export default function Admin() {
 
           <TabsContent value="users">
             <UserManagement />
+          </TabsContent>
+
+          <TabsContent value="files">
+            <FilesManagement />
           </TabsContent>
         </Tabs>
       </div>

@@ -678,3 +678,12 @@
 - [x] Identify conditional hook calls (getUploadedFiles in IIFE)
 - [x] Fix all remaining hooks violations (temporarily disabled file list)
 - [ ] Verify no hooks violations remain
+
+## Add Files Management to Admin Dashboard
+- [x] Create backend endpoint to list all uploaded files
+- [x] Create backend endpoint to delete files
+- [x] Add files section to admin dashboard UI
+- [x] Show file details (name, size, organization, upload date)
+- [x] Add download button for each file
+- [x] Add delete button with confirmation dialog
+- [ ] Test file download and deletion

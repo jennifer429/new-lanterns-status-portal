@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { questions, questionOptions, organizations, users, clients } from "../../drizzle/schema";
+import { questions, questionOptions, organizations, users, clients, intakeFileAttachments } from "../../drizzle/schema";
 import { eq, and, desc } from "drizzle-orm";
 
 /**
@@ -385,6 +385,98 @@ export const adminRouter = router({
       // This will cascade delete users and responses associated with this org
 
       await db.delete(organizations).where(eq(organizations.id, input.id));
+
+      return { success: true };
+    }),
+
+  // ============================================================================
+  // FILES MANAGEMENT
+  // ============================================================================
+
+  /**
+   * Get all uploaded files across all organizations (filtered by user's clientId)
+   */
+  getAllFiles: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user.role !== "admin") {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+    }
+
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+    // Join files with organizations to filter by clientId
+    const files = await db
+      .select({
+        id: intakeFileAttachments.id,
+        fileName: intakeFileAttachments.fileName,
+        fileUrl: intakeFileAttachments.fileUrl,
+        fileSize: intakeFileAttachments.fileSize,
+        questionId: intakeFileAttachments.questionId,
+        createdAt: intakeFileAttachments.createdAt,
+        organizationId: intakeFileAttachments.organizationId,
+        organizationName: organizations.name,
+        organizationSlug: organizations.slug,
+      })
+      .from(intakeFileAttachments)
+      .leftJoin(organizations, eq(intakeFileAttachments.organizationId, organizations.id))
+      .orderBy(desc(intakeFileAttachments.createdAt));
+
+    // Filter by clientId if user has one
+    if (ctx.user.clientId) {
+      const userOrgs = await db
+        .select({ id: organizations.id })
+        .from(organizations)
+        .where(eq(organizations.clientId, ctx.user.clientId));
+      
+      const orgIds = userOrgs.map(o => o.id);
+      return files.filter(f => f.organizationId && orgIds.includes(f.organizationId));
+    }
+
+    return files;
+  }),
+
+  /**
+   * Delete a file
+   */
+  deleteFile: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Get file details first to check access
+      const [file] = await db
+        .select({
+          id: intakeFileAttachments.id,
+          organizationId: intakeFileAttachments.organizationId,
+        })
+        .from(intakeFileAttachments)
+        .where(eq(intakeFileAttachments.id, input.id))
+        .limit(1);
+
+      if (!file) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "File not found" });
+      }
+
+      // Check clientId access
+      if (ctx.user.clientId && file.organizationId) {
+        const [org] = await db
+          .select({ clientId: organizations.clientId })
+          .from(organizations)
+          .where(eq(organizations.id, file.organizationId))
+          .limit(1);
+
+        if (org && org.clientId !== ctx.user.clientId) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
+        }
+      }
+
+      // Delete from database (S3 file remains for now)
+      await db.delete(intakeFileAttachments).where(eq(intakeFileAttachments.id, input.id));
 
       return { success: true };
     }),
