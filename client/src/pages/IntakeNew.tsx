@@ -358,10 +358,7 @@ export default function IntakeNew() {
               <p className="text-sm text-green-600">✓ File uploaded: {value.split('/').pop()}</p>
             )}
             
-            {/* Uploaded files list - Note: This creates a hooks violation and needs to be refactored */}
-            <div className="mt-3 text-sm text-muted-foreground">
-              File list temporarily disabled - please refresh page to see uploaded files
-            </div>
+
           </div>
         );
 
@@ -414,10 +411,7 @@ export default function IntakeNew() {
               <p className="text-sm text-green-600">✓ File uploaded: {value.split('/').pop()}</p>
             )}
             
-            {/* Uploaded files list - Note: This creates a hooks violation and needs to be refactored */}
-            <div className="mt-3 text-sm text-muted-foreground">
-              File list temporarily disabled - please refresh page to see uploaded files
-            </div>
+
           </div>
         );
 

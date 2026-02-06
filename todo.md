@@ -687,3 +687,9 @@
 - [x] Add download button for each file
 - [x] Add delete button with confirmation dialog
 - [ ] Test file download and deletion
+
+## UI Fixes for File Upload and Dashboard
+- [x] Remove "temporarily disabled" message from file upload screen
+- [x] Verify dashboard files list shows all files correctly
+- [x] Verify download buttons work on dashboard
+- [x] Verify delete buttons work on dashboard
