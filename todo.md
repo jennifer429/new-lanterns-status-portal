@@ -659,3 +659,11 @@
 - [x] Make file URLs clickable download links
 - [x] Add download icon/button next to each file
 - [ ] Test file download from uploaded files list
+
+## Add File Preview Feature
+- [x] Create backend endpoint to fetch first few lines of CSV/TXT files
+- [x] Add preview button/icon to uploaded files list
+- [x] Display file preview in expandable section
+- [x] Format CSV preview as table
+- [x] Show line numbers for TXT files
+- [ ] Test preview with various file types

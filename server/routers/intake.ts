@@ -666,4 +666,54 @@ export const intakeRouter = router({
 
       return files;
     }),
+
+  /**
+   * Preview file content (first few lines for CSV/TXT)
+   */
+  previewFile: publicProcedure
+    .input(
+      z.object({
+        fileUrl: z.string(),
+        fileName: z.string(),
+      })
+    )
+    .query(async ({ input }) => {
+      try {
+        const fileExt = input.fileName.split('.').pop()?.toLowerCase();
+        
+        // Only support CSV and TXT preview
+        if (!['csv', 'txt'].includes(fileExt || '')) {
+          return {
+            supported: false,
+            message: 'Preview not available for this file type',
+          };
+        }
+
+        // Fetch file content from S3
+        const response = await fetch(input.fileUrl);
+        if (!response.ok) {
+          throw new Error('Failed to fetch file');
+        }
+
+        const text = await response.text();
+        const lines = text.split('\n');
+        
+        // Return first 10 lines
+        const preview = lines.slice(0, 10).join('\n');
+        const totalLines = lines.length;
+        
+        return {
+          supported: true,
+          content: preview,
+          totalLines,
+          previewLines: Math.min(10, totalLines),
+          fileType: fileExt,
+        };
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to preview file',
+        });
+      }
+    }),
 });
