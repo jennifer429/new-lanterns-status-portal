@@ -667,3 +667,8 @@
 - [x] Format CSV preview as table
 - [x] Show line numbers for TXT files
 - [ ] Test preview with various file types
+
+## Fix React Hooks Violation in File Preview
+- [x] Create separate FilePreviewItem component
+- [x] Move useState and useQuery hooks to component level
+- [ ] Test file preview after fix
