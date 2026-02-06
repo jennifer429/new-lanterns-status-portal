@@ -287,14 +287,25 @@ export const organizationsRouter = router({
           .from(intakeResponses)
           .where(eq(intakeResponses.organizationId, org.id));
 
+        // Map section IDs to human-readable titles
+        const sectionTitles: Record<string, string> = {
+          'org-info': 'Organization Information',
+          'overview-arch': 'Overview & Architecture',
+          'data-integration': 'Data & Integration',
+          'config-files': 'Configuration Files',
+          'connectivity': 'Connectivity',
+          'dicom-validation': 'DICOM Data Validation',
+        };
+
         const sectionStats: Record<string, { total: number; completed: number }> = {};
         allResponses.forEach((resp) => {
-          if (!sectionStats[resp.section]) {
-            sectionStats[resp.section] = { total: 0, completed: 0 };
+          const sectionTitle = sectionTitles[resp.section] || resp.section;
+          if (!sectionStats[sectionTitle]) {
+            sectionStats[sectionTitle] = { total: 0, completed: 0 };
           }
-          sectionStats[resp.section].total++;
+          sectionStats[sectionTitle].total++;
           if (resp.response && resp.response !== '') {
-            sectionStats[resp.section].completed++;
+            sectionStats[sectionTitle].completed++;
           }
         });
 

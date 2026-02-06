@@ -545,3 +545,8 @@
 - [x] Fix file upload to properly save files to Google Drive before creating shareable links
 - [x] Handle "object not found" error when creating rclone links
 - [ ] Test file upload with actual files
+
+## Fix Admin Dashboard Section Names
+- [x] Check getMetrics query in organizations router to see how section progress is calculated
+- [x] Fix section names to match actual questionnaire section titles
+- [x] Update section progress to use correct section names from questionnaireData
