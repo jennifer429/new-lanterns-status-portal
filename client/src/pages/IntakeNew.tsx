@@ -356,6 +356,42 @@ export default function IntakeNew() {
             {value && !isUploading && (
               <p className="text-sm text-green-600">✓ File uploaded: {value.split('/').pop()}</p>
             )}
+            
+            {/* Show uploaded files list */}
+            {(() => {
+              const uploadedFiles = trpc.intake.getUploadedFiles.useQuery(
+                { organizationSlug: slug || "", questionId: question.id },
+                { enabled: !!slug }
+              );
+              
+              if (uploadedFiles.data && uploadedFiles.data.length > 0) {
+                return (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground">Uploaded Files:</p>
+                    {uploadedFiles.data.map((file) => (
+                      <div key={file.id} className="flex items-center justify-between p-2 bg-muted/30 rounded-md">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{file.fileName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {file.fileSize ? `${(file.fileSize / 1024).toFixed(1)} KB • ` : ''}{new Date(file.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <a
+                          href={file.fileUrl}
+                          download={file.fileName}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-2 text-purple-600 hover:text-purple-700"
+                        >
+                          <Download className="w-4 h-4" />
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </div>
         );
 
@@ -407,6 +443,42 @@ export default function IntakeNew() {
             {value && !isUploadingDownload && (
               <p className="text-sm text-green-600">✓ File uploaded: {value.split('/').pop()}</p>
             )}
+            
+            {/* Show uploaded files list */}
+            {(() => {
+              const uploadedFiles = trpc.intake.getUploadedFiles.useQuery(
+                { organizationSlug: slug || "", questionId: question.id },
+                { enabled: !!slug }
+              );
+              
+              if (uploadedFiles.data && uploadedFiles.data.length > 0) {
+                return (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground">Uploaded Files:</p>
+                    {uploadedFiles.data.map((file) => (
+                      <div key={file.id} className="flex items-center justify-between p-2 bg-muted/30 rounded-md">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{file.fileName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {file.fileSize ? `${(file.fileSize / 1024).toFixed(1)} KB • ` : ''}{new Date(file.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <a
+                          href={file.fileUrl}
+                          download={file.fileName}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-2 text-purple-600 hover:text-purple-700"
+                        >
+                          <Download className="w-4 h-4" />
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </div>
         );
 

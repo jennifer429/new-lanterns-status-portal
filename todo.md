@@ -654,3 +654,8 @@
 - [x] Identify root cause of upload failure (files.upload still using Google Drive)
 - [x] Fix upload issue (migrated files.upload to S3)
 - [ ] Test file upload with valid files
+
+## Add File Download Functionality
+- [x] Make file URLs clickable download links
+- [x] Add download icon/button next to each file
+- [ ] Test file download from uploaded files list
