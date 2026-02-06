@@ -676,3 +676,17 @@
 - [ ] Test site loads correctly without base path
 - [ ] Republish and verify production site works
 - [ ] Document that base path should only be added after confirming domain setup
+
+## Implement Client-Level Access Control
+- [x] Create SRV client in database
+- [x] Create RRMC organization under SRV client
+- [x] Create Boulder organization under SRV client
+- [x] Update users table schema to add clientId field
+- [x] Migrate existing users to have clientId (RadOne or SRV)
+- [x] Update admin dashboard to filter organizations by user's clientId
+- [x] Update getMetrics query to scope by clientId
+- [x] Update all organization queries to filter by clientId
+- [x] Update intake router queries to validate clientId access
+- [ ] Test RadOne user can only see RadOne hospitals
+- [ ] Test SRV user can only see SRV hospitals
+- [ ] Add client switcher for super admins (optional)

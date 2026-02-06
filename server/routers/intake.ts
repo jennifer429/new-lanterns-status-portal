@@ -15,7 +15,7 @@ export const intakeRouter = router({
         organizationSlug: z.string(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
@@ -28,6 +28,11 @@ export const intakeRouter = router({
 
       if (!org) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      }
+
+      // Validate user has access to this organization's client
+      if (ctx.user?.clientId && org.clientId !== ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this organization" });
       }
 
       // Get all responses for this organization from new responses table
@@ -58,7 +63,7 @@ export const intakeRouter = router({
         userEmail: z.string(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
@@ -71,6 +76,11 @@ export const intakeRouter = router({
 
       if (!org) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      }
+
+      // Validate user has access to this organization's client
+      if (ctx.user?.clientId && org.clientId !== ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this organization" });
       }
 
       // Find question by questionId (e.g., "H.1")
@@ -130,7 +140,7 @@ export const intakeRouter = router({
         responses: z.record(z.string(), z.any()),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
@@ -143,6 +153,11 @@ export const intakeRouter = router({
 
       if (!org) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      }
+
+      // Validate user has access to this organization's client
+      if (ctx.user?.clientId && org.clientId !== ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this organization" });
       }
 
       // Process each response
@@ -212,7 +227,7 @@ export const intakeRouter = router({
         organizationSlug: z.string(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
@@ -225,6 +240,11 @@ export const intakeRouter = router({
 
       if (!org) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      }
+
+      // Validate user has access to this organization's client
+      if (ctx.user?.clientId && org.clientId !== ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this organization" });
       }
 
       // Get all responses for this organization with question details
@@ -284,7 +304,7 @@ export const intakeRouter = router({
         userEmail: z.string().email(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
@@ -297,6 +317,11 @@ export const intakeRouter = router({
 
       if (!org) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      }
+
+      // Validate user has access to this organization's client
+      if (ctx.user?.clientId && org.clientId !== ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this organization" });
       }
 
       // Get question details for short title

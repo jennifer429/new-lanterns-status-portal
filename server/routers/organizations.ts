@@ -208,12 +208,19 @@ export const organizationsRouter = router({
 
   /**
    * List all organizations (for admin/ops view)
+   * Filters by user's clientId for access control
    */
-  list: publicProcedure.query(async () => {
+  list: publicProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
-    const orgs = await db.select().from(organizations);
-    return orgs;
+    
+    // Filter by user's clientId for access control
+    if (ctx.user?.clientId) {
+      return await db.select().from(organizations).where(eq(organizations.clientId, ctx.user.clientId));
+    } else {
+      // Super admin or no clientId - show all
+      return await db.select().from(organizations);
+    }
   }),
 
   /**
@@ -234,13 +241,21 @@ export const organizationsRouter = router({
 
   /**
    * Get metrics for all organizations (for admin dashboard)
+   * Filters by user's clientId for access control
    */
-  getMetrics: publicProcedure.query(async () => {
+  getMetrics: publicProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
 
-    // Only show RadOne organizations
-    const orgs = await db.select().from(organizations).where(sql`${organizations.slug} LIKE 'radone%'`);
+    // Filter organizations by user's clientId
+    // If user has no clientId (super admin), show all organizations
+    let orgs;
+    if (ctx.user?.clientId) {
+      orgs = await db.select().from(organizations).where(eq(organizations.clientId, ctx.user.clientId));
+    } else {
+      // Super admin or no clientId - show all
+      orgs = await db.select().from(organizations);
+    }
     
     const metrics = await Promise.all(
       orgs.map(async (org) => {

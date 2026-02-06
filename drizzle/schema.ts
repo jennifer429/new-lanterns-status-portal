@@ -18,6 +18,7 @@ export const users = mysqlTable("users", {
   passwordHash: varchar("passwordHash", { length: 255 }), // bcrypt hash for email/password auth
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  clientId: int("clientId"), // Link user to client (RadOne, SRV, etc.)
   organizationId: int("organizationId"), // Link user to organization (null for admins)
   lastLoginAt: timestamp("lastLoginAt"), // Track last login for admin dashboard metrics
   createdAt: timestamp("createdAt").defaultNow().notNull(),

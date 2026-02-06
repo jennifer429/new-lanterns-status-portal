@@ -280,7 +280,7 @@ export const adminRouter = router({
   // ============================================================================
 
   /**
-   * Get all organizations
+   * Get all organizations (filtered by user's clientId)
    */
   getAllOrganizations: protectedProcedure.query(async ({ ctx }) => {
     if (ctx.user.role !== "admin") {
@@ -290,7 +290,13 @@ export const adminRouter = router({
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-    return await db.select().from(organizations).orderBy(desc(organizations.createdAt));
+    // Filter by user's clientId for access control
+    if (ctx.user.clientId) {
+      return await db.select().from(organizations).where(eq(organizations.clientId, ctx.user.clientId)).orderBy(desc(organizations.createdAt));
+    } else {
+      // Super admin or no clientId - show all
+      return await db.select().from(organizations).orderBy(desc(organizations.createdAt));
+    }
   }),
 
   /**

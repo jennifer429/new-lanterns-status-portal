@@ -1,0 +1,12 @@
+{
+  "query": "\n-- Get SRV client ID and RRMC organization ID\nSELECT @srv_client_id := id FROM clients WHERE name = 'SRV' LIMIT 1;\nSELECT @rrmc_org_id := id FROM organizations WHERE slug = 'srv-rrmc' LIMIT 1;\n\n-- Create test users for SRV client\nINSERT INTO users (email, password, name, role, clientId, organizationId, createdAt, updatedAt)\nVALUES \n  ('test.srv1@example.com', '$2b$10$abcdefghijklmnopqrstuv', 'SRV Test User 1', 'user', @srv_client_id, @rrmc_org_id, NOW(), NOW()),\n  ('test.srv2@example.com', '$2b$10$abcdefghijklmnopqrstuv', 'SRV Test User 2', 'user', @srv_client_id, @rrmc_org_id, NOW(), NOW());\n\n-- Verify the users were created\nSELECT id, email, clientId, organizationId FROM users WHERE clientId = @srv_client_id;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute \n-- Get SRV client ID and RRMC organization ID\nSELECT @srv_client_id := id FROM clients WHERE name = 'SRV' LIMIT 1;\nSELECT @rrmc_org_id := id FROM organizations WHERE slug = 'srv-rrmc' LIMIT 1;\n\n-- Create test users for SRV client\nINSERT INTO users (email, password, name, role, clientId, organizationId, createdAt, updatedAt)\nVALUES \n  ('test.srv1@example.com', '$2b$10$abcdefghijklmnopqrstuv', 'SRV Test User 1', 'user', @srv_client_id, @rrmc_org_id, NOW(), NOW()),\n  ('test.srv2@example.com', '$2b$10$abcdefghijklmnopqrstuv', 'SRV Test User 2', 'user', @srv_client_id, @rrmc_org_id, NOW(), NOW());\n\n-- Verify the users were created\nSELECT id, email, clientId, organizationId FROM users WHERE clientId = @srv_client_id;\n",
+  "returncode": 1,
+  "logs": [
+    "@srv_client_id := id",
+    "30001",
+    "@rrmc_org_id := id",
+    "120001",
+    "ERROR 1054 (42S22) at line 7: Unknown column 'password' in 'field list'"
+  ]
+}
