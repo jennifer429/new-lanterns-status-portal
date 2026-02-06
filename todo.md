@@ -638,3 +638,8 @@
 - [x] Display uploaded files list with original filename and size
 - [x] Show both original filename and S3 key in file list
 - [x] Add download links for uploaded files
+
+## Fix React Hooks Violation and File Validation
+- [x] Fix React Hooks violation in IntakeNew.tsx (removed useQuery from renderQuestion)
+- [x] Add file type validation (only accept CSV, Excel, TXT)
+- [ ] Test file upload with valid and invalid file types

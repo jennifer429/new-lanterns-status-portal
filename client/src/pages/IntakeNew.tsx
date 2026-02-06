@@ -326,19 +326,25 @@ export default function IntakeNew() {
 
       case 'upload':
         const isUploading = uploadingFiles.has(question.id);
-        const { data: uploadedFiles } = trpc.intake.getUploadedFiles.useQuery(
-          { organizationSlug: slug || "", questionId: question.id },
-          { enabled: !!slug }
-        );
         
         return (
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <Input
                 type="file"
+                accept=".csv,.xlsx,.xls,.txt"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
-                  if (file) handleFileUpload(question.id, file);
+                  if (file) {
+                    const allowedTypes = ['.csv', '.xlsx', '.xls', '.txt'];
+                    const fileExt = '.' + file.name.split('.').pop()?.toLowerCase();
+                    if (!allowedTypes.includes(fileExt)) {
+                      alert('Only CSV, Excel (.xlsx, .xls), and TXT files are allowed.');
+                      e.target.value = '';
+                      return;
+                    }
+                    handleFileUpload(question.id, file);
+                  }
                 }}
                 disabled={isUploading}
               />
@@ -346,40 +352,14 @@ export default function IntakeNew() {
                 <Loader2 className="w-5 h-5 animate-spin text-purple-500" />
               )}
             </div>
-            
-            {/* Uploaded files list */}
-            {uploadedFiles && uploadedFiles.length > 0 && (
-              <div className="border rounded-lg p-3 space-y-2 bg-muted/30">
-                <p className="text-sm font-medium text-muted-foreground">Uploaded Files:</p>
-                {uploadedFiles.map((file) => (
-                  <div key={file.id} className="flex items-center justify-between p-2 bg-background rounded border">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{file.fileName}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {file.fileSize ? `${(file.fileSize / 1024).toFixed(1)} KB` : 'Unknown size'} • {file.driveFileId || 'No S3 key'}
-                      </p>
-                    </div>
-                    <a
-                      href={file.fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="ml-2 text-purple-500 hover:text-purple-600"
-                    >
-                      <Download className="w-4 h-4" />
-                    </a>
-                  </div>
-                ))}
-              </div>
+            {value && !isUploading && (
+              <p className="text-sm text-green-600">✓ File uploaded: {value.split('/').pop()}</p>
             )}
           </div>
         );
 
       case 'upload-download':
         const isUploadingDownload = uploadingFiles.has(question.id);
-        const { data: uploadedFilesDownload } = trpc.intake.getUploadedFiles.useQuery(
-          { organizationSlug: slug || "", questionId: question.id },
-          { enabled: !!slug }
-        );
         
         return (
           <div className="space-y-3">
@@ -401,9 +381,19 @@ export default function IntakeNew() {
               <div className="flex items-center gap-2 flex-1">
                 <Input
                   type="file"
+                  accept=".csv,.xlsx,.xls,.txt"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
-                    if (file) handleFileUpload(question.id, file);
+                    if (file) {
+                      const allowedTypes = ['.csv', '.xlsx', '.xls', '.txt'];
+                      const fileExt = '.' + file.name.split('.').pop()?.toLowerCase();
+                      if (!allowedTypes.includes(fileExt)) {
+                        alert('Only CSV, Excel (.xlsx, .xls), and TXT files are allowed.');
+                        e.target.value = '';
+                        return;
+                      }
+                      handleFileUpload(question.id, file);
+                    }
                   }}
                   disabled={isUploadingDownload}
                   className="flex-1"
@@ -413,30 +403,8 @@ export default function IntakeNew() {
                 )}
               </div>
             </div>
-            
-            {/* Uploaded files list */}
-            {uploadedFilesDownload && uploadedFilesDownload.length > 0 && (
-              <div className="border rounded-lg p-3 space-y-2 bg-muted/30">
-                <p className="text-sm font-medium text-muted-foreground">Uploaded Files:</p>
-                {uploadedFilesDownload.map((file) => (
-                  <div key={file.id} className="flex items-center justify-between p-2 bg-background rounded border">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{file.fileName}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {file.fileSize ? `${(file.fileSize / 1024).toFixed(1)} KB` : 'Unknown size'} • {file.driveFileId || 'No S3 key'}
-                      </p>
-                    </div>
-                    <a
-                      href={file.fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="ml-2 text-purple-500 hover:text-purple-600"
-                    >
-                      <Download className="w-4 h-4" />
-                    </a>
-                  </div>
-                ))}
-              </div>
+            {value && !isUploadingDownload && (
+              <p className="text-sm text-green-600">✓ File uploaded: {value.split('/').pop()}</p>
             )}
           </div>
         );
