@@ -614,3 +614,8 @@
 - [ ] Test RadOne user can only see RadOne hospitals
 - [ ] Test SRV user can only see SRV hospitals
 - [ ] Add client switcher for super admins (optional)
+
+## Fix Admin Dashboard Navigation
+- [x] Update admin dashboard to link directly to intake questionnaire
+- [x] Remove intermediate page after clicking organization card
+- [ ] Test navigation flow from admin to intake

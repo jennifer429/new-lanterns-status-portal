@@ -210,7 +210,7 @@ export default function Admin() {
                     </div>
 
                     {/* Open Portal Button */}
-                    <Link href={`/org/${org.slug}`}>
+                    <Link href={`/org/${org.slug}/intake`}>
                       <Button
                         className="w-full bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white"
                         size="sm"
