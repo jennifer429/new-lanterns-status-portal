@@ -74,7 +74,8 @@ export default function IntakeNew() {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [responses, slug, saveMutation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [responses, slug]);
 
   // File upload mutation
   const uploadFileMutation = trpc.files.upload.useMutation();

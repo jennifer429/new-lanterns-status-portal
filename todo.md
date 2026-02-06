@@ -643,3 +643,8 @@
 - [x] Fix React Hooks violation in IntakeNew.tsx (removed useQuery from renderQuestion)
 - [x] Add file type validation (only accept CSV, Excel, TXT)
 - [ ] Test file upload with valid and invalid file types
+
+## Fix React Error #310
+- [x] Identify component causing "Cannot update component while rendering" error (saveMutation in useEffect deps)
+- [x] Remove saveMutation from useEffect dependencies to fix infinite loop
+- [ ] Test fix on production build
