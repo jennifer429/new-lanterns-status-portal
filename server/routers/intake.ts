@@ -338,101 +338,42 @@ export const intakeRouter = router({
       // Decode base64 file data
       const fileBuffer = Buffer.from(input.fileData, "base64");
 
-      // Check if should upload to Google Drive (only RadOne organizations)
-      const shouldUpload = input.organizationSlug.toLowerCase().startsWith("radone");
-
-      if (shouldUpload) {
-        // Upload to Google Drive using rclone
-        const { execSync } = await import("child_process");
-        const fs = await import("fs");
-        const path = await import("path");
+      try {
+        // Build filename: {orgName}_{userEmail}_{questionId}-{shortTitle}_{timestamp}.{ext}
+        const timestamp = Date.now();
+        const fileExt = input.fileName.split('.').pop();
+        const sanitizedEmail = input.userEmail.replace(/@/g, '-at-').replace(/[^a-zA-Z0-9.-]/g, '_');
+        const sanitizedOrgName = org.name.replace(/[^a-zA-Z0-9-]/g, '_');
+        const fileName = `${sanitizedOrgName}_${sanitizedEmail}_${input.questionId}-${question.shortTitle}_${timestamp}.${fileExt}`;
         
-        // Create temp file
-        const tempDir = "/tmp";
-        const tempFilePath = path.join(tempDir, `${Date.now()}-${input.fileName}`);
-        fs.writeFileSync(tempFilePath, fileBuffer);
+        // Upload to S3 using built-in storage helper
+        const { storagePut } = await import("../storage");
+        const s3Key = `intake-files/${org.slug}/${fileName}`;
+        const { url: fileUrl } = await storagePut(s3Key, fileBuffer, input.mimeType);
 
-        try {
-          // Build new filename: {orgName}_{userEmail}_{questionId}-{shortTitle}_{timestamp}.{ext}
-          const timestamp = Date.now();
-          const fileExt = input.fileName.split('.').pop();
-          const sanitizedEmail = input.userEmail.replace(/@/g, '-at-').replace(/[^a-zA-Z0-9.-]/g, '_');
-          const sanitizedOrgName = org.name.replace(/[^a-zA-Z0-9-]/g, '_');
-          const fileName = `${sanitizedOrgName}_${sanitizedEmail}_${input.questionId}-${question.shortTitle}_${timestamp}.${fileExt}`;
-          
-          // Upload to RadOne-Intake folder (ID: 1Awi2cFLAXApN9wWVMgqslyyXy69sHVTX)
-          const radoneIntakeFolderId = '1Awi2cFLAXApN9wWVMgqslyyXy69sHVTX';
-          const driveFolderName = 'RadOne-Intake'; // Folder name in Google Drive
-          const drivePath = `manus_google_drive:${driveFolderName}/${fileName}`;
-          
-          // First rename temp file to final name
-          const finalTempPath = path.join(tempDir, fileName);
-          fs.renameSync(tempFilePath, finalTempPath);
-          
-          // Upload to specific folder using rclone
-          execSync(`rclone copy "${finalTempPath}" "manus_google_drive:${driveFolderName}/" --config /home/ubuntu/.gdrive-rclone.ini`, {
-            stdio: 'pipe'
-          });
+        // Store file info in database
+        const { intakeFileAttachments } = await import("../../drizzle/schema");
+        await db.insert(intakeFileAttachments).values({
+          organizationId: org.id,
+          questionId: input.questionId,
+          fileName: input.fileName,
+          fileUrl,
+          driveFileId: s3Key, // Store S3 key for reference
+          fileSize: fileBuffer.length,
+          mimeType: input.mimeType,
+          uploadedBy: input.userEmail,
+        });
 
-          // Wait for file to be available (Google Drive sync delay)
-          await new Promise(resolve => setTimeout(resolve, 2000));
-
-          // Get shareable link with retry
-          let fileUrl = '';
-          let retries = 3;
-          while (retries > 0 && !fileUrl) {
-            try {
-              const linkOutput = execSync(`rclone link "${drivePath}" --config /home/ubuntu/.gdrive-rclone.ini`, {
-                encoding: 'utf-8',
-                stdio: 'pipe'
-              });
-              fileUrl = linkOutput.trim();
-            } catch (linkError: any) {
-              retries--;
-              if (retries > 0) {
-                await new Promise(resolve => setTimeout(resolve, 1000));
-              } else {
-                throw linkError;
-              }
-            }
-          }
-
-          // Clean up temp file
-          fs.unlinkSync(finalTempPath);
-
-          // Store file info in database
-          const { intakeFileAttachments } = await import("../../drizzle/schema");
-          await db.insert(intakeFileAttachments).values({
-            organizationId: org.id,
-            questionId: input.questionId,
-            fileName: input.fileName,
-            fileUrl,
-            driveFileId: fileName,
-            fileSize: fileBuffer.length,
-            mimeType: input.mimeType,
-            uploadedBy: org.contactName || "Unknown",
-          });
-
-          return {
-            success: true,
-            fileUrl,
-            message: "File uploaded to Google Drive successfully",
-          };
-        } catch (error: any) {
-          // Clean up temp file on error
-          try { fs.unlinkSync(tempFilePath); } catch {}
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: `Failed to upload file to Google Drive: ${error.message}`,
-          });
-        }
-      } else {
-        // For non-RadOne organizations, just acknowledge the upload
-        // (You could store files locally or in another storage if needed)
         return {
           success: true,
-          message: "File received (Notion sync disabled for this organization)",
+          fileUrl,
+          message: "File uploaded successfully",
         };
+      } catch (error: any) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to upload file: ${error.message}`,
+        });
       }
     }),
 

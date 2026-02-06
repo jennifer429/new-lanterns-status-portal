@@ -625,3 +625,9 @@
 - [x] Review intake file upload code (frontend and backend)
 - [x] Fix file upload functionality (corrected Google Drive path)
 - [ ] Test file upload with various file types
+
+## Migrate File Uploads from Google Drive to S3
+- [x] Replace Google Drive upload code with S3 storage
+- [x] Update database to store S3 URLs instead of Drive links
+- [x] Update frontend to handle S3 file URLs (no changes needed - uses same fileUrl field)
+- [ ] Test file upload with S3 storage
