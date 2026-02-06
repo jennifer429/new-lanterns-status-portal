@@ -534,3 +534,8 @@
 - [ ] Debug file download functionality
 - [ ] Fix file upload to work with all question types
 - [ ] Test complete file upload/download flow
+
+## Fix Auto-Save Validation Error
+- [x] Check saveResponses mutation input schema in intake router
+- [x] Fix IntakeNew.tsx auto-save to send correct data format (record vs array)
+- [ ] Test auto-save functionality after fix

@@ -62,11 +62,7 @@ export default function IntakeNew() {
       try {
         await saveMutation.mutateAsync({
           organizationSlug: slug || "",
-          responses: Object.entries(responses).map(([questionId, response]) => ({
-            questionId,
-            response: typeof response === 'object' ? JSON.stringify(response) : String(response),
-            section: questionnaireData.find(s => s.questions.some(q => q.id === questionId))?.title || "",
-          })),
+          responses: responses,
         });
         setSaveStatus("saved");
         setTimeout(() => setSaveStatus("idle"), 2000);
