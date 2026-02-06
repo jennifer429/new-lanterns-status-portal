@@ -619,3 +619,9 @@
 - [x] Update admin dashboard to link directly to intake questionnaire
 - [x] Remove intermediate page after clicking organization card
 - [ ] Test navigation flow from admin to intake
+
+## Fix File Upload Failure
+- [x] Check server logs for file upload errors
+- [x] Review intake file upload code (frontend and backend)
+- [x] Fix file upload functionality (corrected Google Drive path)
+- [ ] Test file upload with various file types

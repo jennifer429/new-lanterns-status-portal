@@ -362,14 +362,15 @@ export const intakeRouter = router({
           
           // Upload to RadOne-Intake folder (ID: 1Awi2cFLAXApN9wWVMgqslyyXy69sHVTX)
           const radoneIntakeFolderId = '1Awi2cFLAXApN9wWVMgqslyyXy69sHVTX';
-          const drivePath = `manus_google_drive:${fileName}`;
+          const driveFolderName = 'RadOne-Intake'; // Folder name in Google Drive
+          const drivePath = `manus_google_drive:${driveFolderName}/${fileName}`;
           
           // First rename temp file to final name
           const finalTempPath = path.join(tempDir, fileName);
           fs.renameSync(tempFilePath, finalTempPath);
           
           // Upload to specific folder using rclone
-          execSync(`rclone copy "${finalTempPath}" "manus_google_drive:" --drive-parent-id ${radoneIntakeFolderId} --config /home/ubuntu/.gdrive-rclone.ini`, {
+          execSync(`rclone copy "${finalTempPath}" "manus_google_drive:${driveFolderName}/" --config /home/ubuntu/.gdrive-rclone.ini`, {
             stdio: 'pipe'
           });
 
@@ -406,7 +407,7 @@ export const intakeRouter = router({
             questionId: input.questionId,
             fileName: input.fileName,
             fileUrl,
-            driveFileId: drivePath,
+            driveFileId: fileName,
             fileSize: fileBuffer.length,
             mimeType: input.mimeType,
             uploadedBy: org.contactName || "Unknown",
