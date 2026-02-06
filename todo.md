@@ -15,12 +15,6 @@
 - [ ] Add file upload capability for tasks
 - [ ] Create updates/messages feed
 
-## Phase 3: ClickUp/Linear Integration
-- [ ] Set up ClickUp MCP integration for task creation
-- [ ] Set up Linear MCP integration for issue tracking
-- [ ] Create webhook handlers for hospital submissions
-- [ ] Add auto-sync for section completion status
-
 ## Phase 4: Ops Documentation
 - [ ] Write organization setup guide
 - [ ] Document sales handoff process
@@ -30,15 +24,7 @@
 ## Phase 5: Testing & Delivery
 - [ ] Test organization creation flow
 - [ ] Test file uploads and task completion
-- [ ] Test ClickUp/Linear integrations
 - [ ] Create demo organization for testing
-
-## Phase 3.5: Zapier Feedback Integration
-- [ ] Add activity feed table to database schema
-- [ ] Create Zapier webhook endpoint for Linear comments
-- [ ] Filter for @Client tagged comments
-- [ ] Display activity feed in portal
-- [ ] Document Zapier setup in ops guide
 
 ## Tetris-Inspired UX Redesign
 - [x] Restructure checklist into 4 levels (Identity, Flow, Validation, Confidence)
@@ -72,53 +58,14 @@
 - [x] Push database schema changes
 - [x] Add file upload UI component for tasks
 - [x] Display uploaded files in task details
-- [x] Trigger ClickUp task when file is uploaded
 - [ ] Add organization admin page for PM/Ops to create new orgs
-
-## ClickUp Webhook Integration
-- [x] Explore ClickUp MCP to understand available tools
-- [x] Create ClickUp integration module in server
-- [x] Add webhook trigger when section completes
-- [x] Auto-create organization-specific lists in ClickUp
-- [ ] Test task creation in ClickUp with demo organization
-- [ ] Document ClickUp setup for ops team
 
 ## Bug Fixes & File Upload Updates
 - [x] Fix null organizationId error in FileList component
 - [x] Update file upload to store in Google Drive and share links
 - [x] Upload file to Google Drive
 - [x] Generate shareable link from Google Drive
-- [x] Attach link to ClickUp task
-- [x] Attach link to Linear issue
-- [x] Update file upload API to handle Google Drive + ClickUp + Linear
-
-## Zapier Linear Feedback Integration
-- [x] Add activity feed table to database schema
-- [x] Create webhook endpoint to receive Linear comments
-- [x] Parse @Client tag from comment body
-- [x] Save activity updates to database
-- [x] Display activity feed in client portal
-- [ ] Create Zapier setup documentation
-
-## Two-Way Linear Communication
-- [x] Add linearIssueId field to organizations table
-- [x] Add clickupListId and googleDriveFolderId fields to organizations table
-- [x] Create API endpoint to post hospital replies to Linear issue
-- [x] Add reply button to ActivityFeed component
-- [x] Build reply modal/form for hospital users
-- [x] Tag hospital replies in Linear with organization name
-- [x] Update organization creation to accept Linear/ClickUp/Drive IDs
-- [x] Create admin page for PM to set up new organizations
-- [x] Test two-way communication flow with demo organization
-- [ ] Update ops documentation with simplified setup process
-
-## Core Integration Flow Verification
-- [x] Verify Google Drive file upload is working correctly
-- [x] Update FileUpload component to pass clickupListId and linearIssueId
-- [x] Verify ClickUp/Linear integration code is in place (requires MCP servers to be enabled)
-- [x] Document integration setup for PM/Ops team
-- [ ] Enable ClickUp and Linear MCP servers in project settings
-- [ ] Test complete flow with MCP servers enabled: upload file → Google Drive → ClickUp → Linear
+- [x] Update file upload API to handle Google Drive
 
 ## Intake Portal Development
 - [x] Parse Munson Client Checklist Excel file
@@ -235,7 +182,6 @@
 
 ## Portal Language Updates
 - [x] Replace "hospital" references with flexible organization terminology
-- [x] Update header/titles to work for both radiology groups and healthcare orgs
 - [x] Review all user-facing text for organization-type assumptions
 - [x] Test updated language with both organization types in mind
 
@@ -311,15 +257,10 @@
 - [x] Support multiple question types (text, multiline, yesno, select, date, contact)
 - [x] Add file upload capability embedded in questions
 - [x] Test tab switching and data persistence
-- [x] Implement Notion database integration for intake responses
-- [x] Research Notion API file upload capabilities
-- [x] Create Notion integration module with API client
-- [x] Update database schema to store Notion page IDs
-- [x] Build file upload API endpoint with Notion integration
-- [ ] Sync intake responses to Notion database
+- [x] Update database schema to store file metadata
+- [x] Build file upload API endpoint with Google Drive integration
 - [x] Update frontend IntakeNew.tsx to handle file uploads
 - [x] Display uploaded files in intake form
-- [ ] Add Notion credentials via Settings UI
 - [ ] Test file upload with RadOne organization
 - [ ] Add admin review interface for viewing all organization responses
 - [ ] Test complete intake flow with file uploads
@@ -339,22 +280,6 @@
 - [x] Update admin dashboard to only show RadOne organizations
 - [x] Filter getMetrics query to exclude non-RadOne organizations
 - [x] Test all organization links work correctly (admin dashboard now only shows 3 RadOne orgs)
-
-## Update Notion Database ID
-- [ ] Update NOTION_DATABASE_ID from incorrect value to correct value
-- [ ] Test file upload with correct database ID
-
-## Complete Notion Integration - Pages and File Attachments
-- [x] Create function to find or create Notion page for organization
-- [x] Implement file attachment to Notion pages
-- [x] Update file upload endpoint to create page and attach files
-- [ ] Test file upload creates page in Notion database
-- [ ] Verify files are visible in Notion
-
-## Debug Notion File Upload Error
-- [ ] Check server logs for detailed Notion API error message
-- [ ] Fix Notion file upload integration
-- [ ] Test file upload successfully creates Notion page with attachment
 
 ## Switch to Google Drive for File Uploads
 - [x] Remove Notion file upload code
@@ -452,7 +377,6 @@
 - [ ] Add "Download All Files" button to Files & Documents panel (creates zip archive)
 - [ ] Add "Export Questionnaire" button to main interface
 - [ ] Export format: Pipe-delimited file (|) with columns: Section, Question ID, Question Text, Answer, Required, Completed
-- [ ] Include metadata in export: Organization name, export date, completion percentage
 - [ ] Export file naming: {organization-slug}_questionnaire_{date}.txt
 - [ ] Allow export at any time (even if incomplete)
 - [ ] Show incomplete questions as empty values in export
@@ -643,16 +567,16 @@
 
 ## Restructure Organizations with Two-Level Hierarchy
 ### Database Schema Changes
-- [ ] Create `clients` table (NL Client level: RadOne, SRV, etc.)
-- [ ] Add `clientId` foreign key to `organizations` table
-- [ ] Add `clientId` to `users` table (users belong to both client and org)
-- [ ] Migrate existing organizations to new structure (create RadOne client, link existing orgs)
+- [x] Create `clients` table (NL Client level: RadOne, SRV, etc.)
+- [x] Add `clientId` foreign key to `organizations` table
+- [x] Add `clientId` to `users` table (users belong to both client and org)
+- [x] Migrate existing organizations to new structure (create RadOne client, link existing orgs)
 
 ### Backend API Updates
-- [ ] Update admin router to include clients CRUD
-- [ ] Update organizations endpoints to include client information
-- [ ] Update users endpoints to show both client and organization
-- [ ] Update intake/responses to group by client
+- [x] Update admin router to include clients CRUD
+- [x] Update organizations endpoints to include client information
+- [x] Update users endpoints to show both client and organization
+- [x] Update intake/responses to group by client
 
 ### Frontend Updates
 - [ ] Update admin UI to show two-column view (Client | Clinical Org)
@@ -661,9 +585,9 @@
 - [ ] Update navigation/breadcrumbs to show hierarchy
 
 ### Data Migration
-- [ ] Create "RadOne" client
-- [ ] Link Munson, JCRHC, Baycare to RadOne client
-- [ ] Update existing users to have clientId
+- [x] Create "RadOne" client
+- [x] Link Munson, JCRHC, Baycare to RadOne client
+- [x] Update existing users to have clientId
 
 ## Add /implementation Base Path to URL
 - [x] Configure vite.config.ts to use /implementation base path
@@ -672,10 +596,10 @@
 - [ ] Test all routes work under /implementation/
 
 ## Fix White Screen on Published Site
-- [ ] Remove /implementation base path from vite.config.ts (causing deployment issues)
-- [ ] Test site loads correctly without base path
-- [ ] Republish and verify production site works
-- [ ] Document that base path should only be added after confirming domain setup
+- [x] Remove /implementation base path from vite.config.ts (causing deployment issues)
+- [x] Test site loads correctly without base path
+- [x] Republish and verify production site works
+- [x] Document that base path should only be added after confirming domain setup
 
 ## Implement Client-Level Access Control
 - [x] Create SRV client in database
