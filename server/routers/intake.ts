@@ -30,11 +30,11 @@ export const intakeRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
       }
 
-      // Get all responses for this organization with org name
+      // Get all responses for this organization from new responses table
       const responsesData = await db
         .select()
-        .from(intakeResponses)
-        .where(eq(intakeResponses.organizationId, org.id));
+        .from(responses)
+        .where(eq(responses.organizationId, org.id));
 
       // Include organization name in each response
       const responsesWithOrgName = responsesData.map(r => ({
@@ -53,10 +53,9 @@ export const intakeRouter = router({
     .input(
       z.object({
         organizationSlug: z.string(),
-        questionId: z.string(),
-        section: z.string(),
+        questionId: z.string(), // Question identifier (e.g., "H.1", "A.2")
         response: z.string(),
-        fileUrl: z.string().optional(),
+        userEmail: z.string(),
       })
     )
     .mutation(async ({ input }) => {
@@ -74,14 +73,25 @@ export const intakeRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
       }
 
+      // Find question by questionId (e.g., "H.1")
+      const [question] = await db
+        .select()
+        .from(questions)
+        .where(eq(questions.questionId, input.questionId))
+        .limit(1);
+
+      if (!question) {
+        throw new TRPCError({ code: "NOT_FOUND", message: `Question ${input.questionId} not found` });
+      }
+
       // Check if response already exists
       const [existing] = await db
         .select()
-        .from(intakeResponses)
+        .from(responses)
         .where(
           and(
-            eq(intakeResponses.organizationId, org.id),
-            eq(intakeResponses.questionId, input.questionId)
+            eq(responses.organizationId, org.id),
+            eq(responses.questionId, question.id)
           )
         )
         .limit(1);
@@ -89,25 +99,21 @@ export const intakeRouter = router({
       if (existing) {
         // Update existing response
         await db
-          .update(intakeResponses)
+          .update(responses)
           .set({
             response: input.response,
-            fileUrl: input.fileUrl,
-            status: input.response ? "complete" : "not_started",
-            updatedAt: new Date(),
+            userEmail: input.userEmail,
           })
-          .where(eq(intakeResponses.id, existing.id));
+          .where(eq(responses.id, existing.id));
 
         return { success: true, action: "updated" };
       } else {
         // Insert new response
-        await db.insert(intakeResponses).values({
+        await db.insert(responses).values({
           organizationId: org.id,
-          questionId: input.questionId,
-          section: input.section,
+          questionId: question.id,
           response: input.response,
-          fileUrl: input.fileUrl,
-          status: input.response ? "complete" : "not_started",
+          userEmail: input.userEmail,
         });
 
         return { success: true, action: "created" };
@@ -141,21 +147,33 @@ export const intakeRouter = router({
 
       // Process each response
       const results = [];
-      for (const [questionId, response] of Object.entries(input.responses)) {
+      for (const [questionIdStr, response] of Object.entries(input.responses)) {
         // Skip empty responses
         if (!response || response === '' || response === null) continue;
 
         // Convert response to string for storage
         const responseStr = typeof response === 'object' ? JSON.stringify(response) : String(response);
 
+        // Find question by questionId
+        const [question] = await db
+          .select()
+          .from(questions)
+          .where(eq(questions.questionId, questionIdStr))
+          .limit(1);
+
+        if (!question) {
+          console.warn(`Question ${questionIdStr} not found, skipping`);
+          continue;
+        }
+
         // Check if response already exists
         const [existing] = await db
           .select()
-          .from(intakeResponses)
+          .from(responses)
           .where(
             and(
-              eq(intakeResponses.organizationId, org.id),
-              eq(intakeResponses.questionId, questionId)
+              eq(responses.organizationId, org.id),
+              eq(responses.questionId, question.id)
             )
           )
           .limit(1);
@@ -163,26 +181,22 @@ export const intakeRouter = router({
         if (existing) {
           // Update existing response
           await db
-            .update(intakeResponses)
+            .update(responses)
             .set({
               response: responseStr,
-              status: "complete",
-              updatedAt: new Date(),
+              userEmail: 'batch-save@system', // TODO: Get from context
             })
-            .where(eq(intakeResponses.id, existing.id));
-          results.push({ questionId, action: "updated" });
+            .where(eq(responses.id, existing.id));
+          results.push({ questionId: questionIdStr, action: "updated" });
         } else {
-          // Insert new response - need to determine section from questionId
-          // For now, we'll extract section from questionId prefix
-          const section = questionId.split('_')[0] || 'unknown';
-          await db.insert(intakeResponses).values({
+          // Insert new response
+          await db.insert(responses).values({
             organizationId: org.id,
-            questionId,
-            section,
+            questionId: question.id,
             response: responseStr,
-            status: "complete",
+            userEmail: 'batch-save@system', // TODO: Get from context
           });
-          results.push({ questionId, action: "created" });
+          results.push({ questionId: questionIdStr, action: "created" });
         }
       }
 
@@ -213,28 +227,44 @@ export const intakeRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
       }
 
-      // Get all responses for this organization
-      const responses = await db
-        .select()
-        .from(intakeResponses)
-        .where(eq(intakeResponses.organizationId, org.id));
+      // Get all responses for this organization with question details
+      const responsesData = await db
+        .select({
+          response: responses,
+          question: questions,
+        })
+        .from(responses)
+        .leftJoin(questions, eq(responses.questionId, questions.id))
+        .where(eq(responses.organizationId, org.id));
+
+      // Get total question count from database
+      const [{ count: totalQuestions }] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(questions);
 
       // Calculate completion by section
       const sectionProgress: Record<string, { total: number; completed: number }> = {};
 
-      responses.forEach((response) => {
-        if (!sectionProgress[response.section]) {
-          sectionProgress[response.section] = { total: 0, completed: 0 };
+      responsesData.forEach(({ response, question }) => {
+        if (!question) return;
+        const section = question.sectionId;
+        if (!sectionProgress[section]) {
+          sectionProgress[section] = { total: 0, completed: 0 };
         }
-        sectionProgress[response.section].total++;
-        if (response.status === "complete") {
-          sectionProgress[response.section].completed++;
+        sectionProgress[section].total++;
+        if (response.response && response.response.trim() !== '') {
+          sectionProgress[section].completed++;
         }
       });
 
+      // Calculate overall completion
+      const completedCount = responsesData.filter(({ response }) => 
+        response.response && response.response.trim() !== ''
+      ).length;
+
       return {
-        totalQuestions: responses.length,
-        completedQuestions: responses.filter((r) => r.status === "complete").length,
+        totalQuestions,
+        completedQuestions: completedCount,
         sectionProgress,
       };
     }),

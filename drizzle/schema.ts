@@ -29,10 +29,29 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
 /**
- * Organizations table - represents hospitals/clients
+ * Clients table - represents NL's customers (e.g., RadOne, SRV)
+ * Top level of the hierarchy: Client → Organizations (hospitals)
+ */
+export const clients = mysqlTable("clients", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(), // e.g., "RadOne", "SRV"
+  slug: varchar("slug", { length: 100 }).notNull().unique(), // URL-safe identifier
+  description: text("description"), // Optional description
+  status: mysqlEnum("status", ["active", "inactive"]).default("active").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Client = typeof clients.$inferSelect;
+export type InsertClient = typeof clients.$inferInsert;
+
+/**
+ * Organizations table - represents clinical organizations (hospitals/facilities)
+ * Second level of hierarchy: belongs to a Client
  * Each organization gets a unique slug for URL-based access
  */
 export const organizations = mysqlTable("organizations", {
+  clientId: int("clientId"), // FK to clients.id (temporarily optional for migration)
   id: int("id").autoincrement().primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   slug: varchar("slug", { length: 100 }).notNull().unique(), // URL-safe identifier

@@ -54,8 +54,8 @@ export function IntakeForm({ organizationSlug }: IntakeFormProps) {
     saveResponseMutation.mutate({
       organizationSlug,
       questionId,
-      section: currentSection,
       response: value,
+      userEmail: 'user@example.com', // TODO: Get from auth context
     });
   };
 

@@ -640,3 +640,27 @@
 - [ ] Add user activity log (last login, actions)
 - [ ] Add filter by organization and role
 - [ ] Ensure all CRUD operations are working smoothly
+
+## Restructure Organizations with Two-Level Hierarchy
+### Database Schema Changes
+- [ ] Create `clients` table (NL Client level: RadOne, SRV, etc.)
+- [ ] Add `clientId` foreign key to `organizations` table
+- [ ] Add `clientId` to `users` table (users belong to both client and org)
+- [ ] Migrate existing organizations to new structure (create RadOne client, link existing orgs)
+
+### Backend API Updates
+- [ ] Update admin router to include clients CRUD
+- [ ] Update organizations endpoints to include client information
+- [ ] Update users endpoints to show both client and organization
+- [ ] Update intake/responses to group by client
+
+### Frontend Updates
+- [ ] Update admin UI to show two-column view (Client | Clinical Org)
+- [ ] Update users management to show client and organization
+- [ ] Update organization forms to select parent client
+- [ ] Update navigation/breadcrumbs to show hierarchy
+
+### Data Migration
+- [ ] Create "RadOne" client
+- [ ] Link Munson, JCRHC, Baycare to RadOne client
+- [ ] Update existing users to have clientId

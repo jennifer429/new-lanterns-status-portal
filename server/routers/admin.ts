@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { questions, questionOptions, organizations, users } from "../../drizzle/schema";
+import { questions, questionOptions, organizations, users, clients } from "../../drizzle/schema";
 import { eq, and, desc } from "drizzle-orm";
 
 /**
@@ -299,6 +299,7 @@ export const adminRouter = router({
   createOrganization: protectedProcedure
     .input(
       z.object({
+        clientId: z.number(),
         name: z.string(),
         slug: z.string(),
         contactName: z.string().optional(),
