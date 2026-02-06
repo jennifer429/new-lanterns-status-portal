@@ -664,3 +664,9 @@
 - [ ] Create "RadOne" client
 - [ ] Link Munson, JCRHC, Baycare to RadOne client
 - [ ] Update existing users to have clientId
+
+## Add /implementation Base Path to URL
+- [x] Configure vite.config.ts to use /implementation base path
+- [x] Update frontend router to handle base path correctly (Vite handles automatically)
+- [x] Update API endpoint paths if needed (API paths remain absolute)
+- [ ] Test all routes work under /implementation/

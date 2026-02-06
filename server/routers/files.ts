@@ -27,8 +27,8 @@ async function uploadToGoogleDrive(
   try {
     await writeFile(tempFilePath, fileBuffer);
     
-    // Create organization folder in Google Drive if it doesn't exist
-    const folderPath = `manus_google_drive:Implementation Files/${organizationName}`;
+    // Upload to RadOne-Intake folder (ID: 1Awi2cFLAXApN9wWVMgqslyyXy69sHVTX)
+    const folderPath = `manus_google_drive:RadOne-Intake`;
     
     // Upload file to Google Drive
     await execAsync(
