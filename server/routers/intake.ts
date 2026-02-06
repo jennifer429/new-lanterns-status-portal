@@ -716,4 +716,57 @@ export const intakeRouter = router({
         });
       }
     }),
+
+  /**
+   * Delete uploaded file (for non-admin users on intake portal)
+   */
+  deleteFile: publicProcedure
+    .input(
+      z.object({
+        fileId: z.number(),
+        organizationSlug: z.string(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Get organization by slug
+      const [org] = await db
+        .select()
+        .from(organizations)
+        .where(eq(organizations.slug, input.organizationSlug))
+        .limit(1);
+
+      if (!org) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      }
+
+      // Validate user has access to this organization's client
+      if (ctx.user?.clientId && org.clientId !== ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this organization" });
+      }
+
+      // Get file details to verify it belongs to this organization
+      const { intakeFileAttachments } = await import("../../drizzle/schema");
+      const [file] = await db
+        .select()
+        .from(intakeFileAttachments)
+        .where(eq(intakeFileAttachments.id, input.fileId))
+        .limit(1);
+
+      if (!file) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "File not found" });
+      }
+
+      // Verify file belongs to this organization
+      if (file.organizationId !== org.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this file" });
+      }
+
+      // Delete from database (S3 file remains)
+      await db.delete(intakeFileAttachments).where(eq(intakeFileAttachments.id, input.fileId));
+
+      return { success: true };
+    }),
 });

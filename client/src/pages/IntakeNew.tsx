@@ -11,9 +11,68 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Download, Upload, CheckCircle2, Circle, Clock, ArrowLeft, ChevronRight } from "lucide-react";
+import { Loader2, Download, Upload, CheckCircle2, Circle, Clock, ArrowLeft, ChevronRight, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { FilePreviewItem } from "@/components/FilePreviewItem";
 import { questionnaireData, type Question, type Section } from "@shared/questionnaireData";
+
+// File List Component for each question
+function FileListForQuestion({ questionId, organizationSlug, onDelete }: { questionId: string; organizationSlug: string; onDelete: (fileId: number) => void }) {
+  const { data: files, isLoading } = trpc.intake.getUploadedFiles.useQuery(
+    { organizationSlug, questionId },
+    { enabled: !!organizationSlug && !!questionId }
+  );
+
+  if (isLoading) {
+    return <div className="text-sm text-muted-foreground">Loading files...</div>;
+  }
+
+  if (!files || files.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-3 space-y-2">
+      <p className="text-sm font-medium text-muted-foreground">Uploaded Files:</p>
+      {files.map((file) => (
+        <div key={file.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{file.fileName}</p>
+            <p className="text-xs text-muted-foreground">
+              {file.fileSize ? `${(file.fileSize / 1024).toFixed(1)} KB` : 'Unknown size'} • {new Date(file.createdAt).toLocaleDateString()}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 ml-3">
+            <a
+              href={file.fileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              download
+              className="p-2 hover:bg-muted rounded-md transition-colors"
+            >
+              <Download className="w-4 h-4 text-purple-600" />
+            </a>
+            <button
+              onClick={() => onDelete(file.id)}
+              className="p-2 hover:bg-destructive/10 rounded-md transition-colors"
+            >
+              <Trash2 className="w-4 h-4 text-destructive" />
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function IntakeNew() {
   const { slug } = useParams();
@@ -22,6 +81,8 @@ export default function IntakeNew() {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [currentSection, setCurrentSection] = useState<string | null>(null);
   const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
+  const [deleteFileId, setDeleteFileId] = useState<number | null>(null);
+  const [deleteQuestionId, setDeleteQuestionId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch organization
@@ -81,6 +142,10 @@ export default function IntakeNew() {
   // File upload mutation
   const uploadFileMutation = trpc.files.upload.useMutation();
 
+  // File delete mutation
+  const deleteFileMutation = trpc.intake.deleteFile.useMutation();
+  const utils = trpc.useUtils();
+
   // Handle file upload
   const handleFileUpload = useCallback(async (questionId: string, file: File) => {
     if (!org) {
@@ -118,6 +183,31 @@ export default function IntakeNew() {
     };
     reader.readAsDataURL(file);
   }, [org, uploadFileMutation]);
+
+  // Handle file delete
+  const handleDeleteFile = useCallback(async () => {
+    if (!deleteFileId || !deleteQuestionId || !slug) return;
+
+    try {
+      await deleteFileMutation.mutateAsync({
+        fileId: deleteFileId,
+        organizationSlug: slug,
+      });
+      
+      // Refresh the file list for this question
+      await utils.intake.getUploadedFiles.invalidate({
+        organizationSlug: slug,
+        questionId: deleteQuestionId,
+      });
+      
+      // Close dialog
+      setDeleteFileId(null);
+      setDeleteQuestionId(null);
+    } catch (error) {
+      console.error("File delete failed:", error);
+      alert("Failed to delete file. Please try again.");
+    }
+  }, [deleteFileId, deleteQuestionId, slug, deleteFileMutation, utils]);
 
   // Calculate progress per section
   const calculateSectionProgress = (section: Section) => {
@@ -358,7 +448,11 @@ export default function IntakeNew() {
               <p className="text-sm text-green-600">✓ File uploaded: {value.split('/').pop()}</p>
             )}
             
-
+            {/* File List */}
+            <FileListForQuestion questionId={question.id} organizationSlug={slug || ''} onDelete={(fileId) => {
+              setDeleteFileId(fileId);
+              setDeleteQuestionId(question.id);
+            }} />
           </div>
         );
 
@@ -411,7 +505,11 @@ export default function IntakeNew() {
               <p className="text-sm text-green-600">✓ File uploaded: {value.split('/').pop()}</p>
             )}
             
-
+            {/* File List */}
+            <FileListForQuestion questionId={question.id} organizationSlug={slug || ''} onDelete={(fileId) => {
+              setDeleteFileId(fileId);
+              setDeleteQuestionId(question.id);
+            }} />
           </div>
         );
 
@@ -700,6 +798,29 @@ export default function IntakeNew() {
           </Button>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteFileId !== null} onOpenChange={(open) => {
+        if (!open) {
+          setDeleteFileId(null);
+          setDeleteQuestionId(null);
+        }
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete File</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this file? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteFile} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

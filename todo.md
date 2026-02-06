@@ -693,3 +693,11 @@
 - [x] Verify dashboard files list shows all files correctly
 - [x] Verify download buttons work on dashboard
 - [x] Verify delete buttons work on dashboard
+
+## Add File Management to Intake Portal Pages
+- [x] Display uploaded files list under each file upload question on intake pages
+- [x] Add download button for each file in the list
+- [x] Add delete button with confirmation dialog for each file
+- [x] Show file metadata (name, size, upload date) in the list
+- [x] Refresh file list automatically after deletion
+- [x] Test file management on intake questionnaire pages
