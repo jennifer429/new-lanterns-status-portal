@@ -144,11 +144,13 @@ export const filesRouter = router({
 
       if (!org) throw new Error("Organization not found");
 
-      // Upload to Google Drive and get shareable link
-      const fileUrl = await uploadToGoogleDrive(
-        input.fileName,
+      // Upload to S3
+      const { storagePut } = await import("../storage");
+      const fileKey = `intake/${org.slug}/${input.taskId}/${Date.now()}-${input.fileName}`;
+      const { url: fileUrl } = await storagePut(
+        fileKey,
         fileBuffer,
-        org.name
+        input.mimeType
       );
 
       // Save metadata to database
@@ -157,7 +159,7 @@ export const filesRouter = router({
         taskId: input.taskId,
         fileName: input.fileName,
         fileUrl,
-        fileKey: `gdrive://${org.name}/${input.fileName}`,
+        fileKey,
         fileSize,
         mimeType: input.mimeType,
         uploadedBy: input.uploadedBy,

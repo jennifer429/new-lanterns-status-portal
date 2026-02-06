@@ -648,3 +648,9 @@
 - [x] Identify component causing "Cannot update component while rendering" error (saveMutation in useEffect deps)
 - [x] Remove saveMutation from useEffect dependencies to fix infinite loop
 - [ ] Test fix on production build
+
+## Debug File Upload Failure
+- [x] Check server logs for upload error
+- [x] Identify root cause of upload failure (files.upload still using Google Drive)
+- [x] Fix upload issue (migrated files.upload to S3)
+- [ ] Test file upload with valid files
