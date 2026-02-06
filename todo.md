@@ -631,3 +631,10 @@
 - [x] Update database to store S3 URLs instead of Drive links
 - [x] Update frontend to handle S3 file URLs (no changes needed - uses same fileUrl field)
 - [ ] Test file upload with S3 storage
+
+## Improve File Upload UX
+- [x] Add upload progress indicator (loading spinner)
+- [x] Create endpoint to fetch uploaded files for each question
+- [x] Display uploaded files list with original filename and size
+- [x] Show both original filename and S3 key in file list
+- [x] Add download links for uploaded files

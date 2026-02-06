@@ -620,4 +620,50 @@ export const intakeRouter = router({
 
       return options;
     }),
+
+  /**
+   * Get uploaded files for a specific organization and question
+   */
+  getUploadedFiles: publicProcedure
+    .input(
+      z.object({
+        organizationSlug: z.string(),
+        questionId: z.string(),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Get organization by slug
+      const [org] = await db
+        .select()
+        .from(organizations)
+        .where(eq(organizations.slug, input.organizationSlug))
+        .limit(1);
+
+      if (!org) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      }
+
+      // Validate user has access to this organization's client
+      if (ctx.user?.clientId && org.clientId !== ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this organization" });
+      }
+
+      // Get uploaded files for this question
+      const { intakeFileAttachments } = await import("../../drizzle/schema");
+      const files = await db
+        .select()
+        .from(intakeFileAttachments)
+        .where(
+          and(
+            eq(intakeFileAttachments.organizationId, org.id),
+            eq(intakeFileAttachments.questionId, input.questionId)
+          )
+        )
+        .orderBy(sql`${intakeFileAttachments.createdAt} DESC`);
+
+      return files;
+    }),
 });

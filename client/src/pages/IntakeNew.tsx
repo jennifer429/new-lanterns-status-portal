@@ -20,6 +20,7 @@ export default function IntakeNew() {
   const [responses, setResponses] = useState<Record<string, any>>({});
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [currentSection, setCurrentSection] = useState<string | null>(null);
+  const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch organization
@@ -84,6 +85,10 @@ export default function IntakeNew() {
       alert("Organization not found");
       return;
     }
+    
+    // Mark as uploading
+    setUploadingFiles(prev => new Set(prev).add(questionId));
+    
     const reader = new FileReader();
     reader.onload = async (e) => {
       const base64 = e.target?.result as string;
@@ -100,6 +105,13 @@ export default function IntakeNew() {
       } catch (error) {
         console.error("File upload failed:", error);
         alert("File upload failed. Please try again.");
+      } finally {
+        // Remove from uploading set
+        setUploadingFiles(prev => {
+          const next = new Set(prev);
+          next.delete(questionId);
+          return next;
+        });
       }
     };
     reader.readAsDataURL(file);
@@ -313,22 +325,62 @@ export default function IntakeNew() {
         );
 
       case 'upload':
+        const isUploading = uploadingFiles.has(question.id);
+        const { data: uploadedFiles } = trpc.intake.getUploadedFiles.useQuery(
+          { organizationSlug: slug || "", questionId: question.id },
+          { enabled: !!slug }
+        );
+        
         return (
-          <div className="space-y-2">
-            <Input
-              type="file"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleFileUpload(question.id, file);
-              }}
-            />
-            {value && (
-              <p className="text-sm text-green-600">✓ File uploaded: {value.split('/').pop()}</p>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Input
+                type="file"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFileUpload(question.id, file);
+                }}
+                disabled={isUploading}
+              />
+              {isUploading && (
+                <Loader2 className="w-5 h-5 animate-spin text-purple-500" />
+              )}
+            </div>
+            
+            {/* Uploaded files list */}
+            {uploadedFiles && uploadedFiles.length > 0 && (
+              <div className="border rounded-lg p-3 space-y-2 bg-muted/30">
+                <p className="text-sm font-medium text-muted-foreground">Uploaded Files:</p>
+                {uploadedFiles.map((file) => (
+                  <div key={file.id} className="flex items-center justify-between p-2 bg-background rounded border">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{file.fileName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {file.fileSize ? `${(file.fileSize / 1024).toFixed(1)} KB` : 'Unknown size'} • {file.driveFileId || 'No S3 key'}
+                      </p>
+                    </div>
+                    <a
+                      href={file.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-2 text-purple-500 hover:text-purple-600"
+                    >
+                      <Download className="w-4 h-4" />
+                    </a>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         );
 
       case 'upload-download':
+        const isUploadingDownload = uploadingFiles.has(question.id);
+        const { data: uploadedFilesDownload } = trpc.intake.getUploadedFiles.useQuery(
+          { organizationSlug: slug || "", questionId: question.id },
+          { enabled: !!slug }
+        );
+        
         return (
           <div className="space-y-3">
             <div className="flex gap-2">
@@ -346,17 +398,45 @@ export default function IntakeNew() {
                 <Download className="w-4 h-4 mr-2" />
                 Download Template
               </Button>
-              <Input
-                type="file"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleFileUpload(question.id, file);
-                }}
-                className="flex-1"
-              />
+              <div className="flex items-center gap-2 flex-1">
+                <Input
+                  type="file"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload(question.id, file);
+                  }}
+                  disabled={isUploadingDownload}
+                  className="flex-1"
+                />
+                {isUploadingDownload && (
+                  <Loader2 className="w-5 h-5 animate-spin text-purple-500" />
+                )}
+              </div>
             </div>
-            {value && (
-              <p className="text-sm text-green-600">✓ File uploaded: {value.split('/').pop()}</p>
+            
+            {/* Uploaded files list */}
+            {uploadedFilesDownload && uploadedFilesDownload.length > 0 && (
+              <div className="border rounded-lg p-3 space-y-2 bg-muted/30">
+                <p className="text-sm font-medium text-muted-foreground">Uploaded Files:</p>
+                {uploadedFilesDownload.map((file) => (
+                  <div key={file.id} className="flex items-center justify-between p-2 bg-background rounded border">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{file.fileName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {file.fileSize ? `${(file.fileSize / 1024).toFixed(1)} KB` : 'Unknown size'} • {file.driveFileId || 'No S3 key'}
+                      </p>
+                    </div>
+                    <a
+                      href={file.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-2 text-purple-500 hover:text-purple-600"
+                    >
+                      <Download className="w-4 h-4" />
+                    </a>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         );
