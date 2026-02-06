@@ -1,10 +1,9 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { organizations, sectionProgress, taskCompletion, activityFeed, users, intakeResponses } from "../../drizzle/schema";
+import { organizations, sectionProgress, taskCompletion, activityFeed, users, intakeResponses, questions, responses } from "../../drizzle/schema";
 import { eq, and, desc, count, sql } from "drizzle-orm";
-import { createSectionCompletionTask } from "../clickup";
-import { postLinearComment } from "../linear";
+// ClickUp and Linear integrations removed for simplification
 
 /**
  * Organizations router - handles organization CRUD and data access
@@ -200,17 +199,7 @@ export const organizationsRouter = router({
             .where(eq(organizations.id, input.organizationId))
             .limit(1);
 
-          if (org) {
-            // Trigger ClickUp task creation asynchronously (don't block response)
-            createSectionCompletionTask(
-              org.name,
-              input.sectionName,
-              completedCount,
-              totalCount
-            ).catch(error => {
-              console.error("[ClickUp] Failed to create section completion task:", error);
-            });
-          }
+          // ClickUp integration removed - section completion tracking simplified
         }
       }
 
@@ -259,53 +248,53 @@ export const organizationsRouter = router({
         const userCount = 0;
         const lastLoginAt = null;
 
-        // Calculate intake completion percentage
+        // Calculate intake completion percentage using new schema
+        // Get total questions from database
         const [totalQuestionsResult] = await db
-          .select({ count: count() })
-          .from(intakeResponses)
-          .where(eq(intakeResponses.organizationId, org.id));
+          .select({ count: sql<number>`COUNT(*)` })
+          .from(questions);
         const totalQuestions = totalQuestionsResult?.count || 0;
 
+        // Count completed responses (non-empty)
         const [completedQuestionsResult] = await db
-          .select({ count: count() })
-          .from(intakeResponses)
+          .select({ count: sql<number>`COUNT(*)` })
+          .from(responses)
           .where(
             and(
-              eq(intakeResponses.organizationId, org.id),
-              sql`${intakeResponses.response} IS NOT NULL AND ${intakeResponses.response} != ''`
+              eq(responses.organizationId, org.id),
+              sql`${responses.response} IS NOT NULL AND ${responses.response} != ''`
             )
           );
         const completedQuestions = completedQuestionsResult?.count || 0;
 
-        const completionPercentage = totalQuestions > 0 
+        const completionPercentage = totalQuestions > 0
           ? Math.round((completedQuestions / totalQuestions) * 100)
           : 0;
 
-        // Get section-by-section progress
+        // Get section-by-section progress using new schema
+        const allQuestions = await db.select().from(questions);
         const allResponses = await db
           .select()
-          .from(intakeResponses)
-          .where(eq(intakeResponses.organizationId, org.id));
+          .from(responses)
+          .where(eq(responses.organizationId, org.id));
 
-        // Map section IDs to human-readable titles
-        const sectionTitles: Record<string, string> = {
-          'org-info': 'Organization Information',
-          'overview-arch': 'Overview & Architecture',
-          'data-integration': 'Data & Integration',
-          'config-files': 'Configuration Files',
-          'connectivity': 'Connectivity',
-          'dicom-validation': 'DICOM Data Validation',
-        };
+        // Build response map for quick lookup
+        const responseMap = new Map();
+        allResponses.forEach(r => responseMap.set(r.questionId, r));
 
+        // Group by section
         const sectionStats: Record<string, { total: number; completed: number }> = {};
-        allResponses.forEach((resp) => {
-          const sectionTitle = sectionTitles[resp.section] || resp.section;
-          if (!sectionStats[sectionTitle]) {
-            sectionStats[sectionTitle] = { total: 0, completed: 0 };
+        
+        allQuestions.forEach(q => {
+          if (!sectionStats[q.sectionTitle]) {
+            sectionStats[q.sectionTitle] = { total: 0, completed: 0 };
           }
-          sectionStats[sectionTitle].total++;
-          if (resp.response && resp.response !== '') {
-            sectionStats[sectionTitle].completed++;
+          
+          sectionStats[q.sectionTitle].total++;
+          
+          const resp = responseMap.get(q.id);
+          if (resp && resp.response && resp.response !== '') {
+            sectionStats[q.sectionTitle].completed++;
           }
         });
 
@@ -361,15 +350,9 @@ export const organizationsRouter = router({
         throw new Error("No Linear issue configured for this organization");
       }
 
-      // Post comment to Linear
+      // Linear integration removed - save directly to activity feed
       const author = input.authorName || org.contactName || "Hospital Team";
-      const result = await postLinearComment(org.linearIssueId, input.message, author);
-
-      if (!result.success) {
-        throw new Error(`Failed to post to Linear: ${result.error}`);
-      }
-
-      // Also save to activity feed for local display
+      
       await db.insert(activityFeed).values({
         organizationId: input.organizationId,
         source: "manual",
@@ -377,6 +360,6 @@ export const organizationsRouter = router({
         message: input.message,
       });
 
-      return { success: true, commentId: result.commentId };
+      return { success: true };
     }),
 });

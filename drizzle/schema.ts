@@ -110,15 +110,74 @@ export type FileAttachment = typeof fileAttachments.$inferSelect;
 export type InsertFileAttachment = typeof fileAttachments.$inferInsert;
 
 /**
- * Intake responses - stores hospital answers to intake questions
+ * Questions - master list of all intake questions (single source of truth)
+ */
+export const questions = mysqlTable("questions", {
+  id: int("id").autoincrement().primaryKey(),
+  questionId: varchar("questionId", { length: 50 }).notNull().unique(), // e.g., "H.1", "A.7", "D.3"
+  sectionId: varchar("sectionId", { length: 50 }).notNull(), // e.g., "org-info", "overview-arch"
+  sectionTitle: varchar("sectionTitle", { length: 255 }).notNull(), // e.g., "Organization Information"
+  questionNumber: int("questionNumber").notNull(), // Sequential number within section (1, 2, 3...)
+  shortTitle: varchar("shortTitle", { length: 100 }).notNull(), // Short title for filenames, e.g., "Procedure-Code-List"
+  questionText: text("questionText").notNull(),
+  questionType: varchar("questionType", { length: 50 }).notNull(), // text, textarea, dropdown, date, multi-select, upload
+  options: text("options"), // JSON array of options for dropdown/multi-select
+  placeholder: text("placeholder"),
+  notes: text("notes"),
+  required: int("required").default(0).notNull(), // 0 or 1 (boolean)
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Question = typeof questions.$inferSelect;
+export type InsertQuestion = typeof questions.$inferInsert;
+
+/**
+ * Responses - stores user answers to questions with audit trail
+ */
+export const responses = mysqlTable("responses", {
+  id: int("id").autoincrement().primaryKey(),
+  organizationId: int("organizationId").notNull(),
+  questionId: int("questionId").notNull(), // Foreign key to questions.id
+  response: text("response"), // Text answer or JSON for complex responses
+  fileUrl: text("fileUrl"), // For file uploads
+  userEmail: varchar("userEmail", { length: 320 }), // Who provided this response
+  createdAt: timestamp("createdAt").defaultNow().notNull(), // When first answered
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(), // When last modified
+});
+
+export type Response = typeof responses.$inferSelect;
+export type InsertResponse = typeof responses.$inferInsert;
+
+/**
+ * Question Options - individual options for dropdown and multi-select questions
+ * Allows easy management and updates of question choices
+ */
+export const questionOptions = mysqlTable("question_options", {
+  id: int("id").autoincrement().primaryKey(),
+  questionId: int("questionId").notNull(), // FK to questions.id
+  optionValue: varchar("optionValue", { length: 255 }).notNull(), // Internal value (e.g., "eastern")
+  optionLabel: varchar("optionLabel", { length: 255 }).notNull(), // Display text (e.g., "Eastern Time")
+  displayOrder: int("displayOrder").default(0).notNull(), // Order in dropdown (1, 2, 3...)
+  isActive: int("isActive").default(1).notNull(), // 0 = disabled, 1 = active
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type QuestionOption = typeof questionOptions.$inferSelect;
+export type InsertQuestionOption = typeof questionOptions.$inferInsert;
+
+/**
+ * Legacy intake responses table - kept for migration reference, will be removed after migration
+ * @deprecated Use questions and responses tables instead
  */
 export const intakeResponses = mysqlTable("intakeResponses", {
   id: int("id").autoincrement().primaryKey(),
   organizationId: int("organizationId").notNull(),
-  questionId: varchar("questionId", { length: 50 }).notNull(), // e.g., "A.1", "B.4"
-  section: varchar("section", { length: 255 }).notNull(), // e.g., "Overview & Architecture"
-  response: text("response"), // Text answer
-  fileUrl: text("fileUrl"), // For file uploads
+  questionId: varchar("questionId", { length: 50 }).notNull(),
+  section: varchar("section", { length: 255 }).notNull(),
+  response: text("response"),
+  fileUrl: text("fileUrl"),
   status: mysqlEnum("status", ["not_started", "in_progress", "complete"]).default("not_started").notNull(),
   updatedBy: varchar("updatedBy", { length: 255 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

@@ -2,12 +2,12 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { intakeResponses, organizations } from "../../drizzle/schema";
-import { eq, and } from "drizzle-orm";
+import { intakeResponses, organizations, questions, questionOptions, responses } from "../../drizzle/schema";
+import { eq, and, sql } from "drizzle-orm";
 
 export const intakeRouter = router({
   /**
-   * Get all intake responses for an organization
+   * Get all intake responses for an organization (with org name included)
    */
   getResponses: publicProcedure
     .input(
@@ -30,13 +30,20 @@ export const intakeRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
       }
 
-      // Get all responses for this organization
-      const responses = await db
+      // Get all responses for this organization with org name
+      const responsesData = await db
         .select()
         .from(intakeResponses)
         .where(eq(intakeResponses.organizationId, org.id));
 
-      return responses;
+      // Include organization name in each response
+      const responsesWithOrgName = responsesData.map(r => ({
+        ...r,
+        organizationName: org.name,
+        organizationSlug: org.slug,
+      }));
+
+      return responsesWithOrgName;
     }),
 
   /**
@@ -244,6 +251,7 @@ export const intakeRouter = router({
         fileName: z.string(),
         fileData: z.string(), // base64 encoded file data
         mimeType: z.string(),
+        userEmail: z.string().email(),
       })
     )
     .mutation(async ({ input }) => {
@@ -259,6 +267,17 @@ export const intakeRouter = router({
 
       if (!org) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      }
+
+      // Get question details for short title
+      const [question] = await db
+        .select()
+        .from(questions)
+        .where(eq(questions.questionId, input.questionId))
+        .limit(1);
+      
+      if (!question) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Question not found" });
       }
 
       // Decode base64 file data
@@ -279,10 +298,23 @@ export const intakeRouter = router({
         fs.writeFileSync(tempFilePath, fileBuffer);
 
         try {
-          // Upload to Google Drive (to root, files will be organized by naming convention)
-          const fileName = `${org.slug}_${Date.now()}_${input.fileName}`;
+          // Build new filename: {orgName}_{userEmail}_{questionId}-{shortTitle}_{timestamp}.{ext}
+          const timestamp = Date.now();
+          const fileExt = input.fileName.split('.').pop();
+          const sanitizedEmail = input.userEmail.replace(/@/g, '-at-').replace(/[^a-zA-Z0-9.-]/g, '_');
+          const sanitizedOrgName = org.name.replace(/[^a-zA-Z0-9-]/g, '_');
+          const fileName = `${sanitizedOrgName}_${sanitizedEmail}_${input.questionId}-${question.shortTitle}_${timestamp}.${fileExt}`;
+          
+          // Upload to RadOne-Intake folder (ID: 1Awi2cFLAXApN9wWVMgqslyyXy69sHVTX)
+          const radoneIntakeFolderId = '1Awi2cFLAXApN9wWVMgqslyyXy69sHVTX';
           const drivePath = `manus_google_drive:${fileName}`;
-          execSync(`rclone copy "${tempFilePath}" "manus_google_drive:" --config /home/ubuntu/.gdrive-rclone.ini`, {
+          
+          // First rename temp file to final name
+          const finalTempPath = path.join(tempDir, fileName);
+          fs.renameSync(tempFilePath, finalTempPath);
+          
+          // Upload to specific folder using rclone
+          execSync(`rclone copy "${finalTempPath}" "manus_google_drive:" --drive-parent-id ${radoneIntakeFolderId} --config /home/ubuntu/.gdrive-rclone.ini`, {
             stdio: 'pipe'
           });
 
@@ -310,7 +342,7 @@ export const intakeRouter = router({
           }
 
           // Clean up temp file
-          fs.unlinkSync(tempFilePath);
+          fs.unlinkSync(finalTempPath);
 
           // Store file info in database
           const { intakeFileAttachments } = await import("../../drizzle/schema");
@@ -346,5 +378,249 @@ export const intakeRouter = router({
           message: "File received (Notion sync disabled for this organization)",
         };
       }
+    }),
+
+  /**
+   * Get all questions from database
+   */
+  getAllQuestions: publicProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    
+    const allQuestions = await db
+      .select()
+      .from(questions)
+      .orderBy(questions.sectionId, questions.questionNumber);
+    
+    return allQuestions;
+  }),
+
+  /**
+   * Get responses from new schema (with org name and user email)
+   */
+  getResponsesNew: publicProcedure
+    .input(z.object({ organizationId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      
+      // Get organization
+      const [org] = await db
+        .select()
+        .from(organizations)
+        .where(eq(organizations.id, input.organizationId))
+        .limit(1);
+      
+      if (!org) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      }
+      
+      // Get responses with organization name
+      const responsesData = await db
+        .select()
+        .from(responses)
+        .where(eq(responses.organizationId, input.organizationId));
+      
+      // Include organization name
+      const responsesWithOrgName = responsesData.map(r => ({
+        ...r,
+        organizationName: org.name,
+        organizationSlug: org.slug,
+      }));
+      
+      return responsesWithOrgName;
+    }),
+
+  /**
+   * Save response with user email tracking
+   */
+  saveResponseNew: publicProcedure
+    .input(
+      z.object({
+        organizationId: z.number(),
+        questionId: z.number(),
+        response: z.string().optional(),
+        fileUrl: z.string().optional(),
+        userEmail: z.string().email(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      
+      // Check if response exists
+      const [existing] = await db
+        .select()
+        .from(responses)
+        .where(
+          and(
+            eq(responses.organizationId, input.organizationId),
+            eq(responses.questionId, input.questionId)
+          )
+        )
+        .limit(1);
+      
+      if (existing) {
+        // Update with new user email and timestamp
+        await db
+          .update(responses)
+          .set({
+            response: input.response,
+            fileUrl: input.fileUrl,
+            userEmail: input.userEmail,
+            // updatedAt automatically set by onUpdateNow()
+          })
+          .where(eq(responses.id, existing.id));
+        
+        return { success: true, responseId: existing.id, action: 'updated' };
+      } else {
+        // Insert new response
+        const [newResponse] = await db.insert(responses).values({
+          organizationId: input.organizationId,
+          questionId: input.questionId,
+          response: input.response,
+          fileUrl: input.fileUrl,
+          userEmail: input.userEmail,
+          // createdAt and updatedAt automatically set
+        });
+        
+        return { success: true, responseId: newResponse.insertId, action: 'created' };
+      }
+    }),
+
+  /**
+   * Get completion metrics with org name
+   */
+  getCompletionMetricsNew: publicProcedure
+    .input(z.object({ organizationId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      
+      // Get organization
+      const [org] = await db
+        .select()
+        .from(organizations)
+        .where(eq(organizations.id, input.organizationId))
+        .limit(1);
+      
+      if (!org) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      }
+      
+      // Get total question count
+      const [totalResult] = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(questions);
+      const totalQuestions = totalResult?.count || 0;
+      
+      // Get completed responses count
+      const [completedResult] = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(responses)
+        .where(
+          and(
+            eq(responses.organizationId, input.organizationId),
+            sql`${responses.response} IS NOT NULL AND ${responses.response} != ''`
+          )
+        );
+      const completedQuestions = completedResult?.count || 0;
+      
+      const completionPercentage = totalQuestions > 0
+        ? Math.round((completedQuestions / totalQuestions) * 100)
+        : 0;
+      
+      // Get section breakdown
+      const allQuestions = await db.select().from(questions);
+      const allResponses = await db
+        .select()
+        .from(responses)
+        .where(eq(responses.organizationId, input.organizationId));
+      
+      const responseMap = new Map();
+      allResponses.forEach(r => responseMap.set(r.questionId, r));
+      
+      const sectionStats: Record<string, { total: number; completed: number; percentage: number }> = {};
+      
+      allQuestions.forEach(q => {
+        if (!sectionStats[q.sectionTitle]) {
+          sectionStats[q.sectionTitle] = { total: 0, completed: 0, percentage: 0 };
+        }
+        
+        sectionStats[q.sectionTitle].total++;
+        
+        const resp = responseMap.get(q.id);
+        if (resp && resp.response && resp.response !== '') {
+          sectionStats[q.sectionTitle].completed++;
+        }
+      });
+      
+      Object.keys(sectionStats).forEach(sectionTitle => {
+        const stats = sectionStats[sectionTitle];
+        stats.percentage = stats.total > 0
+          ? Math.round((stats.completed / stats.total) * 100)
+          : 0;
+      });
+      
+      return {
+        organizationName: org.name,
+        organizationSlug: org.slug,
+        totalQuestions,
+        completedQuestions,
+        completionPercentage,
+        sectionStats,
+      };
+    }),
+
+  /**
+   * Get all questions with their options from question_options table
+   */
+  getQuestionsWithOptions: publicProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+    // Get all questions
+    const allQuestions = await db.select().from(questions).orderBy(questions.sectionId, questions.questionNumber);
+
+    // Get all options
+    const allOptions = await db.select().from(questionOptions).where(eq(questionOptions.isActive, 1)).orderBy(questionOptions.displayOrder);
+
+    // Group options by questionId
+    const optionsByQuestion = allOptions.reduce((acc, option) => {
+      if (!acc[option.questionId]) {
+        acc[option.questionId] = [];
+      }
+      acc[option.questionId].push(option);
+      return acc;
+    }, {} as Record<number, typeof allOptions>);
+
+    // Attach options to questions
+    const questionsWithOptions = allQuestions.map(q => ({
+      ...q,
+      optionsArray: optionsByQuestion[q.id] || [],
+    }));
+
+    return questionsWithOptions;
+  }),
+
+  /**
+   * Get options for a specific question
+   */
+  getQuestionOptions: publicProcedure
+    .input(z.object({ questionId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const options = await db
+        .select()
+        .from(questionOptions)
+        .where(and(
+          eq(questionOptions.questionId, input.questionId),
+          eq(questionOptions.isActive, 1)
+        ))
+        .orderBy(questionOptions.displayOrder);
+
+      return options;
     }),
 });

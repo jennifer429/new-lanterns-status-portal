@@ -1,0 +1,9 @@
+{
+  "query": "\nDELETE FROM intakeResponses \nWHERE organizationId = (SELECT id FROM organizations WHERE slug = 'radone-munson' LIMIT 1);\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute \nDELETE FROM intakeResponses \nWHERE organizationId = (SELECT id FROM organizations WHERE slug = 'radone-munson' LIMIT 1);\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 66
+}

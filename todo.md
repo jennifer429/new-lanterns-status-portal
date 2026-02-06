@@ -558,3 +558,85 @@
 - [x] List all 6 sections with circles and individual percentages
 - [x] Add "Ready" status indicator at bottom
 - [x] Match exact design from user's screenshot
+
+## Fix Inconsistent Percentage Calculations
+- [ ] Review getMetrics query percentage calculation logic
+- [ ] Fix overall completion percentage to match section percentages
+- [ ] Ensure section percentages are calculated correctly
+- [ ] Test with multiple organizations to verify accuracy
+
+## Restructure Database Schema for Better Data Integrity
+- [x] Create new `questions` table with all 51 questions as master data
+- [x] Create new `responses` table that references questions via foreign key
+- [x] Seed questions table with data from questionnaireData.ts
+- [x] Clear old Munson data (incompatible with new schema)
+- [x] Update backend API to use new schema
+- [ ] Update frontend to display question numbers from database
+- [x] Fix percentage calculations to use new schema
+- [ ] Test with multiple organizations
+
+## Always Include Organization Name in Responses
+- [x] Update intake router to JOIN responses with organizations table
+- [x] Include organizationName in all response queries
+- [ ] Update frontend to display organization name where relevant
+
+## Remove Unused Integrations
+- [x] Remove ClickUp integration code and imports
+- [x] Remove Notion integration code
+- [x] Remove Linear integration code
+- [x] Keep Google Drive for file uploads
+- [ ] Clean up organization schema (remove clickupListId, linearIssueId fields)
+- [ ] Test file uploads still work with Google Drive only
+
+## Update File Upload to RadOne-Intake Folder
+- [x] Update file upload to write to RadOne-Intake folder (ID: 1Awi2cFLAXApN9wWVMgqslyyXy69sHVTX)
+- [x] Change filename format to: {orgName}_{userEmail}_{questionId}-{shortTitle}_{timestamp}.{ext}
+- [x] Add shortTitle column to questions table
+- [x] Seed all 51 questions with short titles
+- [ ] Test file upload with new naming convention
+
+## Create Question Options Table for Better Maintainability
+- [x] Create `question_options` table schema with questionId, optionValue, optionLabel, displayOrder, isActive
+- [x] Migrate existing options from questions.options JSON to question_options table (47 options migrated)
+- [x] Update backend API to fetch options from question_options table
+- [ ] Remove options column from questions table (keep for backward compatibility initially)
+- [ ] Add admin UI to manage question options (add, edit, delete, reorder)
+- [ ] Test dropdown/multi-select questions with new schema
+
+## Build Comprehensive Admin UI for Full CRUD Management
+### Questions Management
+- [ ] Create backend API endpoints for questions CRUD (create, read, update, delete)
+- [ ] Build Questions Management admin page with table showing all questions
+- [ ] Add "Create Question" form with all fields (questionId, sectionId, questionType, etc.)
+- [ ] Add edit question functionality with inline editing or modal
+- [ ] Add delete question functionality with confirmation
+- [ ] Add filter/search by section
+- [ ] Write vitest tests for questions CRUD endpoints
+
+### Question Options Management
+- [ ] Create backend API endpoints for question options CRUD
+- [ ] Build Question Options Management page (nested under questions or separate)
+- [ ] Add "Add Option" form for each question
+- [ ] Add edit option functionality (change label, value, order)
+- [ ] Add delete option functionality with confirmation
+- [ ] Add drag-and-drop reordering for options
+- [ ] Add toggle to enable/disable options without deleting
+- [ ] Write vitest tests for options CRUD endpoints
+
+### Organizations Management
+- [ ] Create backend API endpoints for organizations CRUD
+- [ ] Build Organizations Management admin page with table
+- [ ] Add "Create Organization" form with all fields (name, slug, contact info)
+- [ ] Add edit organization functionality
+- [ ] Add delete organization functionality with confirmation (cascades to users/responses)
+- [ ] Add slug auto-generation from organization name
+- [ ] Test that organization changes trigger portal updates
+- [ ] Write vitest tests for organizations CRUD endpoints
+
+### Users Management Enhancement
+- [ ] Review existing users management UI
+- [ ] Add bulk user creation (CSV upload)
+- [ ] Add password reset functionality for admins
+- [ ] Add user activity log (last login, actions)
+- [ ] Add filter by organization and role
+- [ ] Ensure all CRUD operations are working smoothly
