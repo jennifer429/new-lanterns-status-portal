@@ -550,3 +550,11 @@
 - [x] Check getMetrics query in organizations router to see how section progress is calculated
 - [x] Fix section names to match actual questionnaire section titles
 - [x] Update section progress to use correct section names from questionnaireData
+
+## Redesign Admin Dashboard Progress Display
+- [x] Replace current section progress list with Overall Progress panel design
+- [x] Show large percentage display (e.g., "0%") in purple
+- [x] Show "X of 6 sections complete" text
+- [x] List all 6 sections with circles and individual percentages
+- [x] Add "Ready" status indicator at bottom
+- [x] Match exact design from user's screenshot
