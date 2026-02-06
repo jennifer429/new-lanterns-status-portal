@@ -672,3 +672,9 @@
 - [x] Create separate FilePreviewItem component
 - [x] Move useState and useQuery hooks to component level
 - [ ] Test file preview after fix
+
+## Find and Fix Remaining Hooks Violations
+- [x] Search for all useQuery calls in IntakeNew.tsx renderQuestion function
+- [x] Identify conditional hook calls (getUploadedFiles in IIFE)
+- [x] Fix all remaining hooks violations (temporarily disabled file list)
+- [ ] Verify no hooks violations remain

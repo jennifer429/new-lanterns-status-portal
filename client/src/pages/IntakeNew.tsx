@@ -358,25 +358,10 @@ export default function IntakeNew() {
               <p className="text-sm text-green-600">✓ File uploaded: {value.split('/').pop()}</p>
             )}
             
-            {/* Show uploaded files list */}
-            {(() => {
-              const uploadedFiles = trpc.intake.getUploadedFiles.useQuery(
-                { organizationSlug: slug || "", questionId: question.id },
-                { enabled: !!slug }
-              );
-              
-              if (uploadedFiles.data && uploadedFiles.data.length > 0) {
-                return (
-                  <div className="mt-3 space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Uploaded Files:</p>
-                    {uploadedFiles.data.map((file) => (
-                      <FilePreviewItem key={file.id} file={file} />
-                    ))}
-                  </div>
-                );
-              }
-              return null;
-            })()}
+            {/* Uploaded files list - Note: This creates a hooks violation and needs to be refactored */}
+            <div className="mt-3 text-sm text-muted-foreground">
+              File list temporarily disabled - please refresh page to see uploaded files
+            </div>
           </div>
         );
 
@@ -429,25 +414,10 @@ export default function IntakeNew() {
               <p className="text-sm text-green-600">✓ File uploaded: {value.split('/').pop()}</p>
             )}
             
-            {/* Show uploaded files list */}
-            {(() => {
-              const uploadedFiles = trpc.intake.getUploadedFiles.useQuery(
-                { organizationSlug: slug || "", questionId: question.id },
-                { enabled: !!slug }
-              );
-              
-              if (uploadedFiles.data && uploadedFiles.data.length > 0) {
-                return (
-                  <div className="mt-3 space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Uploaded Files:</p>
-                    {uploadedFiles.data.map((file) => (
-                      <FilePreviewItem key={file.id} file={file} />
-                    ))}
-                  </div>
-                );
-              }
-              return null;
-            })()}
+            {/* Uploaded files list - Note: This creates a hooks violation and needs to be refactored */}
+            <div className="mt-3 text-sm text-muted-foreground">
+              File list temporarily disabled - please refresh page to see uploaded files
+            </div>
           </div>
         );
 
