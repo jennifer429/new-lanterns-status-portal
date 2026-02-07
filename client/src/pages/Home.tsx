@@ -10,6 +10,7 @@ import { Link, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useEffect, useState } from "react";
 import { questionnaireSections } from "@shared/questionnaireData";
+import { PhiDisclaimer } from "@/components/PhiDisclaimer";
 
 export default function Home() {
   const [, params] = useRoute("/org/:slug");
@@ -218,6 +219,11 @@ export default function Home() {
             </div>
           </CardContent>
         </Card>
+      </div>
+      
+      {/* PHI Disclaimer - Fixed at bottom */}
+      <div className="fixed bottom-0 left-0 right-0 z-50">
+        <PhiDisclaimer />
       </div>
     </div>
   );

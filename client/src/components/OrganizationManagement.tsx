@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
-import { Building2, Edit, Plus } from "lucide-react";
+import { Building2, Edit, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
@@ -19,6 +19,9 @@ export function OrganizationManagement() {
   const [newOrgName, setNewOrgName] = useState("");
   const [newOrgSlug, setNewOrgSlug] = useState("");
   const [editOrgName, setEditOrgName] = useState("");
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [orgToDelete, setOrgToDelete] = useState<{ id: number; name: string } | null>(null);
 
   const trpcUtils = trpc.useUtils();
   const { data: organizations, isLoading, refetch } = trpc.organizations.getAll.useQuery();
@@ -50,6 +53,20 @@ export function OrganizationManagement() {
     },
   });
 
+  const inactivateMutation = trpc.organizations.inactivate.useMutation({
+    onSuccess: () => {
+      refetch();
+      // Invalidate all organization queries to update Dashboard tab
+      trpcUtils.organizations.getMetrics.invalidate();
+      setDeleteDialogOpen(false);
+      setOrgToDelete(null);
+      alert("Organization inactivated successfully!");
+    },
+    onError: (error: any) => {
+      alert(`Error: ${error.message}`);
+    },
+  });
+
   const handleCreate = () => {
     if (!newOrgName.trim() || !newOrgSlug.trim()) {
       alert("Please enter both organization name and slug");
@@ -70,6 +87,16 @@ export function OrganizationManagement() {
     setSelectedOrg(org);
     setEditOrgName(org.name);
     setEditDialogOpen(true);
+  };
+
+  const openDeleteDialog = (org: { id: number; name: string }) => {
+    setOrgToDelete(org);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleInactivate = () => {
+    if (!orgToDelete) return;
+    inactivateMutation.mutate({ id: orgToDelete.id.toString() });
   };
 
   if (isLoading) {
@@ -155,15 +182,26 @@ export function OrganizationManagement() {
                     <p className="text-sm text-gray-400">Slug: {org.slug}</p>
                   </div>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => openEditDialog(org)}
-                  className="border-purple-500/30 hover:bg-purple-600 hover:text-white text-gray-300"
-                >
-                  <Edit className="w-4 h-4 mr-2" />
-                  Rename
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openEditDialog(org)}
+                    className="border-purple-500/30 hover:bg-purple-600 hover:text-white text-gray-300"
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Rename
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openDeleteDialog(org)}
+                    className="border-red-500/30 hover:bg-red-600 hover:text-white text-red-300"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Inactivate
+                  </Button>
+                </div>
               </div>
             ))
           ) : (
@@ -200,6 +238,35 @@ export function OrganizationManagement() {
               className="w-full bg-purple-600 hover:bg-purple-500"
             >
               {updateMutation.isPending ? "Updating..." : "Save Changes"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="bg-black border-red-500/30">
+          <DialogHeader>
+            <DialogTitle className="text-white">Inactivate Organization</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Are you sure you want to inactivate <span className="font-semibold text-white">{orgToDelete?.name}</span>?
+              This will hide the organization from the dashboard and portal, but data will be preserved.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              className="flex-1 border-purple-500/30 hover:bg-purple-600 hover:text-white text-gray-300"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleInactivate}
+              disabled={inactivateMutation.isPending}
+              className="flex-1 bg-red-600 hover:bg-red-500 text-white"
+            >
+              {inactivateMutation.isPending ? "Inactivating..." : "Inactivate"}
             </Button>
           </div>
         </DialogContent>

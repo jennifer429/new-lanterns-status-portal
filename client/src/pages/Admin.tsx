@@ -17,6 +17,7 @@ import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { LogOut, UserCircle } from "lucide-react";
+import { PhiDisclaimer } from "@/components/PhiDisclaimer";
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -321,6 +322,11 @@ export default function Admin() {
             </Card>
           </TabsContent>
         </Tabs>
+      </div>
+      
+      {/* PHI Disclaimer - Fixed at bottom */}
+      <div className="fixed bottom-0 left-0 right-0 z-50">
+        <PhiDisclaimer />
       </div>
     </div>
   );

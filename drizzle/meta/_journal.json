@@ -127,6 +127,13 @@
       "when": 1770492256153,
       "tag": "0017_damp_pyro",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "5",
+      "when": 1770500362963,
+      "tag": "0018_tan_ink",
+      "breakpoints": true
     }
   ]
 }

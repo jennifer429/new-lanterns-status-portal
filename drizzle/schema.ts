@@ -61,7 +61,7 @@ export const organizations = mysqlTable("organizations", {
   contactPhone: varchar("contactPhone", { length: 50 }),
   startDate: varchar("startDate", { length: 50 }),
   goalDate: varchar("goalDate", { length: 50 }),
-  status: mysqlEnum("status", ["active", "completed", "paused"]).default("active").notNull(),
+  status: mysqlEnum("status", ["active", "completed", "paused", "inactive"]).default("active").notNull(),
   // Integration IDs (set by PM during org creation)
   linearIssueId: varchar("linearIssueId", { length: 100 }), // Linear issue ID for two-way communication
   clickupListId: varchar("clickupListId", { length: 100 }), // ClickUp list ID for tasks

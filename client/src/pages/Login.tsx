@@ -11,6 +11,7 @@ import { trpc } from "@/lib/trpc";
 import { useLocation, Link } from "wouter";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
+import { PhiDisclaimer } from "@/components/PhiDisclaimer";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -136,6 +137,11 @@ export default function Login() {
       {/* Copyright footer */}
       <div className="absolute bottom-4 text-center w-full">
         <p className="text-xs text-purple-400/60">New Lantern ©</p>
+      </div>
+      
+      {/* PHI Disclaimer - Fixed at bottom */}
+      <div className="fixed bottom-0 left-0 right-0">
+        <PhiDisclaimer />
       </div>
     </div>
   );

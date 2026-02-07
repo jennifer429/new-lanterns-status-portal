@@ -248,14 +248,23 @@ export const organizationsRouter = router({
     const db = await getDb();
     if (!db) throw new Error("Database not available");
 
-    // Filter organizations by user's clientId
-    // If user has no clientId (super admin), show all organizations
+    // Filter organizations by user's clientId and exclude inactive
+    // If user has no clientId (super admin), show all active organizations
     let orgs;
     if (ctx.user?.clientId) {
-      orgs = await db.select().from(organizations).where(eq(organizations.clientId, ctx.user.clientId));
+      orgs = await db
+        .select()
+        .from(organizations)
+        .where(and(
+          eq(organizations.clientId, ctx.user.clientId),
+          sql`${organizations.status} != 'inactive'`
+        ));
     } else {
-      // Super admin or no clientId - show all
-      orgs = await db.select().from(organizations);
+      // Super admin or no clientId - show all active organizations
+      orgs = await db
+        .select()
+        .from(organizations)
+        .where(sql`${organizations.status} != 'inactive'`);
     }
     
     const metrics = await Promise.all(
@@ -366,7 +375,11 @@ export const organizationsRouter = router({
   getAll: publicProcedure.query(async () => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
-    const allOrgs = await db.select().from(organizations).orderBy(organizations.name);
+    const allOrgs = await db
+      .select()
+      .from(organizations)
+      .where(sql`${organizations.status} != 'inactive'`)
+      .orderBy(organizations.name);
     return allOrgs;
   }),
 
@@ -386,6 +399,25 @@ export const organizationsRouter = router({
       await db
         .update(organizations)
         .set({ name: input.name })
+        .where(eq(organizations.id, parseInt(input.id)));
+      return { success: true };
+    }),
+
+  /**
+   * Inactivate organization (soft delete - hides from dashboard and portal)
+   */
+  inactivate: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      await db
+        .update(organizations)
+        .set({ status: "inactive" })
         .where(eq(organizations.id, parseInt(input.id)));
       return { success: true };
     }),

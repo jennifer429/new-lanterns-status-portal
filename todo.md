@@ -1016,3 +1016,18 @@
 - [x] Test rename organization functionality
 - [x] Verify organization names update across all tabs (Dashboard, Update Organizations)
 - [x] Clean up organization names (removed "RadOne -" prefix from Baycare and JCRHC)
+
+## Organization Soft Delete Feature
+- [x] Add status field to organizations table (active/inactive)
+- [x] Create backend inactivate endpoint (sets status to inactive)
+- [x] Update getAll and getMetrics queries to filter out inactive organizations
+- [x] Add inactivate button to organization cards in Update Organizations tab
+- [x] Implement confirmation dialog with organization name display
+- [x] Test inactivate functionality
+- [ ] Verify inactive organizations are hidden from dashboard and portal
+
+## PHI Disclaimer
+- [x] Add PHI disclaimer banner to all pages (login, admin, client portals)
+- [x] Design prominent but non-intrusive disclaimer placement
+- [x] Add disclaimer text: "Do not share Protected Health Information (PHI) or patient data in this portal"
+- [x] Test disclaimer visibility across all pages
