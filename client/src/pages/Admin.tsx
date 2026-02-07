@@ -13,10 +13,28 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserManagement } from "@/components/UserManagement";
 import { FilesManagement } from "@/components/FilesManagement";
 import { useState } from "react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { LogOut, UserCircle } from "lucide-react";
 
 export default function Admin() {
-  const [activeTab, setActiveTab] = useState("organizations");
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const { user } = useAuth();
   const { data: metrics, isLoading } = trpc.organizations.getMetrics.useQuery();
+  const logoutMutation = trpc.auth.logout.useMutation({
+    onSuccess: () => {
+      window.location.href = "/login";
+    },
+  });
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   if (isLoading) {
     return (
@@ -39,6 +57,39 @@ export default function Admin() {
                 <p className="text-sm text-purple-300 mt-1">PACS Implementation Portal</p>
               </div>
             </div>
+            
+            {/* Profile Button */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="h-10 w-10 rounded-full bg-purple-600 border-purple-400 hover:bg-purple-500 text-white font-semibold"
+                >
+                  {user?.name ? getInitials(user.name) : "AD"}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-black border-purple-500/30">
+                <div className="px-2 py-1.5">
+                  <p className="text-sm font-medium text-white">{user?.name || "Admin"}</p>
+                  <p className="text-xs text-gray-400">{user?.email || ""}</p>
+                </div>
+                <DropdownMenuSeparator className="bg-purple-500/20" />
+                <DropdownMenuItem
+                  className="text-gray-300 hover:text-white hover:bg-purple-600 cursor-pointer"
+                  onClick={() => alert("Edit profile coming soon")}
+                >
+                  <UserCircle className="mr-2 h-4 w-4" />
+                  Edit Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-gray-300 hover:text-white hover:bg-purple-600 cursor-pointer"
+                  onClick={() => logoutMutation.mutate()}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
@@ -47,9 +98,9 @@ export default function Admin() {
       <div className="container py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="bg-black/40 border border-purple-500/20 mb-6">
-            <TabsTrigger value="organizations" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-gray-300">
-              <Building2 className="w-4 h-4 mr-2" />
-              Organizations
+            <TabsTrigger value="dashboard" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-gray-300">
+              <Activity className="w-4 h-4 mr-2" />
+              Dashboard
             </TabsTrigger>
             <TabsTrigger value="users" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-gray-300">
               <Users className="w-4 h-4 mr-2" />
@@ -59,9 +110,17 @@ export default function Admin() {
               <FileText className="w-4 h-4 mr-2" />
               Files
             </TabsTrigger>
+            <TabsTrigger value="update-organizations" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-gray-300">
+              <Building2 className="w-4 h-4 mr-2" />
+              Update Organizations
+            </TabsTrigger>
+            <TabsTrigger value="update-questions" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-gray-300">
+              <FileText className="w-4 h-4 mr-2" />
+              Update Questions
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="organizations">
+          <TabsContent value="dashboard">
         <Card className="border-purple-500/20 bg-black/40 backdrop-blur-xl">
           <CardHeader>
             <CardTitle className="text-white text-xl">Client Portals</CardTitle>
@@ -239,6 +298,38 @@ export default function Admin() {
 
           <TabsContent value="files">
             <FilesManagement />
+          </TabsContent>
+
+          <TabsContent value="update-organizations">
+            <Card className="border-purple-500/20 bg-black/40 backdrop-blur-xl">
+              <CardHeader>
+                <CardTitle className="text-white text-xl">Update Organizations</CardTitle>
+                <CardDescription className="text-gray-300">
+                  Add, edit, or remove client organizations
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-12 text-gray-400">
+                  Organization management interface coming soon
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="update-questions">
+            <Card className="border-purple-500/20 bg-black/40 backdrop-blur-xl">
+              <CardHeader>
+                <CardTitle className="text-white text-xl">Update Questions</CardTitle>
+                <CardDescription className="text-gray-300">
+                  Manage intake questionnaire questions and sections
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-12 text-gray-400">
+                  Question management interface coming soon
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

@@ -725,3 +725,14 @@
 
 ## Further Reduce Login Page Spacing
 - [x] Reduce gap between logo and heading by 50% (from 4px to 2px)
+
+## Update Admin Navigation
+- [x] Rename "Organizations" tab to "Dashboard"
+- [x] Add "Update Organizations" tab
+- [x] Add "Update Questions" tab
+- [x] Update all related code and state management
+
+## Add Profile Button to Admin Header
+- [x] Add profile button with user initials on right side of admin header
+- [x] Create dropdown menu with "Edit Profile" and "Logout" options
+- [x] Implement logout functionality
