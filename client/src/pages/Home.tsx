@@ -1,12 +1,11 @@
 /**
- * Simplified Home Page - Post-Login Dashboard
- * Compact single-screen design
+ * Organization Landing Page - Matches Admin Dashboard Card Design
+ * Single card layout with progress overview and file list
  */
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { ClipboardList, Clock } from "lucide-react";
+import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Activity, Download } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useEffect, useState } from "react";
@@ -42,11 +41,13 @@ export default function Home() {
     { enabled: !!orgSlug }
   );
 
-  // Fetch file count from database
-  const { data: filesUploaded = 0 } = trpc.intake.getFileCount.useQuery(
+  // Fetch all uploaded files
+  const { data: allFiles = [] } = trpc.intake.getAllUploadedFiles.useQuery(
     { organizationSlug: orgSlug },
     { enabled: !!orgSlug }
   );
+  
+  const filesUploaded = allFiles.length;
 
   // Calculate overall completion
   const totalQuestions = questionnaireSections.reduce((sum, s) => sum + s.questions.length, 0);
@@ -58,6 +59,20 @@ export default function Home() {
     ).length;
     return Math.round((sectionAnswered / s.questions.length) * 100) === 100;
   }).length;
+
+  // Calculate section progress
+  const sectionProgress = questionnaireSections.map(section => {
+    const sectionAnswered = section.questions.filter(q => 
+      existingResponses.some(r => r.questionId === q.id && r.response && r.response !== '')
+    ).length;
+    return {
+      name: section.title,
+      progress: Math.round((sectionAnswered / section.questions.length) * 100)
+    };
+  });
+
+  // Mock user count (you can add real user count query later)
+  const userCount = 5;
 
   if (orgLoading) {
     return (
@@ -71,142 +86,121 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm">
-        <div className="container py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img src="/images/flame-icon.png" alt="New Lantern" className="h-7 w-7" />
-              <div>
-                <h1 className="text-lg font-bold text-foreground">Implementation Portal</h1>
-                <p className="text-xs text-muted-foreground">PACS Onboarding</p>
+    <div className="min-h-screen bg-background flex items-center justify-center p-6">
+      <div className="w-full max-w-3xl">
+        <Card className="border-2 border-primary/30 bg-gradient-to-b from-card to-card/50">
+          <CardContent className="p-8">
+            {/* Header with Organization Name */}
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <ClipboardList className="w-8 h-8 text-primary" />
+                <h1 className="text-2xl font-bold">{orgData.name}</h1>
+              </div>
+              <CheckCircle2 className="w-6 h-6 text-green-500" />
+            </div>
+
+            {/* Stats Row */}
+            <div className="grid grid-cols-3 gap-6 mb-8">
+              <div className="flex items-center gap-3">
+                <TrendingUp className="w-5 h-5 text-muted-foreground" />
+                <div>
+                  <div className="text-2xl font-bold">{intakeCompletion}%</div>
+                  <div className="text-sm text-muted-foreground">Complete</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Users className="w-5 h-5 text-muted-foreground" />
+                <div>
+                  <div className="text-2xl font-bold">{userCount}</div>
+                  <div className="text-sm text-muted-foreground">Users</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <FileText className="w-5 h-5 text-muted-foreground" />
+                <div>
+                  <div className="text-2xl font-bold">{filesUploaded}</div>
+                  <div className="text-sm text-muted-foreground">Files</div>
+                </div>
               </div>
             </div>
-            <div className="text-right">
-              <p className="text-sm font-medium text-foreground">{orgData.name}</p>
-              <p className="text-xs text-muted-foreground">Goal: {orgData.goalDate}</p>
-            </div>
-          </div>
-        </div>
-      </header>
 
-      {/* Main Content - Single Screen */}
-      <div className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-5xl">
-          {/* Welcome Section */}
-          <div className="mb-6 text-center">
-            <h2 className="text-3xl font-bold mb-2 leading-tight">
-              <span className="text-foreground">Welcome To Your</span>
-              <br />
-              <span className="bg-gradient-to-r from-purple-400 via-purple-300 to-purple-400 bg-clip-text text-transparent">
-                Onboarding Portal
-              </span>
-            </h2>
-            <p className="text-muted-foreground text-sm max-w-2xl mx-auto">
-              Complete the intake questionnaire to help us configure your PACS system. Save your progress and return anytime.
-            </p>
-          </div>
+            <div className="border-t border-border/50 pt-6 mb-6">
+              {/* Overall Progress Section */}
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold mb-2">Overall Progress</h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {completedSections} of {questionnaireSections.length} sections complete
+                </p>
 
-          {/* Main Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {/* Left: Progress Card */}
-            <Card className="border-primary/20 bg-gradient-to-br from-purple-900/20 to-purple-800/20">
-              <CardContent className="p-5">
-                <h3 className="text-sm font-medium mb-3">Your Progress</h3>
-                
-                {/* Big Percentage */}
-                <div className="text-center mb-4 p-4 rounded-lg bg-gradient-to-br from-purple-900/40 to-purple-800/40 border border-purple-500/30">
-                  <div className="text-5xl font-bold text-purple-300 mb-1">
+                {/* Big Percentage Box */}
+                <div className="text-center p-8 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 border-2 border-primary/30 mb-6">
+                  <div className="text-7xl font-bold text-primary mb-2">
                     {intakeCompletion}%
                   </div>
-                  <div className="text-xs text-muted-foreground">Complete</div>
+                  <div className="text-lg text-muted-foreground">Complete</div>
                 </div>
 
-                {/* Progress Bar */}
-                <div className="mb-3">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs font-medium">Intake Questionnaire</span>
-                    <span className="text-xs font-bold text-primary">{intakeCompletion}%</span>
+                {/* Section List */}
+                <div className="space-y-3 mb-6">
+                  {sectionProgress.map((section, index) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        {section.progress === 100 ? (
+                          <CheckCircle2 className="w-5 h-5 text-primary" />
+                        ) : (
+                          <Circle className="w-5 h-5 text-muted-foreground" />
+                        )}
+                        <span className="text-sm">{section.name}</span>
+                      </div>
+                      <span className="text-sm font-bold">{section.progress}%</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Status */}
+                <div className="text-sm text-muted-foreground mb-6">
+                  In Progress
+                </div>
+              </div>
+
+              {/* Uploaded Files Section */}
+              <div className="border-t border-border/50 pt-6 mb-6">
+                <h3 className="text-base font-semibold mb-3">Uploaded Files:</h3>
+                {allFiles.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No files uploaded yet</p>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {allFiles.map((file) => (
+                      <a
+                        key={file.id}
+                        href={file.fileUrl}
+                        download
+                        className="flex items-center gap-2 text-sm text-primary hover:underline"
+                      >
+                        <Download className="w-4 h-4" />
+                        <span>{file.fileName}</span>
+                      </a>
+                    ))}
                   </div>
-                  <Progress value={intakeCompletion} className="h-1.5" />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {answeredQuestions}/{totalQuestions} questions • {completedSections} of {questionnaireSections.length} sections complete
-                  </p>
-                </div>
+                )}
+              </div>
 
-                {/* Files */}
-                <div className="pt-3 border-t border-border/50">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium">Files Uploaded</span>
-                    <span className="text-xs font-bold text-primary">{filesUploaded} files</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+              {/* Last Login */}
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
+                <Activity className="w-4 h-4" />
+                <span>Last login: about 5 hours ago</span>
+              </div>
 
-            {/* Center: Main CTA */}
-            <Card className="lg:col-span-2 border-2 border-primary">
-              <CardContent className="p-6">
-                <div className="flex items-start gap-4 mb-4">
-                  <ClipboardList className="w-10 h-10 text-primary flex-shrink-0" />
-                  <div className="flex-1">
-                    <h3 className="text-2xl font-bold mb-1">Complete Intake Questionnaire</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Answer questions about your systems and workflows
-                    </p>
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-lg bg-muted/30 mb-4">
-                  <p className="text-sm text-muted-foreground mb-2">
-                    The questionnaire covers 7 sections including security, imaging routing, data integration, and workflows. 
-                    You can complete sections in any order and save your progress.
-                  </p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>Estimated time: 30-45 minutes</span>
-                  </div>
-                </div>
-
-                <Link href={`/org/${orgSlug}/intake`}>
-                  <Button size="lg" className="w-full text-base py-5">
-                    {intakeCompletion === 0 ? "Start Questionnaire" : "Continue Questionnaire"}
-                    <ClipboardList className="w-4 h-4 ml-2" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Bottom Info Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            {/* Status */}
-            <Card className="bg-card/50">
-              <CardContent className="p-4">
-                <h4 className="text-sm font-semibold mb-2">Status</h4>
-                <p className="text-xs text-muted-foreground">
-                  {intakeCompletion === 100 
-                    ? "✓ Ready for review — Our team will reach out with next steps." 
-                    : "⏱ In progress — Complete the questionnaire to move forward with implementation."}
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Support */}
-            <Card className="bg-card/50">
-              <CardContent className="p-4">
-                <h4 className="text-sm font-semibold mb-2">Need Help?</h4>
-                <p className="text-xs text-muted-foreground mb-2">
-                  Questions about the onboarding process? Our team is here to help.
-                </p>
-                <Button variant="outline" size="sm" className="w-full text-xs h-8" asChild>
-                  <a href="mailto:support@newlantern.ai">Contact Support</a>
+              {/* Open Portal Button */}
+              <Link href={`/org/${orgSlug}/intake`}>
+                <Button size="lg" className="w-full text-lg py-6">
+                  <ExternalLink className="w-5 h-5 mr-2" />
+                  Open Portal
                 </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

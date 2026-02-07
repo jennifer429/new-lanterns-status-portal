@@ -895,3 +895,10 @@
 - [x] Simplify page to fit everything on single screen without scrolling
 - [x] Remove excessive content and make it more concise
 - [x] Test the simplified page in browser
+
+## Improve Landing Page UI
+- [x] Remove descriptive text below welcome message
+- [x] Replace file count with actual file list showing filename
+- [x] Add download buttons for each file
+- [x] Redesign page to match admin dashboard card layout
+- [x] Test file list functionality in browser
