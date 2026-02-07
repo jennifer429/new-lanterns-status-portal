@@ -760,3 +760,9 @@
 - [x] Keep profile dropdown with Return to Dashboard and Sign Out
 - [x] Change bottom buttons to "Back to Overview" and "Save & Continue"
 - [x] Match overall styling to reference design
+
+## Fix "Question not found" Errors
+- [x] Investigate which question IDs are causing errors (51, 52, 53, 61, 62, 67, 68, 69, 72, 73, 74, 82, 83)
+- [x] Check if these questions exist in current questionnaireData.ts
+- [x] Clean up orphaned responses from database for non-existent questions
+- [x] Test intake page loads without errors

@@ -112,6 +112,9 @@ export default function IntakeNew() {
     if (existingResponses) {
       const loadedResponses: Record<string, any> = {};
       existingResponses.forEach((resp) => {
+        // Skip responses with null questionId (orphaned data)
+        if (!resp.questionId) return;
+        
         try {
           const value = typeof resp.response === 'string' ? JSON.parse(resp.response) : resp.response;
           loadedResponses[resp.questionId] = value;

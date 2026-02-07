@@ -36,9 +36,20 @@ export const intakeRouter = router({
       }
 
       // Get all responses for this organization from new responses table
+      // Join with questions table to get the questionId string (e.g., "H.1", "A.2")
       const responsesData = await db
-        .select()
+        .select({
+          id: responses.id,
+          organizationId: responses.organizationId,
+          questionId: questions.questionId, // Get the string identifier from questions table
+          response: responses.response,
+          fileUrl: responses.fileUrl,
+          userEmail: responses.userEmail,
+          createdAt: responses.createdAt,
+          updatedAt: responses.updatedAt,
+        })
         .from(responses)
+        .leftJoin(questions, eq(responses.questionId, questions.id))
         .where(eq(responses.organizationId, org.id));
 
       // Include organization name in each response
