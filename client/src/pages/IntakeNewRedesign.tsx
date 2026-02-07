@@ -405,7 +405,7 @@ export default function IntakeNewRedesign() {
         return (
           <div className="space-y-2">
             {question.options?.map(opt => (
-              <div key={opt} className="flex items-center gap-2">
+              <div key={opt} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200">
                 <Checkbox
                   checked={Array.isArray(value) && value.includes(opt)}
                   onCheckedChange={(checked) => {
@@ -416,7 +416,7 @@ export default function IntakeNewRedesign() {
                     setResponses(prev => ({ ...prev, [question.id]: updated }));
                   }}
                 />
-                <Label>{opt}</Label>
+                <Label className="text-gray-900 cursor-pointer">{opt}</Label>
               </div>
             ))}
           </div>

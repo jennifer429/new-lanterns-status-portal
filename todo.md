@@ -1049,3 +1049,9 @@
 - [x] Only auto-redirect to first unanswered question on initial login
 - [x] After first visit, users can navigate freely between all questions
 - [ ] Test navigation behavior (first login vs subsequent visits)
+
+## Fix Text Box Readability in Intake Form
+- [x] Find checkbox list styling (Expected modalities section)
+- [x] Change background from dark purple to white
+- [x] Ensure text is dark and readable against white background
+- [x] Test readability across all question types
