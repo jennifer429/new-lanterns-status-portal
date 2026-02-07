@@ -11,6 +11,8 @@ export interface Question {
   options?: string[];
   notes?: string;
   placeholder?: string;
+  templateUrl?: string; // For upload-download questions: URL to download template
+  templateFileName?: string; // Display name for template download
 }
 
 export interface Section {
@@ -99,7 +101,14 @@ export const questionnaireSections: Section[] = [
     title: 'Connectivity',
     description: 'VPN and DICOM connectivity configuration',
     questions: [
-      { id: 'E.1', text: 'VPN form exchange', type: 'upload-download', notes: 'Upload your completed VPN form or download our template' },
+      { 
+        id: 'E.1', 
+        text: 'VPN form exchange', 
+        type: 'upload-download', 
+        notes: 'Upload your completed VPN form or download our template',
+        templateUrl: 'https://files.manuscdn.com/user_upload_by_module/session_file/310519663326227304/NfNtZiMfXpqdbVqa.xlsx',
+        templateFileName: 'VPN_Form_Template.xlsx'
+      },
       { id: 'E.2', text: 'Please document AE titles here', type: 'textarea', placeholder: 'List all Application Entity titles for DICOM connectivity' },
       { id: 'E.3', text: 'Please document DICOM tag 0008,1040 value and corresponding PV1:11 value for matching', type: 'textarea', placeholder: 'Document tag values for patient matching' },
     ],

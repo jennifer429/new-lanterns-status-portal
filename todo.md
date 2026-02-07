@@ -922,3 +922,26 @@
 - [x] Delete all file attachments for ALL organizations
 - [x] Verify all organizations show 0% completion across all sections
 - [x] Test that organizations can start fresh with clean data (tested RRMC and Boulder)
+
+## Delete Boulder and RRMC Organizations
+- [ ] Query database to find Boulder and RRMC organization IDs
+- [ ] Find all users associated with these organizations
+- [ ] Delete all users for Boulder and RRMC
+- [ ] Delete Boulder organization
+- [ ] Delete RRMC organization
+- [ ] Verify organizations and users are removed
+
+## Remove "Radiology One - " Prefix from Organization Names
+- [ ] Query all organization names
+- [ ] Update organization names to remove "Radiology One - " prefix (keep just hospital names)
+- [ ] Verify organization cards show just hospital names (e.g., "Boulder", "RRMC")
+- [ ] Verify "Radiology One" branding remains in site headers
+
+## Update VPN Form Exchange Question
+- [x] Receive VPN form template file from user
+- [x] Store VPN template file and get public URL (https://files.manuscdn.com/...)
+- [x] Change VPN question type from text to file upload in questionnaireData (type: 'upload-download')
+- [x] Add "Download VPN Template" button above file upload field
+- [x] Test download template functionality (button opens template in new tab)
+- [x] Test upload completed VPN form functionality (file upload field works)
+- [x] Verify uploaded files appear in file list
