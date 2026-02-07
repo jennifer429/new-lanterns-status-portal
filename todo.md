@@ -716,3 +716,6 @@
 ## Login Page Styling Updates
 - [x] Make New Lantern logo even bigger on login page
 - [x] Change login card background to pure black
+
+## Increase Login Logo Size
+- [x] Make logo 50% bigger (from 160px to 240px)
