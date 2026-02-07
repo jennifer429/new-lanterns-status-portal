@@ -1,0 +1,31 @@
+{
+  "query": "SELECT id, email, name, passwordHash, organizationId FROM users WHERE email LIKE '%test%' OR email LIKE '%example%' LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, email, name, passwordHash, organizationId FROM users WHERE email LIKE '%test%' OR email LIKE '%example%' LIMIT 5;",
+  "rows": [
+    {
+      "id": "271709",
+      "email": "test-reset@example.com",
+      "name": "Test User",
+      "passwordHash": "$2b$10$.B6sV94SprG8RV4yNZ6RxOZbh7b/pJDiEPDjTNdjb2JGOnW5aIWTq",
+      "organizationId": "NULL"
+    },
+    {
+      "id": "480056",
+      "email": "test.srv1@example.com",
+      "name": "SRV Test User 1",
+      "passwordHash": "$2b$10$abcdefghijklmnopqrstuv",
+      "organizationId": "120001"
+    },
+    {
+      "id": "480057",
+      "email": "test.srv2@example.com",
+      "name": "SRV Test User 2",
+      "passwordHash": "$2b$10$abcdefghijklmnopqrstuv",
+      "organizationId": "120001"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\temail\tname\tpasswordHash\torganizationId\n271709\ttest-reset@example.com\tTest User\t$2b$10$.B6sV94SprG8RV4yNZ6RxOZbh7b/pJDiEPDjTNdjb2JGOnW5aIWTq\tNULL\n480056\ttest.srv1@example.com\tSRV Test User 1\t$2b$10$abcdefghijklmnopqrstuv\t120001\n480057\ttest.srv2@example.com\tSRV Test User 2\t$2b$10$abcdefghijklmnopqrstuv\t120001\n",
+  "stderr": "",
+  "execution_time_ms": 59
+}

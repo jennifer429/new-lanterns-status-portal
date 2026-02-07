@@ -31,6 +31,87 @@ const sectionIcons: Record<string, any> = {
   "dicom-validation": ClipboardCheck,
 };
 
+// File upload field component with file list display
+function FileUploadField({ questionId, isUploading, organizationSlug, onFileUpload, onFileDelete }: {
+  questionId: string;
+  isUploading: boolean;
+  organizationSlug: string;
+  onFileUpload: (questionId: string, file: File) => void;
+  onFileDelete: (fileId: number) => void;
+}) {
+  const { data: files = [], isLoading } = trpc.intake.getUploadedFiles.useQuery(
+    { organizationSlug, questionId },
+    { enabled: !!organizationSlug }
+  );
+
+  return (
+    <div className="space-y-3">
+      <Input
+        type="file"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) onFileUpload(questionId, file);
+        }}
+        disabled={isUploading}
+        className="!bg-white !text-black"
+      />
+      {isUploading && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          Uploading...
+        </div>
+      )}
+      
+      {/* Display uploaded files */}
+      {isLoading ? (
+        <div className="text-sm text-muted-foreground">Loading files...</div>
+      ) : files.length > 0 ? (
+        <div className="space-y-2">
+          <div className="text-sm font-medium text-muted-foreground">Uploaded Files:</div>
+          {files.map((file) => (
+            <div key={file.id} className="flex items-center justify-between p-2 bg-muted/30 rounded border border-border">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <FileText className="w-4 h-4 text-primary flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <a
+                    href={file.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-medium text-primary hover:underline truncate block"
+                  >
+                    {file.fileName}
+                  </a>
+                  <div className="text-xs text-muted-foreground">
+                    {file.fileSize ? `${(file.fileSize / 1024).toFixed(1)} KB • ` : ''}{new Date(file.createdAt).toLocaleDateString()}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => window.open(file.fileUrl, '_blank')}
+                  className="h-8 px-2"
+                >
+                  <Download className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onFileDelete(file.id)}
+                  className="h-8 px-2 text-destructive hover:text-destructive"
+                >
+                  ×
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function IntakeNewRedesign() {
   const { slug } = useParams();
   const [, setLocation] = useLocation();
@@ -115,8 +196,23 @@ export default function IntakeNewRedesign() {
         next.delete(variables.questionId);
         return next;
       });
+      // Refetch files for this question
+      utils.intake.getUploadedFiles.invalidate({
+        organizationSlug: slug || "",
+        questionId: variables.questionId,
+      });
     },
   });
+
+  // Delete file mutation
+  const deleteMutation = trpc.intake.deleteFile.useMutation({
+    onSuccess: (_, variables) => {
+      // Refetch files after deletion
+      utils.intake.getUploadedFiles.invalidate();
+    },
+  });
+
+  const utils = trpc.useUtils();
 
   // Calculate section progress
   const calculateSectionProgress = (section: Section) => {
@@ -246,23 +342,18 @@ export default function IntakeNewRedesign() {
 
       case 'upload':
         return (
-          <div className="space-y-2">
-            <Input
-              type="file"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleFileUpload(question.id, file);
-              }}
-              disabled={isUploading}
-              className="!bg-white !text-black"
-            />
-            {isUploading && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Uploading...
-              </div>
-            )}
-          </div>
+          <FileUploadField
+            questionId={question.id}
+            isUploading={isUploading}
+            organizationSlug={slug || ''}
+            onFileUpload={handleFileUpload}
+            onFileDelete={(fileId) => {
+              deleteMutation.mutate({
+                organizationSlug: slug || '',
+                fileId,
+              });
+            }}
+          />
         );
 
       default:

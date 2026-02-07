@@ -846,3 +846,10 @@
 - [x] Add validation flags (red borders/warnings) for unanswered questions when user clicks Save & Continue
 - [x] Test checkmarks appear when section reaches 100%
 - [x] Test validation flags appear for empty required fields
+
+## Add File Display UI
+- [x] Create backend endpoint to get files by organization and question ID
+- [x] Update frontend to display uploaded files below each file input field
+- [x] Show filename, file size, and download link for each uploaded file
+- [x] Add delete button for each uploaded file
+- [x] Test file display and delete functionality in browser

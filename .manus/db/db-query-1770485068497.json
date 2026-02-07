@@ -1,0 +1,64 @@
+{
+  "query": "SELECT id, questionId, fileName, fileUrl, driveFileId, uploadedBy, createdAt FROM intakeFileAttachments ORDER BY createdAt DESC LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, questionId, fileName, fileUrl, driveFileId, uploadedBy, createdAt FROM intakeFileAttachments ORDER BY createdAt DESC LIMIT 20;",
+  "rows": [
+    {
+      "id": "90005",
+      "questionId": "D.14",
+      "fileName": "test_user_list.csv",
+      "fileUrl": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/intake-files/radone-munson/RadOne_-_Munson_jennifer-at-newlantern.ai_D.14-User-list-Please-upload-a-file-of-all-users-and-their-roles_1770480642868.csv",
+      "driveFileId": "intake-files/radone-munson/RadOne_-_Munson_jennifer-at-newlantern.ai_D.14-User-list-Please-upload-a-file-of-all-users-and-their-roles_1770480642868.csv",
+      "uploadedBy": "jennifer@newlantern.ai",
+      "createdAt": "2026-02-07 16:10:43"
+    },
+    {
+      "id": "90004",
+      "questionId": "D.14",
+      "fileName": "Valley_RAMS Ticket Inquiry 2.6.26.xlsx",
+      "fileUrl": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/intake-files/radone-munson/RadOne_-_Munson_jennifer-at-newlantern.ai_D.14-User-list-Please-upload-a-file-of-all-users-and-their-roles_1770480493526.xlsx",
+      "driveFileId": "intake-files/radone-munson/RadOne_-_Munson_jennifer-at-newlantern.ai_D.14-User-list-Please-upload-a-file-of-all-users-and-their-roles_1770480493526.xlsx",
+      "uploadedBy": "jennifer@newlantern.ai",
+      "createdAt": "2026-02-07 16:08:13"
+    },
+    {
+      "id": "90003",
+      "questionId": "D.13",
+      "fileName": "Valley_RAMS Ticket Inquiry 2.6.26.xlsx",
+      "fileUrl": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/intake-files/radone-munson/RadOne_-_Munson_jennifer-at-newlantern.ai_D.13-Procedure-code-list-Please-upload-your-list-of-all-procedure-codes-with-modality-that-you-will-be-se_1770480489512.xlsx",
+      "driveFileId": "intake-files/radone-munson/RadOne_-_Munson_jennifer-at-newlantern.ai_D.13-Procedure-code-list-Please-upload-your-list-of-all-procedure-codes-with-modality-that-you-will-be-se_1770480489512.xlsx",
+      "uploadedBy": "jennifer@newlantern.ai",
+      "createdAt": "2026-02-07 16:08:09"
+    },
+    {
+      "id": "90002",
+      "questionId": "D.14",
+      "fileName": "radone-munson_questionnaire_2026-02-06.txt",
+      "fileUrl": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/intake-files/radone-baycare/RadOne_-_Baycare_jennifer-at-newlantern.ai_D.14-User-list-Please-upload-a-file-of-all-users-and-their-roles_1770479681217.txt",
+      "driveFileId": "intake-files/radone-baycare/RadOne_-_Baycare_jennifer-at-newlantern.ai_D.14-User-list-Please-upload-a-file-of-all-users-and-their-roles_1770479681217.txt",
+      "uploadedBy": "jennifer@newlantern.ai",
+      "createdAt": "2026-02-07 15:54:41"
+    },
+    {
+      "id": "90001",
+      "questionId": "D.13",
+      "fileName": "RadOne_-_Munson_jennifer-at-newlantern.ai_D.13-Procedure-Code-List_1770473629143.csv",
+      "fileUrl": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/intake-files/radone-baycare/RadOne_-_Baycare_jennifer-at-newlantern.ai_D.13-Procedure-code-list-Please-upload-your-list-of-all-procedure-codes-with-modality-that-you-will-be-se_1770479676249.csv",
+      "driveFileId": "intake-files/radone-baycare/RadOne_-_Baycare_jennifer-at-newlantern.ai_D.13-Procedure-code-list-Please-upload-your-list-of-all-procedure-codes-with-modality-that-you-will-be-se_1770479676249.csv",
+      "uploadedBy": "jennifer@newlantern.ai",
+      "createdAt": "2026-02-07 15:54:36"
+    },
+    {
+      "id": "60001",
+      "questionId": "D.13",
+      "fileName": "test.csv",
+      "fileUrl": "https://example.com/test.csv",
+      "driveFileId": "test-key",
+      "uploadedBy": "test@example.com",
+      "createdAt": "2026-02-07 14:12:47"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tquestionId\tfileName\tfileUrl\tdriveFileId\tuploadedBy\tcreatedAt\n90005\tD.14\ttest_user_list.csv\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/intake-files/radone-munson/RadOne_-_Munson_jennifer-at-newlantern.ai_D.14-User-list-Please-upload-a-file-of-all-users-and-their-roles_1770480642868.csv\tintake-files/radone-munson/RadOne_-_Munson_jennifer-at-newlantern.ai_D.14-User-list-Please-upload-a-file-of-all-users-and-their-roles_1770480642868.csv\tjennifer@newlantern.ai\t2026-02-07 16:10:43\n90004\tD.14\tValley_RAMS Ticket Inquiry 2.6.26.xlsx\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/intake-files/radone-munson/RadOne_-_Munson_jennifer-at-newlantern.ai_D.14-User-list-Please-upload-a-file-of-all-users-and-their-roles_1770480493526.xlsx\tintake-files/radone-munson/RadOne_-_Munson_jennifer-at-newlantern.ai_D.14-User-list-Please-upload-a-file-of-all-users-and-their-roles_1770480493526.xlsx\tjennifer@newlantern.ai\t2026-02-07 16:08:13\n90003\tD.13\tValley_RAMS Ticket Inquiry 2.6.26.xlsx\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/intake-files/radone-munson/RadOne_-_Munson_jennifer-at-newlantern.ai_D.13-Procedure-code-list-Please-upload-your-list-of-all-procedure-codes-with-modality-that-you-will-be-se_1770480489512.xlsx\tintake-files/radone-munson/RadOne_-_Munson_jennifer-at-newlantern.ai_D.13-Procedure-code-list-Please-upload-your-list-of-all-procedure-codes-with-modality-that-you-will-be-se_1770480489512.xlsx\tjennifer@newlantern.ai\t2026-02-07 16:08:09\n90002\tD.14\tradone-munson_questionnaire_2026-02-06.txt\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/intake-files/radone-baycare/RadOne_-_Baycare_jennifer-at-newlantern.ai_D.14-User-list-Please-upload-a-file-of-all-users-and-their-roles_1770479681217.txt\tintake-files/radone-baycare/RadOne_-_Baycare_jennifer-at-newlantern.ai_D.14-User-list-Please-upload-a-file-of-all-users-and-their-roles_1770479681217.txt\tjennifer@newlantern.ai\t2026-02-07 15:54:41\n90001\tD.13\tRadOne_-_Munson_jennifer-at-newlantern.ai_D.13-Procedure-Code-List_1770473629143.csv\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/intake-files/radone-baycare/RadOne_-_Baycare_jennifer-at-newlantern.ai_D.13-Procedure-code-list-Please-upload-your-list-of-all-procedure-codes-with-modality-that-you-will-be-se_1770479676249.csv\tintake-files/radone-baycare/RadOne_-_Baycare_jennifer-at-newlantern.ai_D.13-Procedure-code-list-Please-upload-your-list-of-all-procedure-codes-with-modality-that-you-will-be-se_1770479676249.csv\tjennifer@newlantern.ai\t2026-02-07 15:54:36\n60001\tD.13\ttest.csv\thttps://example.com/test.csv\ttest-key\ttest@example.com\t2026-02-07 14:12:47\n",
+  "stderr": "",
+  "execution_time_ms": 60
+}
