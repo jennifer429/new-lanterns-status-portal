@@ -877,3 +877,9 @@
 - [x] Remove red border from file upload fields when files are uploaded
 - [x] Allow Save & Continue to proceed when files are uploaded
 - [x] Test validation works correctly for file upload fields
+
+## Fix File Upload Red Border Validation (Still Showing)
+- [x] Investigate why red borders still appear on file upload fields with uploaded files
+- [x] Check if uploadedFilesMap is being populated correctly (issue: getAllUploadedFiles query not invalidated after upload)
+- [x] Add query invalidation for getAllUploadedFiles and getFileCount after upload/delete
+- [x] Test fix to ensure red borders disappear when files are uploaded

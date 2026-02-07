@@ -232,6 +232,14 @@ export default function IntakeNewRedesign() {
         organizationSlug: slug || "",
         questionId: variables.questionId,
       });
+      // Refetch all uploaded files to update validation map
+      utils.intake.getAllUploadedFiles.invalidate({
+        organizationSlug: slug || "",
+      });
+      // Refetch file count
+      utils.intake.getFileCount.invalidate({
+        organizationSlug: slug || "",
+      });
     },
   });
 
@@ -240,6 +248,14 @@ export default function IntakeNewRedesign() {
     onSuccess: (_, variables) => {
       // Refetch files after deletion
       utils.intake.getUploadedFiles.invalidate();
+      // Refetch all uploaded files to update validation map
+      utils.intake.getAllUploadedFiles.invalidate({
+        organizationSlug: slug || "",
+      });
+      // Refetch file count
+      utils.intake.getFileCount.invalidate({
+        organizationSlug: slug || "",
+      });
     },
   });
 
