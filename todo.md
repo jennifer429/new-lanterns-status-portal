@@ -704,3 +704,11 @@
 
 ## Make Login Page Logo Larger
 - [x] Increase the New Lantern logo size on the login page (currently too small)
+
+## Fix Admin Dashboard Metrics
+- [x] Remove "Goal: 2026-06-30" date display from organization cards
+- [x] Fix user count showing 0 (should count users per organization)
+- [x] Fix file count showing 0 (should count uploaded files per organization)
+
+## Fix Logo on Organization Portal Page
+- [x] Replace building/document icon with actual New Lantern logo on organization portal page header

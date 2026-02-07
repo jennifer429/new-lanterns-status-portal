@@ -208,11 +208,6 @@ export default function Admin() {
                       </span>
                     </div>
 
-                    {/* Goal Date */}
-                    <div className="text-sm text-gray-300 flex items-center gap-2">
-                      <Calendar className="w-3 h-3 text-purple-400" />
-                      <span>Goal: {org.goalDate || "Not set"}</span>
-                    </div>
 
                     {/* Open Portal Button */}
                     <Link href={`/org/${org.slug}/intake`}>

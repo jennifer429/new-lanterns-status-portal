@@ -538,7 +538,7 @@ export default function IntakeNew() {
           <div className="container py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-10" />
+                <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-16" />
                 <div>
                   <h1 className="text-2xl font-bold">Radiology One - {slug}</h1>
                   <p className="text-sm text-muted-foreground mt-1">New Site Onboarding</p>
