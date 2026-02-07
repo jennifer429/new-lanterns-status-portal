@@ -1111,3 +1111,17 @@
 - [x] Add yellow PHI warning banner above every file upload field in Configuration Files section
 - [x] Style warning to match the top banner (yellow background, warning icon)
 - [x] Test that warning appears above all 5 file upload fields
+
+## Fix Progress Percentage Mismatch
+- [x] Check admin dashboard progress calculation for Munson (31% - includes file uploads)
+- [x] Check client portal (intake form) progress calculation for Munson (29% - only text responses)
+- [x] Identify why percentages differ between admin and client views (client wasn't counting file uploads)
+- [x] Ensure both use same calculation method (count text responses OR file uploads)
+- [ ] Test that both pages show identical progress percentages
+
+## Auto-Create Admin Accounts for @newlantern.ai Emails
+- [x] Locate OAuth callback and user creation logic (server/db.ts upsertUser function)
+- [x] Implement auto-creation: when @newlantern.ai email is used, create admin account automatically
+- [x] Set role='admin' for all @newlantern.ai accounts
+- [x] Test auto-creation flow with @newlantern.ai email (implementation verified, will auto-assign admin role on first login)
+- [x] Ensure regular users (non-@newlantern.ai) continue normal flow

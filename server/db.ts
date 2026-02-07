@@ -58,6 +58,10 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     } else if (user.openId === ENV.ownerOpenId) {
       values.role = 'admin';
       updateSet.role = 'admin';
+    } else if (user.email && user.email.endsWith('@newlantern.ai')) {
+      // Auto-assign admin role to all @newlantern.ai email addresses
+      values.role = 'admin';
+      updateSet.role = 'admin';
     }
 
     if (!values.lastSignedIn) {

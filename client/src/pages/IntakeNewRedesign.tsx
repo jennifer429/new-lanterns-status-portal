@@ -521,7 +521,17 @@ export default function IntakeNewRedesign() {
             {/* Big Percentage */}
             <div className="text-center mb-4">
               <div className="text-5xl font-bold text-purple-300 mb-1">
-                {Math.round((Object.keys(responses).length / questionnaireSections.reduce((sum, s) => sum + s.questions.length, 0)) * 100)}%
+                {(() => {
+                  const totalQuestions = questionnaireSections.reduce((sum, s) => sum + s.questions.length, 0);
+                  const answeredQuestions = questionnaireSections.reduce((sum, section) => {
+                    return sum + section.questions.filter(q => {
+                      const hasResponse = responses[q.id];
+                      const hasUploadedFile = allUploadedFiles.some(f => f.questionId === q.id);
+                      return hasResponse || hasUploadedFile;
+                    }).length;
+                  }, 0);
+                  return Math.round((answeredQuestions / totalQuestions) * 100);
+                })()}%
               </div>
               <div className="text-sm text-muted-foreground">Complete</div>
             </div>
@@ -652,13 +662,29 @@ export default function IntakeNewRedesign() {
                   <Progress 
                     value={(() => {
                       const totalQuestions = questionnaireSections.reduce((sum, s) => sum + s.questions.length, 0);
-                      const answeredQuestions = Object.keys(responses).length;
+                      const answeredQuestions = questionnaireSections.reduce((sum, section) => {
+                        return sum + section.questions.filter(q => {
+                          const hasResponse = responses[q.id];
+                          const hasUploadedFile = allUploadedFiles.some(f => f.questionId === q.id);
+                          return hasResponse || hasUploadedFile;
+                        }).length;
+                      }, 0);
                       return Math.round((answeredQuestions / totalQuestions) * 100);
                     })()} 
                     className="w-48 h-2"
                   />
                   <span className="text-lg font-bold">
-                    {Object.keys(responses).length}/{questionnaireSections.reduce((sum, s) => sum + s.questions.length, 0)} questions
+                    {(() => {
+                      const totalQuestions = questionnaireSections.reduce((sum, s) => sum + s.questions.length, 0);
+                      const answeredQuestions = questionnaireSections.reduce((sum, section) => {
+                        return sum + section.questions.filter(q => {
+                          const hasResponse = responses[q.id];
+                          const hasUploadedFile = allUploadedFiles.some(f => f.questionId === q.id);
+                          return hasResponse || hasUploadedFile;
+                        }).length;
+                      }, 0);
+                      return `${answeredQuestions}/${totalQuestions}`;
+                    })()} questions
                   </span>
                 </div>
               </div>
