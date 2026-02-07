@@ -53,6 +53,12 @@ function FileUploadField({ questionId, isUploading, organizationSlug, onFileUplo
 
   return (
     <div className="space-y-3">
+      {/* PHI Warning Banner */}
+      <div className="flex items-center gap-2 px-4 py-2 bg-yellow-400/20 border border-yellow-400/50 rounded-md">
+        <span className="text-yellow-400 text-lg">⚠</span>
+        <span className="text-sm font-semibold text-yellow-400">PHI Warning: Do not share Protected Health Information (PHI) or patient data in this portal</span>
+      </div>
+      
       <Input
         type="file"
         onChange={(e) => {

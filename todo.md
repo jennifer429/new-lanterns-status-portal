@@ -1106,3 +1106,8 @@
 - [x] Capitalize hospital name display at top of portal ("Munson" not "munson")
 - [x] Check where organization name is displayed in intake form header
 - [x] Test capitalization across all pages
+
+## Add PHI Warning Above File Uploads
+- [x] Add yellow PHI warning banner above every file upload field in Configuration Files section
+- [x] Style warning to match the top banner (yellow background, warning icon)
+- [x] Test that warning appears above all 5 file upload fields
