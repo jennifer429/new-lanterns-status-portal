@@ -840,3 +840,9 @@
 - [x] Change last section button text from "Save & Continue" to "Complete"
 - [x] Fix "Return to Dashboard" in profile dropdown to navigate to overview page
 - [x] Test all navigation buttons work correctly
+
+## Add Visual Completion Indicators
+- [x] Add purple checkmarks to completed sections (100%) in sidebar
+- [x] Add validation flags (red borders/warnings) for unanswered questions when user clicks Save & Continue
+- [x] Test checkmarks appear when section reaches 100%
+- [x] Test validation flags appear for empty required fields

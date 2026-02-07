@@ -38,6 +38,7 @@ export default function IntakeNewRedesign() {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [currentSection, setCurrentSection] = useState<string>("org-info");
   const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
+  const [unansweredQuestions, setUnansweredQuestions] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const logoutMutation = trpc.auth.logout.useMutation();
@@ -315,7 +316,7 @@ export default function IntakeNewRedesign() {
                 }`}
               >
                 {isComplete ? (
-                  <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                  <CheckCircle2 className="w-5 h-5 text-purple-400 flex-shrink-0" />
                 ) : (
                   <Icon className="w-5 h-5 flex-shrink-0" />
                 )}
@@ -421,15 +422,29 @@ export default function IntakeNewRedesign() {
 
               {/* Questions Grid */}
               <div className="grid grid-cols-2 gap-x-8 gap-y-6">
-                {currentSectionData?.questions.map((question) => (
-                  <div key={question.id} className={question.type === 'textarea' || question.type === 'upload' ? 'col-span-2' : 'col-span-1'}>
-                    <Label className="mb-2 block">{question.text}</Label>
-                    {renderQuestion(question)}
-                    {question.notes && (
-                      <p className="text-xs text-muted-foreground mt-1">{question.notes}</p>
-                    )}
-                  </div>
-                ))}
+                {currentSectionData?.questions.map((question) => {
+                  const isUnanswered = unansweredQuestions.has(question.id);
+                  return (
+                    <div 
+                      key={question.id} 
+                      data-question-id={question.id}
+                      className={`${
+                        question.type === 'textarea' || question.type === 'upload' ? 'col-span-2' : 'col-span-1'
+                      } ${
+                        isUnanswered ? 'p-4 border-2 border-red-500 rounded-lg bg-red-500/5' : ''
+                      }`}
+                    >
+                      <Label className="mb-2 block">
+                        {question.text}
+                        {isUnanswered && <span className="text-red-500 ml-2 font-semibold">* Required</span>}
+                      </Label>
+                      {renderQuestion(question)}
+                      {question.notes && (
+                        <p className="text-xs text-muted-foreground mt-1">{question.notes}</p>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Bottom Buttons */}
@@ -442,6 +457,23 @@ export default function IntakeNewRedesign() {
                 </Button>
                 <Button
                   onClick={() => {
+                    // Check for unanswered questions in current section
+                    const currentQuestions = currentSectionData?.questions || [];
+                    const unanswered = currentQuestions
+                      .filter(q => !responses[q.id] || responses[q.id] === '')
+                      .map(q => q.id);
+                    
+                    if (unanswered.length > 0) {
+                      setUnansweredQuestions(new Set(unanswered));
+                      // Scroll to first unanswered question
+                      const firstUnanswered = document.querySelector(`[data-question-id="${unanswered[0]}"]`);
+                      firstUnanswered?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      return;
+                    }
+                    
+                    // Clear validation flags
+                    setUnansweredQuestions(new Set());
+                    
                     if (!isLastSection) {
                       setCurrentSection(questionnaireSections[currentSectionIndex + 1].id);
                     } else {
