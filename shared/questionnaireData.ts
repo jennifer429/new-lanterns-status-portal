@@ -111,11 +111,12 @@ export const questionnaireSections: Section[] = [
   },
   {
     id: 'dicom-validation',
-    title: 'DICOM Data Validation',
-    description: 'HL7 message validation',
+    title: 'HL7 Data Validation',
+    description: 'HL7 Order message field values and meanings',
     questions: [
-      { id: 'G.3', text: 'Please document the ORC-1 values you expect to send', type: 'textarea', placeholder: 'Example: NW (New order), CA (Cancel order), etc.' },
-      { id: 'G.4', text: 'Please document the ORC-5 values you expect to send', type: 'textarea', placeholder: 'Example: SC (In process), CM (Complete), etc.' },
+      { id: 'G.3', text: 'ORC-1 (Order Control) - Please document the values you will send and what each means', type: 'textarea', placeholder: 'Example: NW = New order, CA = Cancel order, XO = Change order, etc.' },
+      { id: 'G.4', text: 'ORC-5 (Order Status) - Please document the values you will send and what each means', type: 'textarea', placeholder: 'Example: SC = In process/scheduled, CM = Complete, CA = Canceled, etc.' },
+      { id: 'G.5', text: 'OBR:27.1 (Quantity/Timing) in ORU messages - Please document the values you will send and what each means', type: 'textarea', placeholder: 'Example: STAT = Urgent/immediate, ROUTINE = Normal priority, ASAP = As soon as possible, etc.' },
     ],
   },
 ];

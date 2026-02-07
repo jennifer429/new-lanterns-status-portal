@@ -1131,3 +1131,10 @@
 - [x] Add single textarea question: "Please share any timeline requirements or expectations you have around implementation, testing, and going live so we can coordinate resources"
 - [x] Test new timeline question in Organization Information section
 - [x] Update placeholder with examples about system deprecation and contractual deadlines
+
+## Add HL7 Field Documentation Questions
+- [x] Add question for ORC-1 (Order Control) values - what values will they send and what do they mean
+- [x] Add question for ORC-5 (Order Status) values - what values will they send and what do they mean
+- [x] Add question for OBR:27.1 (Quantity/Timing) values in ORU messages
+- [x] Update DICOM Data Validation section title to "HL7 Data Validation"
+- [x] Test new HL7 questions in Data Validation section (all three questions displaying correctly with helpful placeholders)
