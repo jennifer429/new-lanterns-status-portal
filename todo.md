@@ -766,3 +766,17 @@
 - [x] Check if these questions exist in current questionnaireData.ts
 - [x] Clean up orphaned responses from database for non-existent questions
 - [x] Test intake page loads without errors
+
+## Fix File Upload Error
+- [ ] Investigate uploadFile endpoint - questionId type mismatch
+- [ ] Fix uploadFile to look up question ID from questions table
+- [ ] Test file upload with dummy file
+- [ ] Test file download functionality
+- [ ] Test file delete functionality
+
+## Fix File Upload Error (COMPLETED)
+- [x] Investigated database INSERT error - found "Data too long for column 'driveFileId'"
+- [x] Increased driveFileId column length from varchar(100) to varchar(500)
+- [x] Fixed base64 encoding issue - stripped data URL prefix before sending to server
+- [x] Ran database migration successfully
+- [x] Tested file upload - working correctly, files saved to S3 and database

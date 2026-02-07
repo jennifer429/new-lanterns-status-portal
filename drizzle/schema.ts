@@ -216,7 +216,7 @@ export const intakeFileAttachments = mysqlTable("intakeFileAttachments", {
   questionId: varchar("questionId", { length: 50 }).notNull(), // e.g., "active_directory_sso"
   fileName: varchar("fileName", { length: 255 }).notNull(),
   fileUrl: text("fileUrl").notNull(), // Google Drive shareable link
-  driveFileId: varchar("driveFileId", { length: 100 }), // Google Drive file ID
+  driveFileId: varchar("driveFileId", { length: 500 }), // S3 key or Google Drive file ID
   fileSize: int("fileSize"), // bytes
   mimeType: varchar("mimeType", { length: 100 }),
   uploadedBy: varchar("uploadedBy", { length: 255 }),

@@ -129,7 +129,9 @@ export default function IntakeNewRedesign() {
     
     const reader = new FileReader();
     reader.onload = async (e) => {
-      const base64 = e.target?.result as string;
+      const dataUrl = e.target?.result as string;
+      // Strip the data URL prefix (e.g., "data:text/csv;base64,") to get just the base64 string
+      const base64 = dataUrl.split(',')[1];
       await uploadMutation.mutateAsync({
         organizationSlug: slug,
         questionId,

@@ -366,7 +366,7 @@ export const intakeRouter = router({
         const { intakeFileAttachments } = await import("../../drizzle/schema");
         await db.insert(intakeFileAttachments).values({
           organizationId: org.id,
-          questionId: input.questionId,
+          questionId: input.questionId, // String question ID (e.g., "D.13")
           fileName: input.fileName,
           fileUrl,
           driveFileId: s3Key, // Store S3 key for reference
@@ -381,6 +381,7 @@ export const intakeRouter = router({
           message: "File uploaded successfully",
         };
       } catch (error: any) {
+        console.error("[Upload Error] Full error:", error);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: `Failed to upload file: ${error.message}`,
