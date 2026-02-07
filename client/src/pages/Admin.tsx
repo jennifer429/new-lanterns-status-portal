@@ -96,6 +96,9 @@ export default function Admin() {
         </div>
       </header>
 
+      {/* PHI Disclaimer - Below header */}
+      <PhiDisclaimer />
+
       {/* Main Content */}
       <div className="container py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -322,11 +325,6 @@ export default function Admin() {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
-      
-      {/* PHI Disclaimer - Fixed at bottom */}
-      <div className="fixed bottom-0 left-0 right-0 z-50">
-        <PhiDisclaimer />
       </div>
     </div>
   );

@@ -1031,3 +1031,9 @@
 - [x] Design prominent but non-intrusive disclaimer placement
 - [x] Add disclaimer text: "Do not share Protected Health Information (PHI) or patient data in this portal"
 - [x] Test disclaimer visibility across all pages
+
+## PHI Disclaimer Repositioning
+- [x] Move PHI disclaimer from bottom to top of admin dashboard (below header)
+- [x] Move PHI disclaimer from bottom to top of client portal pages (below header)
+- [x] Keep PHI disclaimer at bottom of login page (no header on login)
+- [x] Test disclaimer visibility at top of all logged-in pages

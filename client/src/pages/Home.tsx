@@ -104,8 +104,12 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6">
-      <div className="w-full max-w-3xl">
+    <div className="min-h-screen bg-background">
+      {/* PHI Disclaimer - At top */}
+      <PhiDisclaimer />
+      
+      <div className="flex items-center justify-center p-6">
+        <div className="w-full max-w-3xl">
         <Card className="border-2 border-primary/30 bg-gradient-to-b from-card to-card/50">
           <CardContent className="p-8">
             {/* Header with Organization Name */}
@@ -219,11 +223,7 @@ export default function Home() {
             </div>
           </CardContent>
         </Card>
-      </div>
-      
-      {/* PHI Disclaimer - Fixed at bottom */}
-      <div className="fixed bottom-0 left-0 right-0 z-50">
-        <PhiDisclaimer />
+        </div>
       </div>
     </div>
   );
