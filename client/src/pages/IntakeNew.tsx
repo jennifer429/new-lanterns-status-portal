@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Download, Upload, CheckCircle2, Circle, Clock, ArrowLeft, ChevronRight, Trash2 } from "lucide-react";
+import { Loader2, Download, Upload, CheckCircle2, Circle, Clock, ArrowLeft, ChevronRight, Trash2, LogOut, Home } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,7 +22,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { FilePreviewItem } from "@/components/FilePreviewItem";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { questionnaireData, type Question, type Section } from "@shared/questionnaireData";
 
 // File List Component for each question
@@ -84,6 +92,8 @@ export default function IntakeNew() {
   const [deleteFileId, setDeleteFileId] = useState<number | null>(null);
   const [deleteQuestionId, setDeleteQuestionId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { user } = useAuth();
+  const logoutMutation = trpc.auth.logout.useMutation();
 
   // Fetch organization
   const { data: org } = trpc.organizations.getBySlug.useQuery(
@@ -545,24 +555,38 @@ export default function IntakeNew() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleImportCSV}
-                  className="gap-2"
-                >
-                  <Upload className="w-4 h-4" />
-                  Import
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleExportCSV}
-                  className="gap-2"
-                >
-                  <Download className="w-4 h-4" />
-                  Export
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon" className="rounded-full h-10 w-10">
+                      <div className="text-sm font-semibold">
+                        {user?.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+                      </div>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => setLocation('/admin')}>
+                      <Home className="w-4 h-4 mr-2" />
+                      Return to Dashboard
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleImportCSV}>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Import
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExportCSV}>
+                      <Download className="w-4 h-4 mr-2" />
+                      Export
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => {
+                      logoutMutation.mutate();
+                      setLocation('/login');
+                    }}>
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Sign Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <input
                   ref={fileInputRef}
                   type="file"

@@ -736,3 +736,9 @@
 - [x] Add profile button with user initials on right side of admin header
 - [x] Create dropdown menu with "Edit Profile" and "Logout" options
 - [x] Implement logout functionality
+
+## Add Profile Menu to Intake Page
+- [x] Add profile button with user initials in top-right corner of intake page header
+- [x] Create dropdown menu with: Return to Dashboard, Import, Export, Sign Out
+- [x] Wire up all menu actions
+- [x] Change "Back to Overview" button to "Back to Dashboard"
