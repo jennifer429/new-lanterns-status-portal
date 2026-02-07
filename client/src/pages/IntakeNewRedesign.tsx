@@ -261,12 +261,20 @@ export default function IntakeNewRedesign() {
 
   const utils = trpc.useUtils();
 
-  // Calculate section progress
+  // Calculate section progress (including uploaded files)
   const calculateSectionProgress = (section: Section) => {
     const answered = section.questions.filter(q => {
+      // Check if question has a text response
       const response = responses[q.id];
-      if (Array.isArray(response)) return response.length > 0;
-      return response !== undefined && response !== '' && response !== null;
+      const hasResponse = Array.isArray(response) 
+        ? response.length > 0 
+        : (response !== undefined && response !== '' && response !== null);
+      
+      // Check if question has uploaded files (for file upload questions)
+      const hasUploadedFile = allUploadedFiles.some(f => f.questionId === q.id);
+      
+      // Question is answered if it has EITHER a response OR uploaded files
+      return hasResponse || hasUploadedFile;
     }).length;
     return Math.round((answered / section.questions.length) * 100);
   };

@@ -909,3 +909,16 @@
 - [x] Investigate why overall progress shows 2% when Configuration Files shows 20%
 - [x] Verify progress calculation logic is consistent across all sections
 - [x] Fix progress calculation to include uploaded files for file upload questions (Home.tsx line 52-89)
+
+## Fix RRMC Configuration Files Progress Calculation
+- [x] Investigate why Configuration Files shows 40% when all file upload questions have files
+- [x] Query database to check RRMC file uploads for Configuration Files section
+- [x] Analyze progress calculation logic in Home.tsx
+- [x] Found orphaned data: file URL stored in responses table instead of intakeFileAttachments table
+- [x] Fixed calculateSectionProgress in IntakeNewRedesign.tsx to check both responses and uploaded files
+
+## Clean Up All Organization Data
+- [x] Delete all responses for ALL organizations
+- [x] Delete all file attachments for ALL organizations
+- [x] Verify all organizations show 0% completion across all sections
+- [x] Test that organizations can start fresh with clean data (tested RRMC and Boulder)
