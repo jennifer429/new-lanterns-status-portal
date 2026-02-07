@@ -798,3 +798,10 @@
 - [x] Change main content area to black background
 - [x] Change header to black background
 - [x] Test styling in browser
+
+## Fix Organization Query Error
+- [x] Investigate why organization query is failing for slug "radone-munson"
+- [x] Check if organizations table schema matches the query
+- [x] Verify organization exists in database
+- [x] Add detailed error logging to diagnose future occurrences
+- [x] Test query works without errors

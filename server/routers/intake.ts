@@ -20,11 +20,17 @@ export const intakeRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       // Get organization by slug
-      const [org] = await db
-        .select()
-        .from(organizations)
-        .where(eq(organizations.slug, input.organizationSlug))
-        .limit(1);
+      let org;
+      try {
+        [org] = await db
+          .select()
+          .from(organizations)
+          .where(eq(organizations.slug, input.organizationSlug))
+          .limit(1);
+      } catch (error) {
+        console.error('[intake] Database error when fetching organization:', error);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database error: " + (error instanceof Error ? error.message : String(error)) });
+      }
 
       if (!org) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
@@ -79,11 +85,17 @@ export const intakeRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       // Get organization by slug
-      const [org] = await db
-        .select()
-        .from(organizations)
-        .where(eq(organizations.slug, input.organizationSlug))
-        .limit(1);
+      let org;
+      try {
+        [org] = await db
+          .select()
+          .from(organizations)
+          .where(eq(organizations.slug, input.organizationSlug))
+          .limit(1);
+      } catch (error) {
+        console.error('[intake] Database error when fetching organization:', error);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database error: " + (error instanceof Error ? error.message : String(error)) });
+      }
 
       if (!org) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
@@ -156,11 +168,17 @@ export const intakeRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       // Get organization by slug
-      const [org] = await db
-        .select()
-        .from(organizations)
-        .where(eq(organizations.slug, input.organizationSlug))
-        .limit(1);
+      let org;
+      try {
+        [org] = await db
+          .select()
+          .from(organizations)
+          .where(eq(organizations.slug, input.organizationSlug))
+          .limit(1);
+      } catch (error) {
+        console.error('[intake] Database error when fetching organization:', error);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database error: " + (error instanceof Error ? error.message : String(error)) });
+      }
 
       if (!org) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
@@ -243,11 +261,17 @@ export const intakeRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       // Get organization by slug
-      const [org] = await db
-        .select()
-        .from(organizations)
-        .where(eq(organizations.slug, input.organizationSlug))
-        .limit(1);
+      let org;
+      try {
+        [org] = await db
+          .select()
+          .from(organizations)
+          .where(eq(organizations.slug, input.organizationSlug))
+          .limit(1);
+      } catch (error) {
+        console.error('[intake] Database error when fetching organization:', error);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database error: " + (error instanceof Error ? error.message : String(error)) });
+      }
 
       if (!org) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
@@ -320,11 +344,17 @@ export const intakeRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       // Get organization by slug
-      const [org] = await db
-        .select()
-        .from(organizations)
-        .where(eq(organizations.slug, input.organizationSlug))
-        .limit(1);
+      let org;
+      try {
+        [org] = await db
+          .select()
+          .from(organizations)
+          .where(eq(organizations.slug, input.organizationSlug))
+          .limit(1);
+      } catch (error) {
+        console.error('[intake] Database error when fetching organization:', error);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database error: " + (error instanceof Error ? error.message : String(error)) });
+      }
 
       if (!org) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
@@ -648,11 +678,17 @@ export const intakeRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       // Get organization by slug
-      const [org] = await db
-        .select()
-        .from(organizations)
-        .where(eq(organizations.slug, input.organizationSlug))
-        .limit(1);
+      let org;
+      try {
+        [org] = await db
+          .select()
+          .from(organizations)
+          .where(eq(organizations.slug, input.organizationSlug))
+          .limit(1);
+      } catch (error) {
+        console.error('[intake] Database error when fetching organization:', error);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database error: " + (error instanceof Error ? error.message : String(error)) });
+      }
 
       if (!org) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
@@ -744,11 +780,17 @@ export const intakeRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       // Get organization by slug
-      const [org] = await db
-        .select()
-        .from(organizations)
-        .where(eq(organizations.slug, input.organizationSlug))
-        .limit(1);
+      let org;
+      try {
+        [org] = await db
+          .select()
+          .from(organizations)
+          .where(eq(organizations.slug, input.organizationSlug))
+          .limit(1);
+      } catch (error) {
+        console.error('[intake] Database error when fetching organization:', error);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database error: " + (error instanceof Error ? error.message : String(error)) });
+      }
 
       if (!org) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
