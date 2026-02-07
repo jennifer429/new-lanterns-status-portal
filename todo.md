@@ -701,3 +701,6 @@
 - [x] Show file metadata (name, size, upload date) in the list
 - [x] Refresh file list automatically after deletion
 - [x] Test file management on intake questionnaire pages
+
+## Make Login Page Logo Larger
+- [x] Increase the New Lantern logo size on the login page (currently too small)
