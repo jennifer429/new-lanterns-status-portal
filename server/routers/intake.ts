@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { intakeResponses, intakeFileAttachments, organizations, questions, questionOptions, responses } from "../../drizzle/schema";
+import { intakeResponses, intakeFileAttachments, organizations, questions, questionOptions, responses, onboardingFeedback } from "../../drizzle/schema";
 import { eq, and, sql } from "drizzle-orm";
 
 export const intakeRouter = router({
@@ -898,6 +898,43 @@ export const intakeRouter = router({
 
       // Delete from database (S3 file remains)
       await db.delete(intakeFileAttachments).where(eq(intakeFileAttachments.id, input.fileId));
+
+      return { success: true };
+    }),
+
+  /**
+   * Submit onboarding feedback
+   */
+  submitFeedback: publicProcedure
+    .input(
+      z.object({
+        organizationSlug: z.string(),
+        rating: z.number().min(1).max(5),
+        comments: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Get organization by slug
+      const [org] = await db
+        .select()
+        .from(organizations)
+        .where(eq(organizations.slug, input.organizationSlug))
+        .limit(1);
+
+      if (!org) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      }
+
+      // Insert feedback
+      await db.insert(onboardingFeedback).values({
+        organizationId: org.id,
+        rating: input.rating,
+        comments: input.comments || null,
+        submittedBy: ctx.user?.email || null,
+      });
 
       return { success: true };
     }),

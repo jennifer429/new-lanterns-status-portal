@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Download, Upload, CheckCircle2, Circle, LogOut, Home, FileText, Shield, Database, FileUp, Network, ClipboardCheck } from "lucide-react";
+import { Loader2, Download, Upload, CheckCircle2, Circle, LogOut, Home, FileText, Shield, Database, FileUp, Network, ClipboardCheck, Star } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +18,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { questionnaireSections, type Question, type Section } from "@shared/questionnaireData";
 
@@ -120,6 +127,9 @@ export default function IntakeNewRedesign() {
   const [currentSection, setCurrentSection] = useState<string>("org-info");
   const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
   const [unansweredQuestions, setUnansweredQuestions] = useState<Set<string>>(new Set());
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [feedbackComments, setFeedbackComments] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const logoutMutation = trpc.auth.logout.useMutation();
@@ -197,6 +207,18 @@ export default function IntakeNewRedesign() {
     onSuccess: () => {
       setSaveStatus("saved");
       setTimeout(() => setSaveStatus("idle"), 2000);
+    },
+  });
+
+  // Feedback submission mutation
+  const submitFeedbackMutation = trpc.intake.submitFeedback.useMutation({
+    onSuccess: () => {
+      setShowFeedbackModal(false);
+      setLocation(`/org/${slug}`);
+    },
+    onError: (error) => {
+      console.error('Failed to submit feedback:', error);
+      alert('Failed to submit feedback. Please try again.');
     },
   });
 
@@ -719,10 +741,8 @@ export default function IntakeNewRedesign() {
                     if (!isLastSection) {
                       setCurrentSection(questionnaireSections[currentSectionIndex + 1].id);
                     } else {
-                      // Show completion message
-                      alert('✅ Intake Complete!\n\nThank you for completing the onboarding questionnaire. Your responses have been saved and our team will review them shortly.');
-                      // Redirect to organization dashboard
-                      setLocation(`/org/${slug}`);
+                      // Show feedback modal on completion
+                      setShowFeedbackModal(true);
                     }
                   }}
                 >
@@ -733,6 +753,79 @@ export default function IntakeNewRedesign() {
           </Card>
         </div>
       </div>
+
+      {/* Feedback Modal */}
+      <Dialog open={showFeedbackModal} onOpenChange={setShowFeedbackModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>✅ Intake Complete!</DialogTitle>
+            <DialogDescription>
+              Thank you for completing the onboarding questionnaire. Please rate your experience.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* Star Rating */}
+            <div className="space-y-2">
+              <Label>How would you rate your onboarding experience?</Label>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setFeedbackRating(star)}
+                    className="transition-colors hover:scale-110"
+                  >
+                    <Star
+                      className={`w-8 h-8 ${
+                        star <= feedbackRating
+                          ? "fill-yellow-400 text-yellow-400"
+                          : "text-gray-300"
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Comments */}
+            <div className="space-y-2">
+              <Label htmlFor="feedback-comments">Comments (optional)</Label>
+              <Textarea
+                id="feedback-comments"
+                placeholder="Share your thoughts about the onboarding process..."
+                value={feedbackComments}
+                onChange={(e) => setFeedbackComments(e.target.value)}
+                rows={4}
+              />
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowFeedbackModal(false);
+                  setLocation(`/org/${slug}`);
+                }}
+              >
+                Skip
+              </Button>
+              <Button
+                onClick={() => {
+                  submitFeedbackMutation.mutate({
+                    organizationSlug: slug || '',
+                    rating: feedbackRating,
+                    comments: feedbackComments || undefined,
+                  });
+                }}
+                disabled={feedbackRating === 0 || submitFeedbackMutation.isPending}
+              >
+                {submitFeedbackMutation.isPending ? 'Submitting...' : 'Submit Feedback'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

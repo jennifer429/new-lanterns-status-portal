@@ -256,3 +256,18 @@ export const passwordResetTokens = mysqlTable("passwordResetTokens", {
 
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type InsertPasswordResetToken = typeof passwordResetTokens.$inferInsert;
+
+/**
+ * Onboarding feedback - stores user ratings and comments about the intake experience
+ */
+export const onboardingFeedback = mysqlTable("onboardingFeedback", {
+  id: int("id").autoincrement().primaryKey(),
+  organizationId: int("organizationId").notNull(),
+  rating: int("rating").notNull(), // 1-5 stars
+  comments: text("comments"),
+  submittedBy: varchar("submittedBy", { length: 320 }), // User email
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type OnboardingFeedback = typeof onboardingFeedback.$inferSelect;
+export type InsertOnboardingFeedback = typeof onboardingFeedback.$inferInsert;

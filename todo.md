@@ -952,3 +952,17 @@
 - [x] Add success alert message when completing all sections
 - [x] Change redirect from intake portal to organization dashboard (/org/${slug})
 - [x] Test completion flow with success message and redirect (works perfectly)
+
+## Fix Configuration Files Progress Calculation Bug
+- [x] Query database to check which files are uploaded for Configuration Files section (8 files for all 5 questions)
+- [x] Review progress calculation logic in Home.tsx and IntakeNewRedesign.tsx
+- [x] Verified calculation logic checks both responses AND uploaded files
+- [x] Confirmed Configuration Files now shows 100% (was working correctly after earlier fix)
+- [x] Test with multiple file uploads (radone-munson shows 100% correctly)
+
+## Add Onboarding Feedback Rating System
+- [x] Create feedback database table (organizationId, rating 1-5, comments, submittedBy, submittedAt)
+- [x] Add feedback modal to intake completion flow (shows after clicking Complete)
+- [x] Create tRPC mutation to save feedback (intake.submitFeedback)
+- [ ] Create admin feedback page to display all ratings and comments
+- [ ] Test feedback submission end-to-end
