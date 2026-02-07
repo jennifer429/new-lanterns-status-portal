@@ -826,3 +826,17 @@
 - [x] Create backend endpoint to fetch actual uploaded files from intakeFileAttachments table
 - [x] Update frontend to query real file count from database instead of calculating from responses
 - [x] Test file upload and verify count increments correctly
+
+## Fix Non-Functioning Buttons
+- [ ] Fix "Back to Overview" button not working on every page
+- [ ] Fix duplicate "Back to Overview" button showing on last page
+- [ ] Investigate why "Save & Continue" button doesn't work
+- [ ] Investigate why "Return to Dashboard" doesn't work
+- [ ] Test all buttons to verify they navigate correctly
+
+## Fix Navigation Buttons (COMPLETED)
+- [x] Fix "Back to Overview" button to navigate to `/org/${slug}` instead of `/org/${slug}/intake`
+- [x] Fix duplicate "Back to Overview" button on last section
+- [x] Change last section button text from "Save & Continue" to "Complete"
+- [x] Fix "Return to Dashboard" in profile dropdown to navigate to overview page
+- [x] Test all navigation buttons work correctly

@@ -355,7 +355,7 @@ export default function IntakeNewRedesign() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={() => setLocation('/admin')}>
+                  <DropdownMenuItem onClick={() => setLocation(`/org/${slug}`)}>
                     <Home className="w-4 h-4 mr-2" />
                     Return to Dashboard
                   </DropdownMenuItem>
@@ -436,7 +436,7 @@ export default function IntakeNewRedesign() {
               <div className="flex items-center justify-between mt-8 pt-6 border-t">
                 <Button
                   variant="outline"
-                  onClick={() => setLocation(`/org/${slug}/intake`)}
+                  onClick={() => setLocation(`/org/${slug}`)}
                 >
                   Back to Overview
                 </Button>
@@ -449,7 +449,7 @@ export default function IntakeNewRedesign() {
                     }
                   }}
                 >
-                  {isLastSection ? 'Back to Overview' : 'Save & Continue'}
+                  {isLastSection ? 'Complete' : 'Save & Continue'}
                 </Button>
               </div>
             </div>
