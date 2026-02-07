@@ -598,7 +598,7 @@ export default function IntakeNewRedesign() {
         {/* Header */}
         <header className="border-b border-purple-500/20 bg-black/40 backdrop-blur-sm">
           <div className="px-8 py-4 flex items-center justify-between">
-            <h1 className="text-xl font-bold">Radiology One - {slug}</h1>
+            <h1 className="text-xl font-bold">Radiology One - {slug ? slug.charAt(0).toUpperCase() + slug.slice(1) : ''}</h1>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -675,7 +675,16 @@ export default function IntakeNewRedesign() {
               <div className="mb-6">
                 <h2 className="text-2xl font-bold mb-2">{currentSectionData?.title}</h2>
                 {currentSectionData?.description && (
-                  <p className="text-sm text-muted-foreground mb-2">{currentSectionData.description}</p>
+                  <p className={`text-sm mb-2 flex items-center gap-2 ${
+                    currentSectionData.id === 'config-files' 
+                      ? 'text-yellow-400 font-semibold' 
+                      : 'text-muted-foreground'
+                  }`}>
+                    {currentSectionData.id === 'config-files' && (
+                      <span className="text-yellow-400">★</span>
+                    )}
+                    {currentSectionData.description}
+                  </p>
                 )}
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <span>

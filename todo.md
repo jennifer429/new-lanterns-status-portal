@@ -1096,3 +1096,13 @@
 - [x] Find and remove Mammography yes/no question (already exists as checkbox in Expected modalities)
 - [x] Verify Mammography checkbox still works in Expected modalities list
 - [x] Test intake form to ensure no duplicate questions (reduced from 50 to 48 total questions)
+
+## Make De-identification Warning More Prominent
+- [x] Update Configuration Files section description to display in red text
+- [x] Add star icon to de-identification warning
+- [x] Test warning visibility and styling in intake form
+
+## Fix Hospital Name Capitalization
+- [x] Capitalize hospital name display at top of portal ("Munson" not "munson")
+- [x] Check where organization name is displayed in intake form header
+- [x] Test capitalization across all pages
