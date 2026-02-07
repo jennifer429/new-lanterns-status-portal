@@ -785,3 +785,9 @@
 - [x] Change all input/textarea/select backgrounds to white
 - [x] Change all input/textarea/select text color to black
 - [x] Test styling in browser to ensure readability
+
+## Fix "Question not found" Errors (L.6, L.3)
+- [x] Check which questions exist in questionnaireData.ts but not in questions table
+- [x] Identify why questions table is out of sync with questionnaireData
+- [x] Create script or migration to sync questions table with questionnaireData
+- [x] Test that all questions can be saved without errors
