@@ -748,6 +748,52 @@ export const intakeRouter = router({
     }),
 
   /**
+   * Get all uploaded files for an organization (for validation)
+   */
+  getAllUploadedFiles: publicProcedure
+    .input(
+      z.object({
+        organizationSlug: z.string(),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Get organization by slug
+      let org;
+      try {
+        [org] = await db
+          .select()
+          .from(organizations)
+          .where(eq(organizations.slug, input.organizationSlug))
+          .limit(1);
+      } catch (error) {
+        console.error('[intake] Database error when fetching organization:', error);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database error: " + (error instanceof Error ? error.message : String(error)) });
+      }
+
+      if (!org) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      }
+
+      // Validate user has access to this organization's client
+      if (ctx.user?.clientId && org.clientId !== ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this organization" });
+      }
+
+      // Get all uploaded files for this organization
+      const { intakeFileAttachments } = await import("../../drizzle/schema");
+      const files = await db
+        .select()
+        .from(intakeFileAttachments)
+        .where(eq(intakeFileAttachments.organizationId, org.id))
+        .orderBy(sql`${intakeFileAttachments.createdAt} DESC`);
+
+      return files;
+    }),
+
+  /**
    * Preview file content (first few lines for CSV/TXT)
    */
   previewFile: publicProcedure

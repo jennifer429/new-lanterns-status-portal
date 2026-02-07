@@ -853,3 +853,27 @@
 - [x] Show filename, file size, and download link for each uploaded file
 - [x] Add delete button for each uploaded file
 - [x] Test file display and delete functionality in browser
+
+## Fix Admin Dashboard File Counts
+- [x] Investigate why admin dashboard shows 0 files when 6 files are uploaded
+- [x] Fix the file count query or display logic on admin dashboard (changed to query intakeFileAttachments table)
+- [x] Test that file counts display correctly for all organizations
+
+## Add Progress Overview to Organization Portal
+- [x] Add progress overview card (like admin dashboard) to each organization's intake portal
+- [x] Show completion percentage, user count, and file count
+- [x] Display section-by-section progress with percentages
+- [x] Test progress card displays correctly on organization portal
+- [x] Add same progress overview card to organization landing page
+
+## Auto-Navigate to First Incomplete Section
+- [x] Detect the first section with < 100% completion
+- [x] Auto-navigate to that section when user opens their portal
+- [x] Test auto-navigation works correctly
+
+## Fix File Upload Validation for Save & Continue
+- [x] Create getAllUploadedFiles backend endpoint
+- [x] Update validation logic to check for uploaded files in database, not just responses state
+- [x] Remove red border from file upload fields when files are uploaded
+- [x] Allow Save & Continue to proceed when files are uploaded
+- [x] Test validation works correctly for file upload fields

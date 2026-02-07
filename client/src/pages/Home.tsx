@@ -6,10 +6,11 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { ClipboardList, FileText, CheckCircle2, Clock } from "lucide-react";
+import { ClipboardList, FileText, CheckCircle2, Clock, Circle } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useEffect, useState } from "react";
+import { questionnaireSections } from "@shared/questionnaireData";
 
 export default function Home() {
   const [, params] = useRoute("/org/:slug");
@@ -41,9 +42,30 @@ export default function Home() {
     goalDate: organization?.goalDate || "TBD",
   };
 
-  // Calculate intake completion (mock for now - will be real data)
-  const [intakeCompletion, setIntakeCompletion] = useState(35); // TODO: Calculate from actual questionnaire responses
-  const [filesUploaded, setFilesUploaded] = useState(3); // TODO: Get from actual file count
+  // Fetch existing responses to calculate real progress
+  const { data: existingResponses = [] } = trpc.intake.getResponses.useQuery(
+    { organizationSlug: orgSlug },
+    { enabled: !!orgSlug }
+  );
+
+  // Fetch file count from database
+  const { data: filesUploaded = 0 } = trpc.intake.getFileCount.useQuery(
+    { organizationSlug: orgSlug },
+    { enabled: !!orgSlug }
+  );
+
+  // Calculate section progress
+  const calculateSectionProgress = (section: typeof questionnaireSections[0]) => {
+    const answeredQuestions = section.questions.filter(q => 
+      existingResponses.some(r => r.questionId === q.id && r.response && r.response !== '')
+    ).length;
+    return Math.round((answeredQuestions / section.questions.length) * 100);
+  };
+
+  // Calculate overall completion
+  const totalQuestions = questionnaireSections.reduce((sum, s) => sum + s.questions.length, 0);
+  const answeredQuestions = existingResponses.filter(r => r.response && r.response !== '').length;
+  const intakeCompletion = Math.round((answeredQuestions / totalQuestions) * 100);
 
   if (orgLoading || progressLoading) {
     return (
@@ -87,15 +109,23 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Progress Overview Card */}
-        <Card className="border-primary/20 mb-6">
+        {/* Progress Overview Card - Detailed */}
+        <Card className="border-primary/20 mb-6 bg-gradient-to-br from-purple-900/20 to-purple-800/20">
           <CardHeader>
             <CardTitle>Your Progress</CardTitle>
             <CardDescription>Track your onboarding completion</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Intake Questionnaire Progress */}
-            <div>
+          <CardContent>
+            {/* Big Percentage Display */}
+            <div className="text-center mb-6 p-6 rounded-lg bg-gradient-to-br from-purple-900/40 to-purple-800/40 border border-purple-500/30">
+              <div className="text-6xl font-bold text-purple-300 mb-2">
+                {intakeCompletion}%
+              </div>
+              <div className="text-sm text-muted-foreground">Complete</div>
+            </div>
+
+            {/* Overall Progress Summary */}
+            <div className="mb-4 p-4 rounded-lg bg-muted/30">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <ClipboardList className="w-5 h-5 text-primary" />
@@ -105,20 +135,42 @@ export default function Home() {
               </div>
               <Progress value={intakeCompletion} className="h-2 mb-2" />
               <p className="text-xs text-muted-foreground">
-                {intakeCompletion === 100 ? "✓ Complete" : `${Math.round((100 - intakeCompletion) / 100 * 69)} questions remaining`}
+                {answeredQuestions}/{totalQuestions} questions • {questionnaireSections.filter(s => calculateSectionProgress(s) === 100).length} of {questionnaireSections.length} sections complete
               </p>
             </div>
 
+            {/* Section-by-Section Progress */}
+            <div className="space-y-2 mb-4">
+              <div className="text-sm font-medium mb-2">Section Progress</div>
+              {questionnaireSections.map((section) => {
+                const progress = calculateSectionProgress(section);
+                const isComplete = progress === 100;
+                return (
+                  <div key={section.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/20 hover:bg-muted/30 transition-colors">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      {isComplete ? (
+                        <CheckCircle2 className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                      ) : (
+                        <Circle className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                      )}
+                      <span className="text-sm truncate">{section.title}</span>
+                    </div>
+                    <span className="text-sm font-semibold text-primary ml-2">{progress}%</span>
+                  </div>
+                );
+              })}
+            </div>
+
             {/* Files Uploaded */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
+            <div className="pt-4 border-t border-border">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <FileText className="w-5 h-5 text-primary" />
                   <span className="font-medium">Files Uploaded</span>
                 </div>
-                <span className="text-sm font-bold text-primary">{filesUploaded}</span>
+                <span className="text-sm font-bold text-primary">{filesUploaded} files</span>
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground mt-1">
                 Documents and configurations
               </p>
             </div>
