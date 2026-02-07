@@ -961,8 +961,23 @@
 - [x] Test with multiple file uploads (radone-munson shows 100% correctly)
 
 ## Add Onboarding Feedback Rating System
-- [x] Create feedback database table (organizationId, rating 1-5, comments, submittedBy, submittedAt)
+- [x] Create feedback database table (organizationId, rating 1-5, comments, submittedBy, createdAt)
 - [x] Add feedback modal to intake completion flow (shows after clicking Complete)
 - [x] Create tRPC mutation to save feedback (intake.submitFeedback)
-- [ ] Create admin feedback page to display all ratings and comments
-- [ ] Test feedback submission end-to-end
+- [x] Test feedback submission end-to-end (5-star rating + comment saved successfully)
+- [ ] Add Feedback tab to existing Admin page to display all ratings and comments
+
+## Fix Progress Calculation Discrepancy Between Admin Dashboard and Organization Portal
+- [x] Compare progress calculation in admin dashboard (getMetrics) vs organization portal (Home.tsx)
+- [x] Query database to verify actual RadOne - Munson completion data (44 responses out of 51 questions)
+- [x] Identify why admin shows 58% but portal shows 100% (two different calculation logics)
+- [ ] Create single shared backend function for progress calculation
+- [ ] Update both admin dashboard and organization portal to use same function
+- [ ] Test both dashboards show same percentage
+
+## Delete RRMC and Boulder Organizations
+- [x] Find RRMC and Boulder organization IDs in database
+- [x] Delete associated users for both organizations (0 users deleted - no users were associated)
+- [x] Delete RRMC organization
+- [x] Delete Boulder organization
+- [x] Verify both organizations removed from admin dashboard (only Munson, JCRHC, Baycare remain)

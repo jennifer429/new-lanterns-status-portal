@@ -2,6 +2,7 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { organizations, sectionProgress, taskCompletion, activityFeed, users, intakeResponses, questions, responses, intakeFileAttachments } from "../../drizzle/schema";
+import { questionnaireSections } from "../../shared/questionnaireData";
 import { eq, and, desc, count, sql } from "drizzle-orm";
 // ClickUp and Linear integrations removed for simplification
 
@@ -275,39 +276,32 @@ export const organizationsRouter = router({
           .limit(1);
         const lastLoginAt = lastLoginResult?.lastLoginAt || null;
 
-        // Calculate intake completion percentage using new schema
-        // Get total questions from database
-        const [totalQuestionsResult] = await db
-          .select({ count: sql<number>`COUNT(*)` })
-          .from(questions);
-        const totalQuestions = totalQuestionsResult?.count || 0;
-
-        // Count completed responses (non-empty)
-        const [completedQuestionsResult] = await db
-          .select({ count: sql<number>`COUNT(*)` })
-          .from(responses)
-          .where(
-            and(
-              eq(responses.organizationId, org.id),
-              sql`${responses.response} IS NOT NULL AND ${responses.response} != ''`
-            )
-          );
-        const completedQuestions = completedQuestionsResult?.count || 0;
-
-        const completionPercentage = totalQuestions > 0
-          ? Math.round((completedQuestions / totalQuestions) * 100)
-          : 0;
-
-        // Get section-by-section progress using new schema
-        const allQuestions = await db.select().from(questions);
+        // Get section-by-section progress using questionnaireSections (same source as Home.tsx)
+        // We'll calculate overall completion from section stats to avoid double-counting
+        const allQuestions = questionnaireSections.flatMap(section =>
+          section.questions.map(q => ({
+            id: q.id,
+            sectionTitle: section.title,
+            questionText: q.text
+          }))
+        );
         const allResponses = await db
           .select()
           .from(responses)
           .where(eq(responses.organizationId, org.id));
 
-        // Build response map for quick lookup
+        // Get file uploads for this organization
+        const allFiles = await db
+          .select()
+          .from(intakeFileAttachments)
+          .where(eq(intakeFileAttachments.organizationId, org.id));
+
+        // Build response map and file map for quick lookup
         const responseMap = new Map();
         allResponses.forEach(r => responseMap.set(r.questionId, r));
+        
+        const fileMap = new Map();
+        allFiles.forEach(f => fileMap.set(f.questionId, f));
 
         // Group by section
         const sectionStats: Record<string, { total: number; completed: number }> = {};
@@ -319,11 +313,25 @@ export const organizationsRouter = router({
           
           sectionStats[q.sectionTitle].total++;
           
+          // Check if question has a text response OR uploaded file
           const resp = responseMap.get(q.id);
-          if (resp && resp.response && resp.response !== '') {
+          const hasResponse = resp && resp.response && resp.response !== '';
+          const hasFile = fileMap.has(q.id);
+          
+          if (hasResponse || hasFile) {
             sectionStats[q.sectionTitle].completed++;
           }
         });
+
+        // Calculate overall completion percentage from section stats
+        const totalQuestions = allQuestions.length;
+        const completedQuestions = Object.values(sectionStats).reduce(
+          (sum, section) => sum + section.completed,
+          0
+        );
+        const completionPercentage = totalQuestions > 0
+          ? Math.round((completedQuestions / totalQuestions) * 100)
+          : 0;
 
         // Get file uploads from intakeFileAttachments table
         const uploadedFiles = await db
