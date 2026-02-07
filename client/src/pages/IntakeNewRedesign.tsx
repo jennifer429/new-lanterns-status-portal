@@ -719,7 +719,10 @@ export default function IntakeNewRedesign() {
                     if (!isLastSection) {
                       setCurrentSection(questionnaireSections[currentSectionIndex + 1].id);
                     } else {
-                      setLocation(`/org/${slug}/intake`);
+                      // Show completion message
+                      alert('✅ Intake Complete!\n\nThank you for completing the onboarding questionnaire. Your responses have been saved and our team will review them shortly.');
+                      // Redirect to organization dashboard
+                      setLocation(`/org/${slug}`);
                     }
                   }}
                 >
