@@ -192,13 +192,7 @@ export const intakeSections: IntakeSection[] = [
         helpText: 'Discuss how your organization will support issues during your scheduled go live to ensure production data is correctly configured if not scheduling the testing of production data',
         required: true
       },
-      {
-        id: 'go_live_date',
-        question: 'Requested Go live date - MM/DD/YY',
-        type: 'date',
-        helpText: 'Speak with your vendors to confirm they can meet your production timeline for HL7 and DICOM routing. New Lantern recommends that you send production HL7 and DICOM data to New Lantern for a minimum of 3 consecutive days in real time and start no later than 3-4 weeks before go-live',
-        required: true
-      },
+
       {
         id: 'expected_volume',
         question: 'What is the expected volume of images ready each month?',

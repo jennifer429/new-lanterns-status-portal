@@ -1138,3 +1138,7 @@
 - [x] Add question for OBR:27.1 (Quantity/Timing) values in ORU messages
 - [x] Update DICOM Data Validation section title to "HL7 Data Validation"
 - [x] Test new HL7 questions in Data Validation section (all three questions displaying correctly with helpful placeholders)
+
+## Remove Production Go-Live Date Question
+- [x] Remove "Requested Go live date - MM/DD/YY" question from Data and Integration section
+- [x] Question count reduced from 46 to 45 questions
