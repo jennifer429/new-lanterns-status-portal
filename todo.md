@@ -902,3 +902,10 @@
 - [x] Add download buttons for each file
 - [x] Redesign page to match admin dashboard card layout
 - [x] Test file list functionality in browser
+
+## Investigate RRMC File Count Discrepancy
+- [x] Query database to check RRMC file uploads (0 files - correct)
+- [x] Check if files are uploaded but not counted correctly (files are correct, 20% is from text responses)
+- [x] Investigate why overall progress shows 2% when Configuration Files shows 20%
+- [x] Verify progress calculation logic is consistent across all sections
+- [x] Fix progress calculation to include uploaded files for file upload questions (Home.tsx line 52-89)

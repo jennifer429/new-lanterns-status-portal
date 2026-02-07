@@ -49,22 +49,39 @@ export default function Home() {
   
   const filesUploaded = allFiles.length;
 
-  // Calculate overall completion
+  // Calculate overall completion (including uploaded files)
   const totalQuestions = questionnaireSections.reduce((sum, s) => sum + s.questions.length, 0);
-  const answeredQuestions = existingResponses.filter(r => r.response && r.response !== '').length;
+  
+  // Count answered questions: check both responses table AND uploaded files
+  const answeredQuestions = questionnaireSections.reduce((count, section) => {
+    return count + section.questions.filter(q => {
+      // Check if question has a text response
+      const hasResponse = existingResponses.some(r => r.questionId === q.id && r.response && r.response !== '');
+      // Check if question has uploaded files (for file upload questions)
+      const hasUploadedFile = allFiles.some(f => f.questionId === q.id);
+      return hasResponse || hasUploadedFile;
+    }).length;
+  }, 0);
+  
   const intakeCompletion = Math.round((answeredQuestions / totalQuestions) * 100);
+  
+  // Calculate completed sections (100% complete)
   const completedSections = questionnaireSections.filter(s => {
-    const sectionAnswered = s.questions.filter(q => 
-      existingResponses.some(r => r.questionId === q.id && r.response && r.response !== '')
-    ).length;
+    const sectionAnswered = s.questions.filter(q => {
+      const hasResponse = existingResponses.some(r => r.questionId === q.id && r.response && r.response !== '');
+      const hasUploadedFile = allFiles.some(f => f.questionId === q.id);
+      return hasResponse || hasUploadedFile;
+    }).length;
     return Math.round((sectionAnswered / s.questions.length) * 100) === 100;
   }).length;
 
-  // Calculate section progress
+  // Calculate section progress (including uploaded files)
   const sectionProgress = questionnaireSections.map(section => {
-    const sectionAnswered = section.questions.filter(q => 
-      existingResponses.some(r => r.questionId === q.id && r.response && r.response !== '')
-    ).length;
+    const sectionAnswered = section.questions.filter(q => {
+      const hasResponse = existingResponses.some(r => r.questionId === q.id && r.response && r.response !== '');
+      const hasUploadedFile = allFiles.some(f => f.questionId === q.id);
+      return hasResponse || hasUploadedFile;
+    }).length;
     return {
       name: section.title,
       progress: Math.round((sectionAnswered / section.questions.length) * 100)
