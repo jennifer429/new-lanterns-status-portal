@@ -674,6 +674,9 @@ export default function IntakeNewRedesign() {
               {/* Section Header */}
               <div className="mb-6">
                 <h2 className="text-2xl font-bold mb-2">{currentSectionData?.title}</h2>
+                {currentSectionData?.description && (
+                  <p className="text-sm text-muted-foreground mb-2">{currentSectionData.description}</p>
+                )}
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <span>
                     {currentSectionData?.questions.filter(q => responses[q.id]).length || 0}/{currentSectionData?.questions.length} questions answered ({calculateSectionProgress(currentSectionData!)}%)

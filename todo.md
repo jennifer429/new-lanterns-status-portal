@@ -1055,3 +1055,39 @@
 - [x] Change background from dark purple to white
 - [x] Ensure text is dark and readable against white background
 - [x] Test readability across all question types
+
+## Intake Form Question Updates (Boss Feedback) - ALL COMPLETE ✓
+
+### 1. Organization Information Section
+- [x] Add clarification to sites/locations question: "Main goal is to determine how many VPN tunnels Rad1 needs to build"
+- [x] Simplify or split out institution groups section (not currently used)
+- [x] Change testing timeline questions from specific dates to duration-based
+- [x] Add guidance text about Rad1 guiding timelines, not just accepting client dates
+
+### 2. Overview & Architecture Section
+- [x] Add "(HL7)" next to "Do you have an integration engine"
+- [x] Add "(DICOM)" next to "Do you have a router"
+- [x] Add "(VNA)" or tooltip to "Current archive system" indicating this is often their PACS
+- [x] Add examples to "Systems that produce DICOM SR" (e.g., dosage reports)
+
+### 3. Data & Integration Section
+- [x] Remove "PET" from expected modalities list
+- [x] Change "C" option to "Query Retrieve" in comparison images question
+- [x] Clarify text sheets question - they come automatically with images, not technically SR
+- [x] Note that prior reports are SR (text), text sheets are DICOM PDF or images
+
+### 4. Configuration Files Section
+- [x] Add reminder to de-identify files before uploading
+
+### 5. Connectivity Section
+- [x] Clarify DICOM requires: IP address, AE title, and port
+- [x] Clarify HL7 requires: IP and port
+- [x] Note that DICOM tagging is done through Silverback, not by client sites
+- [x] Leave DICOM data validation form alone (work in progress, technically HL7)
+
+## Progress Synchronization Issue
+- [x] Investigate why intake form shows 16% but admin dashboard shows 0%
+- [x] Check getMetrics query in organizations router
+- [x] Check progress calculation logic in both components
+- [x] Fix synchronization between intake form progress and dashboard display (changed from `responses` to `intakeResponses` table)
+- [x] Test that both show same progress after fix (Munson now shows 26% on both dashboard and intake form)

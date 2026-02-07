@@ -296,8 +296,8 @@ export const organizationsRouter = router({
         );
         const allResponses = await db
           .select()
-          .from(responses)
-          .where(eq(responses.organizationId, org.id));
+          .from(intakeResponses)
+          .where(eq(intakeResponses.organizationId, org.id));
 
         // Get file uploads for this organization
         const allFiles = await db
