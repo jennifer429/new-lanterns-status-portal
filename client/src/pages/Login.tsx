@@ -49,7 +49,7 @@ export default function Login() {
     >
       <Card className="w-full max-w-md border-purple-500/20 bg-black">
         <CardHeader className="space-y-6 pb-8">
-          <div className="flex flex-col items-center gap-1">
+          <div className="flex flex-col items-center gap-0.5">
             {/* New Lantern Logo */}
             <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-60 w-60 object-contain" />
             

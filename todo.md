@@ -722,3 +722,6 @@
 
 ## Fix Login Page Spacing
 - [x] Reduce gap between logo and "Customer Implementation Portal" heading
+
+## Further Reduce Login Page Spacing
+- [x] Reduce gap between logo and heading by 50% (from 4px to 2px)
