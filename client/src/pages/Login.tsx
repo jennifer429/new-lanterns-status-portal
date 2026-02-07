@@ -24,8 +24,7 @@ export default function Login() {
       if (data.role === "admin") {
         setLocation("/admin");
       } else if (data.orgSlug) {
-        // Regular users go directly to their intake questionnaire
-        setLocation(`/org/${data.orgSlug}/intake`);
+        setLocation(`/org/${data.orgSlug}`);
       } else {
         setLocation("/");
       }
