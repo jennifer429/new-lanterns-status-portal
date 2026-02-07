@@ -131,6 +131,7 @@ export default function IntakeNewRedesign() {
   const [feedbackRating, setFeedbackRating] = useState(0);
   const [feedbackComments, setFeedbackComments] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const hasNavigatedRef = useRef(false); // Track if we've already auto-navigated
   const { user } = useAuth();
   const logoutMutation = trpc.auth.logout.useMutation();
 
@@ -187,9 +188,10 @@ export default function IntakeNewRedesign() {
     }
   }, [existingResponses]);
 
-  // Auto-navigate to first incomplete section on load
+  // Auto-navigate to first incomplete section ONLY on first load
   useEffect(() => {
-    if (Object.keys(responses).length === 0) return; // Wait for responses to load
+    // Skip if already navigated or responses not loaded yet
+    if (hasNavigatedRef.current || Object.keys(responses).length === 0) return;
     
     // Find first section that is not 100% complete
     const firstIncompleteSection = questionnaireSections.find(section => {
@@ -200,6 +202,9 @@ export default function IntakeNewRedesign() {
     if (firstIncompleteSection) {
       setCurrentSection(firstIncompleteSection.id);
     }
+    
+    // Mark that we've done the initial navigation
+    hasNavigatedRef.current = true;
   }, [responses]); // Run when responses are loaded
 
   // Save mutation

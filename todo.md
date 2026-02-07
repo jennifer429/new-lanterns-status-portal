@@ -1037,3 +1037,15 @@
 - [x] Move PHI disclaimer from bottom to top of client portal pages (below header)
 - [x] Keep PHI disclaimer at bottom of login page (no header on login)
 - [x] Test disclaimer visibility at top of all logged-in pages
+
+## Fix New Lantern Logo on Admin Dashboard
+- [x] Check Admin.tsx for logo image path and sizing
+- [x] Verify logo file exists at correct path
+- [x] Fix logo display issue (changed from h-10 w-10 to h-12 for proper sizing)
+- [x] Test logo across all pages
+
+## Flexible Question Navigation
+- [x] Allow users to skip around and answer questions in any order
+- [x] Only auto-redirect to first unanswered question on initial login
+- [x] After first visit, users can navigate freely between all questions
+- [ ] Test navigation behavior (first login vs subsequent visits)
