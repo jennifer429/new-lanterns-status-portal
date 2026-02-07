@@ -277,9 +277,14 @@ export default function IntakeNewRedesign() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div 
+      className="min-h-screen flex"
+      style={{
+        background: "linear-gradient(135deg, #1a0b2e 0%, #2d1b4e 50%, #1a0b2e 100%)"
+      }}
+    >
       {/* Left Sidebar */}
-      <div className="w-80 bg-card border-r flex flex-col">
+      <div className="w-80 bg-black border-r border-purple-500/20 flex flex-col">
         {/* Logo */}
         <div className="p-6 border-b">
           <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-10" />
@@ -320,9 +325,9 @@ export default function IntakeNewRedesign() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col bg-black">
         {/* Header */}
-        <header className="border-b bg-card/50 backdrop-blur-sm">
+        <header className="border-b border-purple-500/20 bg-black">
           <div className="px-8 py-4 flex items-center justify-between">
             <h1 className="text-xl font-bold">Radiology One - {slug}</h1>
             <div className="flex items-center gap-2">

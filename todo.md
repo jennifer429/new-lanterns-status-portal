@@ -791,3 +791,10 @@
 - [x] Identify why questions table is out of sync with questionnaireData
 - [x] Create script or migration to sync questions table with questionnaireData
 - [x] Test that all questions can be saved without errors
+
+## Update Intake Page Background Styling
+- [x] Change main page background to purple (match login page)
+- [x] Change sidebar to black background
+- [x] Change main content area to black background
+- [x] Change header to black background
+- [x] Test styling in browser
