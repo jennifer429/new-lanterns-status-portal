@@ -805,3 +805,18 @@
 - [x] Verify organization exists in database
 - [x] Add detailed error logging to diagnose future occurrences
 - [x] Test query works without errors
+
+## Fix Profile Button Display
+- [ ] Change top-right profile button from showing initials to showing full user name
+- [ ] Test in browser to verify user name displays correctly
+
+## Add High-Level Overview to Intake Page
+- [ ] Add overall completion percentage display (across all sections)
+- [ ] Add total files uploaded count display
+- [ ] Position overview prominently at top of page
+- [ ] Test in browser to verify calculations are correct
+
+## Change Content Area Background to Purple
+- [x] Change main content area from black to purple/transparent
+- [x] Change form card background to match purple theme
+- [x] Test styling to ensure readability with white input fields

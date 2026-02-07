@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -53,6 +53,14 @@ export default function IntakeNewRedesign() {
     { organizationSlug: slug || "" },
     { enabled: !!slug }
   );
+
+  // Calculate file count from responses
+  const fileCount = useMemo(() => {
+    const fileQuestions = questionnaireSections
+      .flatMap(s => s.questions)
+      .filter(q => q.type === 'upload' || q.type === 'upload-download');
+    return fileQuestions.filter(q => responses[q.id]).length;
+  }, [responses]);
 
   // Load existing responses
   useEffect(() => {
@@ -325,9 +333,9 @@ export default function IntakeNewRedesign() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col bg-black">
+      <div className="flex-1 flex flex-col bg-transparent">
         {/* Header */}
-        <header className="border-b border-purple-500/20 bg-black">
+        <header className="border-b border-purple-500/20 bg-black/40 backdrop-blur-sm">
           <div className="px-8 py-4 flex items-center justify-between">
             <h1 className="text-xl font-bold">Radiology One - {slug}</h1>
             <div className="flex items-center gap-2">
@@ -342,9 +350,9 @@ export default function IntakeNewRedesign() {
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" className="rounded-full h-10 w-10">
-                    <div className="text-sm font-semibold">
-                      {user?.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+                  <Button variant="outline" className="h-10 px-4">
+                    <div className="text-sm font-medium">
+                      {user?.name || 'User'}
                     </div>
                   </Button>
                 </DropdownMenuTrigger>
@@ -367,9 +375,40 @@ export default function IntakeNewRedesign() {
           </div>
         </header>
 
+        {/* Overall Stats Banner */}
+        <div className="bg-gradient-to-r from-purple-900/20 to-purple-800/20 border-b border-purple-500/20 px-8 py-4">
+          <div className="max-w-6xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-8">
+              <div>
+                <div className="text-sm text-muted-foreground mb-1">Overall Progress</div>
+                <div className="flex items-center gap-3">
+                  <Progress 
+                    value={(() => {
+                      const totalQuestions = questionnaireSections.reduce((sum, s) => sum + s.questions.length, 0);
+                      const answeredQuestions = Object.keys(responses).length;
+                      return Math.round((answeredQuestions / totalQuestions) * 100);
+                    })()} 
+                    className="w-48 h-2"
+                  />
+                  <span className="text-lg font-bold">
+                    {Object.keys(responses).length}/{questionnaireSections.reduce((sum, s) => sum + s.questions.length, 0)} questions
+                  </span>
+                </div>
+              </div>
+              <div className="h-12 w-px bg-border" />
+              <div>
+                <div className="text-sm text-muted-foreground mb-1">Files Uploaded</div>
+                <div className="text-lg font-bold">
+                  {fileCount} files
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Section Content */}
         <div className="flex-1 overflow-y-auto p-8">
-          <Card className="max-w-6xl mx-auto">
+          <Card className="max-w-6xl mx-auto bg-black/40 backdrop-blur-sm border-purple-500/20">
             <div className="p-8">
               {/* Section Header */}
               <div className="mb-6">
