@@ -2,10 +2,42 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { intakeResponses, organizations, questions, questionOptions, responses } from "../../drizzle/schema";
+import { intakeResponses, intakeFileAttachments, organizations, questions, questionOptions, responses } from "../../drizzle/schema";
 import { eq, and, sql } from "drizzle-orm";
 
 export const intakeRouter = router({
+  /**
+   * Get file count for an organization
+   */
+  getFileCount: publicProcedure
+    .input(
+      z.object({
+        organizationSlug: z.string(),
+      })
+    )
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Get organization by slug
+      const [org] = await db
+        .select()
+        .from(organizations)
+        .where(eq(organizations.slug, input.organizationSlug))
+        .limit(1);
+
+      if (!org) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      }
+
+      // Count files for this organization
+      const result = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(intakeFileAttachments)
+        .where(eq(intakeFileAttachments.organizationId, org.id));
+
+      return result[0]?.count || 0;
+    }),
   /**
    * Get all intake responses for an organization (with org name included)
    */

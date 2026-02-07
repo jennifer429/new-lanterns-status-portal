@@ -54,13 +54,11 @@ export default function IntakeNewRedesign() {
     { enabled: !!slug }
   );
 
-  // Calculate file count from responses
-  const fileCount = useMemo(() => {
-    const fileQuestions = questionnaireSections
-      .flatMap(s => s.questions)
-      .filter(q => q.type === 'upload' || q.type === 'upload-download');
-    return fileQuestions.filter(q => responses[q.id]).length;
-  }, [responses]);
+  // Fetch file count from database
+  const { data: fileCount = 0 } = trpc.intake.getFileCount.useQuery(
+    { organizationSlug: slug || "" },
+    { enabled: !!slug }
+  );
 
   // Load existing responses
   useEffect(() => {

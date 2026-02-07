@@ -820,3 +820,9 @@
 - [x] Change main content area from black to purple/transparent
 - [x] Change form card background to match purple theme
 - [x] Test styling to ensure readability with white input fields
+
+## Fix File Count Not Updating After Upload
+- [x] Investigate why file uploads don't update the file count display
+- [x] Create backend endpoint to fetch actual uploaded files from intakeFileAttachments table
+- [x] Update frontend to query real file count from database instead of calculating from responses
+- [x] Test file upload and verify count increments correctly
