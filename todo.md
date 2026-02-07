@@ -981,3 +981,38 @@
 - [x] Delete RRMC organization
 - [x] Delete Boulder organization
 - [x] Verify both organizations removed from admin dashboard (only Munson, JCRHC, Baycare remain)
+
+## Clear All Data for Fresh Start
+- [x] Delete all responses from all organizations
+- [x] Delete all file attachments from all organizations
+- [x] Delete all feedback submissions
+- [x] All data cleared - ready for new features
+
+## Build Update Organizations Tab
+- [ ] Check current Update Organizations tab implementation in Admin.tsx
+- [ ] Design organization management UI (list, create, edit, delete)
+- [ ] Create backend API endpoints for organization CRUD operations
+- [ ] Implement create organization form
+- [ ] Implement edit organization functionality
+- [ ] Implement delete organization with confirmation
+- [ ] Test complete organization management flow
+
+## Build Update Organizations Tab
+- [x] Check current Update Organizations tab implementation in Admin.tsx (placeholder text)
+- [ ] Display list of all current organizations with edit buttons
+- [ ] Add "Create New Organization" button and form
+- [ ] Implement rename organization functionality (updates org name everywhere)
+- [ ] Create backend API endpoints (create, update organizations)
+- [ ] Test organization creation and rename flows
+
+## Update Organizations Tab
+- [x] Design organization management UI with list, create, and rename functionality
+- [x] Add tRPC endpoints for organizations.getAll and organizations.update
+- [x] Build organization list showing name, slug, and rename button
+- [x] Build create organization dialog with name and slug inputs
+- [x] Build rename organization dialog
+- [x] Add query invalidation to update Dashboard tab when organizations are renamed
+- [x] Test create organization functionality
+- [x] Test rename organization functionality
+- [x] Verify organization names update across all tabs (Dashboard, Update Organizations)
+- [x] Clean up organization names (removed "RadOne -" prefix from Baycare and JCRHC)

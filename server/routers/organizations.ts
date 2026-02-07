@@ -361,6 +361,36 @@ export const organizationsRouter = router({
   }),
 
   /**
+   * Get all organizations (for admin management)
+   */
+  getAll: publicProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+    const allOrgs = await db.select().from(organizations).orderBy(organizations.name);
+    return allOrgs;
+  }),
+
+  /**
+   * Update organization name (for admin management)
+   */
+  update: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        name: z.string().min(1),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      await db
+        .update(organizations)
+        .set({ name: input.name })
+        .where(eq(organizations.id, parseInt(input.id)));
+      return { success: true };
+    }),
+
+  /**
    * Post a reply from hospital to Linear issue
    */
   postReply: publicProcedure

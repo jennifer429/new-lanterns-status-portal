@@ -12,6 +12,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserManagement } from "@/components/UserManagement";
 import { FilesManagement } from "@/components/FilesManagement";
+import { OrganizationManagement } from "@/components/OrganizationManagement";
 import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
@@ -301,19 +302,7 @@ export default function Admin() {
           </TabsContent>
 
           <TabsContent value="update-organizations">
-            <Card className="border-purple-500/20 bg-black/40 backdrop-blur-xl">
-              <CardHeader>
-                <CardTitle className="text-white text-xl">Update Organizations</CardTitle>
-                <CardDescription className="text-gray-300">
-                  Add, edit, or remove client organizations
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12 text-gray-400">
-                  Organization management interface coming soon
-                </div>
-              </CardContent>
-            </Card>
+            <OrganizationManagement />
           </TabsContent>
 
           <TabsContent value="update-questions">
