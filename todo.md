@@ -742,3 +742,21 @@
 - [x] Create dropdown menu with: Return to Dashboard, Import, Export, Sign Out
 - [x] Wire up all menu actions
 - [x] Change "Back to Overview" button to "Back to Dashboard"
+
+## Complete Intake Page Redesign
+- [ ] Add left sidebar with section navigation (icons, names, checkmarks)
+- [ ] Change all input fields to white background
+- [ ] Implement two-column layout for questions
+- [ ] Move Export button to top-right header (visible, not in dropdown)
+- [ ] Keep profile dropdown with Import and Sign Out
+- [ ] Change bottom buttons to "Back to Overview" and "Save & Continue"
+- [ ] Match overall styling to reference design
+
+## Complete Intake Page Redesign
+- [x] Add left sidebar with section navigation (icons, names, checkmarks)
+- [x] Change all input fields to white background
+- [x] Implement two-column layout for questions
+- [x] Move Export button to top-right header (visible, not in dropdown)
+- [x] Keep profile dropdown with Return to Dashboard and Sign Out
+- [x] Change bottom buttons to "Back to Overview" and "Save & Continue"
+- [x] Match overall styling to reference design

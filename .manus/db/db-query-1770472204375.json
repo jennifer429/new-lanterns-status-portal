@@ -1,0 +1,30 @@
+{
+  "query": "SELECT slug, name FROM organizations;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT slug, name FROM organizations;",
+  "rows": [
+    {
+      "slug": "radone-munson",
+      "name": "RadOne - Munson"
+    },
+    {
+      "slug": "radone-jcrhc",
+      "name": "RadOne - JCRHC"
+    },
+    {
+      "slug": "radone-baycare",
+      "name": "RadOne - Baycare"
+    },
+    {
+      "slug": "srv-rrmc",
+      "name": "RRMC"
+    },
+    {
+      "slug": "srv-boulder",
+      "name": "Boulder"
+    }
+  ],
+  "messages": [],
+  "stdout": "slug\tname\nradone-munson\tRadOne - Munson\nradone-jcrhc\tRadOne - JCRHC\nradone-baycare\tRadOne - Baycare\nsrv-rrmc\tRRMC\nsrv-boulder\tBoulder\n",
+  "stderr": "",
+  "execution_time_ms": 184
+}
