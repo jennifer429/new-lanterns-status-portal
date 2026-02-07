@@ -719,3 +719,6 @@
 
 ## Increase Login Logo Size
 - [x] Make logo 50% bigger (from 160px to 240px)
+
+## Fix Login Page Spacing
+- [x] Reduce gap between logo and "Customer Implementation Portal" heading
