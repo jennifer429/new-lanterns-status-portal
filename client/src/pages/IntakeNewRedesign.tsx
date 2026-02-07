@@ -175,7 +175,7 @@ export default function IntakeNewRedesign() {
             value={value || ''}
             onChange={(e) => setResponses(prev => ({ ...prev, [question.id]: e.target.value }))}
             placeholder={question.placeholder}
-            className="bg-white text-black"
+            className="!bg-white !text-black"
           />
         );
 
@@ -185,7 +185,7 @@ export default function IntakeNewRedesign() {
             value={value || ''}
             onChange={(e) => setResponses(prev => ({ ...prev, [question.id]: e.target.value }))}
             placeholder={question.placeholder}
-            className="bg-white text-black min-h-[100px]"
+            className="!bg-white !text-black min-h-[100px]"
           />
         );
 
@@ -195,7 +195,7 @@ export default function IntakeNewRedesign() {
             value={value || ''}
             onValueChange={(val) => setResponses(prev => ({ ...prev, [question.id]: val }))}
           >
-            <SelectTrigger className="bg-white text-black">
+            <SelectTrigger className="!bg-white !text-black">
               <SelectValue placeholder="Select an option" />
             </SelectTrigger>
             <SelectContent>
@@ -212,7 +212,7 @@ export default function IntakeNewRedesign() {
             type="date"
             value={value || ''}
             onChange={(e) => setResponses(prev => ({ ...prev, [question.id]: e.target.value }))}
-            className="bg-white text-black"
+            className="!bg-white !text-black"
           />
         );
 
@@ -247,7 +247,7 @@ export default function IntakeNewRedesign() {
                 if (file) handleFileUpload(question.id, file);
               }}
               disabled={isUploading}
-              className="bg-white text-black"
+              className="!bg-white !text-black"
             />
             {isUploading && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">

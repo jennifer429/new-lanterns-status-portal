@@ -780,3 +780,8 @@
 - [x] Fixed base64 encoding issue - stripped data URL prefix before sending to server
 - [x] Ran database migration successfully
 - [x] Tested file upload - working correctly, files saved to S3 and database
+
+## Fix Input Field Styling in Redesigned Intake Page
+- [x] Change all input/textarea/select backgrounds to white
+- [x] Change all input/textarea/select text color to black
+- [x] Test styling in browser to ensure readability
