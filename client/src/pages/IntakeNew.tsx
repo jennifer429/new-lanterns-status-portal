@@ -756,18 +756,25 @@ export default function IntakeNew() {
             )}
           </CardHeader>
           <CardContent className="space-y-6">
-            {currentSectionData?.questions.map((question) => (
-              <div key={question.id} className="space-y-2">
-                <Label htmlFor={question.id} className="text-base font-medium">
-                  {question.text}
-                  <span className="text-red-500 ml-1">*</span>
-                </Label>
-                {question.notes && (
-                  <p className="text-sm text-muted-foreground">{question.notes}</p>
-                )}
-                {renderQuestion(question)}
-              </div>
-            ))}
+            {currentSectionData?.questions.map((question) => {
+              const value = responses[question.id];
+              const isFilled = Array.isArray(value) ? value.length > 0 : (typeof value === 'string' ? value.trim().length > 0 : value !== undefined && value !== null && value !== '');
+              
+              return (
+                <div key={question.id} className="space-y-2">
+                  <Label htmlFor={question.id} className="text-base font-medium">
+                    {question.text}
+                    {!isFilled && <span className="text-red-500 ml-1">*</span>}
+                  </Label>
+                  {question.notes && (
+                    <p className="text-sm text-muted-foreground">{question.notes}</p>
+                  )}
+                  <div className={isFilled ? '[&_input]:border-primary [&_textarea]:border-primary [&_button]:border-primary' : '[&_input]:border-white/40 [&_textarea]:border-white/40 [&_button]:border-white/40'}>
+                    {renderQuestion(question)}
+                  </div>
+                </div>
+              );
+            })}
           </CardContent>
         </Card>
 
