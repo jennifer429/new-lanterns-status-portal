@@ -883,3 +883,15 @@
 - [x] Check if uploadedFilesMap is being populated correctly (issue: getAllUploadedFiles query not invalidated after upload)
 - [x] Add query invalidation for getAllUploadedFiles and getFileCount after upload/delete
 - [x] Test fix to ensure red borders disappear when files are uploaded
+
+## Fix Return to Dashboard Navigation
+- [ ] Find the Return to Dashboard button in the user dropdown menu
+- [ ] Update navigation to go to organization landing page (/org/:slug) instead of old dashboard
+- [ ] Test that clicking Return to Dashboard takes user to correct page
+
+## Update Welcome Message Styling
+- [x] Update welcome message text to match login page capitalization
+- [x] Improve formatting and styling to be more professional
+- [x] Simplify page to fit everything on single screen without scrolling
+- [x] Remove excessive content and make it more concise
+- [x] Test the simplified page in browser
