@@ -1091,3 +1091,8 @@
 - [x] Check progress calculation logic in both components
 - [x] Fix synchronization between intake form progress and dashboard display (changed from `responses` to `intakeResponses` table)
 - [x] Test that both show same progress after fix (Munson now shows 26% on both dashboard and intake form)
+
+## Remove Duplicate Mammography Question
+- [x] Find and remove Mammography yes/no question (already exists as checkbox in Expected modalities)
+- [x] Verify Mammography checkbox still works in Expected modalities list
+- [x] Test intake form to ensure no duplicate questions (reduced from 50 to 48 total questions)
