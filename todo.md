@@ -1125,3 +1125,9 @@
 - [x] Set role='admin' for all @newlantern.ai accounts
 - [x] Test auto-creation flow with @newlantern.ai email (implementation verified, will auto-assign admin role on first login)
 - [x] Ensure regular users (non-@newlantern.ai) continue normal flow
+
+## Replace Timeline Questions with Single Open-Ended Field
+- [x] Remove three separate timeline questions (Integration testing duration, User acceptance duration, Production validation timeline)
+- [x] Add single textarea question: "Please share any timeline requirements or expectations you have around implementation, testing, and going live so we can coordinate resources"
+- [x] Test new timeline question in Organization Information section
+- [x] Update placeholder with examples about system deprecation and contractual deadlines
