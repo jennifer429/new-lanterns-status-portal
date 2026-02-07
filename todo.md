@@ -712,3 +712,7 @@
 
 ## Fix Logo on Organization Portal Page
 - [x] Replace building/document icon with actual New Lantern logo on organization portal page header
+
+## Login Page Styling Updates
+- [x] Make New Lantern logo even bigger on login page
+- [x] Change login card background to pure black

@@ -47,11 +47,11 @@ export default function Login() {
         background: "linear-gradient(135deg, #1a0b2e 0%, #2d1b4e 50%, #1a0b2e 100%)"
       }}
     >
-      <Card className="w-full max-w-md border-purple-500/20 bg-black/40 backdrop-blur-xl">
+      <Card className="w-full max-w-md border-purple-500/20 bg-black">
         <CardHeader className="space-y-6 pb-8">
           <div className="flex flex-col items-center gap-3">
             {/* New Lantern Logo */}
-            <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-32 w-32 object-contain" />
+            <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-40 w-40 object-contain" />
             
             {/* Main Heading */}
             <h1 className="text-4xl font-bold text-center leading-tight">
