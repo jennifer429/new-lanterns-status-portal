@@ -117,7 +117,7 @@ export const questionnaireSections: Section[] = [
         id: 'E.2', 
         text: 'DICOM Endpoints - Test/Proof Environment (IP address, Port, AE title for each endpoint)', 
         type: 'textarea', 
-        placeholder: 'Example:\n- PACS Test: IP 10.1.2.4, Port 104, AE Title: PACS_TEST\n- CT Scanner Test: IP 10.1.2.11, Port 104, AE Title: CT1_TEST\n- Modality Test: IP 10.1.2.12, Port 104, AE Title: MOD_TEST' 
+        placeholder: 'Example:\n- PACS Test: IP 10.1.2.4, Port 104, AE Title: PACS_TEST\n- CT Scanner Test: IP 10.1.2.11, Port 104, AE Title: CT1_TEST\n\nIf you do not have a test environment, write: Not applicable' 
       },
       { 
         id: 'E.2.1', 
@@ -129,7 +129,7 @@ export const questionnaireSections: Section[] = [
         id: 'E.3', 
         text: 'HL7 Orders - Test/Proof Environment (IP address and Port)', 
         type: 'textarea', 
-        placeholder: 'Example:\n- RIS Test: IP 10.1.3.10, Port 2575' 
+        placeholder: 'Example:\n- RIS Test: IP 10.1.3.10, Port 2575\n\nIf you do not have a test environment, write: Not applicable' 
       },
       { 
         id: 'E.3.1', 
@@ -141,7 +141,7 @@ export const questionnaireSections: Section[] = [
         id: 'E.4', 
         text: 'HL7 Prior Reports - Test/Proof Environment (IP address and Port)', 
         type: 'textarea', 
-        placeholder: 'Example:\n- EHR Test: IP 10.1.3.11, Port 2576' 
+        placeholder: 'Example:\n- EHR Test: IP 10.1.3.11, Port 2576\n\nIf you do not have a test environment, write: Not applicable' 
       },
       { 
         id: 'E.4.1', 
@@ -153,7 +153,7 @@ export const questionnaireSections: Section[] = [
         id: 'E.5', 
         text: 'HL7 Reports from New Lantern - Test/Proof Environment (IP address and Port where you will receive reports)', 
         type: 'textarea', 
-        placeholder: 'Example:\n- Your HL7 Listener Test: IP 10.1.3.12, Port 2577' 
+        placeholder: 'Example:\n- Your HL7 Listener Test: IP 10.1.3.12, Port 2577\n\nIf you do not have a test environment, write: Not applicable' 
       },
       { 
         id: 'E.5.1', 
@@ -165,13 +165,13 @@ export const questionnaireSections: Section[] = [
         id: 'E.6', 
         text: 'HL7 ADTs (if in scope) - Test/Proof Environment (IP address and Port)', 
         type: 'textarea', 
-        placeholder: 'Example:\n- ADT Interface Test: IP 10.1.3.13, Port 2578\n\nLeave blank if ADTs are not in scope for this implementation' 
+        placeholder: 'Example:\n- ADT Interface Test: IP 10.1.3.13, Port 2578\n\nIf you do not have a test environment or ADTs are not in scope, write: Not applicable' 
       },
       { 
         id: 'E.6.1', 
         text: 'HL7 ADTs (if in scope) - Production Environment (IP address and Port)', 
         type: 'textarea', 
-        placeholder: 'Example:\n- ADT Interface Production: IP 10.1.3.8, Port 2578\n\nLeave blank if ADTs are not in scope for this implementation' 
+        placeholder: 'Example:\n- ADT Interface Production: IP 10.1.3.8, Port 2578\n\nIf ADTs are not in scope for this implementation, write: Not applicable' 
       },
     ],
   },
