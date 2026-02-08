@@ -112,14 +112,61 @@ export const questionnaireSections: Section[] = [
         templateUrl: 'https://files.manuscdn.com/user_upload_by_module/session_file/310519663326227304/NfNtZiMfXpqdbVqa.xlsx',
         templateFileName: 'VPN_Form_Template.xlsx'
       },
+      { 
+        id: 'E.2', 
+        text: 'DICOM Endpoints - Test/Proof Environment (IP address, Port, AE title for each endpoint)', 
+        type: 'textarea', 
+        placeholder: 'Example:\n- PACS Test: IP 10.1.2.4, Port 104, AE Title: PACS_TEST\n- CT Scanner Test: IP 10.1.2.11, Port 104, AE Title: CT1_TEST\n- Modality Test: IP 10.1.2.12, Port 104, AE Title: MOD_TEST' 
+      },
+      { 
+        id: 'E.2.1', 
+        text: 'DICOM Endpoints - Production Environment (IP address, Port, AE title for each endpoint)', 
+        type: 'textarea', 
+        placeholder: 'Example:\n- PACS: IP 10.1.2.3, Port 104, AE Title: PACS_PROD\n- CT Scanner 1: IP 10.1.2.10, Port 104, AE Title: CT1_PROD\n- Modality 1: IP 10.1.2.15, Port 104, AE Title: MOD1_PROD' 
+      },
+      { 
+        id: 'E.3', 
+        text: 'HL7 Orders - Test/Proof Environment (IP address and Port)', 
+        type: 'textarea', 
+        placeholder: 'Example:\n- RIS Test: IP 10.1.3.10, Port 2575' 
+      },
+      { 
+        id: 'E.3.1', 
+        text: 'HL7 Orders - Production Environment (IP address and Port)', 
+        type: 'textarea', 
+        placeholder: 'Example:\n- RIS Production: IP 10.1.3.5, Port 2575' 
+      },
+      { 
+        id: 'E.4', 
+        text: 'HL7 Prior Reports - Test/Proof Environment (IP address and Port)', 
+        type: 'textarea', 
+        placeholder: 'Example:\n- EHR Test: IP 10.1.3.11, Port 2576' 
+      },
+      { 
+        id: 'E.4.1', 
+        text: 'HL7 Prior Reports - Production Environment (IP address and Port)', 
+        type: 'textarea', 
+        placeholder: 'Example:\n- EHR Production: IP 10.1.3.6, Port 2576' 
+      },
+      { 
+        id: 'E.5', 
+        text: 'HL7 Reports from New Lantern - Test/Proof Environment (IP address and Port where you will receive reports)', 
+        type: 'textarea', 
+        placeholder: 'Example:\n- Your HL7 Listener Test: IP 10.1.3.12, Port 2577' 
+      },
+      { 
+        id: 'E.5.1', 
+        text: 'HL7 Reports from New Lantern - Production Environment (IP address and Port where you will receive reports)', 
+        type: 'textarea', 
+        placeholder: 'Example:\n- Your HL7 Listener Production: IP 10.1.3.7, Port 2577' 
+      },
     ],
   },
   {
     id: 'dicom-config',
     title: 'DICOM Configuration',
-    description: 'DICOM Application Entity (AE) titles and tagging configuration (IP addresses and ports should be in VPN form)',
+    description: 'DICOM tagging and patient matching configuration',
     questions: [
-      { id: 'E.2', text: 'Please document AE titles for all DICOM endpoints', type: 'textarea', placeholder: 'List all Application Entity titles with their corresponding systems (e.g., PACS_AE - Main PACS, MOD_CT1 - CT Scanner 1)' },
       { id: 'E.3', text: 'Please document DICOM tag 0008,1040 value and corresponding PV1:11 value for matching (Note: DICOM tagging is handled by Silverback, not client sites)', type: 'textarea', placeholder: 'Document tag values for patient matching' },
     ],
   },

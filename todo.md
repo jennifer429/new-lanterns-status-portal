@@ -1200,3 +1200,15 @@
 - [x] Clarified VPN section includes IP/port for DICOM and HL7
 - [x] Clarified DICOM section is for AE titles only (not IP/port)
 - [x] Clarified HL7 section is for message fields only (not IP/port)
+
+## Add DICOM Endpoint Documentation to VPN & Connectivity
+- [x] Add separate textareas for Test and Production DICOM endpoints
+- [x] Each box documents IP, Port, and AE title for all endpoints in that environment
+- [x] Move AE title question from DICOM Configuration to VPN & Connectivity
+- [ ] Test the new field displays correctly
+
+## Add HL7 Endpoint Documentation to VPN & Connectivity
+- [x] Add HL7 Orders endpoints (Test and Production) - IP and port
+- [x] Add HL7 Prior Reports endpoints (Test and Production) - IP and port
+- [x] Add HL7 Reports from New Lantern endpoints (Test and Production) - IP and port
+- [ ] Test all HL7 endpoint fields display correctly
