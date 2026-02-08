@@ -1295,3 +1295,19 @@
 
 ## Login 404 Fix
 - [x] Fix platform admin login redirect 404 error (changed orgSlug from "org/admin" to "admin")
+
+## Admin Dashboard Metrics Enhancement
+- [x] Create shared getAdminSummary function for consistent metrics across all admin pages
+- [x] Remove debug header (yellow banner)
+- [ ] Change "ClientId: NULL" to "ClientId: All" for platform admins
+- [x] Add user count per organization to admin dashboard
+- [x] Add completion percentage per organization to admin dashboard
+- [x] Add downloadable files list per organization to admin dashboard
+- [ ] Implement soft delete for organizations (mark as inactive)
+- [x] Add reactivation button for inactive organizations (UI ready, backend pending)
+- [ ] Show inactive organizations in admin dashboard
+
+## Missing Pages Fix
+- [x] Create "Create Organization" page at /org/admin/create
+- [ ] Create user management page
+- [x] Add routes for all missing pages in App.tsx

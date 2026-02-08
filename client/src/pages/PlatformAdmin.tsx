@@ -5,7 +5,7 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Users, Plus, ExternalLink } from "lucide-react";
+import { Building2, Users, Plus, ExternalLink, FileText, Download, RotateCcw } from "lucide-react";
 
 /**
  * Platform Admin Dashboard - New Lantern staff only (@newlantern.ai)
@@ -24,6 +24,7 @@ export default function PlatformAdmin() {
 
   const { data: orgs, isLoading } = trpc.admin.getAllOrganizations.useQuery();
   const { data: clients } = trpc.admin.getAllClients.useQuery();
+  const { data: metrics } = trpc.admin.getAdminSummary.useQuery();
 
   if (authLoading || isLoading) {
     return (
@@ -44,12 +45,14 @@ export default function PlatformAdmin() {
     return acc;
   }, {} as Record<number, typeof orgs>);
 
+  // Create a map of organizationId -> metrics for quick lookup
+  const metricsMap = metrics?.reduce((acc, m) => {
+    acc[m.organizationId] = m;
+    return acc;
+  }, {} as Record<number, typeof metrics[number]>) || {};
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Debug info */}
-      <div className="bg-yellow-500/20 border-b border-yellow-500/50 p-2 text-center text-sm">
-        <strong>DEBUG:</strong> User: {user?.email} | ClientId: {user?.clientId || 'NULL'} | Role: {user?.role}
-      </div>
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm">
         <div className="container py-6">
@@ -124,21 +127,69 @@ export default function PlatformAdmin() {
                   <p className="text-sm text-muted-foreground">No organizations yet</p>
                 ) : (
                   <div className="space-y-2">
-                    {clientOrgs.map(org => (
+                    {clientOrgs.map(org => {
+                      const orgMetrics = metricsMap[org.id];
+                      return (
                       <div
                         key={org.id}
-                        className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                        className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
                       >
                         <div className="flex-1">
-                          <h3 className="font-medium">{org.name}</h3>
-                          <p className="text-sm text-muted-foreground">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="font-medium">{org.name}</h3>
+                            <Badge variant={org.status === "active" ? "default" : org.status === "inactive" ? "destructive" : "secondary"}>
+                              {org.status}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-3">
                             {org.contactName} • {org.contactEmail}
                           </p>
+                          {orgMetrics && (
+                            <div className="flex items-center gap-6 text-sm">
+                              <div className="flex items-center gap-2">
+                                <Users className="w-4 h-4 text-muted-foreground" />
+                                <span><strong>{orgMetrics.userCount}</strong> users</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-muted-foreground">Progress:</span>
+                                <span className="font-semibold text-primary">{orgMetrics.completionPercent}%</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <FileText className="w-4 h-4 text-muted-foreground" />
+                                <span><strong>{orgMetrics.files.length}</strong> files</span>
+                                {orgMetrics.files.length > 0 && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 px-2"
+                                    onClick={() => {
+                                      // Download all files
+                                      orgMetrics.files.forEach(f => {
+                                        window.open(f.fileUrl, '_blank');
+                                      });
+                                    }}
+                                  >
+                                    <Download className="w-3 h-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                        <div className="flex items-center gap-3">
-                          <Badge variant={org.status === "active" ? "default" : "secondary"}>
-                            {org.status}
-                          </Badge>
+                        <div className="flex items-center gap-2">
+                          {org.status === "inactive" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                // TODO: Implement reactivation
+                                alert('Reactivation feature coming soon');
+                              }}
+                            >
+                              <RotateCcw className="w-4 h-4 mr-2" />
+                              Reactivate
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
@@ -148,7 +199,8 @@ export default function PlatformAdmin() {
                           </Button>
                         </div>
                       </div>
-                    ))}
+                    );
+                    })}
                   </div>
                 )}
               </CardContent>

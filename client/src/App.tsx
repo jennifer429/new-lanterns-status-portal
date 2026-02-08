@@ -13,6 +13,7 @@ import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Tasks from "./pages/Tasks";
+import CreateOrganization from "./pages/CreateOrganization";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -22,6 +23,7 @@ function Router() {
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/admin" component={Admin} />
+      <Route path="/org/admin/create" component={CreateOrganization} />
       <Route path="/org/admin">
         {() => <PlatformAdmin />}
       </Route>

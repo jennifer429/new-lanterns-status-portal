@@ -526,4 +526,74 @@ export const adminRouter = router({
 
       return { success: true };
     }),
+
+  /**
+   * Get admin summary - unified metrics for all admin dashboards
+   * Returns consistent summary data: organizations with user count, completion %, and files
+   * Filters by clientId for partner admins, shows all for platform admins
+   */
+  getAdminSummary: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user.role !== "admin") {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+    }
+
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+    // Get all organizations (filtered by clientId if applicable)
+    let orgs;
+    if (ctx.user.clientId) {
+      orgs = await db.select().from(organizations).where(eq(organizations.clientId, ctx.user.clientId));
+    } else {
+      orgs = await db.select().from(organizations);
+    }
+
+    // For each organization, get metrics
+    const metrics = await Promise.all(
+      orgs.map(async (org) => {
+        // Get user count
+        const orgUsers = await db.select().from(users).where(eq(users.organizationId, org.id));
+        const userCount = orgUsers.length;
+
+        // Get completion percentage (from intake responses)
+        // Count total questions vs answered questions
+        const allQuestions = await db.select().from(questions);
+        const totalQuestions = allQuestions.length;
+
+        // Get intake responses for this org
+        const { intakeResponses } = await import("../../drizzle/schema");
+        const responses = await db
+          .select()
+          .from(intakeResponses)
+          .where(eq(intakeResponses.organizationId, org.id));
+
+        const answeredQuestions = responses.filter(r => r.response && r.response !== "").length;
+        const completionPercent = totalQuestions > 0 ? Math.round((answeredQuestions / totalQuestions) * 100) : 0;
+
+        // Get files
+        const files = await db
+          .select()
+          .from(intakeFileAttachments)
+          .where(eq(intakeFileAttachments.organizationId, org.id))
+          .orderBy(desc(intakeFileAttachments.createdAt));
+
+        return {
+          organizationId: org.id,
+          organizationName: org.name,
+          organizationSlug: org.slug,
+          status: org.status,
+          userCount,
+          completionPercent,
+          files: files.map(f => ({
+            id: f.id,
+            fileName: f.fileName,
+            fileUrl: f.fileUrl,
+            uploadedAt: f.createdAt,
+          })),
+        };
+      })
+    );
+
+    return metrics;
+  }),
 });
