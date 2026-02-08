@@ -14,6 +14,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Tasks from "./pages/Tasks";
 import CreateOrganization from "./pages/CreateOrganization";
+import ManageUsers from "./pages/ManageUsers";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -24,11 +25,20 @@ function Router() {
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/admin" component={Admin} />
       <Route path="/org/admin/create" component={CreateOrganization} />
+      <Route path="/org/admin/users">
+        {() => <ManageUsers />}
+      </Route>
       <Route path="/org/admin">
         {() => <PlatformAdmin />}
       </Route>
+      <Route path="/org/SRV/admin/users">
+        {() => <ManageUsers partnerName="SRV" />}
+      </Route>
       <Route path="/org/SRV/admin">
         {() => <PartnerAdmin partnerName="SRV" allowedDomain="@srv.com" />}
+      </Route>
+      <Route path="/org/RadOne/admin/users">
+        {() => <ManageUsers partnerName="RadOne" />}
       </Route>
       <Route path="/org/RadOne/admin">
         {() => <PartnerAdmin partnerName="RadOne" allowedDomain="@radone.com" />}

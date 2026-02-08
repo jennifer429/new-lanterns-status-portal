@@ -63,10 +63,19 @@ export default function PlatformAdmin() {
                 New Lantern - All Partners
               </p>
             </div>
-            <Button onClick={() => setLocation("/org/admin/create")}>
-              <Plus className="w-4 h-4 mr-2" />
-              Create Organization
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setLocation("/org/admin/users")}
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Manage Users
+              </Button>
+              <Button onClick={() => setLocation("/org/admin/create")}>
+                <Plus className="w-4 h-4 mr-2" />
+                Create Organization
+              </Button>
+            </div>
           </div>
         </div>
       </header>

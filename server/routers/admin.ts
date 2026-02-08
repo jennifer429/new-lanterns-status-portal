@@ -4,6 +4,7 @@ import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { questions, questionOptions, organizations, users, clients, intakeFileAttachments } from "../../drizzle/schema";
 import { eq, and, desc } from "drizzle-orm";
+import bcrypt from "bcrypt";
 
 /**
  * Admin router for managing questions, options, organizations, and users
@@ -596,4 +597,85 @@ export const adminRouter = router({
 
     return metrics;
   }),
+
+  /**
+   * Get all users - filtered by clientId for partner admins
+   */
+  getAllUsers: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user.role !== "admin") {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+    }
+
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+    // Platform admins see all users, partner admins see only their partner's users
+    const allUsers = await db
+      .select()
+      .from(users)
+      .where(ctx.user.clientId ? eq(users.clientId, ctx.user.clientId) : undefined);
+
+    return allUsers;
+  }),
+
+  /**
+   * Create a new user
+   */
+  createUser: protectedProcedure
+    .input(
+      z.object({
+        email: z.string().email(),
+        name: z.string(),
+        organizationId: z.number(),
+        role: z.enum(["user", "admin"]),
+        clientId: z.number().nullable(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+
+      // Partner admins can only create users for their own partner
+      if (ctx.user.clientId && input.clientId !== ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot create users for other partners" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Check if user already exists
+      const existingUser = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, input.email))
+        .limit(1);
+
+      if (existingUser.length > 0) {
+        throw new TRPCError({ code: "CONFLICT", message: "User with this email already exists" });
+      }
+
+      // Generate a temporary password (in production, send email with reset link)
+      const tempPassword = Math.random().toString(36).slice(-8);
+      const passwordHash = await bcrypt.hash(tempPassword, 10);
+
+      // Create user
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          email: input.email,
+          name: input.name,
+          organizationId: input.organizationId,
+          role: input.role,
+          clientId: input.clientId,
+          passwordHash,
+          loginMethod: "email",
+          openId: `user-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        });
+
+      // TODO: Send email with temporary password or reset link
+      console.log(`[createUser] Created user ${input.email} with temp password: ${tempPassword}`);
+
+      return { success: true, tempPassword };
+    }),
 });

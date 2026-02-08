@@ -1311,3 +1311,16 @@
 - [x] Create "Create Organization" page at /org/admin/create
 - [ ] Create user management page
 - [x] Add routes for all missing pages in App.tsx
+
+## Partner Admin API Fix
+- [ ] Fix PartnerAdmin page to not call getAllClients (platform admin only)
+- [ ] Use getAdminSummary which already filters by clientId
+
+## Partner Admin Fixes
+- [x] Fix PartnerAdmin page API permission error (don't call getAllClients)
+- [x] Debug SRV admin login issue
+- [x] Add metrics display to PartnerAdmin dashboard
+- [x] Create user management page for partner admins
+- [x] Add create user functionality for partner admins
+- [x] Add Manage Users button to both Platform and Partner admin dashboards
+- [x] Test SRV admin access

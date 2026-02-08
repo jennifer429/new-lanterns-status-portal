@@ -5,7 +5,7 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Plus, ExternalLink } from "lucide-react";
+import { Building2, Plus, ExternalLink, Users, FileText, Download } from "lucide-react";
 
 interface PartnerAdminProps {
   partnerName: string; // "SRV" or "RadOne"
@@ -20,18 +20,22 @@ export default function PartnerAdmin({ partnerName, allowedDomain }: PartnerAdmi
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
 
-  // Get clientId from clients query by matching partnerName
-  const { data: clients } = trpc.admin.getAllClients.useQuery();
-  const partnerClient = clients?.find(c => c.name === partnerName);
-  
-  // Access control: Check user's clientId matches partner
+  // Access control: Partner admins must have a clientId
   useEffect(() => {
-    if (!authLoading && partnerClient && (!user || user.clientId !== partnerClient.id)) {
+    if (!authLoading && (!user || !user.clientId)) {
       setLocation("/");
     }
-  }, [user, authLoading, partnerClient, setLocation]);
+  }, [user, authLoading, setLocation]);
 
+  // Get organizations and metrics filtered by user's clientId
   const { data: orgs, isLoading } = trpc.admin.getAllOrganizations.useQuery();
+  const { data: metrics } = trpc.admin.getAdminSummary.useQuery();
+
+  // Create metrics map for quick lookup
+  const metricsMap = metrics?.reduce((acc, m) => {
+    acc[m.organizationId] = m;
+    return acc;
+  }, {} as Record<number, typeof metrics[number]>) || {};
 
   if (authLoading || isLoading) {
     return (
@@ -56,10 +60,19 @@ export default function PartnerAdmin({ partnerName, allowedDomain }: PartnerAdmi
                 Manage your organizations
               </p>
             </div>
-            <Button onClick={() => setLocation(`/org/${partnerName}/admin/create`)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Create Organization
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setLocation(`/org/${partnerName}/admin/users`)}
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Manage Users
+              </Button>
+              <Button onClick={() => setLocation(`/org/${partnerName}/admin/create`)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Create Organization
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -104,37 +117,61 @@ export default function PartnerAdmin({ partnerName, allowedDomain }: PartnerAdmi
               </div>
             ) : (
               <div className="space-y-2">
-                {orgs.map(org => (
+                {orgs.map(org => {
+                  const orgMetrics = metricsMap[org.id];
+                  return (
                   <div
                     key={org.id}
                     className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
                   >
                     <div className="flex-1">
-                      <h3 className="font-medium text-lg">{org.name}</h3>
-                      <div className="flex items-center gap-4 mt-1">
-                        <p className="text-sm text-muted-foreground">
-                          {org.contactName && `${org.contactName} • `}
-                          {org.contactEmail}
-                        </p>
-                        {org.startDate && (
-                          <p className="text-sm text-muted-foreground">
-                            Started: {org.startDate}
-                          </p>
-                        )}
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="font-medium text-lg">{org.name}</h3>
+                        <Badge variant={org.status === "active" ? "default" : "secondary"}>
+                          {org.status}
+                        </Badge>
                       </div>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        {org.contactName && `${org.contactName} • `}
+                        {org.contactEmail}
+                      </p>
+                      {orgMetrics && (
+                        <div className="flex items-center gap-6 text-sm">
+                          <div className="flex items-center gap-2">
+                            <Users className="w-4 h-4 text-muted-foreground" />
+                            <span><strong>{orgMetrics.userCount}</strong> users</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Progress:</span>
+                            <span className="font-semibold text-primary">{orgMetrics.completionPercent}%</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-muted-foreground" />
+                            <span><strong>{orgMetrics.files.length}</strong> files</span>
+                            {orgMetrics.files.length > 0 && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-2"
+                                onClick={() => {
+                                  orgMetrics.files.forEach(f => {
+                                    window.open(f.fileUrl, '_blank');
+                                  });
+                                }}
+                              >
+                                <Download className="w-3 h-3" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      {org.startDate && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Started: {org.startDate}
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center gap-3">
-                      <Badge
-                        variant={
-                          org.status === "active"
-                            ? "default"
-                            : org.status === "completed"
-                            ? "secondary"
-                            : "outline"
-                        }
-                      >
-                        {org.status}
-                      </Badge>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -144,7 +181,8 @@ export default function PartnerAdmin({ partnerName, allowedDomain }: PartnerAdmi
                       </Button>
                     </div>
                   </div>
-                ))}
+                );
+                })}
               </div>
             )}
           </CardContent>
