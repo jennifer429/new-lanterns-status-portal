@@ -5,7 +5,9 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Users, Plus, ExternalLink, FileText, Download, RotateCcw } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Building2, Users, Plus, Ban, RotateCcw } from "lucide-react";
+import { toast } from "sonner";
 
 /**
  * Platform Admin Dashboard - New Lantern staff only (@newlantern.ai)
@@ -15,16 +17,36 @@ export default function PlatformAdmin() {
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
 
-  // Access control: Only New Lantern staff (clientId = 1 or NULL)
+  // Access control: Only New Lantern staff (clientId = NULL)
   useEffect(() => {
-    if (!authLoading && (!user || (user.clientId !== null && user.clientId !== 1))) {
+    if (!authLoading && (!user || user.clientId !== null)) {
       setLocation("/");
     }
   }, [user, authLoading, setLocation]);
 
-  const { data: orgs, isLoading } = trpc.admin.getAllOrganizations.useQuery();
+  const { data: orgs, isLoading, refetch } = trpc.admin.getAllOrganizations.useQuery();
   const { data: clients } = trpc.admin.getAllClients.useQuery();
   const { data: metrics } = trpc.admin.getAdminSummary.useQuery();
+  
+  const deactivateMutation = trpc.admin.deactivateOrganization.useMutation({
+    onSuccess: () => {
+      toast.success("Organization deactivated");
+      refetch();
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to deactivate: ${error.message}`);
+    },
+  });
+
+  const reactivateMutation = trpc.admin.reactivateOrganization.useMutation({
+    onSuccess: () => {
+      toast.success("Organization reactivated");
+      refetch();
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to reactivate: ${error.message}`);
+    },
+  });
 
   if (authLoading || isLoading) {
     return (
@@ -37,19 +59,20 @@ export default function PlatformAdmin() {
     );
   }
 
-  // Group organizations by client
-  const orgsByClient = orgs?.reduce((acc, org) => {
-    const clientId = org.clientId || 0;
-    if (!acc[clientId]) acc[clientId] = [];
-    acc[clientId].push(org);
-    return acc;
-  }, {} as Record<number, typeof orgs>);
-
   // Create a map of organizationId -> metrics for quick lookup
   const metricsMap = metrics?.reduce((acc, m) => {
     acc[m.organizationId] = m;
     return acc;
   }, {} as Record<number, typeof metrics[number]>) || {};
+
+  // Create a map of clientId -> client name
+  const clientMap = clients?.reduce((acc, c) => {
+    acc[c.id] = c.name;
+    return acc;
+  }, {} as Record<number, string>) || {};
+
+  const activeOrgs = orgs?.filter(o => o.status === "active") || [];
+  const inactiveOrgs = orgs?.filter(o => o.status === "inactive") || [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -108,114 +131,140 @@ export default function PlatformAdmin() {
               <Building2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {orgs?.filter(o => o.status === "active").length || 0}
-              </div>
+              <div className="text-2xl font-bold">{activeOrgs.length}</div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Organizations by Partner */}
-        {clients?.map((client: { id: number; name: string; slug: string; status: string }) => {
-          const clientOrgs = orgsByClient?.[client.id] || [];
-          return (
-            <Card key={client.id} className="mb-6">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-xl">{client.name}</CardTitle>
-                    <CardDescription>
-                      {clientOrgs.length} organization{clientOrgs.length !== 1 ? "s" : ""}
-                    </CardDescription>
-                  </div>
-                  <Badge variant="outline">{client.status}</Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {clientOrgs.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No organizations yet</p>
+        {/* Active Organizations List */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Active Organizations</CardTitle>
+            <CardDescription>{activeOrgs.length} active projects</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Organization</TableHead>
+                  <TableHead>Partner</TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead className="text-right">Users</TableHead>
+                  <TableHead className="text-right">Progress</TableHead>
+                  <TableHead className="text-right">Files</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {activeOrgs.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground">
+                      No active organizations
+                    </TableCell>
+                  </TableRow>
                 ) : (
-                  <div className="space-y-2">
-                    {clientOrgs.map(org => {
-                      const orgMetrics = metricsMap[org.id];
-                      return (
-                      <div
-                        key={org.id}
-                        className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="font-medium">{org.name}</h3>
-                            <Badge variant={org.status === "active" ? "default" : org.status === "inactive" ? "destructive" : "secondary"}>
-                              {org.status}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-3">
-                            {org.contactName} • {org.contactEmail}
-                          </p>
-                          {orgMetrics && (
-                            <div className="flex items-center gap-6 text-sm">
-                              <div className="flex items-center gap-2">
-                                <Users className="w-4 h-4 text-muted-foreground" />
-                                <span><strong>{orgMetrics.userCount}</strong> users</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-muted-foreground">Progress:</span>
-                                <span className="font-semibold text-primary">{orgMetrics.completionPercent}%</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <FileText className="w-4 h-4 text-muted-foreground" />
-                                <span><strong>{orgMetrics.files.length}</strong> files</span>
-                                {orgMetrics.files.length > 0 && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 px-2"
-                                    onClick={() => {
-                                      // Download all files
-                                      orgMetrics.files.forEach(f => {
-                                        window.open(f.fileUrl, '_blank');
-                                      });
-                                    }}
-                                  >
-                                    <Download className="w-3 h-3" />
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {org.status === "inactive" && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                // TODO: Implement reactivation
-                                alert('Reactivation feature coming soon');
-                              }}
-                            >
-                              <RotateCcw className="w-4 h-4 mr-2" />
-                              Reactivate
-                            </Button>
-                          )}
+                  activeOrgs.map(org => {
+                    const orgMetrics = metricsMap[org.id];
+                    const partnerName = org.clientId ? clientMap[org.clientId] : "Unknown";
+                    return (
+                      <TableRow key={org.id}>
+                        <TableCell className="font-medium">{org.name}</TableCell>
+                        <TableCell>{partnerName}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {org.contactName}<br />
+                          {org.contactEmail}
+                        </TableCell>
+                        <TableCell className="text-right">{orgMetrics?.userCount || 0}</TableCell>
+                        <TableCell className="text-right">
+                          <span className="font-semibold text-primary">
+                            {orgMetrics?.completionPercent || 0}%
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">{orgMetrics?.files.length || 0}</TableCell>
+                        <TableCell className="text-right">
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => setLocation(`/org/${org.slug}/intake`)}
+                            onClick={() => {
+                              if (confirm(`Deactivate ${org.name}?`)) {
+                                deactivateMutation.mutate({ organizationId: org.id });
+                              }
+                            }}
                           >
-                            <ExternalLink className="w-4 h-4" />
+                            <Ban className="w-4 h-4 mr-2" />
+                            Deactivate
                           </Button>
-                        </div>
-                      </div>
+                        </TableCell>
+                      </TableRow>
                     );
-                    })}
-                  </div>
+                  })
                 )}
-              </CardContent>
-            </Card>
-          );
-        })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        {/* Inactive Organizations List */}
+        {inactiveOrgs.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Inactive Organizations</CardTitle>
+              <CardDescription>{inactiveOrgs.length} inactive projects</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Organization</TableHead>
+                    <TableHead>Partner</TableHead>
+                    <TableHead>Contact</TableHead>
+                    <TableHead className="text-right">Users</TableHead>
+                    <TableHead className="text-right">Progress</TableHead>
+                    <TableHead className="text-right">Files</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {inactiveOrgs.map(org => {
+                    const orgMetrics = metricsMap[org.id];
+                    const partnerName = org.clientId ? clientMap[org.clientId] : "Unknown";
+                    return (
+                      <TableRow key={org.id} className="opacity-60">
+                        <TableCell className="font-medium">{org.name}</TableCell>
+                        <TableCell>{partnerName}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {org.contactName}<br />
+                          {org.contactEmail}
+                        </TableCell>
+                        <TableCell className="text-right">{orgMetrics?.userCount || 0}</TableCell>
+                        <TableCell className="text-right">
+                          <span className="font-semibold text-muted-foreground">
+                            {orgMetrics?.completionPercent || 0}%
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">{orgMetrics?.files.length || 0}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              if (confirm(`Reactivate ${org.name}?`)) {
+                                reactivateMutation.mutate({ organizationId: org.id });
+                              }
+                            }}
+                          >
+                            <RotateCcw className="w-4 h-4 mr-2" />
+                            Reactivate
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

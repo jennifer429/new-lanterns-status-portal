@@ -1329,3 +1329,14 @@
 - [x] Remove strict email validation for non-@newlantern.ai users
 - [x] Keep validation only for @newlantern.ai staff
 - [x] Test user creation with various email formats (test@srv works!)
+
+## Organization Management Fix
+- [x] Change organization display from cards to simple list/table format
+- [x] Fix platform admin access control (should check clientId = NULL, not clientId = 1)
+- [x] Add Deactivate button for active organizations
+- [x] Add Reactivate button for inactive organizations
+- [x] Add user deactivation/reactivation functionality
+- [x] Add backend API endpoints for organization and user deactivation/reactivation
+- [x] Keep the fixes we made today (email validation, completion percentage)
+- [x] Test organization list UI with deactivate/reactivate functionality
+- [x] Fix completion percentage inconsistency (was using deprecated intakeResponses table instead of responses table)

@@ -561,14 +561,14 @@ export const adminRouter = router({
         const allQuestions = await db.select().from(questions);
         const totalQuestions = allQuestions.length;
 
-        // Get intake responses for this org
-        const { intakeResponses } = await import("../../drizzle/schema");
-        const responses = await db
+        // Get intake responses for this org (using correct responses table, not deprecated intakeResponses)
+        const { responses: responsesTable } = await import("../../drizzle/schema");
+        const orgResponses = await db
           .select()
-          .from(intakeResponses)
-          .where(eq(intakeResponses.organizationId, org.id));
+          .from(responsesTable)
+          .where(eq(responsesTable.organizationId, org.id));
 
-        const answeredQuestions = responses.filter(r => r.response && r.response !== "").length;
+        const answeredQuestions = orgResponses.filter(r => r.response && r.response !== "").length;
         const completionPercent = totalQuestions > 0 ? Math.round((answeredQuestions / totalQuestions) * 100) : 0;
 
         // Get files
@@ -687,5 +687,143 @@ export const adminRouter = router({
       console.log(`[createUser] Created user ${input.email} with temp password: ${tempPassword}`);
 
       return { success: true, tempPassword };
+    }),
+
+  /**
+   * Deactivate an organization (soft delete)
+   */
+  deactivateOrganization: protectedProcedure
+    .input(z.object({ organizationId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Get the organization to check permissions
+      const [org] = await db.select().from(organizations).where(eq(organizations.id, input.organizationId));
+      if (!org) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      }
+
+      // Partner admins can only deactivate their own partner's organizations
+      if (ctx.user.clientId && org.clientId !== ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot deactivate other partner's organizations" });
+      }
+
+      // Update status to inactive
+      await db
+        .update(organizations)
+        .set({ status: "inactive" })
+        .where(eq(organizations.id, input.organizationId));
+
+      return { success: true };
+    }),
+
+  /**
+   * Reactivate an organization
+   */
+  reactivateOrganization: protectedProcedure
+    .input(z.object({ organizationId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Get the organization to check permissions
+      const [org] = await db.select().from(organizations).where(eq(organizations.id, input.organizationId));
+      if (!org) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      }
+
+      // Partner admins can only reactivate their own partner's organizations
+      if (ctx.user.clientId && org.clientId !== ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot reactivate other partner's organizations" });
+      }
+
+      // Update status to active
+      await db
+        .update(organizations)
+        .set({ status: "active" })
+        .where(eq(organizations.id, input.organizationId));
+
+      return { success: true };
+    }),
+
+  /**
+   * Deactivate a user
+   */
+  deactivateUser: protectedProcedure
+    .input(z.object({ userId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Get the user to check permissions
+      const [targetUser] = await db.select().from(users).where(eq(users.id, input.userId));
+      if (!targetUser) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+      }
+
+      // Partner admins can only deactivate users from their own partner
+      if (ctx.user.clientId && targetUser.clientId !== ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot deactivate other partner's users" });
+      }
+
+      // Prevent self-deactivation
+      if (targetUser.id === ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot deactivate yourself" });
+      }
+
+      // Mark as inactive by setting a flag (we'll add an 'active' field to schema)
+      // For now, we can set organizationId to null as a soft delete
+      await db
+        .update(users)
+        .set({ organizationId: null })
+        .where(eq(users.id, input.userId));
+
+      return { success: true };
+    }),
+
+  /**
+   * Reactivate a user
+   */
+  reactivateUser: protectedProcedure
+    .input(z.object({ userId: z.number(), organizationId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Get the user to check permissions
+      const [targetUser] = await db.select().from(users).where(eq(users.id, input.userId));
+      if (!targetUser) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+      }
+
+      // Partner admins can only reactivate users from their own partner
+      if (ctx.user.clientId && targetUser.clientId !== ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot reactivate other partner's users" });
+      }
+
+      // Restore user by setting organizationId
+      await db
+        .update(users)
+        .set({ organizationId: input.organizationId })
+        .where(eq(users.id, input.userId));
+
+      return { success: true };
     }),
 });
