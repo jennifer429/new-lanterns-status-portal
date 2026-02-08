@@ -1292,3 +1292,6 @@
 - [ ] Test SRV admin (clientId=2) sees only SRV organizations
 - [ ] Test RadOne admin (clientId=3) sees only RadOne organizations
 - [ ] Remove debug banner from PlatformAdmin after testing
+
+## Login 404 Fix
+- [x] Fix platform admin login redirect 404 error (changed orgSlug from "org/admin" to "admin")

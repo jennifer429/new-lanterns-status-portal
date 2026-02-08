@@ -58,7 +58,7 @@ export function registerAuthRoutes(app: Router) {
         orgSlug = "RadOne/admin";
       } else {
         // Platform admin (New Lantern staff)
-        orgSlug = "org/admin";
+        orgSlug = "admin";
       }
 
       // Create session token
