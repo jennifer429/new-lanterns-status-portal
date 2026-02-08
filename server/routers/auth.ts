@@ -11,6 +11,7 @@ import { eq } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import { sdk } from "../_core/sdk";
 import { getSessionCookieOptions } from "../_core/cookies";
+import { randomBytes } from "crypto";
 
 const COOKIE_NAME = "manus-session";
 const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
@@ -109,6 +110,67 @@ export const authRouter = router({
       return {
         exists: !!user,
         email: input.email,
+      };
+    }),
+
+  /**
+   * Create admin account for @newlantern.ai emails
+   */
+  createAdmin: publicProcedure
+    .input(
+      z.object({
+        email: z.string().email(),
+        password: z.string().min(6),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // Verify email is @newlantern.ai
+      if (!input.email.toLowerCase().endsWith('@newlantern.ai')) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only @newlantern.ai emails can create admin accounts",
+        });
+      }
+
+      // Check if user already exists
+      const [existingUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, input.email.toLowerCase()))
+        .limit(1);
+
+      if (existingUser) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Account already exists. Please use forgot password to reset.",
+        });
+      }
+
+      // Extract name from email (part before @)
+      const name = input.email.split('@')[0];
+
+      // Generate unique openId
+      const openId = randomBytes(16).toString('hex');
+
+      // Hash password
+      const passwordHash = await bcrypt.hash(input.password, 10);
+
+      // Create admin user
+      await db.insert(users).values({
+        openId,
+        email: input.email.toLowerCase(),
+        name,
+        passwordHash,
+        role: 'admin',
+        loginMethod: 'password',
+      });
+
+      return {
+        success: true,
+        message: "Admin account created successfully. You can now log in.",
       };
     }),
 

@@ -23,8 +23,15 @@ export default function ForgotPassword() {
         // Email exists - redirect to reset password page
         setLocation(`/reset-password?email=${encodeURIComponent(data.email)}`);
       } else {
-        // Email doesn't exist - show support message
-        setError("Please contact New Lantern support");
+        // Email doesn't exist
+        const isNewLanternEmail = data.email.toLowerCase().endsWith('@newlantern.ai');
+        if (isNewLanternEmail) {
+          // New Lantern staff - redirect to create admin account
+          setLocation(`/reset-password?email=${encodeURIComponent(data.email)}&create=true`);
+        } else {
+          // External user - show support message
+          setError("Please contact New Lantern support");
+        }
       }
     },
     onError: (err) => {

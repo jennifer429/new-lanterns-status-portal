@@ -19,19 +19,31 @@ export default function ResetPassword() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  const [isCreateMode, setIsCreateMode] = useState(false);
 
-  // Get email from URL
+  // Get email and create flag from URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const emailParam = params.get("email");
+    const createParam = params.get("create");
     if (emailParam) {
       setEmail(emailParam);
+      setIsCreateMode(createParam === "true");
     } else {
       setError("Invalid reset link");
     }
   }, []);
 
   const resetMutation = trpc.auth.resetPasswordDirect.useMutation({
+    onSuccess: () => {
+      setSuccess(true);
+    },
+    onError: (err: { message: string }) => {
+      setError(err.message);
+    },
+  });
+
+  const createAdminMutation = trpc.auth.createAdmin.useMutation({
     onSuccess: () => {
       setSuccess(true);
     },
@@ -54,7 +66,11 @@ export default function ResetPassword() {
       return;
     }
 
-    resetMutation.mutate({ email, newPassword });
+    if (isCreateMode) {
+      createAdminMutation.mutate({ email, password: newPassword });
+    } else {
+      resetMutation.mutate({ email, newPassword });
+    }
   };
 
   return (
@@ -72,14 +88,14 @@ export default function ResetPassword() {
             
             {/* Main Heading */}
             <h1 className="text-3xl font-bold text-center leading-tight">
-              <span className="text-white">Create New</span>
+              <span className="text-white">{isCreateMode ? "Create Admin" : "Create New"}</span>
               <br />
               <span className="bg-gradient-to-r from-purple-400 via-purple-300 to-purple-400 bg-clip-text text-transparent">
-                Password
+                {isCreateMode ? "Account" : "Password"}
               </span>
             </h1>
             <CardDescription className="text-gray-300 text-center">
-              Enter your new password below
+              {isCreateMode ? "Set up your admin account" : "Enter your new password below"}
             </CardDescription>
           </div>
         </CardHeader>
@@ -89,7 +105,10 @@ export default function ResetPassword() {
               <Alert className="bg-green-950/50 border-green-500/50">
                 <CheckCircle2 className="h-4 w-4 text-green-400" />
                 <AlertDescription className="text-green-100">
-                  Password has been reset successfully. You can now log in with your new password.
+                  {isCreateMode 
+                    ? "Admin account created successfully. You can now log in with your credentials."
+                    : "Password has been reset successfully. You can now log in with your new password."
+                  }
                 </AlertDescription>
               </Alert>
               <Link href="/login">
@@ -154,9 +173,12 @@ export default function ResetPassword() {
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white font-medium"
-                disabled={resetMutation.isPending || !email}
+                disabled={(isCreateMode ? createAdminMutation.isPending : resetMutation.isPending) || !email}
               >
-                {resetMutation.isPending ? "Resetting..." : "Reset Password"}
+                {isCreateMode 
+                  ? (createAdminMutation.isPending ? "Creating Account..." : "Create Admin Account")
+                  : (resetMutation.isPending ? "Resetting..." : "Reset Password")
+                }
               </Button>
 
               <div className="text-center">
