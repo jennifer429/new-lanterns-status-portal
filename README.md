@@ -25,7 +25,14 @@ This application implements a **three-tier access control system** with partner-
 ### Data Hierarchy
 
 ```
-Clients (Partners)
+New Lantern
+-Clients (Partners ID Rad One)
+└── Organizations (Hospitals)
+    ├── Users
+    ├── Responses
+    ├── Files
+    └── Activity Feed
+-Clients (Partners ID SRV)
 └── Organizations (Hospitals)
     ├── Users
     ├── Responses
