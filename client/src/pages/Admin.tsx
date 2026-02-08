@@ -207,7 +207,7 @@ export default function Admin() {
                           'Data & Integration',
                           'Configuration Files',
                           'Connectivity',
-                          'DICOM Data Validation'
+                          'HL7 Data Validation'
                         ].map((sectionName) => {
                           const stats = org.sectionProgress?.[sectionName];
                           const percentage = stats && stats.total > 0 

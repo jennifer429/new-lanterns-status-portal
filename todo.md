@@ -1146,3 +1146,9 @@
 ## Remove RadOne Prefix from Organization Names
 - [x] Update organization names in database to remove "RadOne -" prefix
 - [x] Verify names display correctly in admin dashboard and client portals
+
+## Fix Progress Percentage Mismatch Between Admin and Portal
+- [x] Check progress calculation in admin dashboard (server/routers/organizations.ts getMetrics)
+- [x] Check progress calculation in client portal (client/src/pages/Home.tsx)
+- [x] Ensure both use identical logic (count answered questions + uploaded files)
+- [x] Test that percentages match exactly - Fixed section name mismatch: 'DICOM Data Validation' -> 'HL7 Data Validation'
