@@ -1142,3 +1142,7 @@
 ## Remove Production Go-Live Date Question
 - [x] Remove "Requested Go live date - MM/DD/YY" question from Data and Integration section
 - [x] Question count reduced from 46 to 45 questions
+
+## Remove RadOne Prefix from Organization Names
+- [x] Update organization names in database to remove "RadOne -" prefix
+- [x] Verify names display correctly in admin dashboard and client portals
