@@ -61,7 +61,7 @@ export default function PlatformAdmin() {
 
   // Create a map of organizationId -> metrics for quick lookup
   const metricsMap = metrics?.reduce((acc, m) => {
-    acc[m.organizationId] = m;
+    acc[m.id] = m;
     return acc;
   }, {} as Record<number, typeof metrics[number]>) || {};
 

@@ -33,7 +33,7 @@ export default function PartnerAdmin({ partnerName, allowedDomain }: PartnerAdmi
 
   // Create metrics map for quick lookup
   const metricsMap = metrics?.reduce((acc, m) => {
-    acc[m.organizationId] = m;
+    acc[m.id] = m;
     return acc;
   }, {} as Record<number, typeof metrics[number]>) || {};
 

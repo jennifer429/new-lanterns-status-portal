@@ -32,13 +32,13 @@ function Router() {
         {() => <PlatformAdmin />}
       </Route>
       <Route path="/org/SRV/admin/users">
-        {() => <ManageUsers partnerName="SRV" />}
+        {() => <ManageUsers />}
       </Route>
       <Route path="/org/SRV/admin">
         {() => <PartnerAdmin partnerName="SRV" allowedDomain="@srv.com" />}
       </Route>
       <Route path="/org/RadOne/admin/users">
-        {() => <ManageUsers partnerName="RadOne" />}
+        {() => <ManageUsers />}
       </Route>
       <Route path="/org/RadOne/admin">
         {() => <PartnerAdmin partnerName="RadOne" allowedDomain="@radone.com" />}
