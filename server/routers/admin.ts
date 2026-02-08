@@ -624,7 +624,17 @@ export const adminRouter = router({
   createUser: protectedProcedure
     .input(
       z.object({
-        email: z.string().email(),
+        email: z.string().min(1, "Email is required").refine(
+          (email) => {
+            // Only validate @newlantern.ai emails strictly
+            if (email.endsWith('@newlantern.ai')) {
+              return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+            }
+            // For other emails, just check that @ exists
+            return email.includes('@');
+          },
+          { message: "Invalid email format" }
+        ),
         name: z.string(),
         organizationId: z.number(),
         role: z.enum(["user", "admin"]),

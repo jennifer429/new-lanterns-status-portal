@@ -1324,3 +1324,8 @@
 - [x] Add create user functionality for partner admins
 - [x] Add Manage Users button to both Platform and Partner admin dashboards
 - [x] Test SRV admin access
+
+## Email Validation Fix
+- [x] Remove strict email validation for non-@newlantern.ai users
+- [x] Keep validation only for @newlantern.ai staff
+- [x] Test user creation with various email formats (test@srv works!)
