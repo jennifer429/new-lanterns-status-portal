@@ -14,7 +14,8 @@ import { calculateProgress } from "@shared/progressCalculation";
 import { PhiDisclaimer } from "@/components/PhiDisclaimer";
 
 export default function Home() {
-  const [, params] = useRoute("/org/:slug");
+  const [, params] = useRoute("/org/:clientSlug/:slug");
+  const clientSlug = params?.clientSlug || "";
   const orgSlug = params?.slug || "demo";
   
   const [organizationId, setOrganizationId] = useState<number | null>(null);
@@ -206,7 +207,7 @@ export default function Home() {
               </div>
 
               {/* Open Portal Button */}
-              <Link href={`/org/${orgSlug}/intake`}>
+              <Link href={`/org/${clientSlug}/${orgSlug}/intake`}>
                 <Button size="lg" className="w-full text-lg py-6">
                   <ExternalLink className="w-5 h-5 mr-2" />
                   Open Portal

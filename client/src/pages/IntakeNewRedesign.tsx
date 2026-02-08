@@ -127,7 +127,9 @@ function FileUploadField({ questionId, isUploading, organizationSlug, onFileUplo
 }
 
 export default function IntakeNewRedesign() {
-  const { slug } = useParams();
+  const params = useParams();
+  const slug = params?.slug || "";
+  const clientSlug = params?.clientSlug || "";
   const [, setLocation] = useLocation();
   const [responses, setResponses] = useState<Record<string, any>>({});
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
@@ -226,7 +228,7 @@ export default function IntakeNewRedesign() {
   const submitFeedbackMutation = trpc.intake.submitFeedback.useMutation({
     onSuccess: () => {
       setShowFeedbackModal(false);
-      setLocation(`/org/${slug}`);
+      setLocation(`/org/${clientSlug}/${slug}`);
     },
     onError: (error) => {
       console.error('Failed to submit feedback:', error);
@@ -646,7 +648,7 @@ export default function IntakeNewRedesign() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={() => setLocation(`/org/${slug}`)}>
+                  <DropdownMenuItem onClick={() => setLocation(`/org/${clientSlug}/${slug}`)}>
                     <Home className="w-4 h-4 mr-2" />
                     Return to Dashboard
                   </DropdownMenuItem>
@@ -815,7 +817,7 @@ export default function IntakeNewRedesign() {
               <div className="flex items-center justify-between mt-8 pt-6 border-t">
                 <Button
                   variant="outline"
-                  onClick={() => setLocation(`/org/${slug}`)}
+                  onClick={() => setLocation(`/org/${clientSlug}/${slug}`)}
                 >
                   Back to Overview
                 </Button>
@@ -920,7 +922,7 @@ export default function IntakeNewRedesign() {
                 variant="outline"
                 onClick={() => {
                   setShowFeedbackModal(false);
-                  setLocation(`/org/${slug}`);
+                  setLocation(`/org/${clientSlug}/${slug}`);
                 }}
               >
                 Skip

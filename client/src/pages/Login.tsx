@@ -21,10 +21,16 @@ export default function Login() {
 
   const loginMutation = trpc.auth.login.useMutation({
     onSuccess: (data) => {
-      // Redirect based on role and organization
-      if (data.role === "admin") {
+      // Redirect based on role, client, and organization
+      if (data.role === "admin" && data.clientSlug) {
+        setLocation(`/org/${data.clientSlug}/admin`);
+      } else if (data.role === "admin") {
+        // Super admin with no client - go to first available client admin
         setLocation("/admin");
+      } else if (data.clientSlug && data.orgSlug) {
+        setLocation(`/org/${data.clientSlug}/${data.orgSlug}`);
       } else if (data.orgSlug) {
+        // Fallback for orgs without client slug
         setLocation(`/org/${data.orgSlug}`);
       } else {
         setLocation("/");

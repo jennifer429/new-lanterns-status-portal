@@ -18,7 +18,8 @@ import { trpc } from "@/lib/trpc";
 import { questionnaireData, type Section, type Question } from "@shared/questionnaire-data";
 
 export default function Intake() {
-  const [, params] = useRoute("/org/:slug/intake");
+  const [, params] = useRoute("/org/:clientSlug/:slug/intake");
+  const clientSlug = params?.clientSlug || "";
   const orgSlug = params?.slug || "demo";
   
   const [organizationId, setOrganizationId] = useState<number | null>(null);
@@ -266,7 +267,7 @@ export default function Intake() {
         {/* Save Button */}
         <div className="mt-8 flex items-center justify-between">
           <Button variant="outline" asChild>
-            <a href={`/org/${orgSlug}`}>Back to Dashboard</a>
+            <a href={`/org/${clientSlug}/${orgSlug}`}>Back to Dashboard</a>
           </Button>
           <Button size="lg">
             Save Progress

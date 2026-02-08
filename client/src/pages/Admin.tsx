@@ -18,8 +18,11 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { LogOut, UserCircle } from "lucide-react";
 import { PhiDisclaimer } from "@/components/PhiDisclaimer";
+import { useRoute } from "wouter";
 
 export default function Admin() {
+  const [, params] = useRoute("/org/:clientSlug/admin");
+  const clientSlug = params?.clientSlug || "";
   const [activeTab, setActiveTab] = useState("dashboard");
   const { user } = useAuth();
   const { data: metrics, isLoading } = trpc.organizations.getMetrics.useQuery();
@@ -271,7 +274,7 @@ export default function Admin() {
 
 
                     {/* Open Portal Button */}
-                    <Link href={`/org/${org.slug}/intake`}>
+                    <Link href={`/org/${clientSlug}/${org.slug}/intake`}>
                       <Button
                         className="w-full bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white"
                         size="sm"

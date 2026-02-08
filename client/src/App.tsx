@@ -19,10 +19,14 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
+      {/* Client-level admin routes */}
+      <Route path="/org/:clientSlug/admin" component={Admin} />
+      {/* Organization-level routes (nested under client) */}
+      <Route path="/org/:clientSlug/:slug/intake" component={IntakeNewRedesign} />
+      <Route path="/org/:clientSlug/:slug/tasks" component={Tasks} />
+      <Route path="/org/:clientSlug/:slug" component={Home} />
+      {/* Legacy routes - redirect old /admin to login */}
       <Route path="/admin" component={Admin} />
-      <Route path="/org/:slug/intake" component={IntakeNewRedesign} />
-      <Route path="/org/:slug/tasks" component={Tasks} />
-      <Route path="/org/:slug" component={Home} />
       <Route path={"/"} component={Login} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

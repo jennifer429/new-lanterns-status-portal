@@ -11,9 +11,10 @@ import type { Task } from "@shared/wizard-data";
 interface WizardCompletionProps {
   tasks: Task[];
   orgSlug: string;
+  clientSlug: string;
 }
 
-export function WizardCompletion({ tasks, orgSlug }: WizardCompletionProps) {
+export function WizardCompletion({ tasks, orgSlug, clientSlug }: WizardCompletionProps) {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-8">
       <div className="max-w-2xl w-full space-y-6">
@@ -100,12 +101,12 @@ export function WizardCompletion({ tasks, orgSlug }: WizardCompletionProps) {
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Button variant="outline" size="lg" asChild>
-            <a href={`/org/${orgSlug}`}>
+            <a href={`/org/${clientSlug}/${orgSlug}`}>
               Back to Dashboard
             </a>
           </Button>
           <Button size="lg" asChild>
-            <a href={`/org/${orgSlug}/tasks`}>
+            <a href={`/org/${clientSlug}/${orgSlug}/tasks`}>
               View All Tasks
               <ArrowRight className="w-4 h-4 ml-2" />
             </a>

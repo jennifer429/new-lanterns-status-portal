@@ -6,7 +6,7 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
-import { users, organizations } from "../../drizzle/schema";
+import { users, organizations, clients } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import { sdk } from "../_core/sdk";
@@ -57,8 +57,22 @@ export const authRouter = router({
       // Update last login timestamp
       await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
 
-      // Get organization slug if user has organizationId
+      // Get organization slug and client slug for redirect
       let orgSlug = "admin";
+      let clientSlug = "";
+      
+      // Get client slug from user's clientId
+      if (user.clientId) {
+        const [client] = await db
+          .select()
+          .from(clients)
+          .where(eq(clients.id, user.clientId))
+          .limit(1);
+        if (client) {
+          clientSlug = client.slug;
+        }
+      }
+      
       if (user.organizationId) {
         const [org] = await db
           .select()
@@ -67,6 +81,17 @@ export const authRouter = router({
           .limit(1);
         if (org) {
           orgSlug = org.slug;
+          // If we didn't get clientSlug from user, get it from org
+          if (!clientSlug && org.clientId) {
+            const [client] = await db
+              .select()
+              .from(clients)
+              .where(eq(clients.id, org.clientId))
+              .limit(1);
+            if (client) {
+              clientSlug = client.slug;
+            }
+          }
         }
       }
 
@@ -84,6 +109,7 @@ export const authRouter = router({
         name: user.name || user.email?.split('@')[0] || "User",
         role: user.role,
         orgSlug,
+        clientSlug,
       };
     }),
 
