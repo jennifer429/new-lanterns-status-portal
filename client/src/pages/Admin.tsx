@@ -119,10 +119,7 @@ export default function Admin() {
               <Building2 className="w-4 h-4 mr-2" />
               Update Organizations
             </TabsTrigger>
-            <TabsTrigger value="update-questions" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-gray-300">
-              <FileText className="w-4 h-4 mr-2" />
-              Update Questions
-            </TabsTrigger>
+
           </TabsList>
 
           <TabsContent value="dashboard">
@@ -309,21 +306,7 @@ export default function Admin() {
             <OrganizationManagement />
           </TabsContent>
 
-          <TabsContent value="update-questions">
-            <Card className="border-purple-500/20 bg-black/40 backdrop-blur-xl">
-              <CardHeader>
-                <CardTitle className="text-white text-xl">Update Questions</CardTitle>
-                <CardDescription className="text-gray-300">
-                  Manage intake questionnaire questions and sections
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12 text-gray-400">
-                  Question management interface coming soon
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+
         </Tabs>
       </div>
     </div>

@@ -3,6 +3,7 @@ import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { organizations, sectionProgress, taskCompletion, activityFeed, users, intakeResponses, questions, responses, intakeFileAttachments } from "../../drizzle/schema";
 import { questionnaireSections } from "../../shared/questionnaireData";
+import { calculateProgress } from "../../shared/progressCalculation";
 import { eq, and, desc, count, sql } from "drizzle-orm";
 // ClickUp and Linear integrations removed for simplification
 
@@ -305,42 +306,14 @@ export const organizationsRouter = router({
           .from(intakeFileAttachments)
           .where(eq(intakeFileAttachments.organizationId, org.id));
 
-        // Build response map and file map for quick lookup
-        const responseMap = new Map();
-        allResponses.forEach(r => responseMap.set(r.questionId, r));
-        
-        const fileMap = new Map();
-        allFiles.forEach(f => fileMap.set(f.questionId, f));
-
-        // Group by section
-        const sectionStats: Record<string, { total: number; completed: number }> = {};
-        
-        allQuestions.forEach(q => {
-          if (!sectionStats[q.sectionTitle]) {
-            sectionStats[q.sectionTitle] = { total: 0, completed: 0 };
-          }
-          
-          sectionStats[q.sectionTitle].total++;
-          
-          // Check if question has a text response OR uploaded file
-          const resp = responseMap.get(q.id);
-          const hasResponse = resp && resp.response && resp.response !== '';
-          const hasFile = fileMap.has(q.id);
-          
-          if (hasResponse || hasFile) {
-            sectionStats[q.sectionTitle].completed++;
-          }
-        });
-
-        // Calculate overall completion percentage from section stats
-        const totalQuestions = allQuestions.length;
-        const completedQuestions = Object.values(sectionStats).reduce(
-          (sum, section) => sum + section.completed,
-          0
+        // Use shared progress calculation function
+        const progress = calculateProgress(
+          allQuestions,
+          allResponses,
+          allFiles
         );
-        const completionPercentage = totalQuestions > 0
-          ? Math.round((completedQuestions / totalQuestions) * 100)
-          : 0;
+        
+        const { completionPercentage, sectionProgress: sectionStats } = progress;
 
         // Get file uploads from intakeFileAttachments table
         const uploadedFiles = await db

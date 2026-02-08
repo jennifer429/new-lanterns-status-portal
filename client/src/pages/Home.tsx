@@ -10,6 +10,7 @@ import { Link, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useEffect, useState } from "react";
 import { questionnaireSections } from "@shared/questionnaireData";
+import { calculateProgress } from "@shared/progressCalculation";
 import { PhiDisclaimer } from "@/components/PhiDisclaimer";
 
 export default function Home() {
@@ -50,44 +51,33 @@ export default function Home() {
   
   const filesUploaded = allFiles.length;
 
-  // Calculate overall completion (including uploaded files)
-  const totalQuestions = questionnaireSections.reduce((sum, s) => sum + s.questions.length, 0);
-  
-  // Count answered questions: check both responses table AND uploaded files
-  const answeredQuestions = questionnaireSections.reduce((count, section) => {
-    return count + section.questions.filter(q => {
-      // Check if question has a text response
-      const hasResponse = existingResponses.some(r => r.questionId === q.id && r.response && r.response !== '');
-      // Check if question has uploaded files (for file upload questions)
-      const hasUploadedFile = allFiles.some(f => f.questionId === q.id);
-      return hasResponse || hasUploadedFile;
-    }).length;
-  }, 0);
-  
-  const intakeCompletion = Math.round((answeredQuestions / totalQuestions) * 100);
+  // Flatten all questions from sections
+  const allQuestions = questionnaireSections.flatMap(section =>
+    section.questions.map(q => ({
+      id: q.id,
+      sectionTitle: section.title
+    }))
+  );
+
+  // Use shared progress calculation function
+  const progress = calculateProgress(
+    allQuestions,
+    existingResponses,
+    allFiles
+  );
+
+  const intakeCompletion = progress.completionPercentage;
   
   // Calculate completed sections (100% complete)
-  const completedSections = questionnaireSections.filter(s => {
-    const sectionAnswered = s.questions.filter(q => {
-      const hasResponse = existingResponses.some(r => r.questionId === q.id && r.response && r.response !== '');
-      const hasUploadedFile = allFiles.some(f => f.questionId === q.id);
-      return hasResponse || hasUploadedFile;
-    }).length;
-    return Math.round((sectionAnswered / s.questions.length) * 100) === 100;
-  }).length;
+  const completedSections = Object.values(progress.sectionProgress).filter(
+    section => section.completed === section.total
+  ).length;
 
-  // Calculate section progress (including uploaded files)
-  const sectionProgress = questionnaireSections.map(section => {
-    const sectionAnswered = section.questions.filter(q => {
-      const hasResponse = existingResponses.some(r => r.questionId === q.id && r.response && r.response !== '');
-      const hasUploadedFile = allFiles.some(f => f.questionId === q.id);
-      return hasResponse || hasUploadedFile;
-    }).length;
-    return {
-      name: section.title,
-      progress: Math.round((sectionAnswered / section.questions.length) * 100)
-    };
-  });
+  // Convert section progress to array format for display
+  const sectionProgress = Object.entries(progress.sectionProgress).map(([name, stats]) => ({
+    name,
+    progress: stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0
+  }));
 
   // Mock user count (you can add real user count query later)
   const userCount = 5;

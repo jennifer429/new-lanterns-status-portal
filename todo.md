@@ -1221,3 +1221,17 @@
 - [x] Remove standalone DICOM Configuration section
 - [x] Update section numbering from 7 sections to 6 sections
 - [ ] Test consolidated structure
+
+## Bug Fixes and Role System Implementation (Current)
+- [x] Remove "Questionnaire" tab from admin dashboard (not expanding this functionality)
+- [x] Fix VPN connectivity form - only one download button should be clickable (currently two buttons, only right one works)
+- [x] Align progress calculation between admin page and organization dashboard (must use same calculation and display same summary)
+- [ ] Implement three-tier role system:
+  - [ ] Update schema: change `admin` role to `platform-admin`, add `radone-admin`, keep `user`
+  - [ ] Add `partnerId` field to organizations table
+  - [ ] Update @newlantern.ai auto-create to assign `platform-admin` role
+  - [ ] Add permission checks: platform-admin can create all roles, radone-admin can create radone-admin and user only
+  - [ ] Filter organizations by partnerId for radone-admin users
+  - [ ] Update UI to show role restrictions
+  - [ ] Migrate existing users: Jennifer → platform-admin, Ashley → radone-admin
+- [ ] Begin workflow diagram integration (Orders, Images, Priors, Reports Out)

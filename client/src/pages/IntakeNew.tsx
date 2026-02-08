@@ -64,8 +64,9 @@ function FileListForQuestion({ questionId, organizationSlug, onDelete }: { quest
               href={file.fileUrl}
               target="_blank"
               rel="noopener noreferrer"
-              download
+              download={file.fileName}
               className="p-2 hover:bg-muted rounded-md transition-colors"
+              title="Download file"
             >
               <Download className="w-4 h-4 text-purple-600" />
             </a>
