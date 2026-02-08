@@ -1152,3 +1152,51 @@
 - [x] Check progress calculation in client portal (client/src/pages/Home.tsx)
 - [x] Ensure both use identical logic (count answered questions + uploaded files)
 - [x] Test that percentages match exactly - Fixed section name mismatch: 'DICOM Data Validation' -> 'HL7 Data Validation'
+
+## Add Sample Answers to All Questions
+- [x] Review all questions in questionnaireData.ts - placeholders already exist
+- [x] Add conditional follow-up questions for Yes/No system questions
+- [x] When user answers "Yes" to integration engine/router/system questions, ask for system name
+- [x] Add security questionnaire follow-up (link/details on how and when to share)
+- [x] Update intake form to show/hide conditional questions based on answers
+- [ ] Test conditional question display logic
+
+## Add DICOM Conditional Follow-up Questions
+- [ ] Review all DICOM-related questions in questionnaire
+- [ ] Add conditional follow-ups for DICOM system/configuration questions
+- [ ] Test DICOM conditional questions display correctly
+
+## Implement Boss Feedback on Questionnaire
+- [ ] Org Info: Clarify VPN tunnel goal in sites/locations question
+- [ ] Overview & Architecture: Add (HL7) label to integration engine question
+- [ ] Overview & Architecture: Add (DICOM) label to router question
+- [ ] Overview & Architecture: Add (VNA) label to archive system question
+- [ ] Overview & Architecture: Add examples to DICOM SR question (dosage reports, etc.)
+- [ ] Data & Integration: Remove "Pet" from expected modalities
+- [ ] Data & Integration: Change "C" to "Query Retrieve" in comparison images question
+- [ ] Data & Integration: Clarify tech sheets question (automatic with images, not SR)
+- [ ] Configuration Files: Add de-identification reminder to section description
+- [ ] Connectivity: Update description to clarify DICOM (IP, AE title, port) and HL7 (IP, port) requirements
+- [ ] Connectivity: Add note that DICOM tagging is handled by Silverback, not client sites
+
+## Make EHR Question Optional
+- [ ] Change EHR question from required text to optional Yes/No dropdown
+- [ ] Add conditional follow-up asking for EHR system name if Yes
+- [ ] Test conditional display works correctly
+
+## Make RIS and EHR Questions Optional
+- [x] Change RIS question from required text to optional Yes/No dropdown
+- [x] Add conditional follow-up asking for RIS system name if Yes
+- [x] Change EHR question from required text to optional Yes/No dropdown
+- [x] Add conditional follow-up asking for EHR system name if Yes
+- [ ] Test conditional display works correctly for both
+
+## Reorganize Connectivity Sections
+- [x] Create "VPN & Connectivity" section with VPN form and port information
+- [x] Create "DICOM Configuration" section with AE titles, DICOM tagging
+- [x] Create "HL7 Configuration" section with HL7 message field values
+- [x] Update section IDs and navigation
+- [x] Test all three sections display correctly
+- [x] Clarified VPN section includes IP/port for DICOM and HL7
+- [x] Clarified DICOM section is for AE titles only (not IP/port)
+- [x] Clarified HL7 section is for message fields only (not IP/port)

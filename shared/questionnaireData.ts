@@ -13,6 +13,7 @@ export interface Question {
   placeholder?: string;
   templateUrl?: string; // For upload-download questions: URL to download template
   templateFileName?: string; // Display name for template download
+  conditionalOn?: { questionId: string; value: string }; // Show this question only if another question has specific value
 }
 
 export interface Section {
@@ -37,6 +38,7 @@ export const questionnaireSections: Section[] = [
       { id: 'A.4', text: 'Radiologist champion(s)', type: 'textarea', placeholder: 'Name, title, email, phone' },
       { id: 'A.5', text: 'Project manager (if applicable)', type: 'textarea', placeholder: 'Name, title, email, phone' },
       { id: 'A.6', text: 'Is a security questionnaire required?', type: 'dropdown', options: ['Yes', 'No'] },
+      { id: 'A.6.1', text: 'Please provide details on how and when you plan to share the security questionnaire (link, email, timeline)', type: 'textarea', placeholder: 'Example: We will send the questionnaire via email to security@newlantern.ai by [date]. Link to our security portal: https://...', conditionalOn: { questionId: 'A.6', value: 'Yes' } },
       { id: 'L.2', text: 'Test patient data requirements', type: 'textarea', placeholder: 'Document test patient data needs' },
       { id: 'L.3', text: 'Test study requirements', type: 'textarea', placeholder: 'Document test study requirements' },
       { id: 'L.4', text: 'Please share any timeline requirements or expectations you have around implementation, testing, and going live so we can coordinate resources', type: 'textarea', placeholder: 'Example: Our current PACS system is being decommissioned June 30th. Contract requires go-live by Q2 2026. Prefer 2 weeks for integration testing, 1 week for UAT.' },
@@ -52,15 +54,20 @@ export const questionnaireSections: Section[] = [
     description: 'System architecture and integrations',
     questions: [
       { id: 'A.7', text: 'Do you have an integration engine (HL7)?', type: 'dropdown', options: ['Yes', 'No'] },
+      { id: 'A.7.1', text: 'What is your integration engine system name and version?', type: 'text', placeholder: 'Example: Rhapsody 6.5, Mirth Connect 4.0, Cloverleaf', conditionalOn: { questionId: 'A.7', value: 'Yes' } },
       { id: 'A.8', text: 'Do you have a router (DICOM)?', type: 'dropdown', options: ['Yes', 'No'] },
-      { id: 'A.9', text: 'Current RIS (system you will generate orders from)', type: 'text', placeholder: 'Example: Epic Radiant' },
-      { id: 'A.10', text: 'What is your EHR system?', type: 'text', placeholder: 'Example: Epic, Cerner' },
+      { id: 'A.8.1', text: 'What is your DICOM router system name and version?', type: 'text', placeholder: 'Example: Laurel Bridge DCF, DCMTK Router, Intelerad', conditionalOn: { questionId: 'A.8', value: 'Yes' } },
+      { id: 'A.9', text: 'Do you have a RIS (system you will generate orders from)?', type: 'dropdown', options: ['Yes', 'No'] },
+      { id: 'A.9.1', text: 'What is your RIS system name?', type: 'text', placeholder: 'Example: Epic Radiant', conditionalOn: { questionId: 'A.9', value: 'Yes' } },
+      { id: 'A.10', text: 'Do you have an EHR system?', type: 'dropdown', options: ['Yes', 'No'] },
+      { id: 'A.10.1', text: 'What is your EHR system name?', type: 'text', placeholder: 'Example: Epic, Cerner', conditionalOn: { questionId: 'A.10', value: 'Yes' } },
       { id: 'A.11', text: 'What is your PACS system?', type: 'text', placeholder: 'Example: GE Centricity' },
       { id: 'A.12', text: 'What is your current archive system (VNA)?', type: 'text', placeholder: 'Example: GE (often your PACS)' },
       { id: 'A.13', text: 'System that produces DICOM SR', type: 'text', placeholder: 'Examples: dosage reports, radiation dose monitoring systems' },
       { id: 'A.14', text: 'Please list all AI integrations', type: 'textarea', placeholder: 'Example: Viz AI, Heart Flow, etc.' },
       { id: 'A.15', text: 'Will any systems be replaced during integration (PACS/RIS/EHR retirement)?', type: 'textarea', placeholder: 'Document any system replacements' },
       { id: 'A.16', text: 'Will your modality worklist system be impacted during this implementation?', type: 'dropdown', options: ['Yes', 'No'] },
+      { id: 'A.16.1', text: 'What is your modality worklist system name?', type: 'text', placeholder: 'Example: GE RIS, Epic Radiant MWL', conditionalOn: { questionId: 'A.16', value: 'Yes' } },
     ],
   },
   {
@@ -93,26 +100,33 @@ export const questionnaireSections: Section[] = [
     ],
   },
   {
-    id: 'connectivity',
-    title: 'Connectivity',
-    description: 'VPN and DICOM connectivity configuration (DICOM requires: IP address, AE title, port | HL7 requires: IP, port)',
+    id: 'vpn-connectivity',
+    title: 'VPN & Connectivity',
+    description: 'VPN setup and network connectivity (DICOM requires: IP address, port | HL7 requires: IP address, port)',
     questions: [
       { 
         id: 'E.1', 
         text: 'VPN form exchange', 
         type: 'upload-download', 
-        notes: 'Upload your completed VPN form or download our template',
+        notes: 'Upload your completed VPN form or download our template. MUST include IP addresses and ports for all DICOM endpoints and HL7 interfaces.',
         templateUrl: 'https://files.manuscdn.com/user_upload_by_module/session_file/310519663326227304/NfNtZiMfXpqdbVqa.xlsx',
         templateFileName: 'VPN_Form_Template.xlsx'
       },
-      { id: 'E.2', text: 'Please document AE titles here', type: 'textarea', placeholder: 'List all Application Entity titles for DICOM connectivity' },
+    ],
+  },
+  {
+    id: 'dicom-config',
+    title: 'DICOM Configuration',
+    description: 'DICOM Application Entity (AE) titles and tagging configuration (IP addresses and ports should be in VPN form)',
+    questions: [
+      { id: 'E.2', text: 'Please document AE titles for all DICOM endpoints', type: 'textarea', placeholder: 'List all Application Entity titles with their corresponding systems (e.g., PACS_AE - Main PACS, MOD_CT1 - CT Scanner 1)' },
       { id: 'E.3', text: 'Please document DICOM tag 0008,1040 value and corresponding PV1:11 value for matching (Note: DICOM tagging is handled by Silverback, not client sites)', type: 'textarea', placeholder: 'Document tag values for patient matching' },
     ],
   },
   {
-    id: 'dicom-validation',
-    title: 'HL7 Data Validation',
-    description: 'HL7 Order message field values and meanings',
+    id: 'hl7-config',
+    title: 'HL7 Configuration',
+    description: 'HL7 message field values and meanings (IP addresses and ports should be in VPN form)',
     questions: [
       { id: 'G.3', text: 'ORC-1 (Order Control) - Please document the values you will send and what each means', type: 'textarea', placeholder: 'Example: NW = New order, CA = Cancel order, XO = Change order, etc.' },
       { id: 'G.4', text: 'ORC-5 (Order Status) - Please document the values you will send and what each means', type: 'textarea', placeholder: 'Example: SC = In process/scheduled, CM = Complete, CA = Canceled, etc.' },

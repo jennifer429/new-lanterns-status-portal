@@ -296,7 +296,16 @@ export default function IntakeNewRedesign() {
 
   // Calculate section progress (including uploaded files)
   const calculateSectionProgress = (section: Section) => {
-    const answered = section.questions.filter(q => {
+    // Filter out hidden conditional questions first
+    const visibleQuestions = section.questions.filter(q => {
+      if (q.conditionalOn) {
+        const parentResponse = responses[q.conditionalOn.questionId];
+        return parentResponse === q.conditionalOn.value;
+      }
+      return true;
+    });
+    
+    const answered = visibleQuestions.filter(q => {
       // Check if question has a text response
       const response = responses[q.id];
       const hasResponse = Array.isArray(response) 
@@ -309,7 +318,10 @@ export default function IntakeNewRedesign() {
       // Question is answered if it has EITHER a response OR uploaded files
       return hasResponse || hasUploadedFile;
     }).length;
-    return Math.round((answered / section.questions.length) * 100);
+    
+    return visibleQuestions.length > 0 
+      ? Math.round((answered / visibleQuestions.length) * 100)
+      : 100; // If no visible questions, consider section complete
   };
 
   // Handle file upload
@@ -729,6 +741,14 @@ export default function IntakeNewRedesign() {
               {/* Questions Grid */}
               <div className="grid grid-cols-2 gap-x-8 gap-y-6">
                 {currentSectionData?.questions.map((question) => {
+                  // Check if question should be displayed based on conditionalOn
+                  if (question.conditionalOn) {
+                    const parentResponse = responses[question.conditionalOn.questionId];
+                    if (parentResponse !== question.conditionalOn.value) {
+                      return null; // Hide this question
+                    }
+                  }
+                  
                   const isUnanswered = unansweredQuestions.has(question.id);
                   return (
                     <div 
@@ -767,6 +787,14 @@ export default function IntakeNewRedesign() {
                     const currentQuestions = currentSectionData?.questions || [];
                     const unanswered = currentQuestions
                       .filter(q => {
+                        // Skip conditional questions that aren't visible
+                        if (q.conditionalOn) {
+                          const parentResponse = responses[q.conditionalOn.questionId];
+                          if (parentResponse !== q.conditionalOn.value) {
+                            return false; // Don't validate hidden questions
+                          }
+                        }
+                        
                         // For file upload questions (including upload-download), check if files are uploaded
                         if (q.type === 'upload' || q.type === 'upload-download') {
                           return !uploadedFilesMap.has(q.id) || uploadedFilesMap.get(q.id) === 0;
