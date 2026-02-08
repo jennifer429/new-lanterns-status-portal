@@ -1259,3 +1259,7 @@
 - [x] Debug workflow diagram rendering - diagrams not showing up in intake form
 - [x] Verify workflow sections are properly integrated with the form
 - [x] Add "Downtime Plans" question to questionnaire (describe how organization handles planned/unplanned downtimes impacting orders, reports, or backup reading)
+
+## Critical Bug Fix (Current)
+- [x] Fix workflow configuration save error - backend validation rejects workflow config keys like 'orders-workflow_config'
+- [x] Test workflow configuration saving across all 4 workflow types

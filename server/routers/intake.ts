@@ -138,7 +138,7 @@ export const intakeRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this organization" });
       }
 
-      // Find question by questionId (e.g., "H.1")
+      // Find question by questionId (e.g., "H.1" or "orders-workflow_config")
       const [question] = await db
         .select()
         .from(questions)
