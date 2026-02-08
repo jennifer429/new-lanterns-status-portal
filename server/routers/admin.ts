@@ -552,16 +552,9 @@ export const adminRouter = router({
     // For each organization, get metrics
     const metrics = await Promise.all(
       orgs.map(async (org) => {
-        // Get users for this organization
+        // Get user count
         const orgUsers = await db.select().from(users).where(eq(users.organizationId, org.id));
         const userCount = orgUsers.length;
-
-        // Get partner name if applicable
-        let partnerName = null;
-        if (org.clientId) {
-          const [partner] = await db.select().from(clients).where(eq(clients.id, org.clientId));
-          partnerName = partner?.name || null;
-        }
 
         // Get completion percentage (from intake responses)
         // Count total questions vs answered questions
@@ -586,21 +579,12 @@ export const adminRouter = router({
           .orderBy(desc(intakeFileAttachments.createdAt));
 
         return {
-          id: org.id,
-          name: org.name,
-          slug: org.slug,
+          organizationId: org.id,
+          organizationName: org.name,
+          organizationSlug: org.slug,
           status: org.status,
-          partnerName,
           userCount,
           completionPercent,
-          users: orgUsers.map(u => ({
-            id: u.id,
-            email: u.email,
-            name: u.name,
-            role: u.role,
-            organizationId: u.organizationId,
-            lastLoginAt: u.lastLoginAt,
-          })),
           files: files.map(f => ({
             id: f.id,
             fileName: f.fileName,
@@ -767,49 +751,6 @@ export const adminRouter = router({
         .update(organizations)
         .set({ status: "active" })
         .where(eq(organizations.id, input.organizationId));
-
-      return { success: true };
-    }),
-
-  /**
-   * Update a user
-   */
-  updateUser: protectedProcedure
-    .input(
-      z.object({
-        id: z.number(),
-        email: z.string().optional(),
-        name: z.string().optional(),
-        organizationId: z.number().optional(),
-        role: z.enum(["user", "admin"]).optional(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
-      // Get the user to check permissions
-      const [targetUser] = await db.select().from(users).where(eq(users.id, input.id));
-      if (!targetUser) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
-      }
-
-      // Partner admins can only update users from their own partner
-      if (ctx.user.clientId && targetUser.clientId !== ctx.user.clientId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot update other partner's users" });
-      }
-
-      const { id, ...updates } = input;
-
-      // Update user
-      await db
-        .update(users)
-        .set(updates)
-        .where(eq(users.id, id));
 
       return { success: true };
     }),
