@@ -85,6 +85,7 @@ export const questionnaireSections: Section[] = [
       { id: 'D.10', text: 'What are the HL7 priority values in your orders (OBR:27.1) and what do they mean?', type: 'textarea', placeholder: 'Example: S=Stat, R=Routine' },
       { id: 'D.11', text: 'What patient identifier do you use for matching (e.g. MRN) and is it in PID:3.1?', type: 'textarea', placeholder: 'Document patient identifier field' },
       { id: 'D.12', text: 'Is the patient identifier in your order the same as in prior reports and comparison images?', type: 'textarea', placeholder: 'Yes/No and explain any differences' },
+      { id: 'D.13', text: 'Please document DICOM tag 0008,1040 value and corresponding PV1:11 value for matching (Note: DICOM tagging is handled by Silverback, not client sites)', type: 'textarea', placeholder: 'Document tag values for patient matching' },
     ],
   },
   {
@@ -175,14 +176,6 @@ export const questionnaireSections: Section[] = [
     ],
   },
   {
-    id: 'dicom-config',
-    title: 'DICOM Configuration',
-    description: 'DICOM tagging and patient matching configuration',
-    questions: [
-      { id: 'E.3', text: 'Please document DICOM tag 0008,1040 value and corresponding PV1:11 value for matching (Note: DICOM tagging is handled by Silverback, not client sites)', type: 'textarea', placeholder: 'Document tag values for patient matching' },
-    ],
-  },
-  {
     id: 'hl7-config',
     title: 'HL7 Configuration',
     description: 'HL7 message field values and meanings (IP addresses and ports should be in VPN form)',
@@ -190,6 +183,8 @@ export const questionnaireSections: Section[] = [
       { id: 'G.3', text: 'ORC-1 (Order Control) - Please document the values you will send and what each means', type: 'textarea', placeholder: 'Example: NW = New order, CA = Cancel order, XO = Change order, etc.' },
       { id: 'G.4', text: 'ORC-5 (Order Status) - Please document the values you will send and what each means', type: 'textarea', placeholder: 'Example: SC = In process/scheduled, CM = Complete, CA = Canceled, etc.' },
       { id: 'G.5', text: 'OBR:27.1 (Quantity/Timing) in ORU messages - Please document the values you will send and what each means', type: 'textarea', placeholder: 'Example: STAT = Urgent/immediate, ROUTINE = Normal priority, ASAP = As soon as possible, etc.' },
+      { id: 'G.6', text: 'PV1:2 (Patient Class) - Please document the values you will send and what each means', type: 'textarea', placeholder: 'Example: E = Emergency, I = Inpatient, O = Outpatient, P = Preadmit, R = Recurring, etc.' },
+      { id: 'G.7', text: 'PV1:3 (Assigned Patient Location) - Optional but useful - Please document your location codes and what they mean', type: 'textarea', placeholder: 'Example: MAIN^3RD^302A = Main building, 3rd floor, room 302A\nEAST^RAD^CT1 = East wing, Radiology, CT Scanner 1\n\nLeave blank if not applicable' },
     ],
   },
 ];

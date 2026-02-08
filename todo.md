@@ -1213,3 +1213,11 @@
 - [x] Add HL7 Reports from New Lantern endpoints (Test and Production) - IP and port
 - [x] Add HL7 ADT endpoints (if in scope) - Test and Production - IP and port
 - [ ] Test all endpoint fields display correctly
+
+## Consolidate Sections and Add PV1 Questions
+- [x] Add PV1:2 (Patient Class) question to HL7 Configuration
+- [x] Add PV1:3 (Assigned Patient Location) question to HL7 Configuration (optional)
+- [x] Move DICOM tagging question from Section 6 to Section 3 (Data & Integration)
+- [x] Remove standalone DICOM Configuration section
+- [x] Update section numbering from 7 sections to 6 sections
+- [ ] Test consolidated structure
