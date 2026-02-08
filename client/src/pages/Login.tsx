@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
 import { useLocation, Link } from "wouter";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
@@ -18,27 +17,40 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const loginMutation = trpc.auth.login.useMutation({
-    onSuccess: (data) => {
-      // Redirect based on role and organization
-      if (data.role === "admin") {
-        setLocation("/admin");
-      } else if (data.orgSlug) {
-        setLocation(`/org/${data.orgSlug}`);
-      } else {
-        setLocation("/");
-      }
-    },
-    onError: (err) => {
-      setError(err.message);
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    loginMutation.mutate({ email, password });
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+        credentials: "include", // Important: include cookies
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Login failed");
+      }
+
+      const data = await response.json();
+      
+      // Hard reload to ensure cookie is properly set
+      if (data.orgSlug) {
+        window.location.href = `/org/${data.orgSlug}`;
+      } else {
+        window.location.href = "/";
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Login failed");
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -103,9 +115,9 @@ export default function Login() {
             <Button
               type="submit"
               className="w-full bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white font-semibold py-6 text-lg"
-              disabled={loginMutation.isPending}
+              disabled={isLoading}
             >
-              {loginMutation.isPending && (
+              {isLoading && (
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
               )}
               Access Portal

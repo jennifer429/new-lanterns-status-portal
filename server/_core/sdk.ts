@@ -260,6 +260,8 @@ class SDKServer {
     // Regular authentication flow
     const cookies = this.parseCookies(req.headers.cookie);
     const sessionCookie = cookies.get(COOKIE_NAME);
+    console.log('[authenticateRequest] Cookie header:', req.headers.cookie?.substring(0, 100));
+    console.log('[authenticateRequest] Session cookie exists:', !!sessionCookie);
     const session = await this.verifySession(sessionCookie);
 
     if (!session) {
@@ -267,8 +269,10 @@ class SDKServer {
     }
 
     const sessionUserId = session.openId;
+    console.log('[authenticateRequest] Session openId:', sessionUserId);
     const signedInAt = new Date();
     let user = await db.getUserByOpenId(sessionUserId);
+    console.log('[authenticateRequest] Found user:', user?.email, 'clientId:', user?.clientId);
 
     // If user not in DB, sync from OAuth server automatically
     if (!user) {

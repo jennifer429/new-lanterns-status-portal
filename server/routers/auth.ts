@@ -6,7 +6,7 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
-import { users, organizations } from "../../drizzle/schema";
+import { users, organizations, clients } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import { sdk } from "../_core/sdk";
@@ -32,12 +32,14 @@ export const authRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
       // Find user by email
+      console.log('[auth.login] Looking for user:', input.email.toLowerCase());
       const [user] = await db
         .select()
         .from(users)
         .where(eq(users.email, input.email.toLowerCase()))
         .limit(1);
 
+      console.log('[auth.login] User found:', !!user, 'Has password:', !!user?.passwordHash);
       if (!user || !user.passwordHash) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -46,7 +48,9 @@ export const authRouter = router({
       }
 
       // Verify password
+      console.log('[auth.login] Comparing password...');
       const isValid = await bcrypt.compare(input.password, user.passwordHash);
+      console.log('[auth.login] Password valid:', isValid);
       if (!isValid) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -57,8 +61,10 @@ export const authRouter = router({
       // Update last login timestamp
       await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
 
-      // Get organization slug if user has organizationId
+      // Determine redirect route based on user type
       let orgSlug = "admin";
+      
+      // If user has organizationId, they're a hospital user → go to their org portal
       if (user.organizationId) {
         const [org] = await db
           .select()
@@ -69,6 +75,21 @@ export const authRouter = router({
           orgSlug = org.slug;
         }
       }
+      // If user has clientId, they're a partner admin → go to partner admin page
+      else if (user.clientId) {
+        const [client] = await db
+          .select()
+          .from(clients)
+          .where(eq(clients.id, user.clientId))
+          .limit(1);
+        if (client) {
+          orgSlug = `${client.slug}/admin`;
+        }
+      }
+      // Otherwise, platform admin → go to /org/admin
+      else {
+        orgSlug = "org/admin";
+      }
 
       // Create session token and set cookie
       const sessionToken = await sdk.createSessionToken(user.openId, {
@@ -76,9 +97,14 @@ export const authRouter = router({
         expiresInMs: ONE_YEAR_MS,
       });
 
+      // Clear any existing session cookie first to ensure fresh login
       const cookieOptions = getSessionCookieOptions(ctx.req);
+      ctx.res.clearCookie(COOKIE_NAME, cookieOptions);
       ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+      console.log('[auth.login] Set cookie with options:', { ...cookieOptions, maxAge: ONE_YEAR_MS });
+      console.log('[auth.login] Session token for user:', user.email, 'openId:', user.openId);
 
+      console.log('[auth.login] Returning orgSlug:', orgSlug);
       return {
         email: user.email || "",
         name: user.name || user.email?.split('@')[0] || "User",

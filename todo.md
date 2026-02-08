@@ -1284,3 +1284,11 @@
 - [x] Create README.md with architecture overview
 - [x] Create DATA_DICTIONARY.md with complete schema documentation
 - [x] Create TENANCY.md explaining how partner isolation worksmentation
+
+## Fix Partner Access Control (Current)
+- [x] Replace email domain checks with clientId checks in PlatformAdmin
+- [x] Replace email domain checks with clientId checks in PartnerAdmin
+- [x] Update login redirect logic to use clientId to determine admin page route
+- [ ] Test SRV admin (clientId=2) sees only SRV organizations
+- [ ] Test RadOne admin (clientId=3) sees only RadOne organizations
+- [ ] Remove debug banner from PlatformAdmin after testing

@@ -15,9 +15,9 @@ export default function PlatformAdmin() {
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
 
-  // Access control: Only @newlantern.ai emails
+  // Access control: Only New Lantern staff (clientId = 1 or NULL)
   useEffect(() => {
-    if (!authLoading && (!user || !user.email?.endsWith("@newlantern.ai"))) {
+    if (!authLoading && (!user || (user.clientId !== null && user.clientId !== 1))) {
       setLocation("/");
     }
   }, [user, authLoading, setLocation]);
@@ -46,6 +46,10 @@ export default function PlatformAdmin() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Debug info */}
+      <div className="bg-yellow-500/20 border-b border-yellow-500/50 p-2 text-center text-sm">
+        <strong>DEBUG:</strong> User: {user?.email} | ClientId: {user?.clientId || 'NULL'} | Role: {user?.role}
+      </div>
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm">
         <div className="container py-6">

@@ -20,12 +20,16 @@ export default function PartnerAdmin({ partnerName, allowedDomain }: PartnerAdmi
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
 
-  // Access control: Only users with the correct email domain
+  // Get clientId from clients query by matching partnerName
+  const { data: clients } = trpc.admin.getAllClients.useQuery();
+  const partnerClient = clients?.find(c => c.name === partnerName);
+  
+  // Access control: Check user's clientId matches partner
   useEffect(() => {
-    if (!authLoading && (!user || !user.email?.endsWith(allowedDomain))) {
+    if (!authLoading && partnerClient && (!user || user.clientId !== partnerClient.id)) {
       setLocation("/");
     }
-  }, [user, authLoading, allowedDomain, setLocation]);
+  }, [user, authLoading, partnerClient, setLocation]);
 
   const { data: orgs, isLoading } = trpc.admin.getAllOrganizations.useQuery();
 

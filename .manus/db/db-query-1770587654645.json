@@ -1,0 +1,16 @@
+{
+  "query": "SELECT id, email, clientId, organizationId FROM users WHERE email = 'admin@srv.com';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, email, clientId, organizationId FROM users WHERE email = 'admin@srv.com';",
+  "rows": [
+    {
+      "id": "1530012",
+      "email": "admin@srv.com",
+      "clientId": "2",
+      "organizationId": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\temail\tclientId\torganizationId\n1530012\tadmin@srv.com\t2\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 57
+}

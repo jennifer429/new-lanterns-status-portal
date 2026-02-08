@@ -300,6 +300,13 @@ export const adminRouter = router({
   /**
    * Get all organizations (filtered by user's clientId)
    */
+  /**
+   * Debug: Get current user's full data
+   */
+  getCurrentUser: protectedProcedure.query(async ({ ctx }) => {
+    return ctx.user;
+  }),
+
   getAllOrganizations: protectedProcedure.query(async ({ ctx }) => {
     if (ctx.user.role !== "admin") {
       throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
@@ -307,6 +314,9 @@ export const adminRouter = router({
 
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+    // Debug logging
+    console.log('[getAllOrganizations] User:', ctx.user.email, 'clientId:', ctx.user.clientId, 'role:', ctx.user.role);
 
     // Filter by user's clientId for access control
     if (ctx.user.clientId) {
