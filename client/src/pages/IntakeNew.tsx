@@ -177,7 +177,7 @@ export default function IntakeNew() {
         const result = await uploadFileMutation.mutateAsync({
           organizationId: org.id,
           taskId: questionId,
-          taskName: questionnaireData.flatMap(s => s.questions).find(q => q.id === questionId)?.text || questionId,
+          taskName: questionnaireData.filter(s => s.questions).flatMap(s => s.questions!).find(q => q.id === questionId)?.text || questionId,
           fileName: file.name,
           fileData: base64,
           mimeType: file.type,
@@ -225,6 +225,7 @@ export default function IntakeNew() {
 
   // Calculate progress per section
   const calculateSectionProgress = (section: Section) => {
+    if (!section.questions) return 0; // Workflow sections have no questions
     const totalQuestions = section.questions.length;
     if (totalQuestions === 0) return 100;
 
@@ -302,6 +303,7 @@ export default function IntakeNew() {
     csvContent += `Section|Question ID|Question Text|Answer|Completed\n`;
     
     questionnaireData.forEach(section => {
+      if (!section.questions) return; // Skip workflow sections
       section.questions.forEach(question => {
         const answer = responses[question.id];
         let answerStr = '';
@@ -617,7 +619,7 @@ export default function IntakeNew() {
                 {questionnaireData.map((section, idx) => {
                   const progress = calculateSectionProgress(section);
                   const status = getSectionStatus(section);
-                  const answeredCount = section.questions.filter(q => {
+                  const answeredCount = section.questions?.filter(q => {
                     const value = responses[q.id];
                     if (Array.isArray(value)) return value.length > 0;
                     if (typeof value === 'string') return value.trim().length > 0;
@@ -648,7 +650,7 @@ export default function IntakeNew() {
                         <div className="space-y-2">
                           <div className="flex items-center justify-between text-sm">
                             <span className="text-muted-foreground">
-                              {answeredCount} of {section.questions.length} questions answered
+                              {answeredCount} of {section.questions?.length || 0} questions answered
                             </span>
                             <span className="font-semibold text-primary">{progress}%</span>
                           </div>
@@ -743,12 +745,12 @@ export default function IntakeNew() {
               <div>
                 <h1 className="text-xl font-bold">{currentSectionData?.title}</h1>
                 <p className="text-sm text-muted-foreground">
-                  {currentSectionData?.questions.filter(q => {
+                  {currentSectionData?.questions?.filter(q => {
                     const value = responses[q.id];
                     if (Array.isArray(value)) return value.length > 0;
                     if (typeof value === 'string') return value.trim().length > 0;
                     return value !== undefined && value !== null && value !== '';
-                  }).length} of {currentSectionData?.questions.length} questions answered
+                  }).length || 0} of {currentSectionData?.questions?.length || 0} questions answered
                 </p>
               </div>
             </div>
@@ -784,7 +786,7 @@ export default function IntakeNew() {
             )}
           </CardHeader>
           <CardContent className="space-y-6">
-            {currentSectionData?.questions.map((question) => (
+            {currentSectionData?.questions?.map((question) => (
               <div key={question.id} className="space-y-2">
                 <Label htmlFor={question.id} className="text-base font-medium">
                   {question.text}

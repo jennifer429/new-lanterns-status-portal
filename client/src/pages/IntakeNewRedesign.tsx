@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { questionnaireSections, type Question, type Section } from "@shared/questionnaireData";
+import { WorkflowDiagram } from "@/components/WorkflowDiagram";
 
 // Section icons mapping
 const sectionIcons: Record<string, any> = {
@@ -296,6 +297,9 @@ export default function IntakeNewRedesign() {
 
   // Calculate section progress (including uploaded files)
   const calculateSectionProgress = (section: Section) => {
+    // Workflow sections don't have questions
+    if (!section.questions) return 0;
+    
     // Filter out hidden conditional questions first
     const visibleQuestions = section.questions.filter(q => {
       if (q.conditionalOn) {
@@ -351,6 +355,9 @@ export default function IntakeNewRedesign() {
   const handleExportCSV = () => {
     const lines = ['Question ID,Question Text,Response'];
     questionnaireSections.forEach(section => {
+      // Skip workflow sections (no questions)
+      if (!section.questions) return;
+      
       section.questions.forEach(q => {
         const response = responses[q.id] || '';
         const responseStr = Array.isArray(response) ? response.join('; ') : String(response);
@@ -527,13 +534,13 @@ export default function IntakeNewRedesign() {
             <div className="text-center mb-4">
               <div className="text-5xl font-bold text-purple-300 mb-1">
                 {(() => {
-                  const totalQuestions = questionnaireSections.reduce((sum, s) => sum + s.questions.length, 0);
+                  const totalQuestions = questionnaireSections.reduce((sum, s) => sum + (s.questions?.length || 0), 0);
                   const answeredQuestions = questionnaireSections.reduce((sum, section) => {
-                    return sum + section.questions.filter(q => {
+                    return sum + (section.questions?.filter(q => {
                       const hasResponse = responses[q.id];
                       const hasUploadedFile = allUploadedFiles.some(f => f.questionId === q.id);
                       return hasResponse || hasUploadedFile;
-                    }).length;
+                    }).length || 0);
                   }, 0);
                   return Math.round((answeredQuestions / totalQuestions) * 100);
                 })()}%
@@ -666,13 +673,13 @@ export default function IntakeNewRedesign() {
                 <div className="flex items-center gap-3">
                   <Progress 
                     value={(() => {
-                      const totalQuestions = questionnaireSections.reduce((sum, s) => sum + s.questions.length, 0);
+                      const totalQuestions = questionnaireSections.reduce((sum, s) => sum + (s.questions?.length || 0), 0);
                       const answeredQuestions = questionnaireSections.reduce((sum, section) => {
-                        return sum + section.questions.filter(q => {
+                        return sum + (section.questions?.filter(q => {
                           const hasResponse = responses[q.id];
                           const hasUploadedFile = allUploadedFiles.some(f => f.questionId === q.id);
                           return hasResponse || hasUploadedFile;
-                        }).length;
+                        }).length || 0);
                       }, 0);
                       return Math.round((answeredQuestions / totalQuestions) * 100);
                     })()} 
@@ -680,13 +687,13 @@ export default function IntakeNewRedesign() {
                   />
                   <span className="text-lg font-bold">
                     {(() => {
-                      const totalQuestions = questionnaireSections.reduce((sum, s) => sum + s.questions.length, 0);
+                      const totalQuestions = questionnaireSections.reduce((sum, s) => sum + (s.questions?.length || 0), 0);
                       const answeredQuestions = questionnaireSections.reduce((sum, section) => {
-                        return sum + section.questions.filter(q => {
+                        return sum + (section.questions?.filter(q => {
                           const hasResponse = responses[q.id];
                           const hasUploadedFile = allUploadedFiles.some(f => f.questionId === q.id);
                           return hasResponse || hasUploadedFile;
-                        }).length;
+                        }).length || 0);
                       }, 0);
                       return `${answeredQuestions}/${totalQuestions}`;
                     })()} questions
@@ -723,48 +730,70 @@ export default function IntakeNewRedesign() {
                     {currentSectionData.description}
                   </p>
                 )}
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <span>
-                    {currentSectionData?.questions.filter(q => responses[q.id]).length || 0}/{currentSectionData?.questions.length} questions answered ({calculateSectionProgress(currentSectionData!)}%)
-                  </span>
-                </div>
-                <Progress value={calculateSectionProgress(currentSectionData!)} className="mt-3 h-2" />
+                {/* Only show progress for standard sections with questions */}
+                {currentSectionData?.questions && (
+                  <>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <span>
+                        {currentSectionData.questions.filter(q => responses[q.id]).length || 0}/{currentSectionData.questions.length} questions answered ({calculateSectionProgress(currentSectionData)}%)
+                      </span>
+                    </div>
+                    <Progress value={calculateSectionProgress(currentSectionData)} className="mt-3 h-2" />
+                  </>
+                )}
               </div>
 
-              {/* Questions Grid */}
-              <div className="grid grid-cols-2 gap-x-8 gap-y-6">
-                {currentSectionData?.questions.map((question) => {
-                  // Check if question should be displayed based on conditionalOn
-                  if (question.conditionalOn) {
-                    const parentResponse = responses[question.conditionalOn.questionId];
-                    if (parentResponse !== question.conditionalOn.value) {
-                      return null; // Hide this question
+              {/* Questions Grid or Workflow Diagram */}
+              {currentSectionData?.type === 'workflow' ? (
+                <div className="mt-6">
+                  <WorkflowDiagram 
+                    workflowType={currentSectionData.workflowType as any}
+                    configuration={{
+                      paths: {},
+                      systems: {},
+                      notes: {}
+                    }}
+                    onConfigurationChange={(config) => {
+                      // Store workflow configuration in responses
+                      setResponses(prev => ({ ...prev, [currentSectionData.id + '_config']: JSON.stringify(config) }));
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-x-8 gap-y-6">
+                  {currentSectionData?.questions?.map((question) => {
+                    // Check if question should be displayed based on conditionalOn
+                    if (question.conditionalOn) {
+                      const parentResponse = responses[question.conditionalOn.questionId];
+                      if (parentResponse !== question.conditionalOn.value) {
+                        return null; // Hide this question
+                      }
                     }
-                  }
-                  
-                  const isUnanswered = unansweredQuestions.has(question.id);
-                  return (
-                    <div 
-                      key={question.id} 
-                      data-question-id={question.id}
-                      className={`${
-                        question.type === 'textarea' || question.type === 'upload' || question.type === 'upload-download' ? 'col-span-2' : 'col-span-1'
-                      } ${
-                        isUnanswered ? 'p-4 border-2 border-red-500 rounded-lg bg-red-500/5' : ''
-                      }`}
-                    >
-                      <Label className="mb-2 block">
-                        {question.text}
-                        {isUnanswered && <span className="text-red-500 ml-2 font-semibold">* Required</span>}
-                      </Label>
-                      {renderQuestion(question)}
-                      {question.notes && (
-                        <p className="text-xs text-muted-foreground mt-1">{question.notes}</p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                    
+                    const isUnanswered = unansweredQuestions.has(question.id);
+                    return (
+                      <div 
+                        key={question.id} 
+                        data-question-id={question.id}
+                        className={`${
+                          question.type === 'textarea' || question.type === 'upload' || question.type === 'upload-download' ? 'col-span-2' : 'col-span-1'
+                        } ${
+                          isUnanswered ? 'p-4 border-2 border-red-500 rounded-lg bg-red-500/5' : ''
+                        }`}
+                      >
+                        <Label className="mb-2 block">
+                          {question.text}
+                          {isUnanswered && <span className="text-red-500 ml-2 font-semibold">* Required</span>}
+                        </Label>
+                        {renderQuestion(question)}
+                        {question.notes && (
+                          <p className="text-xs text-muted-foreground mt-1">{question.notes}</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Bottom Buttons */}
               <div className="flex items-center justify-between mt-8 pt-6 border-t">

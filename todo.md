@@ -1235,3 +1235,27 @@
   - [ ] Update UI to show role restrictions
   - [ ] Migrate existing users: Jennifer → platform-admin, Ashley → radone-admin
 - [ ] Begin workflow diagram integration (Orders, Images, Priors, Reports Out)
+
+## Interactive Workflow Diagrams Implementation (Current)
+- [x] Update questionnaire structure to add 4 new workflow sections
+  - [x] Section 2: Orders Workflow (replace text questions with interactive diagram)
+  - [x] Section 3: Images Workflow (with MWL, AI routing, PACS options)
+  - [x] Section 4: Priors Workflow (images + reports from multiple sources)
+  - [x] Section 5: Reports Out Workflow
+- [x] Create WorkflowDiagram component
+  - [x] Left panel: Configuration checkboxes with conditional text fields
+  - [x] Right panel: Three-column architecture diagram (Client Site | Silverback | New Lantern)
+  - [x] Dynamic arrow rendering based on checkbox selections
+  - [x] Gray labels above arrows
+  - [x] Grayed out cards for unchecked items
+- [x] Implement data persistence
+  - [x] Save workflow configurations to database
+  - [x] Load existing configurations on page load
+  - [x] Update progress calculation to include workflow sections
+- [x] Test all 4 workflows end-to-end
+
+## Urgent Bug Fixes (Current)
+- [x] Remove UAT participants questions from questionnaire
+- [x] Debug workflow diagram rendering - diagrams not showing up in intake form
+- [x] Verify workflow sections are properly integrated with the form
+- [x] Add "Downtime Plans" question to questionnaire (describe how organization handles planned/unplanned downtimes impacting orders, reports, or backup reading)

@@ -287,14 +287,16 @@ export const organizationsRouter = router({
         const lastLoginAt = lastLoginResult?.lastLoginAt || null;
 
         // Get section-by-section progress using questionnaireSections (same source as Home.tsx)
-        // We'll calculate overall completion from section stats to avoid double-counting
-        const allQuestions = questionnaireSections.flatMap(section =>
-          section.questions.map(q => ({
-            id: q.id,
-            sectionTitle: section.title,
-            questionText: q.text
-          }))
-        );
+        // Filter out workflow sections (they don't have questions array)
+        const allQuestions = questionnaireSections
+          .filter(section => section.questions) // Only process sections with questions
+          .flatMap(section =>
+            section.questions!.map(q => ({
+              id: q.id,
+              sectionTitle: section.title,
+              questionText: q.text
+            }))
+          );
         const allResponses = await db
           .select()
           .from(intakeResponses)

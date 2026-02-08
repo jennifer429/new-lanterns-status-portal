@@ -1,6 +1,6 @@
 /**
  * Radiology One New Site Onboarding Questionnaire
- * 6 sections, 51 total questions
+ * 9 sections (5 standard + 4 workflow diagrams), 51 total questions
  * Note: Router = DataFirst (Silverback) for all overlay situations
  */
 
@@ -20,7 +20,9 @@ export interface Section {
   id: string;
   title: string;
   description?: string;
-  questions: Question[];
+  questions?: Question[]; // Optional for workflow sections
+  type?: 'standard' | 'workflow'; // New: workflow sections use WorkflowDiagram component
+  workflowType?: 'orders' | 'images' | 'priors' | 'reports'; // New: which workflow to render
 }
 
 export const questionnaireSections: Section[] = [
@@ -42,33 +44,46 @@ export const questionnaireSections: Section[] = [
       { id: 'L.2', text: 'Test patient data requirements', type: 'textarea', placeholder: 'Document test patient data needs' },
       { id: 'L.3', text: 'Test study requirements', type: 'textarea', placeholder: 'Document test study requirements' },
       { id: 'L.4', text: 'Please share any timeline requirements or expectations you have around implementation, testing, and going live so we can coordinate resources', type: 'textarea', placeholder: 'Example: Our current PACS system is being decommissioned June 30th. Contract requires go-live by Q2 2026. Prefer 2 weeks for integration testing, 1 week for UAT.' },
-      { id: 'L.6', text: 'UAT participants', type: 'textarea', placeholder: 'List UAT participants' },
       { id: 'L.8', text: 'Go-live support requirements', type: 'textarea', placeholder: 'Document go-live support needs' },
       { id: 'L.9', text: 'Post go-live monitoring requirements', type: 'textarea', placeholder: 'Document post go-live monitoring' },
       { id: 'L.10', text: 'Issue escalation process', type: 'textarea', placeholder: 'Document escalation process' },
+      { id: 'L.11', text: 'Downtime Plans - Please describe how your organization handles downtimes planned and unplanned that impact orders and reports or backup reading', type: 'textarea', placeholder: 'Example: During planned maintenance windows (announced 2 weeks in advance), we route orders to backup PACS. For unplanned outages, we have 4-hour SLA for critical systems and maintain paper backup procedures for order entry.' },
     ],
   },
+  /**
+   * MAJOR CHANGE: Replaced text-based "Overview & Architecture" section
+   * with 4 interactive visual workflow diagrams
+   * 
+   * Old section had 16 text questions about systems
+   * New sections use WorkflowDiagram component for visual configuration
+   */
   {
-    id: 'overview-arch',
-    title: 'Overview & Architecture',
-    description: 'System architecture and integrations',
-    questions: [
-      { id: 'A.7', text: 'Do you have an integration engine (HL7)?', type: 'dropdown', options: ['Yes', 'No'] },
-      { id: 'A.7.1', text: 'What is your integration engine system name and version?', type: 'text', placeholder: 'Example: Rhapsody 6.5, Mirth Connect 4.0, Cloverleaf', conditionalOn: { questionId: 'A.7', value: 'Yes' } },
-      { id: 'A.8', text: 'Do you have a router (DICOM)?', type: 'dropdown', options: ['Yes', 'No'] },
-      { id: 'A.8.1', text: 'What is your DICOM router system name and version?', type: 'text', placeholder: 'Example: Laurel Bridge DCF, DCMTK Router, Intelerad', conditionalOn: { questionId: 'A.8', value: 'Yes' } },
-      { id: 'A.9', text: 'Do you have a RIS (system you will generate orders from)?', type: 'dropdown', options: ['Yes', 'No'] },
-      { id: 'A.9.1', text: 'What is your RIS system name?', type: 'text', placeholder: 'Example: Epic Radiant', conditionalOn: { questionId: 'A.9', value: 'Yes' } },
-      { id: 'A.10', text: 'Do you have an EHR system?', type: 'dropdown', options: ['Yes', 'No'] },
-      { id: 'A.10.1', text: 'What is your EHR system name?', type: 'text', placeholder: 'Example: Epic, Cerner', conditionalOn: { questionId: 'A.10', value: 'Yes' } },
-      { id: 'A.11', text: 'What is your PACS system?', type: 'text', placeholder: 'Example: GE Centricity' },
-      { id: 'A.12', text: 'What is your current archive system (VNA)?', type: 'text', placeholder: 'Example: GE (often your PACS)' },
-      { id: 'A.13', text: 'System that produces DICOM SR', type: 'text', placeholder: 'Examples: dosage reports, radiation dose monitoring systems' },
-      { id: 'A.14', text: 'Please list all AI integrations', type: 'textarea', placeholder: 'Example: Viz AI, Heart Flow, etc.' },
-      { id: 'A.15', text: 'Will any systems be replaced during integration (PACS/RIS/EHR retirement)?', type: 'textarea', placeholder: 'Document any system replacements' },
-      { id: 'A.16', text: 'Will your modality worklist system be impacted during this implementation?', type: 'dropdown', options: ['Yes', 'No'] },
-      { id: 'A.16.1', text: 'What is your modality worklist system name?', type: 'text', placeholder: 'Example: GE RIS, Epic Radiant MWL', conditionalOn: { questionId: 'A.16', value: 'Yes' } },
-    ],
+    id: 'orders-workflow',
+    type: 'workflow',
+    workflowType: 'orders',
+    title: 'Orders Workflow',
+    description: 'Configure how imaging orders reach New Lantern',
+  },
+  {
+    id: 'images-workflow',
+    type: 'workflow',
+    workflowType: 'images',
+    title: 'Images Workflow (DICOM)',
+    description: 'Configure how new images flow to New Lantern',
+  },
+  {
+    id: 'priors-workflow',
+    type: 'workflow',
+    workflowType: 'priors',
+    title: 'Priors Workflow',
+    description: 'Configure how prior images and reports reach New Lantern',
+  },
+  {
+    id: 'reports-out-workflow',
+    type: 'workflow',
+    workflowType: 'reports',
+    title: 'Reports Out Workflow',
+    description: 'Configure where finalized reports are sent',
   },
   {
     id: 'data-integration',
@@ -190,10 +205,11 @@ export const questionnaireSections: Section[] = [
 ];
 
 // Total questions count
+// Note: Workflow sections don't have questions array, so we filter them out
 export const TOTAL_QUESTIONS = questionnaireSections.reduce(
-  (sum, section) => sum + section.questions.length,
+  (sum, section) => sum + (section.questions?.length || 0),
   0
-); // 51 questions
+);
 
 // Legacy export for backward compatibility
 export const questionnaireData = questionnaireSections;

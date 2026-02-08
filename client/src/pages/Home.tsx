@@ -51,13 +51,15 @@ export default function Home() {
   
   const filesUploaded = allFiles.length;
 
-  // Flatten all questions from sections
-  const allQuestions = questionnaireSections.flatMap(section =>
-    section.questions.map(q => ({
-      id: q.id,
-      sectionTitle: section.title
-    }))
-  );
+  // Flatten all questions from sections (filter out workflow sections)
+  const allQuestions = questionnaireSections
+    .filter(section => section.questions) // Skip workflow sections
+    .flatMap(section =>
+      section.questions!.map(q => ({
+        id: q.id,
+        sectionTitle: section.title
+      }))
+    );
 
   // Use shared progress calculation function
   const progress = calculateProgress(
