@@ -1340,3 +1340,6 @@
 - [x] Keep the fixes we made today (email validation, completion percentage)
 - [x] Test organization list UI with deactivate/reactivate functionality
 - [x] Fix completion percentage inconsistency (was using deprecated intakeResponses table instead of responses table)
+
+## Urgent Fixes for Launch
+- [x] Add New Lantern logo to all admin page headers (PlatformAdmin, PartnerAdmin, ManageUsers)

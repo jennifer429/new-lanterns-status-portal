@@ -80,11 +80,14 @@ export default function PlatformAdmin() {
       <header className="border-b border-border bg-card/50 backdrop-blur-sm">
         <div className="container py-6">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">Platform Admin</h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                New Lantern - All Partners
-              </p>
+            <div className="flex items-center gap-4">
+              <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-12" />
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">Platform Admin</h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  New Lantern - All Partners
+                </p>
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <Button

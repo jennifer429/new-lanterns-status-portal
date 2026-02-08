@@ -97,6 +97,7 @@ export default function ManageUsers({ partnerName }: ManageUsersProps) {
         <div className="container py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
+              <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-12" />
               <Button
                 variant="ghost"
                 size="sm"
