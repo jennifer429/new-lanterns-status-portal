@@ -748,14 +748,30 @@ export default function IntakeNewRedesign() {
                 <div className="mt-6">
                   <WorkflowDiagram 
                     workflowType={currentSectionData.workflowType as any}
-                    configuration={{
-                      paths: {},
-                      systems: {},
-                      notes: {}
-                    }}
+                    configuration={(() => {
+                      const configKey = currentSectionData.id + '_config';
+                      const savedConfig = responses[configKey];
+                      if (savedConfig && typeof savedConfig === 'string') {
+                        try {
+                          return JSON.parse(savedConfig);
+                        } catch {
+                          return { paths: {}, systems: {}, notes: {} };
+                        }
+                      }
+                      return { paths: {}, systems: {}, notes: {} };
+                    })()}
                     onConfigurationChange={(config) => {
                       // Store workflow configuration in responses
                       setResponses(prev => ({ ...prev, [currentSectionData.id + '_config']: JSON.stringify(config) }));
+                      // Also trigger save mutation
+                      if (slug && user?.email) {
+                        saveMutation.mutate({
+                          organizationSlug: slug,
+                          questionId: currentSectionData.id + '_config',
+                          response: JSON.stringify(config),
+                          userEmail: user.email,
+                        });
+                      }
                     }}
                   />
                 </div>

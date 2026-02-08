@@ -273,48 +273,42 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
                 <div>New Lantern</div>
               </div>
 
-              {/* RIS Row */}
-              {ordersFromRIS && (
-                <div className="grid grid-cols-3 gap-4 items-center">
-                  <SystemCard
-                    name="RIS"
-                    subtitle={configuration.systems.risName}
-                    isActive={ordersFromRIS}
-                    column="client"
-                  />
-                  <Arrow label="Orders (HL7)" isActive={ordersFromRIS} />
-                  <div /> {/* Empty cell */}
-                </div>
-              )}
+              {/* RIS Row - Always show */}
+              <div className="grid grid-cols-3 gap-4 items-center">
+                <SystemCard
+                  name="RIS"
+                  subtitle={configuration.systems.risName}
+                  isActive={ordersFromRIS}
+                  column="client"
+                />
+                <Arrow label="Orders (HL7)" isActive={ordersFromRIS} />
+                <div /> {/* Empty cell */}
+              </div>
 
-              {/* EHR Row */}
-              {ordersFromEHR && (
-                <div className="grid grid-cols-3 gap-4 items-center">
-                  <SystemCard
-                    name="EHR"
-                    subtitle={configuration.systems.ehrName}
-                    isActive={ordersFromEHR}
-                    column="client"
-                  />
-                  <Arrow label="Orders (HL7)" isActive={ordersFromEHR} />
-                  <div /> {/* Empty cell */}
-                </div>
-              )}
+              {/* EHR Row - Always show */}
+              <div className="grid grid-cols-3 gap-4 items-center">
+                <SystemCard
+                  name="EHR"
+                  subtitle={configuration.systems.ehrName}
+                  isActive={ordersFromEHR}
+                  column="client"
+                />
+                <Arrow label="Orders (HL7)" isActive={ordersFromEHR} />
+                <div /> {/* Empty cell */}
+              </div>
 
-              {/* Silverback → New Lantern (consolidation point) */}
-              {(ordersFromRIS || ordersFromEHR) && (
-                <div className="grid grid-cols-3 gap-4 items-center">
-                  <div /> {/* Empty cell */}
-                  <SystemCard
-                    name="Silverback"
-                    isActive={true}
-                    column="silverback"
-                  />
-                  <Arrow label="Orders" isActive={true} />
-                </div>
-              )}
+              {/* Silverback → New Lantern (consolidation point) - Always show */}
+              <div className="grid grid-cols-3 gap-4 items-center">
+                <div /> {/* Empty cell */}
+                <SystemCard
+                  name="Silverback"
+                  isActive={ordersFromRIS || ordersFromEHR}
+                  column="silverback"
+                />
+                <Arrow label="Orders" isActive={ordersFromRIS || ordersFromEHR} />
+              </div>
 
-              {/* New Lantern */}
+              {/* New Lantern - Always show */}
               <div className="grid grid-cols-3 gap-4 items-center">
                 <div /> {/* Empty cell */}
                 <div /> {/* Empty cell */}
@@ -753,85 +747,73 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
                 <div>New Lantern</div>
               </div>
 
-              {/* Prior Images from VNA */}
-              {priorImagesVNA && (
-                <div className="grid grid-cols-3 gap-4 items-center">
-                  <SystemCard
-                    name="VNA"
-                    subtitle="Prior Images"
-                    isActive={true}
-                    column="client"
-                  />
-                  <Arrow label="Prior Images (DICOM)" isActive={true} />
-                  <div />
-                </div>
-              )}
+              {/* Prior Images from VNA - Always show */}
+              <div className="grid grid-cols-3 gap-4 items-center">
+                <SystemCard
+                  name="VNA"
+                  subtitle="Prior Images"
+                  isActive={priorImagesVNA}
+                  column="client"
+                />
+                <Arrow label="Prior Images (DICOM)" isActive={priorImagesVNA} />
+                <div />
+              </div>
 
-              {/* Prior Reports from EHR */}
-              {priorReportsEHR && (
-                <div className="grid grid-cols-3 gap-4 items-center">
-                  <SystemCard
-                    name="EHR"
-                    subtitle="Prior Reports"
-                    isActive={true}
-                    column="client"
-                  />
-                  <Arrow label="Prior Reports (HL7)" isActive={true} />
-                  <div />
-                </div>
-              )}
+              {/* Prior Reports from EHR - Always show */}
+              <div className="grid grid-cols-3 gap-4 items-center">
+                <SystemCard
+                  name="EHR"
+                  subtitle="Prior Reports"
+                  isActive={priorReportsEHR}
+                  column="client"
+                />
+                <Arrow label="Prior Reports (HL7)" isActive={priorReportsEHR} />
+                <div />
+              </div>
 
-              {/* Prior Reports from RIS */}
-              {priorReportsRIS && (
-                <div className="grid grid-cols-3 gap-4 items-center">
-                  <SystemCard
-                    name="RIS"
-                    subtitle="Prior Reports"
-                    isActive={true}
-                    column="client"
-                  />
-                  <Arrow label="Prior Reports (HL7)" isActive={true} />
-                  <div />
-                </div>
-              )}
+              {/* Prior Reports from RIS - Always show */}
+              <div className="grid grid-cols-3 gap-4 items-center">
+                <SystemCard
+                  name="RIS"
+                  subtitle="Prior Reports"
+                  isActive={priorReportsRIS}
+                  column="client"
+                />
+                <Arrow label="Prior Reports (HL7)" isActive={priorReportsRIS} />
+                <div />
+              </div>
 
-              {/* Prior Reports in DICOM */}
-              {priorReportsDICOM && (
-                <div className="grid grid-cols-3 gap-4 items-center">
-                  <SystemCard
-                    name="VNA"
-                    subtitle="DICOM SR/PDF"
-                    isActive={true}
-                    column="client"
-                  />
-                  <Arrow label="Prior Reports (DICOM)" isActive={true} />
-                  <div />
-                </div>
-              )}
+              {/* Prior Reports in DICOM - Always show */}
+              <div className="grid grid-cols-3 gap-4 items-center">
+                <SystemCard
+                  name="VNA"
+                  subtitle="DICOM SR/PDF"
+                  isActive={priorReportsDICOM}
+                  column="client"
+                />
+                <Arrow label="Prior Reports (DICOM)" isActive={priorReportsDICOM} />
+                <div />
+              </div>
 
-              {/* Silverback → New Lantern */}
-              {(priorImagesVNA || priorReportsEHR || priorReportsRIS || priorReportsDICOM) && (
-                <>
-                  <div className="grid grid-cols-3 gap-4 items-center">
-                    <div />
-                    <SystemCard
-                      name="Silverback"
-                      isActive={true}
-                      column="silverback"
-                    />
-                    <Arrow label="Priors" isActive={true} />
-                  </div>
-                  <div className="grid grid-cols-3 gap-4 items-center">
-                    <div />
-                    <div />
-                    <SystemCard
-                      name="New Lantern"
-                      isActive={true}
-                      column="newlantern"
-                    />
-                  </div>
-                </>
-              )}
+              {/* Silverback → New Lantern - Always show */}
+              <div className="grid grid-cols-3 gap-4 items-center">
+                <div />
+                <SystemCard
+                  name="Silverback"
+                  isActive={priorImagesVNA || priorReportsEHR || priorReportsRIS || priorReportsDICOM}
+                  column="silverback"
+                />
+                <Arrow label="Priors" isActive={priorImagesVNA || priorReportsEHR || priorReportsRIS || priorReportsDICOM} />
+              </div>
+              <div className="grid grid-cols-3 gap-4 items-center">
+                <div />
+                <div />
+                <SystemCard
+                  name="New Lantern"
+                  isActive={true}
+                  column="newlantern"
+                />
+              </div>
             </div>
           </CardContent>
         </Card>

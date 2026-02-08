@@ -1263,3 +1263,8 @@
 ## Critical Bug Fix (Current)
 - [x] Fix workflow configuration save error - backend validation rejects workflow config keys like 'orders-workflow_config'
 - [x] Test workflow configuration saving across all 4 workflow types
+
+## CRITICAL: Workflow Diagram Not Rendering
+- [x] Investigate why WorkflowDiagram component is not showing up (only checkboxes visible, no visual diagram)
+- [x] Fix diagram rendering for all 4 workflow types
+- [x] Verify Client Site → Silverback → New Lantern flow diagram displays correctly for all workflows
