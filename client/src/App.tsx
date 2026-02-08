@@ -6,6 +6,8 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Admin from "./pages/Admin";
+import PlatformAdmin from "./pages/PlatformAdmin";
+import PartnerAdmin from "./pages/PartnerAdmin";
 import IntakeNewRedesign from "./pages/IntakeNewRedesign";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -20,6 +22,15 @@ function Router() {
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/admin" component={Admin} />
+      <Route path="/org/admin">
+        {() => <PlatformAdmin />}
+      </Route>
+      <Route path="/org/SRV/admin">
+        {() => <PartnerAdmin partnerName="SRV" allowedDomain="@srv.com" />}
+      </Route>
+      <Route path="/org/RadOne/admin">
+        {() => <PartnerAdmin partnerName="RadOne" allowedDomain="@radone.com" />}
+      </Route>
       <Route path="/org/:slug/intake" component={IntakeNewRedesign} />
       <Route path="/org/:slug/tasks" component={Tasks} />
       <Route path="/org/:slug" component={Home} />

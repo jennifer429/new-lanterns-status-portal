@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO users (openId, name, email, passwordHash, loginMethod, role, clientId) VALUES\n('test-newlantern-1', 'New Lantern Admin', 'admin@newlantern.ai', '$2b$10$YourHashHere', 'email', 'admin', NULL),\n('test-srv-1', 'SRV Admin', 'admin@srv.com', '$2b$10$YourHashHere', 'email', 'admin', 2),\n('test-radone-1', 'RadOne Admin', 'admin@radone.com', '$2b$10$YourHashHere', 'email', 'admin', 1)\nON DUPLICATE KEY UPDATE name=name;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute INSERT INTO users (openId, name, email, passwordHash, loginMethod, role, clientId) VALUES\n('test-newlantern-1', 'New Lantern Admin', 'admin@newlantern.ai', '$2b$10$YourHashHere', 'email', 'admin', NULL),\n('test-srv-1', 'SRV Admin', 'admin@srv.com', '$2b$10$YourHashHere', 'email', 'admin', 2),\n('test-radone-1', 'RadOne Admin', 'admin@radone.com', '$2b$10$YourHashHere', 'email', 'admin', 1)\nON DUPLICATE KEY UPDATE name=name;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 70
+}

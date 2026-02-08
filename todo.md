@@ -1268,3 +1268,19 @@
 - [x] Investigate why WorkflowDiagram component is not showing up (only checkboxes visible, no visual diagram)
 - [x] Fix diagram rendering for all 4 workflow types
 - [x] Verify Client Site → Silverback → New Lantern flow diagram displays correctly for all workflows
+
+## Partner Isolation System Implementation
+- [x] Add partnerId field to users table (varchar, nullable for backward compatibility) - using existing clientId
+- [x] Add partnerId field to organizations table (varchar, not null) - using existing clientId
+- [x] Create /org/admin page for New Lantern staff (shows all partners)
+- [x] Create /org/SRV/admin page for SRV users (filtered to SRV only)
+- [x] Create /org/RadOne/admin page for RadOne users (filtered to RadOne only)
+- [x] Implement backend query filtering by partnerId
+- [x] Auto-assign partnerId when creating users/orgs from partner admin pages
+- [x] Add email domain-based access control (@newlantern.ai, @srv.com, @radone.com)
+- [x] Test SRV admin cannot see RadOne data
+- [x] Test RadOne admin cannot see SRV data
+- [x] Test New Lantern admin can see all da## Documentation
+- [x] Create README.md with architecture overview
+- [x] Create DATA_DICTIONARY.md with complete schema documentation
+- [x] Create TENANCY.md explaining how partner isolation worksmentation

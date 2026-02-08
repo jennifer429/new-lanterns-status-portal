@@ -276,6 +276,24 @@ export const adminRouter = router({
     }),
 
   // ============================================================================
+  // CLIENTS CRUD
+  // ============================================================================
+
+  /**
+   * Get all clients (partners) - New Lantern staff only
+   */
+  getAllClients: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user.role !== "admin" || !ctx.user.email?.endsWith("@newlantern.ai")) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Only New Lantern staff can view all clients" });
+    }
+
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+    return await db.select().from(clients).orderBy(clients.name);
+  }),
+
+  // ============================================================================
   // ORGANIZATIONS CRUD
   // ============================================================================
 
@@ -305,7 +323,7 @@ export const adminRouter = router({
   createOrganization: protectedProcedure
     .input(
       z.object({
-        clientId: z.number(),
+        clientId: z.number().optional(), // Optional - will be auto-assigned for partner admins
         name: z.string(),
         slug: z.string(),
         contactName: z.string().optional(),
@@ -322,6 +340,21 @@ export const adminRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
+      // Auto-assign clientId based on user's email domain if not provided
+      let clientId = input.clientId;
+      if (!clientId) {
+        // Determine clientId from user's email domain
+        if (ctx.user.email?.endsWith("@srv.com")) {
+          clientId = 2; // SRV
+        } else if (ctx.user.email?.endsWith("@radone.com")) {
+          clientId = 1; // RadOne
+        } else if (ctx.user.email?.endsWith("@newlantern.ai")) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "New Lantern staff must specify clientId" });
+        } else {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Cannot determine partner for this user" });
+        }
+      }
+
       // Check if slug already exists
       const existing = await db
         .select()
@@ -333,7 +366,10 @@ export const adminRouter = router({
         throw new TRPCError({ code: "CONFLICT", message: "Organization slug already exists" });
       }
 
-      const [newOrg] = await db.insert(organizations).values(input);
+      const [newOrg] = await db.insert(organizations).values({
+        ...input,
+        clientId, // Use auto-assigned or provided clientId
+      });
 
       return { success: true, organizationId: newOrg.insertId };
     }),
