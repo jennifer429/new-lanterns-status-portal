@@ -1211,4 +1211,5 @@
 - [x] Add HL7 Orders endpoints (Test and Production) - IP and port
 - [x] Add HL7 Prior Reports endpoints (Test and Production) - IP and port
 - [x] Add HL7 Reports from New Lantern endpoints (Test and Production) - IP and port
-- [ ] Test all HL7 endpoint fields display correctly
+- [x] Add HL7 ADT endpoints (if in scope) - Test and Production - IP and port
+- [ ] Test all endpoint fields display correctly

@@ -160,6 +160,18 @@ export const questionnaireSections: Section[] = [
         type: 'textarea', 
         placeholder: 'Example:\n- Your HL7 Listener Production: IP 10.1.3.7, Port 2577' 
       },
+      { 
+        id: 'E.6', 
+        text: 'HL7 ADTs (if in scope) - Test/Proof Environment (IP address and Port)', 
+        type: 'textarea', 
+        placeholder: 'Example:\n- ADT Interface Test: IP 10.1.3.13, Port 2578\n\nLeave blank if ADTs are not in scope for this implementation' 
+      },
+      { 
+        id: 'E.6.1', 
+        text: 'HL7 ADTs (if in scope) - Production Environment (IP address and Port)', 
+        type: 'textarea', 
+        placeholder: 'Example:\n- ADT Interface Production: IP 10.1.3.8, Port 2578\n\nLeave blank if ADTs are not in scope for this implementation' 
+      },
     ],
   },
   {
