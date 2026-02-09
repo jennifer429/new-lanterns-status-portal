@@ -40,7 +40,7 @@ import { toast } from "sonner";
 export default function PlatformAdmin() {
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"dashboard" | "organizations" | "users">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "users" | "organizations">("dashboard");
   
   // User creation dialog state
   const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
@@ -48,6 +48,17 @@ export default function PlatformAdmin() {
   const [newUserName, setNewUserName] = useState("");
   const [newUserOrgId, setNewUserOrgId] = useState<number | undefined>();
   const [newUserRole, setNewUserRole] = useState<"user" | "admin">("user");
+
+  // Organization management state
+  const [isCreateOrgDialogOpen, setIsCreateOrgDialogOpen] = useState(false);
+  const [newOrgName, setNewOrgName] = useState("");
+  const [newOrgSlug, setNewOrgSlug] = useState("");
+  const [newOrgClientId, setNewOrgClientId] = useState<number | undefined>();
+  const [isEditOrgDialogOpen, setIsEditOrgDialogOpen] = useState(false);
+  const [editOrgId, setEditOrgId] = useState<number | null>(null);
+  const [editOrgName, setEditOrgName] = useState("");
+  const [editOrgSlug, setEditOrgSlug] = useState("");
+  const [editOrgClientId, setEditOrgClientId] = useState<number | null>(null);
 
   // Access control: Only New Lantern staff (clientId = NULL)
   useEffect(() => {
@@ -89,6 +100,47 @@ export default function PlatformAdmin() {
       role: newUserRole,
       clientId: user?.clientId || null,
     });
+  };
+
+  const createOrgMutation = trpc.admin.createOrganization.useMutation({
+    onSuccess: () => {
+      toast.success("Organization created successfully!");
+      setIsCreateOrgDialogOpen(false);
+      setNewOrgName("");
+      setNewOrgSlug("");
+      setNewOrgClientId(undefined);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to create organization");
+    },
+  });
+
+  const deactivateOrgMutation = trpc.admin.deactivateOrganization.useMutation({
+    onSuccess: () => {
+      toast.success("Organization deactivated successfully!");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to deactivate organization");
+    },
+  });
+
+  const handleCreateOrg = () => {
+    if (!newOrgName || !newOrgSlug || !newOrgClientId) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    createOrgMutation.mutate({
+      name: newOrgName,
+      slug: newOrgSlug,
+      clientId: newOrgClientId,
+    });
+  };
+
+  const handleDeactivateOrg = (orgId: number) => {
+    if (confirm("Are you sure you want to deactivate this organization?")) {
+      deactivateOrgMutation.mutate({ organizationId: orgId });
+    }
   };
 
   if (authLoading || isLoading) {
@@ -254,19 +306,6 @@ export default function PlatformAdmin() {
               )}
             </button>
             <button
-              onClick={() => setActiveTab("organizations")}
-              className={`pb-3 px-1 font-medium transition-colors relative ${
-                activeTab === "organizations"
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Organizations
-              {activeTab === "organizations" && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-              )}
-            </button>
-            <button
               onClick={() => setActiveTab("users")}
               className={`pb-3 px-1 font-medium transition-colors relative ${
                 activeTab === "users"
@@ -276,6 +315,19 @@ export default function PlatformAdmin() {
             >
               Users
               {activeTab === "users" && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab("organizations")}
+              className={`pb-3 px-1 font-medium transition-colors relative ${
+                activeTab === "organizations"
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Organizations
+              {activeTab === "organizations" && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
               )}
             </button>
@@ -340,117 +392,141 @@ export default function PlatformAdmin() {
 
         {activeTab === "organizations" && (
           <>
-            <h2 className="text-2xl font-bold mb-6">Active Organizations ({activeOrgs.length})</h2>
-            
-            {/* Organization Portal Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {activeOrgs.length === 0 ? (
-                <div className="col-span-full text-center py-12 text-muted-foreground">
-                  No active organizations
-                </div>
-              ) : (
-                activeOrgs.map(org => {
-                  const orgMetrics = metricsMap[org.id];
-                  const partnerName = org.clientId ? clientMap[org.clientId] : "Unknown";
-                  const completionPercent = orgMetrics?.completionPercent || 0;
-                  const userCount = orgMetrics?.userCount || 0;
-                  const fileCount = orgMetrics?.files?.length || 0;
-                  const sectionProgress = orgMetrics?.sectionProgress || {};
-
-                  // Get sections that are in progress (> 0% but < 100%)
-                  const inProgressSections = Object.entries(sectionProgress)
-                    .filter(([_, percent]) => percent > 0 && percent < 100)
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 2);
-
-                  return (
-                    <Card key={org.id} className="relative">
-                      <CardContent className="p-6">
-                        {/* Organization Header */}
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center gap-3">
-                            <ClipboardList className="w-5 h-5 text-primary" />
-                            <div>
-                              <h3 className="font-semibold text-lg">{org.name}</h3>
-                              <p className="text-sm text-muted-foreground">{partnerName}</p>
-                            </div>
-                          </div>
-                          <CheckCircle2 className="w-5 h-5 text-green-500" />
-                        </div>
-
-                        {/* Quick Stats */}
-                        <div className="grid grid-cols-3 gap-4 mb-4">
-                          <div className="text-center">
-                            <div className="text-2xl font-bold text-primary">{completionPercent}%</div>
-                            <div className="text-xs text-muted-foreground">Complete</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-2xl font-bold">{userCount}</div>
-                            <div className="text-xs text-muted-foreground">Users</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-2xl font-bold">{fileCount}</div>
-                            <div className="text-xs text-muted-foreground">Files</div>
-                          </div>
-                        </div>
-
-                        {/* Overall Progress */}
-                        <div className="mb-4">
-                          <div className="text-sm font-medium mb-2">Overall Progress</div>
-                          <div className="text-xs text-muted-foreground mb-2">0 of 9 sections complete</div>
-                          <div className="bg-primary/10 rounded-lg p-6 text-center">
-                            <div className="text-5xl font-bold text-primary mb-1">{completionPercent}%</div>
-                            <div className="text-sm text-muted-foreground">Complete</div>
-                          </div>
-                        </div>
-
-                        {/* Section Progress */}
-                        {inProgressSections.length > 0 && (
-                          <div className="mb-4">
-                            {inProgressSections.map(([sectionId, percent]) => (
-                              <div key={sectionId} className="flex items-center justify-between py-2">
-                                <div className="flex items-center gap-2">
-                                  <Circle className="w-3 h-3 text-muted-foreground" />
-                                  <span className="text-sm capitalize">{sectionId.replace(/([A-Z])/g, ' $1').trim()}</span>
-                                </div>
-                                <span className="text-sm font-medium">{percent}%</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        <div className="text-xs text-muted-foreground mb-4">In Progress</div>
-
-                        {/* Uploaded Files */}
-                        <div className="mb-4">
-                          <div className="text-sm font-medium mb-2">Uploaded Files:</div>
-                          {fileCount > 0 ? (
-                            <div className="text-sm text-muted-foreground">{fileCount} files uploaded</div>
-                          ) : (
-                            <div className="text-sm text-muted-foreground">No files uploaded yet</div>
-                          )}
-                        </div>
-
-                        {/* Last Login */}
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
-                          <Activity className="w-3 h-3" />
-                          <span>Last login: about 5 hours ago</span>
-                        </div>
-
-                        {/* Open Portal Button */}
-                        <Button
-                          className="w-full"
-                          onClick={() => setLocation(`/org/${org.slug}/intake`)}
-                        >
-                          <ExternalLink className="w-4 h-4 mr-2" />
-                          Open Portal
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  );
-                })
-              )}
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold">Organization Management</h2>
+              <Dialog open={isCreateOrgDialogOpen} onOpenChange={setIsCreateOrgDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Organization
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create New Organization</DialogTitle>
+                    <DialogDescription>
+                      Add a new hospital or healthcare organization to the onboarding portal.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div>
+                      <Label htmlFor="org-name">Organization Name</Label>
+                      <Input
+                        id="org-name"
+                        placeholder="Memorial General Hospital"
+                        value={newOrgName}
+                        onChange={(e) => setNewOrgName(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="org-slug">URL Slug</Label>
+                      <Input
+                        id="org-slug"
+                        placeholder="memorial-general"
+                        value={newOrgSlug}
+                        onChange={(e) => setNewOrgSlug(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="org-partner">Partner</Label>
+                      <Select value={newOrgClientId?.toString()} onValueChange={(val) => setNewOrgClientId(parseInt(val))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select partner" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(clientMap).map(([id, name]) => (
+                            <SelectItem key={id} value={id}>{name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      onClick={handleCreateOrg}
+                      disabled={createOrgMutation.isPending}
+                      className="w-full"
+                    >
+                      {createOrgMutation.isPending ? "Creating..." : "Create Organization"}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
+
+            <h3 className="text-lg font-semibold mb-4">Active Organizations ({activeOrgs.length})</h3>
+            <Card>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Partner</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Users</TableHead>
+                    <TableHead>Completion</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {activeOrgs.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        No active organizations
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    activeOrgs.map(org => {
+                      const orgMetrics = metricsMap[org.id];
+                      const partnerName = org.clientId ? clientMap[org.clientId] : "N/A";
+                      const completionPercent = orgMetrics?.completionPercent || 0;
+                      const userCount = orgMetrics?.userCount || 0;
+
+                      return (
+                        <TableRow key={org.id}>
+                          <TableCell className="font-medium">{org.name}</TableCell>
+                          <TableCell>{partnerName}</TableCell>
+                          <TableCell>
+                            <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                              Active
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{userCount}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <div className="text-sm font-medium">{completionPercent}%</div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setEditOrgId(org.id);
+                                  setEditOrgName(org.name);
+                                  setEditOrgSlug(org.slug);
+                                  setEditOrgClientId(org.clientId);
+                                  setIsEditOrgDialogOpen(true);
+                                }}
+                              >
+                                <Edit className="w-4 h-4 mr-1" />
+                                Edit
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeactivateOrg(org.id)}
+                                disabled={deactivateOrgMutation.isPending}
+                              >
+                                Deactivate
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </Card>
           </>
         )}
 

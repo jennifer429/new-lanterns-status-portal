@@ -1350,3 +1350,4 @@
 - [x] Update workflow diagram checkboxes to be white when unchecked and purple when checked
 - [ ] Fix percentage mismatch - admin shows 24% but portal shows 18% for Munson
 - [x] Add tabbed navigation to admin page with Dashboard, Organizations, and Users tabs
+- [ ] Redesign Organizations tab to show table format with Edit/Deactivate/Add actions
