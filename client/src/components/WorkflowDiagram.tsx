@@ -76,7 +76,7 @@ const SwimLaneRow: React.FC<SwimLaneRowProps> = ({
         id={id}
         checked={isActive}
         onCheckedChange={(checked) => onCheckChange(checked as boolean)}
-        className={isActive ? '' : 'opacity-50'}
+        className={isActive ? 'data-[state=checked]:bg-primary data-[state=checked]:border-primary' : 'border-white bg-transparent'}
       />
 
       {/* Source System Box */}

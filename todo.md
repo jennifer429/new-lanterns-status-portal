@@ -1347,3 +1347,4 @@
 - [x] Redesign workflow diagrams to use swim lane layout (Orders, Images, Priors, Reports)
 - [ ] Redesign admin dashboard to show organization cards with progress summaries
 - [ ] Fix percentage calculation mismatch between user portal and admin dashboard
+- [x] Update workflow diagram checkboxes to be white when unchecked and purple when checked
