@@ -1364,3 +1364,9 @@
 
 ## Profile Menu Enhancement
 - [x] Add "Back to Admin Dashboard" link in profile menu when admin views organization portal
+
+## Viz.ai Workflow Architecture Fix
+- [x] Update Viz.ai pathway to show correct 3-column flow: Modality→Viz.ai (Client Site) → Silverback → New Lantern
+
+## Viz.ai Workflow Architecture Fix
+- [x] Update Viz.ai pathway to show correct 3-column flow: Modality→Viz.ai (Client Site) → Silverback → New Lantern
