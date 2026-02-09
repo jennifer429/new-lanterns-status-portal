@@ -14,6 +14,7 @@
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { ArrowRight } from 'lucide-react';
 
 /**
@@ -233,18 +234,84 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
       <div className="space-y-4">
         <h3 className="font-semibold text-lg mb-4">Configure Image Sources</h3>
         
-        <SwimLaneRow
-          id="imagesFromModalities"
-          label="Images from Modalities (DICOM)"
-          sourceSystem="Modalities"
-          middlewareSystem="Silverback"
-          destinationSystem="New Lantern"
-          isActive={configuration.paths.imagesFromModalities || false}
-          noteValue={configuration.notes.imagesFromModalities_note || ''}
-          notePlaceholder="e.g., All CT, MR, X-ray modalities send directly to New Lantern"
-          onCheckChange={(checked) => handleCheckboxChange('imagesFromModalities', checked)}
-          onNoteChange={(value) => handleNoteChange('imagesFromModalities_note', value)}
-        />
+        {/* Modalities → Current PACS → Silverback → New Lantern */}
+        <div
+          className={`
+            flex items-center gap-4 p-4 rounded-lg transition-all
+            ${configuration.paths.imagesFromModalities ? 'bg-primary/10' : 'bg-muted/30'}
+          `}
+        >
+          <Checkbox
+            id="imagesFromModalities"
+            checked={configuration.paths.imagesFromModalities || false}
+            onCheckedChange={(checked) => handleCheckboxChange('imagesFromModalities', checked as boolean)}
+            className={configuration.paths.imagesFromModalities ? 'data-[state=checked]:bg-primary data-[state=checked]:border-primary' : 'border-white bg-transparent'}
+          />
+
+          {/* Client Site: Modalities → Current PACS */}
+          <div className="flex items-center gap-2">
+            <div
+              className={`
+                px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm
+                ${configuration.paths.imagesFromModalities 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'bg-muted text-muted-foreground'}
+              `}
+            >
+              Modality
+            </div>
+            <ArrowRight className={`w-5 h-5 ${configuration.paths.imagesFromModalities ? 'text-primary' : 'text-muted-foreground'}`} />
+            <div
+              className={`
+                px-4 py-2 rounded-md font-medium min-w-[120px] text-center text-sm
+                ${configuration.paths.imagesFromModalities 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'bg-muted text-muted-foreground'}
+              `}
+            >
+              Current PACS
+            </div>
+          </div>
+
+          {/* Arrow to Silverback */}
+          <ArrowRight className={`w-5 h-5 ${configuration.paths.imagesFromModalities ? 'text-primary' : 'text-muted-foreground'}`} />
+
+          {/* Silverback (Middleware) */}
+          <div
+            className={`
+              px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm
+              ${configuration.paths.imagesFromModalities 
+                ? 'bg-purple-600 text-white' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          >
+            Silverback
+          </div>
+
+          {/* Arrow to New Lantern */}
+          <ArrowRight className={`w-5 h-5 ${configuration.paths.imagesFromModalities ? 'text-primary' : 'text-muted-foreground'}`} />
+
+          {/* New Lantern (Destination) */}
+          <div
+            className={`
+              px-4 py-2 rounded-md font-medium min-w-[120px] text-center text-sm
+              ${configuration.paths.imagesFromModalities 
+                ? 'bg-primary text-primary-foreground' 
+                  : 'bg-muted text-muted-foreground'}
+            `}
+          >
+            New Lantern
+          </div>
+
+          {/* Notes Input */}
+          <Textarea
+            placeholder="e.g., All CT, MR, X-ray modalities send to PACS first"
+            value={configuration.notes.imagesFromModalities_note || ''}
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleNoteChange('imagesFromModalities_note', e.target.value)}
+            disabled={!configuration.paths.imagesFromModalities}
+            className={`flex-1 min-w-[200px] ${!configuration.paths.imagesFromModalities ? 'opacity-50' : ''}`}
+          />
+        </div>
 
         <SwimLaneRow
           id="imagesFromPACS"

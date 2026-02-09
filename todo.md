@@ -1403,3 +1403,25 @@
 - [x] Create SRV admin account for Rhonda Bennett (rbennett@tuscrad.com)
 - [x] Create SRV admin account for Leigh Ann Hobson (lhobson@tuscrad.com)
 - [x] Create SRV admin account for Dr. David Shulman (dshulman@tuscrad.com)
+
+## Partner Admin Filtering Fix
+- [ ] Fix SRV partner admin to only show SRV organizations (Boulder, RRMC)
+- [ ] Currently showing all organizations including RadOne orgs (JCRHC, Baycare, Munson)
+
+## Intake Portal Header Fix
+- [ ] Fix intake portal header to show correct partner name (e.g., "SRV - Boulder" not "Radiology One - Boulder")
+- [ ] Header should use partner name from organization's clientId in database
+
+## SRV Partner Admin Fixes
+- [ ] Fix organization filtering - SRV admins should only see Boulder and RRMC (not JCRHC, Baycare, Munson)
+- [ ] Add portal summary cards to Dashboard tab (matching Platform Admin)
+- [ ] Add profile dropdown menu in top-right corner
+- [ ] Add tabbed navigation (Dashboard, Organizations, Users)
+- [ ] Make UI structure match Platform Admin (just filtered to partner orgs)
+
+## Images Workflow Correction
+- [x] Fix Images workflow pathways:
+  - Path 1: Modalities → Silverback → New Lantern (direct)
+  - Path 2: Modalities → Current PACS → Silverback → New Lantern
+  - Path 3: Modalities → VNA → Silverback → New Lantern
+  - Path 4: Modalities → Viz.ai → Silverback → New Lantern

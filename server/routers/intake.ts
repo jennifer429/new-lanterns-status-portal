@@ -2,10 +2,43 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { intakeResponses, intakeFileAttachments, organizations, questions, questionOptions, responses, onboardingFeedback } from "../../drizzle/schema";
+import { intakeResponses, intakeFileAttachments, organizations, questions, questionOptions, responses, onboardingFeedback, clients } from "../../drizzle/schema";
 import { eq, and, sql } from "drizzle-orm";
 
 export const intakeRouter = router({
+  /**
+   * Get organization info including partner name
+   */
+  getOrganizationInfo: publicProcedure
+    .input(
+      z.object({
+        organizationSlug: z.string(),
+      })
+    )
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Get organization with partner info via LEFT JOIN
+      const result = await db
+        .select({
+          id: organizations.id,
+          name: organizations.name,
+          slug: organizations.slug,
+          clientId: organizations.clientId,
+          partnerName: sql<string>`COALESCE(clients.name, 'RadOne')`,
+        })
+        .from(organizations)
+        .leftJoin(sql`clients`, sql`organizations.clientId = clients.id`)
+        .where(eq(organizations.slug, input.organizationSlug))
+        .limit(1);
+
+      if (!result || result.length === 0) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      }
+
+      return result[0];
+    }),
   /**
    * Get file count for an organization
    */
