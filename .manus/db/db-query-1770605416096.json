@@ -1,0 +1,52 @@
+{
+  "query": "SELECT COUNT(*) as total_questions FROM questions;\nSELECT COUNT(*) as workflow_questions FROM questions WHERE sectionId IN ('ordersWorkflow', 'imagesWorkflow', 'priorsWorkflow', 'reportsOutWorkflow');\nSELECT questionId, sectionId FROM questions LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT COUNT(*) as total_questions FROM questions;\nSELECT COUNT(*) as workflow_questions FROM questions WHERE sectionId IN ('ordersWorkflow', 'imagesWorkflow', 'priorsWorkflow', 'reportsOutWorkflow');\nSELECT questionId, sectionId FROM questions LIMIT 10;",
+  "rows": [
+    {
+      "total_questions": "80"
+    },
+    {
+      "total_questions": "workflow_questions"
+    },
+    {
+      "total_questions": "0"
+    },
+    {
+      "total_questions": "questionId\tsectionId"
+    },
+    {
+      "total_questions": "H.1\torg-info"
+    },
+    {
+      "total_questions": "H.2\torg-info"
+    },
+    {
+      "total_questions": "H.3\torg-info"
+    },
+    {
+      "total_questions": "H.4\torg-info"
+    },
+    {
+      "total_questions": "H.5\torg-info"
+    },
+    {
+      "total_questions": "H.6\torg-info"
+    },
+    {
+      "total_questions": "H.7\torg-info"
+    },
+    {
+      "total_questions": "H.8\torg-info"
+    },
+    {
+      "total_questions": "H.9\torg-info"
+    },
+    {
+      "total_questions": "H.10\torg-info"
+    }
+  ],
+  "messages": [],
+  "stdout": "total_questions\n80\nworkflow_questions\n0\nquestionId\tsectionId\nH.1\torg-info\nH.2\torg-info\nH.3\torg-info\nH.4\torg-info\nH.5\torg-info\nH.6\torg-info\nH.7\torg-info\nH.8\torg-info\nH.9\torg-info\nH.10\torg-info\n",
+  "stderr": "",
+  "execution_time_ms": 76
+}

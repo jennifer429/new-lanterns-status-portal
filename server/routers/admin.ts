@@ -556,57 +556,69 @@ export const adminRouter = router({
         const orgUsers = await db.select().from(users).where(eq(users.organizationId, org.id));
         const userCount = orgUsers.length;
 
-        // Get completion percentage (from intake responses)
-        // Count total questions vs answered questions
-        const allQuestions = await db.select().from(questions);
-        const totalQuestions = allQuestions.length;
-
-        // Get intake responses for this org (using correct responses table, not deprecated intakeResponses)
+        // Use shared progress calculation function (same as frontend)
+        const { calculateProgress } = await import("../../shared/progressCalculation");
+        const { questionnaireSections } = await import("../../shared/questionnaireData");
+        
+        // Get responses and files for this org
+        // Join with questions table to get string questionIds (e.g., "H.1", "A.2")
         const { responses: responsesTable } = await import("../../drizzle/schema");
         const orgResponses = await db
-          .select()
+          .select({
+            id: responsesTable.id,
+            organizationId: responsesTable.organizationId,
+            questionId: questions.questionId, // Get string identifier from questions table
+            response: responsesTable.response,
+            fileUrl: responsesTable.fileUrl,
+            userEmail: responsesTable.userEmail,
+            createdAt: responsesTable.createdAt,
+            updatedAt: responsesTable.updatedAt,
+          })
           .from(responsesTable)
+          .leftJoin(questions, eq(responsesTable.questionId, questions.id))
           .where(eq(responsesTable.organizationId, org.id));
+        const orgFiles = await db
+          .select()
+          .from(intakeFileAttachments)
+          .where(eq(intakeFileAttachments.organizationId, org.id));
 
-        const answeredQuestions = orgResponses.filter(r => r.response && r.response !== "").length;
-        const completionPercent = totalQuestions > 0 ? Math.round((answeredQuestions / totalQuestions) * 100) : 0;
+        // Build question list (exclude workflow sections, same as frontend)
+        const allQuestions = questionnaireSections
+          .filter(section => section.questions) // Skip workflow sections
+          .flatMap(section =>
+            section.questions!.map(q => ({
+              id: q.id,
+              sectionTitle: section.title
+            }))
+          );
 
-        // Calculate section-level progress
-        const sectionIds = [
-          "organizationInfo",
-          "ordersWorkflow",
-          "imagesWorkflow",
-          "priorsWorkflow",
-          "reportsOutWorkflow",
-          "dataIntegration",
-          "configurationFiles",
-          "vpnConnectivity",
-          "hl7Configuration"
-        ];
+        // Calculate progress using shared utility
+        const progress = calculateProgress(allQuestions, orgResponses, orgFiles);
+        const completionPercent = progress.completionPercentage;
 
+        // Convert section progress from shared utility format to percentage format
+        const sectionTitleToId: Record<string, string> = {
+          "Organization Info": "organizationInfo",
+          "Orders Workflow": "ordersWorkflow",
+          "Images Workflow": "imagesWorkflow",
+          "Priors Workflow": "priorsWorkflow",
+          "Reports Out Workflow": "reportsOutWorkflow",
+          "Data & Integration": "dataIntegration",
+          "Configuration Files": "configurationFiles",
+          "VPN & Connectivity": "vpnConnectivity",
+          "HL7 Configuration": "hl7Configuration"
+        };
+        
         const sectionProgress: Record<string, number> = {};
-        let sectionsComplete = 0;
-
-        for (const sectionId of sectionIds) {
-          const sectionQuestions = allQuestions.filter(q => q.sectionId === sectionId);
-          const sectionTotal = sectionQuestions.length;
-          
-          if (sectionTotal > 0) {
-            const sectionAnswered = orgResponses.filter(r => {
-              const question = sectionQuestions.find(q => String(q.questionId) === String(r.questionId));
-              return question && r.response && r.response !== "";
-            }).length;
-            
-            const sectionPercent = Math.round((sectionAnswered / sectionTotal) * 100);
-            sectionProgress[sectionId] = sectionPercent;
-            
-            if (sectionPercent === 100) {
-              sectionsComplete++;
-            }
-          } else {
-            sectionProgress[sectionId] = 0;
+        Object.entries(progress.sectionProgress).forEach(([title, stats]) => {
+          const sectionId = sectionTitleToId[title];
+          if (sectionId) {
+            const percent = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
+            sectionProgress[sectionId] = percent;
           }
-        }
+        });
+        
+        const sectionsComplete = Object.values(sectionProgress).filter(p => p === 100).length;
 
         // Get files
         const files = await db

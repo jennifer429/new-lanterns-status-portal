@@ -1346,3 +1346,4 @@
 - [ ] Redesign intake questionnaire diagram images to look professional (RIS/EMR architecture diagrams)
 - [x] Redesign workflow diagrams to use swim lane layout (Orders, Images, Priors, Reports)
 - [ ] Redesign admin dashboard to show organization cards with progress summaries
+- [ ] Fix percentage calculation mismatch between user portal and admin dashboard
