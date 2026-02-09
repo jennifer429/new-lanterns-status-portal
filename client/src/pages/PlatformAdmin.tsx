@@ -124,6 +124,16 @@ export default function PlatformAdmin() {
     },
   });
 
+  const deactivateUserMutation = trpc.admin.deactivateUser.useMutation({
+    onSuccess: () => {
+      toast.success("User deactivated successfully!");
+      refetchUsers();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to deactivate user");
+    },
+  });
+
   const updateOrgMutation = trpc.admin.updateOrganization.useMutation({
     onSuccess: () => {
       toast.success("Organization updated successfully!");
@@ -227,12 +237,6 @@ export default function PlatformAdmin() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              {activeTab === "organizations" && (
-                <Button onClick={() => setLocation("/org/admin/create")}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Organization
-                </Button>
-              )}
               {activeTab === "users" && (
                 <Dialog open={isCreateUserDialogOpen} onOpenChange={setIsCreateUserDialogOpen}>
                   <DialogTrigger asChild>
@@ -645,11 +649,23 @@ export default function PlatformAdmin() {
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
-                              <Button size="sm" variant="outline">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => toast.info("Edit user functionality coming soon")}
+                              >
                                 <Edit className="w-3 h-3 mr-1" />
                                 Edit
                               </Button>
-                              <Button size="sm" variant="outline">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => {
+                                  if (confirm(`Deactivate user ${u.name}?`)) {
+                                    deactivateUserMutation.mutate({ userId: u.id });
+                                  }
+                                }}
+                              >
                                 Deactivate
                               </Button>
                             </div>
@@ -693,7 +709,11 @@ export default function PlatformAdmin() {
                               <Badge variant="secondary">{u.role}</Badge>
                             </TableCell>
                             <TableCell>
-                              <Button size="sm" variant="outline">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => toast.info("Reactivate user functionality coming soon")}
+                              >
                                 Reactivate
                               </Button>
                             </TableCell>

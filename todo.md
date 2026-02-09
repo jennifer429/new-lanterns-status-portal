@@ -1352,3 +1352,5 @@
 - [x] Add tabbed navigation to admin page with Dashboard, Organizations, and Users tabs
 - [ ] Redesign Organizations tab to show table format with Edit/Deactivate/Add actions
 - [ ] Implement Edit Organization dialog with name, slug, and partner fields
+- [x] Remove duplicate Create Organization button from header
+- [x] Fix broken Edit and Deactivate buttons for users
