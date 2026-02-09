@@ -94,7 +94,7 @@ export default function PlatformAdmin() {
   // Determine if this is a platform admin (no clientId) or partner admin
   const isPlatformAdmin = user?.clientId === null || user?.clientId === undefined;
 
-  const { data: orgs, isLoading } = trpc.admin.getAllOrganizations.useQuery();
+  const { data: orgs, isLoading, refetch: refetchOrgs } = trpc.admin.getAllOrganizations.useQuery();
   // Only platform admins can fetch all clients; partner admins don't need this
   const { data: clients } = trpc.admin.getAllClients.useQuery(undefined, {
     enabled: isPlatformAdmin,
@@ -270,10 +270,21 @@ export default function PlatformAdmin() {
 
   const deactivateOrgMutation = trpc.admin.deactivateOrganization.useMutation({
     onSuccess: () => {
-      toast.success("Organization deactivated successfully!");
+      toast.success("Organization deactivated");
+      refetchOrgs();
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(error.message || "Failed to deactivate organization");
+    },
+  });
+
+  const reactivateOrgMutation = trpc.admin.reactivateOrganization.useMutation({
+    onSuccess: () => {
+      toast.success("Organization reactivated");
+      refetchOrgs();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to reactivate organization");
     },
   });
 
@@ -380,6 +391,7 @@ export default function PlatformAdmin() {
   }, {} as Record<number, string>) || {};
 
   const activeOrgs = orgs?.filter(o => o.status === "active") || [];
+  const inactiveOrgs = orgs?.filter(o => o.status !== "active") || [];
   
   // Separate active and inactive users
   // Users with organizationId = null are considered deactivated (soft delete pattern)
@@ -406,96 +418,6 @@ export default function PlatformAdmin() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              {activeTab === "users" && (
-                <Dialog open={isCreateUserDialogOpen} onOpenChange={setIsCreateUserDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create User
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Create New User</DialogTitle>
-                      <DialogDescription>
-                        Add a new user to an organization
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 pt-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="userEmail">
-                          Email <span className="text-destructive">*</span>
-                        </Label>
-                        <Input
-                          id="userEmail"
-                          type="email"
-                          value={newUserEmail}
-                          onChange={(e) => setNewUserEmail(e.target.value)}
-                          placeholder="user@hospital.org"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="userName">
-                          Name <span className="text-destructive">*</span>
-                        </Label>
-                        <Input
-                          id="userName"
-                          value={newUserName}
-                          onChange={(e) => setNewUserName(e.target.value)}
-                          placeholder="John Doe"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="userOrg">
-                          Organization <span className="text-destructive">*</span>
-                        </Label>
-                        <Select
-                          value={newUserOrgId?.toString()}
-                          onValueChange={(value) => setNewUserOrgId(parseInt(value))}
-                        >
-                          <SelectTrigger id="userOrg">
-                            <SelectValue placeholder="Select organization" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {activeOrgs.map(org => (
-                              <SelectItem key={org.id} value={org.id.toString()}>
-                                {org.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="userRole">Role</Label>
-                        <Select
-                          value={newUserRole}
-                          onValueChange={(value: "user" | "admin") => setNewUserRole(value)}
-                        >
-                          <SelectTrigger id="userRole">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="user">User</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <Button
-                        onClick={handleCreateUser}
-                        disabled={createUserMutation.isPending}
-                        className="w-full"
-                      >
-                        {createUserMutation.isPending ? "Creating..." : "Create User"}
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              )}
-
               {/* Export All Button */}
               <Button
                 variant="outline"
@@ -945,12 +867,150 @@ export default function PlatformAdmin() {
                 </TableBody>
               </Table>
             </Card>
+
+            {/* Deactivated Organizations Section */}
+            {inactiveOrgs.length > 0 && (
+              <>
+                <h3 className="text-lg font-semibold mt-8 mb-4">Deactivated Organizations ({inactiveOrgs.length})</h3>
+                <Card>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        {isPlatformAdmin && <TableHead>Partner</TableHead>}
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {inactiveOrgs.map(org => {
+                        const partnerName = org.clientId ? clientMap[org.clientId] : "N/A";
+                        
+                        return (
+                          <TableRow key={org.id} className="opacity-60">
+                            <TableCell className="font-medium">{org.name}</TableCell>
+                            {isPlatformAdmin && <TableCell>{partnerName}</TableCell>}
+                            <TableCell>
+                              <Badge variant="secondary">Deactivated</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => {
+                                  if (confirm(`Reactivate ${org.name}?`)) {
+                                    reactivateOrgMutation.mutate({ organizationId: org.id });
+                                  }
+                                }}
+                                disabled={reactivateOrgMutation.isPending}
+                              >
+                                <RotateCcw className="w-3 h-3 mr-1" />
+                                Reactivate
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </Card>
+              </>
+            )}
           </>
         )}
 
         {activeTab === "users" && (
           <>
-            <h2 className="text-2xl font-bold mb-6">User Management</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold">User Management</h2>
+              <Dialog open={isCreateUserDialogOpen} onOpenChange={setIsCreateUserDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create User
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create New User</DialogTitle>
+                    <DialogDescription>
+                      Add a new user to an organization
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 pt-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="userEmail">
+                        Email <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="userEmail"
+                        type="email"
+                        value={newUserEmail}
+                        onChange={(e) => setNewUserEmail(e.target.value)}
+                        placeholder="user@hospital.org"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="userName">
+                        Name <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="userName"
+                        value={newUserName}
+                        onChange={(e) => setNewUserName(e.target.value)}
+                        placeholder="John Doe"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="userOrg">
+                        Organization <span className="text-destructive">*</span>
+                      </Label>
+                      <Select
+                        value={newUserOrgId?.toString()}
+                        onValueChange={(value) => setNewUserOrgId(parseInt(value))}
+                      >
+                        <SelectTrigger id="userOrg">
+                          <SelectValue placeholder="Select organization" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {activeOrgs.map(org => (
+                            <SelectItem key={org.id} value={org.id.toString()}>
+                              {org.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="userRole">Role</Label>
+                      <Select
+                        value={newUserRole}
+                        onValueChange={(value: "user" | "admin") => setNewUserRole(value)}
+                      >
+                        <SelectTrigger id="userRole">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="user">User</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <Button
+                      onClick={handleCreateUser}
+                      disabled={createUserMutation.isPending}
+                      className="w-full"
+                    >
+                      {createUserMutation.isPending ? "Creating..." : "Create User"}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
 
             {/* Edit User Dialog */}
             <Dialog open={isEditUserDialogOpen} onOpenChange={setIsEditUserDialogOpen}>

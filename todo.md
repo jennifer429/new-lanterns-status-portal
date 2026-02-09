@@ -1439,3 +1439,8 @@
 - [x] Backend: Update getAllUsers query to filter by joining with organizations table
 - [x] Fix Files display - files automatically filtered (shown in org cards which are already filtered)
 - [x] No separate Files tab exists - files only shown in Dashboard org cards
+
+## Admin UI Improvements (Feb 9, 2026)
+- [x] Move Create User button positioning to match Organizations tab layout
+- [x] Show deactivated organizations in Organizations tab with Reactivate button
+- [x] Ensure deactivated users are visible in Users tab with Reactivate button (verify existing functionality)
