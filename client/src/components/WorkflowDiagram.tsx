@@ -46,7 +46,7 @@ interface SwimLaneRowProps {
   id: string;
   label: string;
   sourceSystem: string;
-  middlewareSystem?: string; // Optional middleware (e.g., Silverback)
+  middlewareSystem?: string; // Optional middleware (e.g., Manual push to New Lantern)
   destinationSystem: string;
   isActive: boolean;
   noteValue: string;
@@ -188,7 +188,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           id="ordersFromRIS"
           label="Orders from RIS (HL7)"
           sourceSystem="RIS"
-          middlewareSystem="Silverback"
+          middlewareSystem="Manual push to New Lantern"
           destinationSystem="New Lantern"
           isActive={configuration.paths.ordersFromRIS || false}
           noteValue={configuration.notes.ordersFromRIS_note || ''}
@@ -201,7 +201,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           id="ordersFromEHR"
           label="Orders from EHR (HL7)"
           sourceSystem="EHR"
-          middlewareSystem="Silverback"
+          middlewareSystem="Manual push to New Lantern"
           destinationSystem="New Lantern"
           isActive={configuration.paths.ordersFromEHR || false}
           noteValue={configuration.notes.ordersFromEHR_note || ''}
@@ -214,7 +214,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           id="manualEntry"
           label="Manual Entry in PACS (No HL7)"
           sourceSystem="Manual Entry"
-          middlewareSystem="Silverback"
+          middlewareSystem="Manual push to New Lantern"
           destinationSystem="New Lantern"
           isActive={configuration.paths.manualEntry || false}
           noteValue={configuration.notes.manualEntry_note || ''}
@@ -234,7 +234,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
       <div className="space-y-4">
         <h3 className="font-semibold text-lg mb-4">Configure Image Sources</h3>
         
-        {/* Modalities → Current PACS → Silverback → New Lantern */}
+        {/* Modalities → Current PACS → Manual push to New Lantern → New Lantern */}
         <div
           className={`
             flex items-center gap-4 p-4 rounded-lg transition-all
@@ -273,10 +273,10 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
             </div>
           </div>
 
-          {/* Arrow to Silverback */}
+          {/* Arrow to Manual push to New Lantern */}
           <ArrowRight className={`w-5 h-5 ${configuration.paths.imagesFromModalities ? 'text-primary' : 'text-muted-foreground'}`} />
 
-          {/* Silverback (Middleware) */}
+          {/* Manual push to New Lantern (Middleware) */}
           <div
             className={`
               px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm
@@ -285,7 +285,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
                 : 'bg-muted text-muted-foreground'}
             `}
           >
-            Silverback
+            Manual push to New Lantern
           </div>
 
           {/* Arrow to New Lantern */}
@@ -317,7 +317,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           id="imagesFromPACS"
           label="Images from Existing PACS"
           sourceSystem="Current PACS"
-          middlewareSystem="Silverback"
+          middlewareSystem="Manual push to New Lantern"
           destinationSystem="New Lantern"
           isActive={configuration.paths.imagesFromPACS || false}
           noteValue={configuration.notes.imagesFromPACS_note || ''}
@@ -330,7 +330,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           id="imagesViaVNA"
           label="Images via VNA/Archive"
           sourceSystem="VNA"
-          middlewareSystem="Silverback"
+          middlewareSystem="Manual push to New Lantern"
           destinationSystem="New Lantern"
           isActive={configuration.paths.imagesViaVNA || false}
           noteValue={configuration.notes.imagesViaVNA_note || ''}
@@ -339,7 +339,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           onNoteChange={(value) => handleNoteChange('imagesViaVNA_note', value)}
         />
 
-        {/* Viz.ai 3-Column Workflow: Modality→Viz.ai → Silverback → New Lantern */}
+        {/* Viz.ai 3-Column Workflow: Modality→Viz.ai → Manual push to New Lantern → New Lantern */}
         <div
           className={`
             flex items-center gap-4 p-4 rounded-lg transition-all
@@ -381,12 +381,12 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
             </div>
           </div>
 
-          {/* Arrow to Silverback */}
+          {/* Arrow to Manual push to New Lantern */}
           <ArrowRight
             className={`w-6 h-6 flex-shrink-0 ${configuration.paths.imagesViaVizAI ? 'text-primary' : 'text-muted-foreground'}`}
           />
 
-          {/* Silverback Box */}
+          {/* Manual push to New Lantern Box */}
           <div
             className={`
               px-4 py-2 rounded-md font-medium min-w-[120px] text-center
@@ -395,7 +395,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
                 : 'bg-muted text-muted-foreground'}
             `}
           >
-            Silverback
+            Manual push to New Lantern
           </div>
 
           {/* Arrow to New Lantern */}
@@ -417,7 +417,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
 
           {/* Notes Input Field */}
           <Input
-            placeholder="e.g., CT/MR modalities send to Viz.ai for AI analysis, then forward through Silverback to New Lantern"
+            placeholder="e.g., CT/MR modalities send to Viz.ai for AI analysis, then forward through Manual push to New Lantern to New Lantern"
             value={configuration.notes.imagesViaVizAI_note || ''}
             onChange={(e) => handleNoteChange('imagesViaVizAI_note', e.target.value)}
             disabled={!configuration.paths.imagesViaVizAI}
@@ -445,7 +445,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           id="priorsFromPACS"
           label="Priors from Current PACS"
           sourceSystem="Current PACS"
-          middlewareSystem="Silverback"
+          middlewareSystem="Manual push to New Lantern"
           destinationSystem="New Lantern"
           isActive={configuration.paths.priorsFromPACS || false}
           noteValue={configuration.notes.priorsFromPACS_note || ''}
@@ -458,7 +458,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           id="priorsFromVNA"
           label="Priors from VNA/Archive"
           sourceSystem="VNA"
-          middlewareSystem="Silverback"
+          middlewareSystem="Manual push to New Lantern"
           destinationSystem="New Lantern"
           isActive={configuration.paths.priorsFromVNA || false}
           noteValue={configuration.notes.priorsFromVNA_note || ''}
@@ -471,7 +471,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           id="priorsFromCDImport"
           label="Priors from CD/External Import"
           sourceSystem="CD Import"
-          middlewareSystem="Silverback"
+          middlewareSystem="Manual push to New Lantern"
           destinationSystem="New Lantern"
           isActive={configuration.paths.priorsFromCDImport || false}
           noteValue={configuration.notes.priorsFromCDImport_note || ''}
@@ -495,7 +495,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           id="reportsToRIS"
           label="Reports to RIS (HL7)"
           sourceSystem="New Lantern"
-          middlewareSystem="Silverback"
+          middlewareSystem="Manual push to New Lantern"
           destinationSystem="RIS"
           isActive={configuration.paths.reportsToRIS || false}
           noteValue={configuration.notes.reportsToRIS_note || ''}
@@ -508,7 +508,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           id="reportsToEHR"
           label="Reports to EHR (HL7)"
           sourceSystem="New Lantern"
-          middlewareSystem="Silverback"
+          middlewareSystem="Manual push to New Lantern"
           destinationSystem="EHR"
           isActive={configuration.paths.reportsToEHR || false}
           noteValue={configuration.notes.reportsToEHR_note || ''}
@@ -521,7 +521,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           id="reportsToPortal"
           label="Reports to Patient Portal"
           sourceSystem="New Lantern"
-          middlewareSystem="Silverback"
+          middlewareSystem="Manual push to New Lantern"
           destinationSystem="Patient Portal"
           isActive={configuration.paths.reportsToPortal || false}
           noteValue={configuration.notes.reportsToPortal_note || ''}

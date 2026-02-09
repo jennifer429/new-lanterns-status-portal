@@ -1453,3 +1453,6 @@
 - [x] Frontend: Add "Mark as Complete" button for active organizations
 - [x] Frontend: Add "Reopen" button for completed organizations
 - [x] Test all status transitions (active → completed → reopened, active → deactivated → reactivated)
+
+## Workflow Visualization Update (Feb 9, 2026)
+- [x] Change "Silverback" text to "Manual push to New Lantern" in workflow diagram
