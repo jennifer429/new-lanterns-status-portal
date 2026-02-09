@@ -3,7 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { questions, questionOptions, organizations, users, clients, intakeFileAttachments } from "../../drizzle/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
 /**
@@ -661,10 +661,24 @@ export const adminRouter = router({
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
     // Platform admins see all users, partner admins see only their partner's users
-    const allUsers = await db
-      .select()
-      .from(users)
-      .where(ctx.user.clientId ? eq(users.clientId, ctx.user.clientId) : undefined);
+    let allUsers;
+    if (ctx.user.clientId) {
+      // Partner admin: filter users by organizations that belong to their partner
+      const partnerOrgs = await db
+        .select({ id: organizations.id })
+        .from(organizations)
+        .where(eq(organizations.clientId, ctx.user.clientId));
+      
+      const orgIds = partnerOrgs.map(org => org.id);
+      
+      allUsers = await db
+        .select()
+        .from(users)
+        .where(orgIds.length > 0 ? inArray(users.organizationId, orgIds) : sql`1=0`);
+    } else {
+      // Platform admin: see all users
+      allUsers = await db.select().from(users);
+    }
 
     return allUsers;
   }),

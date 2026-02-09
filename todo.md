@@ -1432,3 +1432,10 @@
 - [x] Prevent partner admins from accessing /org/admin (Platform Admin) route
 - [x] Add proper navigation and admin dashboard structure to /org/SRV/admin route
 - [x] Unified all admin pages to use single PlatformAdmin component with automatic filtering by clientId
+
+## Partner Admin Filtering Fixes (Feb 9, 2026)
+- [x] Fix Edit Organization dialog - already correct (no client dropdown, can't change partner)
+- [x] Fix Users tab - filter users to only show users from partner's organizations
+- [x] Backend: Update getAllUsers query to filter by joining with organizations table
+- [x] Fix Files display - files automatically filtered (shown in org cards which are already filtered)
+- [x] No separate Files tab exists - files only shown in Dashboard org cards
