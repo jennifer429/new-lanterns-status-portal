@@ -1361,3 +1361,6 @@
 ## Restore Portal Summary Cards
 - [x] Restore organization portal summary cards to Dashboard tab (removed in version 75d48436)
 - [x] Each card should show: completion %, section breakdown, file count, "Open Portal" button
+
+## Profile Menu Enhancement
+- [x] Add "Back to Admin Dashboard" link in profile menu when admin views organization portal

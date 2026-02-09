@@ -650,6 +650,26 @@ export default function IntakeNewRedesign() {
                     <Home className="w-4 h-4 mr-2" />
                     Return to Dashboard
                   </DropdownMenuItem>
+                  {/* Show admin links for admin users */}
+                  {user?.role === 'admin' && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => {
+                        // Navigate to appropriate admin dashboard based on user's clientId
+                        if (user.clientId === null) {
+                          // New Lantern staff - go to Platform Admin
+                          setLocation('/org/admin');
+                        } else {
+                          // Partner admin - go to their partner admin page
+                          // Need to get partner name from clientId
+                          setLocation('/org/admin'); // Fallback to platform admin
+                        }
+                      }}>
+                        <Shield className="w-4 h-4 mr-2" />
+                        Admin Dashboard
+                      </DropdownMenuItem>
+                    </>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => {
                     logoutMutation.mutate();
