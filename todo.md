@@ -1425,3 +1425,10 @@
   - Path 2: Modalities → Current PACS → Silverback → New Lantern
   - Path 3: Modalities → VNA → Silverback → New Lantern
   - Path 4: Modalities → Viz.ai → Silverback → New Lantern
+
+## SRV Partner Admin UI Fixes (Feb 9, 2026)
+- [x] Redesign PartnerAdmin page to match Platform Admin UI (portal summary cards, tabs, profile dropdown)
+- [x] Keep organization filtering working (SRV admins see only Boulder and RRMC)
+- [x] Prevent partner admins from accessing /org/admin (Platform Admin) route
+- [x] Add proper navigation and admin dashboard structure to /org/SRV/admin route
+- [x] Unified all admin pages to use single PlatformAdmin component with automatic filtering by clientId
