@@ -1,20 +1,53 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Activity, Download, Plus } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Activity, Download, Plus, Mail, Edit } from "lucide-react";
 import { toast } from "sonner";
 
 /**
  * Platform Admin Dashboard - New Lantern staff only (@newlantern.ai)
- * Shows ALL organizations as portal summary cards
+ * Tabbed interface: Organizations | Users
  */
 export default function PlatformAdmin() {
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
+  const [activeTab, setActiveTab] = useState<"dashboard" | "organizations" | "users">("dashboard");
+  
+  // User creation dialog state
+  const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserName, setNewUserName] = useState("");
+  const [newUserOrgId, setNewUserOrgId] = useState<number | undefined>();
+  const [newUserRole, setNewUserRole] = useState<"user" | "admin">("user");
 
   // Access control: Only New Lantern staff (clientId = NULL)
   useEffect(() => {
@@ -26,6 +59,37 @@ export default function PlatformAdmin() {
   const { data: orgs, isLoading } = trpc.admin.getAllOrganizations.useQuery();
   const { data: clients } = trpc.admin.getAllClients.useQuery();
   const { data: metrics } = trpc.admin.getAdminSummary.useQuery();
+  const { data: allUsers, refetch: refetchUsers } = trpc.admin.getAllUsers.useQuery();
+
+  const createUserMutation = trpc.admin.createUser.useMutation({
+    onSuccess: () => {
+      toast.success("User created successfully!");
+      setIsCreateUserDialogOpen(false);
+      setNewUserEmail("");
+      setNewUserName("");
+      setNewUserOrgId(undefined);
+      setNewUserRole("user");
+      refetchUsers();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to create user");
+    },
+  });
+
+  const handleCreateUser = () => {
+    if (!newUserEmail || !newUserName || !newUserOrgId) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    createUserMutation.mutate({
+      email: newUserEmail,
+      name: newUserName,
+      organizationId: newUserOrgId,
+      role: newUserRole,
+      clientId: user?.clientId || null,
+    });
+  };
 
   if (authLoading || isLoading) {
     return (
@@ -50,7 +114,15 @@ export default function PlatformAdmin() {
     return acc;
   }, {} as Record<number, string>) || {};
 
+  // Create a map of organizationId -> organization name
+  const orgMap = orgs?.reduce((acc, o) => {
+    acc[o.id] = o.name;
+    return acc;
+  }, {} as Record<number, string>) || {};
+
   const activeOrgs = orgs?.filter(o => o.status === "active") || [];
+  const activeUsers = allUsers || [];
+  const inactiveUsers: typeof allUsers = [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -68,188 +140,423 @@ export default function PlatformAdmin() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                onClick={() => setLocation("/org/admin/users")}
-              >
-                <Users className="w-4 h-4 mr-2" />
-                Manage Users
-              </Button>
-              <Button onClick={() => setLocation("/org/admin/create")}>
-                <Plus className="w-4 h-4 mr-2" />
-                Create Organization
-              </Button>
+              {activeTab === "organizations" && (
+                <Button onClick={() => setLocation("/org/admin/create")}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Organization
+                </Button>
+              )}
+              {activeTab === "users" && (
+                <Dialog open={isCreateUserDialogOpen} onOpenChange={setIsCreateUserDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create User
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Create New User</DialogTitle>
+                      <DialogDescription>
+                        Add a new user to an organization
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="userEmail">
+                          Email <span className="text-destructive">*</span>
+                        </Label>
+                        <Input
+                          id="userEmail"
+                          type="email"
+                          value={newUserEmail}
+                          onChange={(e) => setNewUserEmail(e.target.value)}
+                          placeholder="user@hospital.org"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="userName">
+                          Name <span className="text-destructive">*</span>
+                        </Label>
+                        <Input
+                          id="userName"
+                          value={newUserName}
+                          onChange={(e) => setNewUserName(e.target.value)}
+                          placeholder="John Doe"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="userOrg">
+                          Organization <span className="text-destructive">*</span>
+                        </Label>
+                        <Select
+                          value={newUserOrgId?.toString()}
+                          onValueChange={(value) => setNewUserOrgId(parseInt(value))}
+                        >
+                          <SelectTrigger id="userOrg">
+                            <SelectValue placeholder="Select organization" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {activeOrgs.map(org => (
+                              <SelectItem key={org.id} value={org.id.toString()}>
+                                {org.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="userRole">Role</Label>
+                        <Select
+                          value={newUserRole}
+                          onValueChange={(value: "user" | "admin") => setNewUserRole(value)}
+                        >
+                          <SelectTrigger id="userRole">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="user">User</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <Button
+                        onClick={handleCreateUser}
+                        disabled={createUserMutation.isPending}
+                        className="w-full"
+                      >
+                        {createUserMutation.isPending ? "Creating..." : "Create User"}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
             </div>
+          </div>
+
+          {/* Tab Navigation */}
+          <div className="flex gap-6 mt-6 border-b border-border">
+            <button
+              onClick={() => setActiveTab("dashboard")}
+              className={`pb-3 px-1 font-medium transition-colors relative ${
+                activeTab === "dashboard"
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Dashboard
+              {activeTab === "dashboard" && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab("organizations")}
+              className={`pb-3 px-1 font-medium transition-colors relative ${
+                activeTab === "organizations"
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Organizations
+              {activeTab === "organizations" && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab("users")}
+              className={`pb-3 px-1 font-medium transition-colors relative ${
+                activeTab === "users"
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Users
+              {activeTab === "users" && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+              )}
+            </button>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
       <div className="container py-8">
-        <h2 className="text-2xl font-bold mb-6">Active Organizations ({activeOrgs.length})</h2>
-        
-        {/* Organization Portal Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {activeOrgs.length === 0 ? (
-            <div className="col-span-full text-center py-12 text-muted-foreground">
-              No active organizations
+        {activeTab === "dashboard" && (
+          <>
+            <h2 className="text-2xl font-bold mb-6">Overview</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Organizations</p>
+                      <p className="text-3xl font-bold">{activeOrgs.length}</p>
+                    </div>
+                    <ClipboardList className="w-8 h-8 text-primary" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Users</p>
+                      <p className="text-3xl font-bold">{activeUsers.length}</p>
+                    </div>
+                    <Users className="w-8 h-8 text-primary" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Avg Completion</p>
+                      <p className="text-3xl font-bold">
+                        {Math.round(
+                          (metrics?.reduce((sum, m) => sum + m.completionPercent, 0) || 0) /
+                          (metrics?.length || 1)
+                        )}%
+                      </p>
+                    </div>
+                    <TrendingUp className="w-8 h-8 text-primary" />
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          ) : (
-            activeOrgs.map(org => {
-              const orgMetrics = metricsMap[org.id];
-              const partnerName = org.clientId ? clientMap[org.clientId] : "Unknown";
-              const completionPercent = orgMetrics?.completionPercent || 0;
-              const sectionsComplete = orgMetrics?.sectionsComplete || 0;
-              const totalSections = 9;
-              const filesCount = orgMetrics?.files.length || 0;
-              const userCount = orgMetrics?.userCount || 0;
 
-              // Get section progress
-              const sectionProgress = [
-                { name: "Organization Information", progress: orgMetrics?.sectionProgress?.organizationInfo || 0 },
-                { name: "Orders Workflow", progress: orgMetrics?.sectionProgress?.ordersWorkflow || 0 },
-                { name: "Images Workflow", progress: orgMetrics?.sectionProgress?.imagesWorkflow || 0 },
-                { name: "Priors Workflow", progress: orgMetrics?.sectionProgress?.priorsWorkflow || 0 },
-                { name: "Reports Out", progress: orgMetrics?.sectionProgress?.reportsOutWorkflow || 0 },
-                { name: "Data & Integration", progress: orgMetrics?.sectionProgress?.dataIntegration || 0 },
-                { name: "Configuration Files", progress: orgMetrics?.sectionProgress?.configurationFiles || 0 },
-                { name: "VPN & Connectivity", progress: orgMetrics?.sectionProgress?.vpnConnectivity || 0 },
-                { name: "HL7 Configuration", progress: orgMetrics?.sectionProgress?.hl7Configuration || 0 },
-              ];
+            <h3 className="text-xl font-bold mb-4">Recent Activity</h3>
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-muted-foreground">Activity feed coming soon...</p>
+              </CardContent>
+            </Card>
+          </>
+        )}
 
-              // Show only sections in progress (> 0%)
-              const inProgressSections = sectionProgress.filter(s => s.progress > 0);
+        {activeTab === "organizations" && (
+          <>
+            <h2 className="text-2xl font-bold mb-6">Active Organizations ({activeOrgs.length})</h2>
+            
+            {/* Organization Portal Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {activeOrgs.length === 0 ? (
+                <div className="col-span-full text-center py-12 text-muted-foreground">
+                  No active organizations
+                </div>
+              ) : (
+                activeOrgs.map(org => {
+                  const orgMetrics = metricsMap[org.id];
+                  const partnerName = org.clientId ? clientMap[org.clientId] : "Unknown";
+                  const completionPercent = orgMetrics?.completionPercent || 0;
+                  const userCount = orgMetrics?.userCount || 0;
+                  const fileCount = orgMetrics?.files?.length || 0;
+                  const sectionProgress = orgMetrics?.sectionProgress || {};
 
-              return (
-                <Card key={org.id} className="border-2 border-primary/30 bg-gradient-to-b from-card to-card/50">
-                  <CardContent className="p-6">
-                    {/* Header with Organization Name and Partner Badge */}
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <ClipboardList className="w-6 h-6 text-primary flex-shrink-0" />
-                        <div className="min-w-0 flex-1">
-                          <h3 className="text-lg font-bold truncate">{org.name}</h3>
-                          <Badge variant="outline" className="text-xs mt-1">
-                            {partnerName}
-                          </Badge>
-                        </div>
-                      </div>
-                      <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    </div>
+                  // Get sections that are in progress (> 0% but < 100%)
+                  const inProgressSections = Object.entries(sectionProgress)
+                    .filter(([_, percent]) => percent > 0 && percent < 100)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 2);
 
-                    {/* Stats Row */}
-                    <div className="grid grid-cols-3 gap-4 mb-6">
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="w-4 h-4 text-muted-foreground" />
-                        <div>
-                          <div className="text-xl font-bold">{completionPercent}%</div>
-                          <div className="text-xs text-muted-foreground">Complete</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4 text-muted-foreground" />
-                        <div>
-                          <div className="text-xl font-bold">{userCount}</div>
-                          <div className="text-xs text-muted-foreground">Users</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-muted-foreground" />
-                        <div>
-                          <div className="text-xl font-bold">{filesCount}</div>
-                          <div className="text-xs text-muted-foreground">Files</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="border-t border-border/50 pt-4">
-                      {/* Overall Progress Section */}
-                      <div className="mb-4">
-                        <h4 className="text-sm font-semibold mb-1">Overall Progress</h4>
-                        <p className="text-xs text-muted-foreground mb-3">
-                          {sectionsComplete} of {totalSections} sections complete
-                        </p>
-
-                        {/* Big Percentage Box */}
-                        <div className="text-center p-6 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 border-2 border-primary/30 mb-4">
-                          <div className="text-5xl font-bold text-primary mb-1">
-                            {completionPercent}%
+                  return (
+                    <Card key={org.id} className="relative">
+                      <CardContent className="p-6">
+                        {/* Organization Header */}
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <ClipboardList className="w-5 h-5 text-primary" />
+                            <div>
+                              <h3 className="font-semibold text-lg">{org.name}</h3>
+                              <p className="text-sm text-muted-foreground">{partnerName}</p>
+                            </div>
                           </div>
-                          <div className="text-sm text-muted-foreground">Complete</div>
+                          <CheckCircle2 className="w-5 h-5 text-green-500" />
                         </div>
 
-                        {/* Section List - Only show sections in progress */}
+                        {/* Quick Stats */}
+                        <div className="grid grid-cols-3 gap-4 mb-4">
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-primary">{completionPercent}%</div>
+                            <div className="text-xs text-muted-foreground">Complete</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-2xl font-bold">{userCount}</div>
+                            <div className="text-xs text-muted-foreground">Users</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-2xl font-bold">{fileCount}</div>
+                            <div className="text-xs text-muted-foreground">Files</div>
+                          </div>
+                        </div>
+
+                        {/* Overall Progress */}
+                        <div className="mb-4">
+                          <div className="text-sm font-medium mb-2">Overall Progress</div>
+                          <div className="text-xs text-muted-foreground mb-2">0 of 9 sections complete</div>
+                          <div className="bg-primary/10 rounded-lg p-6 text-center">
+                            <div className="text-5xl font-bold text-primary mb-1">{completionPercent}%</div>
+                            <div className="text-sm text-muted-foreground">Complete</div>
+                          </div>
+                        </div>
+
+                        {/* Section Progress */}
                         {inProgressSections.length > 0 && (
-                          <div className="space-y-2 mb-4">
-                            {inProgressSections.map((section, index) => (
-                              <div key={index} className="flex items-center justify-between">
+                          <div className="mb-4">
+                            {inProgressSections.map(([sectionId, percent]) => (
+                              <div key={sectionId} className="flex items-center justify-between py-2">
                                 <div className="flex items-center gap-2">
-                                  {section.progress === 100 ? (
-                                    <CheckCircle2 className="w-4 h-4 text-primary" />
-                                  ) : (
-                                    <Circle className="w-4 h-4 text-muted-foreground" />
-                                  )}
-                                  <span className="text-xs">{section.name}</span>
+                                  <Circle className="w-3 h-3 text-muted-foreground" />
+                                  <span className="text-sm capitalize">{sectionId.replace(/([A-Z])/g, ' $1').trim()}</span>
                                 </div>
-                                <span className="text-xs font-bold">{section.progress}%</span>
+                                <span className="text-sm font-medium">{percent}%</span>
                               </div>
                             ))}
                           </div>
                         )}
 
-                        {/* Status */}
-                        <div className="text-xs text-muted-foreground mb-4">
-                          In Progress
+                        <div className="text-xs text-muted-foreground mb-4">In Progress</div>
+
+                        {/* Uploaded Files */}
+                        <div className="mb-4">
+                          <div className="text-sm font-medium mb-2">Uploaded Files:</div>
+                          {fileCount > 0 ? (
+                            <div className="text-sm text-muted-foreground">{fileCount} files uploaded</div>
+                          ) : (
+                            <div className="text-sm text-muted-foreground">No files uploaded yet</div>
+                          )}
                         </div>
-                      </div>
 
-                      {/* Uploaded Files Section */}
-                      <div className="border-t border-border/50 pt-4 mb-4">
-                        <h5 className="text-xs font-semibold mb-2">Uploaded Files:</h5>
-                        {filesCount === 0 ? (
-                          <p className="text-xs text-muted-foreground">No files uploaded yet</p>
-                        ) : (
-                          <div className="space-y-1 max-h-32 overflow-y-auto">
-                            {orgMetrics?.files.slice(0, 3).map((file) => (
-                              <a
-                                key={file.id}
-                                href={file.fileUrl}
-                                download
-                                className="flex items-center gap-2 text-xs text-primary hover:underline"
-                              >
-                                <Download className="w-3 h-3" />
-                                <span className="truncate">{file.fileName}</span>
-                              </a>
-                            ))}
-                            {filesCount > 3 && (
-                              <p className="text-xs text-muted-foreground">+{filesCount - 3} more files</p>
-                            )}
-                          </div>
-                        )}
-                      </div>
+                        {/* Last Login */}
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
+                          <Activity className="w-3 h-3" />
+                          <span>Last login: about 5 hours ago</span>
+                        </div>
 
-                      {/* Last Login */}
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
-                        <Activity className="w-3 h-3" />
-                        <span>Last login: about 5 hours ago</span>
-                      </div>
+                        {/* Open Portal Button */}
+                        <Button
+                          className="w-full"
+                          onClick={() => setLocation(`/org/${org.slug}/intake`)}
+                        >
+                          <ExternalLink className="w-4 h-4 mr-2" />
+                          Open Portal
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              )}
+            </div>
+          </>
+        )}
 
-                      {/* Open Portal Button */}
-                      <Button 
-                        size="lg" 
-                        className="w-full"
-                        onClick={() => setLocation(`/org/${org.slug}/intake`)}
-                      >
-                        <ExternalLink className="w-4 h-4 mr-2" />
-                        Open Portal
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })
-          )}
-        </div>
+        {activeTab === "users" && (
+          <>
+            <h2 className="text-2xl font-bold mb-6">User Management</h2>
+
+            {/* Active Users Table */}
+            <Card className="mb-8">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Active Users ({activeUsers.length})</h3>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Organization</TableHead>
+                      <TableHead>Partner</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Last Login</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {activeUsers.map(u => {
+                      const org = orgs?.find(o => o.id === u.organizationId);
+                      const partner = org?.clientId ? clientMap[org.clientId] : "N/A";
+                      
+                      return (
+                        <TableRow key={u.id}>
+                          <TableCell className="font-medium">{u.name}</TableCell>
+                          <TableCell>{u.email}</TableCell>
+                          <TableCell>{orgMap[u.organizationId || 0] || "N/A"}</TableCell>
+                          <TableCell>{partner}</TableCell>
+                          <TableCell>
+                            <Badge variant={u.role === "admin" ? "default" : "secondary"}>
+                              {u.role}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : "Never"}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button size="sm" variant="outline">
+                                <Edit className="w-3 h-3 mr-1" />
+                                Edit
+                              </Button>
+                              <Button size="sm" variant="outline">
+                                Deactivate
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            {/* Inactive Users Table */}
+            {inactiveUsers.length > 0 && (
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold mb-4">Inactive Users ({inactiveUsers.length})</h3>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Organization</TableHead>
+                        <TableHead>Partner</TableHead>
+                        <TableHead>Role</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {inactiveUsers.map(u => {
+                        const org = orgs?.find(o => o.id === u.organizationId);
+                        const partner = org?.clientId ? clientMap[org.clientId] : "N/A";
+                        
+                        return (
+                          <TableRow key={u.id} className="opacity-60">
+                            <TableCell className="font-medium">{u.name}</TableCell>
+                            <TableCell>{u.email}</TableCell>
+                            <TableCell>{orgMap[u.organizationId || 0] || "N/A"}</TableCell>
+                            <TableCell>{partner}</TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">{u.role}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Button size="sm" variant="outline">
+                                Reactivate
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
