@@ -1343,3 +1343,5 @@
 
 ## Urgent Fixes for Launch
 - [x] Add New Lantern logo to all admin page headers (PlatformAdmin, PartnerAdmin, ManageUsers)
+- [ ] Redesign intake questionnaire diagram images to look professional (RIS/EMR architecture diagrams)
+- [x] Redesign workflow diagrams to use swim lane layout (Orders, Images, Priors, Reports)
