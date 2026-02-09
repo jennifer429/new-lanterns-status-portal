@@ -534,44 +534,236 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
       <div className="space-y-4">
         <h3 className="font-semibold text-lg mb-4">Configure Prior Study Access</h3>
         
-        <SwimLaneRow
-          id="priorsFromPACS"
-          label="Priors from Current PACS"
-          sourceSystem="Current PACS"
-          middlewareSystem="Manual push to New Lantern"
-          destinationSystem="New Lantern"
-          isActive={configuration.paths.priorsFromPACS || false}
-          noteValue={configuration.notes.priorsFromPACS_note || ''}
-          notePlaceholder="e.g., Query/Retrieve from legacy PACS for comparison studies"
-          onCheckChange={(checked) => handleCheckboxChange('priorsFromPACS', checked)}
-          onNoteChange={(value) => handleNoteChange('priorsFromPACS_note', value)}
-        />
+        {/* Option 1: Fill-in Box → Silverback → New Lantern (unidirectional) */}
+        <div
+          className={`
+            flex items-center gap-4 p-4 rounded-lg transition-all
+            ${configuration.paths.priorsOption1 ? 'bg-primary/10' : 'bg-muted/30'}
+          `}
+        >
+          <Checkbox
+            id="priorsOption1"
+            checked={configuration.paths.priorsOption1 || false}
+            onCheckedChange={(checked) => handleCheckboxChange('priorsOption1', checked as boolean)}
+            className={configuration.paths.priorsOption1 ? 'data-[state=checked]:bg-primary data-[state=checked]:border-primary' : 'border-white bg-transparent'}
+          />
 
-        <SwimLaneRow
-          id="priorsFromVNA"
-          label="Priors from VNA/Archive"
-          sourceSystem="VNA"
-          middlewareSystem="Manual push to New Lantern"
-          destinationSystem="New Lantern"
-          isActive={configuration.paths.priorsFromVNA || false}
-          noteValue={configuration.notes.priorsFromVNA_note || ''}
-          notePlaceholder="e.g., Enterprise archive for historical studies across facilities"
-          onCheckChange={(checked) => handleCheckboxChange('priorsFromVNA', checked)}
-          onNoteChange={(value) => handleNoteChange('priorsFromVNA_note', value)}
-        />
+          {/* Source System Input */}
+          <Input
+            placeholder="Source system"
+            value={configuration.systems.priorsOption1Source || ''}
+            onChange={(e) => handleSystemChange('priorsOption1Source', e.target.value)}
+            disabled={!configuration.paths.priorsOption1}
+            className={`
+              w-[140px] text-center font-medium
+              ${configuration.paths.priorsOption1 
+                ? 'bg-primary/20 border-primary text-foreground' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          />
 
-        <SwimLaneRow
-          id="priorsFromCDImport"
-          label="Priors from CD/External Import"
-          sourceSystem="CD Import"
-          middlewareSystem="Manual push to New Lantern"
-          destinationSystem="New Lantern"
-          isActive={configuration.paths.priorsFromCDImport || false}
-          noteValue={configuration.notes.priorsFromCDImport_note || ''}
-          notePlaceholder="e.g., Outside studies brought in by patients on CD/DVD"
-          onCheckChange={(checked) => handleCheckboxChange('priorsFromCDImport', checked)}
-          onNoteChange={(value) => handleNoteChange('priorsFromCDImport_note', value)}
-        />
+          {/* Unidirectional Arrow */}
+          <ArrowRight
+            className={`w-5 h-5 ${configuration.paths.priorsOption1 ? 'text-primary' : 'text-muted-foreground'}`}
+          />
+
+          {/* Silverback Box */}
+          <div
+            className={`
+              px-4 py-2 rounded-md font-medium min-w-[120px] text-center
+              ${configuration.paths.priorsOption1 
+                ? 'bg-purple-600 text-white' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          >
+            Silverback
+          </div>
+
+          <ArrowRight
+            className={`w-6 h-6 flex-shrink-0 ${configuration.paths.priorsOption1 ? 'text-primary' : 'text-muted-foreground'}`}
+          />
+
+          {/* New Lantern Box */}
+          <div
+            className={`
+              px-4 py-2 rounded-md font-medium min-w-[120px] text-center
+              ${configuration.paths.priorsOption1 
+                ? 'bg-primary text-primary-foreground' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          >
+            New Lantern
+          </div>
+
+          {/* Notes */}
+          <Input
+            placeholder="e.g., Query/Retrieve from legacy PACS for comparison studies"
+            value={configuration.notes.priorsOption1_note || ''}
+            onChange={(e) => handleNoteChange('priorsOption1_note', e.target.value)}
+            disabled={!configuration.paths.priorsOption1}
+            className={`
+              flex-1
+              ${configuration.paths.priorsOption1 
+                ? 'border-primary bg-background' 
+                : 'bg-muted/50 text-muted-foreground'}
+            `}
+          />
+        </div>
+
+        {/* Option 2: Fill-in Box ↔ Silverback → New Lantern (bidirectional C-FIND/C-MOVE) */}
+        <div
+          className={`
+            flex items-center gap-4 p-4 rounded-lg transition-all
+            ${configuration.paths.priorsOption2 ? 'bg-primary/10' : 'bg-muted/30'}
+          `}
+        >
+          <Checkbox
+            id="priorsOption2"
+            checked={configuration.paths.priorsOption2 || false}
+            onCheckedChange={(checked) => handleCheckboxChange('priorsOption2', checked as boolean)}
+            className={configuration.paths.priorsOption2 ? 'data-[state=checked]:bg-primary data-[state=checked]:border-primary' : 'border-white bg-transparent'}
+          />
+
+          {/* Source System Input */}
+          <Input
+            placeholder="Source system"
+            value={configuration.systems.priorsOption2Source || ''}
+            onChange={(e) => handleSystemChange('priorsOption2Source', e.target.value)}
+            disabled={!configuration.paths.priorsOption2}
+            className={`
+              w-[140px] text-center font-medium
+              ${configuration.paths.priorsOption2 
+                ? 'bg-primary/20 border-primary text-foreground' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          />
+
+          {/* Bidirectional Arrow */}
+          <div className="flex items-center gap-1">
+            <ArrowRight
+              className={`w-5 h-5 ${configuration.paths.priorsOption2 ? 'text-primary' : 'text-muted-foreground'}`}
+            />
+            <ArrowRight
+              className={`w-5 h-5 rotate-180 ${configuration.paths.priorsOption2 ? 'text-primary' : 'text-muted-foreground'}`}
+            />
+          </div>
+
+          {/* Silverback Box */}
+          <div
+            className={`
+              px-4 py-2 rounded-md font-medium min-w-[120px] text-center
+              ${configuration.paths.priorsOption2 
+                ? 'bg-purple-600 text-white' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          >
+            Silverback
+          </div>
+
+          <ArrowRight
+            className={`w-6 h-6 flex-shrink-0 ${configuration.paths.priorsOption2 ? 'text-primary' : 'text-muted-foreground'}`}
+          />
+
+          {/* New Lantern Box */}
+          <div
+            className={`
+              px-4 py-2 rounded-md font-medium min-w-[120px] text-center
+              ${configuration.paths.priorsOption2 
+                ? 'bg-primary text-primary-foreground' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          >
+            New Lantern
+          </div>
+
+          {/* Notes */}
+          <Input
+            placeholder="e.g., Enterprise archive for historical studies across facilities"
+            value={configuration.notes.priorsOption2_note || ''}
+            onChange={(e) => handleNoteChange('priorsOption2_note', e.target.value)}
+            disabled={!configuration.paths.priorsOption2}
+            className={`
+              flex-1
+              ${configuration.paths.priorsOption2 
+                ? 'border-primary bg-background' 
+                : 'bg-muted/50 text-muted-foreground'}
+            `}
+          />
+        </div>
+
+        {/* Option 3: "Manual" → Silverback → New Lantern (fixed text) */}
+        <div
+          className={`
+            flex items-center gap-4 p-4 rounded-lg transition-all
+            ${configuration.paths.priorsOption3 ? 'bg-primary/10' : 'bg-muted/30'}
+          `}
+        >
+          <Checkbox
+            id="priorsOption3"
+            checked={configuration.paths.priorsOption3 || false}
+            onCheckedChange={(checked) => handleCheckboxChange('priorsOption3', checked as boolean)}
+            className={configuration.paths.priorsOption3 ? 'data-[state=checked]:bg-primary data-[state=checked]:border-primary' : 'border-white bg-transparent'}
+          />
+
+          {/* Fixed "Manual" Box */}
+          <div
+            className={`
+              px-4 py-2 rounded-md font-medium min-w-[140px] text-center
+              ${configuration.paths.priorsOption3 
+                ? 'bg-primary/20 border-2 border-primary text-foreground' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          >
+            Manual
+          </div>
+
+          {/* Unidirectional Arrow */}
+          <ArrowRight
+            className={`w-5 h-5 ${configuration.paths.priorsOption3 ? 'text-primary' : 'text-muted-foreground'}`}
+          />
+
+          {/* Silverback Box */}
+          <div
+            className={`
+              px-4 py-2 rounded-md font-medium min-w-[120px] text-center
+              ${configuration.paths.priorsOption3 
+                ? 'bg-purple-600 text-white' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          >
+            Silverback
+          </div>
+
+          <ArrowRight
+            className={`w-6 h-6 flex-shrink-0 ${configuration.paths.priorsOption3 ? 'text-primary' : 'text-muted-foreground'}`}
+          />
+
+          {/* New Lantern Box */}
+          <div
+            className={`
+              px-4 py-2 rounded-md font-medium min-w-[120px] text-center
+              ${configuration.paths.priorsOption3 
+                ? 'bg-primary text-primary-foreground' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          >
+            New Lantern
+          </div>
+
+          {/* Notes */}
+          <Input
+            placeholder="e.g., Outside studies brought in by patients on CD/DVD"
+            value={configuration.notes.priorsOption3_note || ''}
+            onChange={(e) => handleNoteChange('priorsOption3_note', e.target.value)}
+            disabled={!configuration.paths.priorsOption3}
+            className={`
+              flex-1
+              ${configuration.paths.priorsOption3 
+                ? 'border-primary bg-background' 
+                : 'bg-muted/50 text-muted-foreground'}
+            `}
+          />
+        </div>
       </div>
     );
   };
@@ -622,6 +814,78 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           onCheckChange={(checked) => handleCheckboxChange('reportsToPortal', checked)}
           onNoteChange={(value) => handleNoteChange('reportsToPortal_note', value)}
         />
+
+        {/* Manual Download Option: New Lantern → [Site] - Manual download from New Lantern */}
+        <div
+          className={`
+            flex items-center gap-4 p-4 rounded-lg transition-all
+            ${configuration.paths.reportsManualDownload ? 'bg-primary/10' : 'bg-muted/30'}
+          `}
+        >
+          <Checkbox
+            id="reportsManualDownload"
+            checked={configuration.paths.reportsManualDownload || false}
+            onCheckedChange={(checked) => handleCheckboxChange('reportsManualDownload', checked as boolean)}
+            className={configuration.paths.reportsManualDownload ? 'data-[state=checked]:bg-primary data-[state=checked]:border-primary' : 'border-white bg-transparent'}
+          />
+
+          {/* New Lantern Box */}
+          <div
+            className={`
+              px-4 py-2 rounded-md font-medium min-w-[120px] text-center
+              ${configuration.paths.reportsManualDownload 
+                ? 'bg-primary text-primary-foreground' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          >
+            New Lantern
+          </div>
+
+          {/* Arrow */}
+          <ArrowRight
+            className={`w-6 h-6 flex-shrink-0 ${configuration.paths.reportsManualDownload ? 'text-primary' : 'text-muted-foreground'}`}
+          />
+
+          {/* Site Name Input */}
+          <Input
+            placeholder="Site name"
+            value={configuration.systems.reportsManualDownloadSite || ''}
+            onChange={(e) => handleSystemChange('reportsManualDownloadSite', e.target.value)}
+            disabled={!configuration.paths.reportsManualDownload}
+            className={`
+              w-[140px] text-center font-medium
+              ${configuration.paths.reportsManualDownload 
+                ? 'bg-primary/20 border-primary text-foreground' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          />
+
+          {/* Description Text */}
+          <span
+            className={`
+              text-sm font-medium
+              ${configuration.paths.reportsManualDownload 
+                ? 'text-foreground' 
+                : 'text-muted-foreground'}
+            `}
+          >
+            Manual download from New Lantern
+          </span>
+
+          {/* Notes */}
+          <Input
+            placeholder="e.g., Referring physicians download reports directly from New Lantern portal"
+            value={configuration.notes.reportsManualDownload_note || ''}
+            onChange={(e) => handleNoteChange('reportsManualDownload_note', e.target.value)}
+            disabled={!configuration.paths.reportsManualDownload}
+            className={`
+              flex-1
+              ${configuration.paths.reportsManualDownload 
+                ? 'border-primary bg-background' 
+                : 'bg-muted/50 text-muted-foreground'}
+            `}
+          />
+        </div>
       </div>
     );
   };

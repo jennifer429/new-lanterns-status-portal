@@ -1465,3 +1465,19 @@
 - [x] Frontend: Add unlabeled fill-in input field for source system name
 - [x] Frontend: Use bidirectional arrows between source box and Silverback (C-FIND/C-MOVE)
 - [x] Frontend: Regular arrow from Silverback to New Lantern
+
+## Priors Workflow Redesign (Feb 9, 2026)
+- [x] Remove existing Priors workflow options (priorsFromPACS, priorsFromVNA, priorsFromCDImport)
+- [x] Add Option 1: [Fill-in Box] → Silverback → New Lantern (unidirectional)
+- [x] Add Option 2: [Fill-in Box] ↔ Silverback → New Lantern (bidirectional C-FIND/C-MOVE)
+- [x] Add Option 3: "Manual" → Silverback → New Lantern (fixed text, for CD/DVD imports)
+- [x] Update configuration keys to match new structure
+
+## Reports Out Manual Download Option (Feb 9, 2026)
+- [x] Add 4th option to Reports Out workflow: New Lantern → [Site] - Manual download from New Lantern
+- [x] Fill-in box for site name
+- [x] Arrow from New Lantern to site box
+
+## Remove Duplicate Priors Question (Feb 9, 2026)
+- [x] Find and remove the old "How will comparison images for priors be obtained?" dropdown question (D.5)
+- [x] Ensure only the new Priors workflow diagram is displayed

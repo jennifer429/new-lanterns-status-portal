@@ -93,7 +93,6 @@ export const questionnaireSections: Section[] = [
       { id: 'D.1', text: 'Can production systems be configured for testing prior to go-live?', type: 'dropdown', options: ['Yes', 'No'] },
       { id: 'D.2', text: 'Confirmed go-live date', type: 'date', placeholder: 'MM/DD/YYYY' },
       { id: 'D.3', text: 'Expected modalities', type: 'multi-select', options: ['CT', 'MRI', 'X-Ray', 'Ultrasound', 'Nuclear Medicine', 'Mammography'] },
-      { id: 'D.5', text: 'How will comparison images for priors be obtained?', type: 'dropdown', options: ['1) Manually pushed', '2) Automatically pushed by your system', '3) Query Retrieve'] },
       { id: 'D.7', text: 'How will prior reports be obtained?', type: 'dropdown', options: ['1) HL7 messages', '2) Flat file (requires 3-4 weeks for processing)', '3) DICOM SR images'] },
       { id: 'D.8', text: 'Tech sheets input method (Note: Tech sheets come automatically with images in PACS as DICOM PDF or images, not SR)', type: 'dropdown', options: ['1) Automatically with images', '2) Manually as PDF'], notes: 'Prior reports are SR (text), but tech sheets are typically DICOM PDF or actual images' },
       { id: 'D.9', text: 'Are there DICOM SR or other data sources for auto-populating fields?', type: 'textarea', placeholder: 'List DICOM SR sources' },
