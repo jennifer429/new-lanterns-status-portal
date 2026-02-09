@@ -571,6 +571,43 @@ export const adminRouter = router({
         const answeredQuestions = orgResponses.filter(r => r.response && r.response !== "").length;
         const completionPercent = totalQuestions > 0 ? Math.round((answeredQuestions / totalQuestions) * 100) : 0;
 
+        // Calculate section-level progress
+        const sectionIds = [
+          "organizationInfo",
+          "ordersWorkflow",
+          "imagesWorkflow",
+          "priorsWorkflow",
+          "reportsOutWorkflow",
+          "dataIntegration",
+          "configurationFiles",
+          "vpnConnectivity",
+          "hl7Configuration"
+        ];
+
+        const sectionProgress: Record<string, number> = {};
+        let sectionsComplete = 0;
+
+        for (const sectionId of sectionIds) {
+          const sectionQuestions = allQuestions.filter(q => q.sectionId === sectionId);
+          const sectionTotal = sectionQuestions.length;
+          
+          if (sectionTotal > 0) {
+            const sectionAnswered = orgResponses.filter(r => {
+              const question = sectionQuestions.find(q => String(q.questionId) === String(r.questionId));
+              return question && r.response && r.response !== "";
+            }).length;
+            
+            const sectionPercent = Math.round((sectionAnswered / sectionTotal) * 100);
+            sectionProgress[sectionId] = sectionPercent;
+            
+            if (sectionPercent === 100) {
+              sectionsComplete++;
+            }
+          } else {
+            sectionProgress[sectionId] = 0;
+          }
+        }
+
         // Get files
         const files = await db
           .select()
@@ -585,6 +622,8 @@ export const adminRouter = router({
           status: org.status,
           userCount,
           completionPercent,
+          sectionsComplete,
+          sectionProgress,
           files: files.map(f => ({
             id: f.id,
             fileName: f.fileName,
