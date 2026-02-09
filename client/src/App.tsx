@@ -7,14 +7,12 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Admin from "./pages/Admin";
 import PlatformAdmin from "./pages/PlatformAdmin";
-import PartnerAdmin from "./pages/PartnerAdmin";
 import IntakeNewRedesign from "./pages/IntakeNewRedesign";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Tasks from "./pages/Tasks";
 import CreateOrganization from "./pages/CreateOrganization";
-import ManageUsers from "./pages/ManageUsers";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -25,23 +23,25 @@ function Router() {
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/admin" component={Admin} />
       <Route path="/org/admin/create" component={CreateOrganization} />
+      {/* Unified admin page - works for all admin roles (Platform, SRV, RadOne, etc.) */}
+      {/* Backend automatically filters data by the logged-in user's clientId */}
       <Route path="/org/admin/users">
-        {() => <ManageUsers />}
+        {() => <PlatformAdmin />}
       </Route>
       <Route path="/org/admin">
         {() => <PlatformAdmin />}
       </Route>
       <Route path="/org/SRV/admin/users">
-        {() => <ManageUsers partnerName="SRV" />}
+        {() => <PlatformAdmin />}
       </Route>
       <Route path="/org/SRV/admin">
-        {() => <PartnerAdmin partnerName="SRV" allowedDomain="@srv.com" />}
+        {() => <PlatformAdmin />}
       </Route>
       <Route path="/org/RadOne/admin/users">
-        {() => <ManageUsers partnerName="RadOne" />}
+        {() => <PlatformAdmin />}
       </Route>
       <Route path="/org/RadOne/admin">
-        {() => <PartnerAdmin partnerName="RadOne" allowedDomain="@radone.com" />}
+        {() => <PlatformAdmin />}
       </Route>
       <Route path="/org/:slug/intake" component={IntakeNewRedesign} />
       <Route path="/org/:slug/tasks" component={Tasks} />
