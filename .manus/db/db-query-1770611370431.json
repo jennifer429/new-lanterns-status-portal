@@ -1,0 +1,16 @@
+{
+  "query": "SELECT u.email, u.name, u.role, c.name as clientName \nFROM users u \nLEFT JOIN clients c ON u.clientId = c.id \nWHERE c.name = 'SRV' AND u.role = 'admin';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT u.email, u.name, u.role, c.name as clientName \nFROM users u \nLEFT JOIN clients c ON u.clientId = c.id \nWHERE c.name = 'SRV' AND u.role = 'admin';",
+  "rows": [
+    {
+      "email": "admin@srv.com",
+      "name": "SRV Admin User",
+      "role": "admin",
+      "clientName": "SRV"
+    }
+  ],
+  "messages": [],
+  "stdout": "email\tname\trole\tclientName\nadmin@srv.com\tSRV Admin User\tadmin\tSRV\n",
+  "stderr": "",
+  "execution_time_ms": 63
+}
