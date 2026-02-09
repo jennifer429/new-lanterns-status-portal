@@ -30,8 +30,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Activity, Download, Plus, Mail, Edit, RotateCcw } from "lucide-react";
+import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Activity, Download, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle } from "lucide-react";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 /**
  * Unified Admin Dashboard
@@ -94,6 +101,54 @@ export default function PlatformAdmin() {
   });
   const { data: metrics } = trpc.admin.getAdminSummary.useQuery();
   const { data: allUsers, refetch: refetchUsers } = trpc.admin.getAllUsers.useQuery();
+
+  // Logout mutation
+  const logoutMutation = trpc.auth.logout.useMutation({
+    onSuccess: () => {
+      window.location.href = "/login";
+    },
+  });
+
+  // Helper to get user initials for avatar
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  // Export All: exports all organizations, users, and metrics as CSV
+  const handleExportAll = () => {
+    const lines = ['Type,Name,Email,Organization,Partner,Role,Status,Completion %,Last Login'];
+
+    // Export organizations
+    orgs?.forEach(org => {
+      const orgMetrics = metrics?.find(m => m.organizationId === org.id);
+      const partnerName = org.clientId && clients ? clients.find(c => c.id === org.clientId)?.name || 'N/A' : 'N/A';
+      lines.push(`"Organization","${org.name}","","","${partnerName}","","${org.status}","${orgMetrics?.completionPercent || 0}%",""`);
+    });
+
+    // Export users
+    allUsers?.forEach(u => {
+      const org = orgs?.find(o => o.id === u.organizationId);
+      const partnerName = org?.clientId && clients ? clients.find(c => c.id === org.clientId)?.name || 'N/A' : 'N/A';
+      const orgName = org?.name || 'N/A';
+      const status = u.organizationId ? 'Active' : 'Inactive';
+      const lastLogin = u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : 'Never';
+      lines.push(`"User","${u.name}","${u.email}","${orgName}","${partnerName}","${u.role}","${status}","","${lastLogin}"`);
+    });
+
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `admin-export-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Export downloaded successfully');
+  };
 
   const createUserMutation = trpc.admin.createUser.useMutation({
     onSuccess: () => {
@@ -440,6 +495,51 @@ export default function PlatformAdmin() {
                   </DialogContent>
                 </Dialog>
               )}
+
+              {/* Export All Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportAll}
+                className="gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Export All
+              </Button>
+
+              {/* Profile Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="h-10 w-10 rounded-full bg-purple-600 border-purple-400 hover:bg-purple-500 text-white font-semibold"
+                  >
+                    {user?.name ? getInitials(user.name) : "AD"}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <div className="px-2 py-1.5">
+                    <p className="text-sm font-medium">{user?.name || "Admin"}</p>
+                    <p className="text-xs text-muted-foreground">{user?.email || ""}</p>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onClick={handleExportAll}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Export All Data
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="cursor-pointer text-destructive"
+                    onClick={() => logoutMutation.mutate()}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
