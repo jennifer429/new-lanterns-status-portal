@@ -1444,3 +1444,12 @@
 - [x] Move Create User button positioning to match Organizations tab layout
 - [x] Show deactivated organizations in Organizations tab with Reactivate button
 - [x] Ensure deactivated users are visible in Users tab with Reactivate button (verify existing functionality)
+
+## Organization Status & Sorting (Feb 9, 2026)
+- [x] Update database schema: Add 'completed' status option for organizations (already exists)
+- [x] Backend: Add markOrganizationComplete and reopenOrganization mutations
+- [x] Frontend: Separate organizations into three sections (Active, Completed, Deactivated)
+- [x] Frontend: Add sorting controls (by name, completion %, status, partner)
+- [x] Frontend: Add "Mark as Complete" button for active organizations
+- [x] Frontend: Add "Reopen" button for completed organizations
+- [x] Test all status transitions (active → completed → reopened, active → deactivated → reactivated)

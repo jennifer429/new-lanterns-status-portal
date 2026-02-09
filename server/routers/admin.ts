@@ -821,6 +821,72 @@ export const adminRouter = router({
     }),
 
   /**
+   * Mark an organization as complete
+   */
+  markOrganizationComplete: protectedProcedure
+    .input(z.object({ organizationId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Get the organization to check permissions
+      const [org] = await db.select().from(organizations).where(eq(organizations.id, input.organizationId));
+      if (!org) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      }
+
+      // Partner admins can only mark their own partner's organizations as complete
+      if (ctx.user.clientId && org.clientId !== ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot mark other partner's organizations as complete" });
+      }
+
+      // Update status to completed
+      await db
+        .update(organizations)
+        .set({ status: "completed" })
+        .where(eq(organizations.id, input.organizationId));
+
+      return { success: true };
+    }),
+
+  /**
+   * Reopen a completed organization (set back to active)
+   */
+  reopenOrganization: protectedProcedure
+    .input(z.object({ organizationId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Get the organization to check permissions
+      const [org] = await db.select().from(organizations).where(eq(organizations.id, input.organizationId));
+      if (!org) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      }
+
+      // Partner admins can only reopen their own partner's organizations
+      if (ctx.user.clientId && org.clientId !== ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot reopen other partner's organizations" });
+      }
+
+      // Update status to active
+      await db
+        .update(organizations)
+        .set({ status: "active" })
+        .where(eq(organizations.id, input.organizationId));
+
+      return { success: true };
+    }),
+
+  /**
    * Deactivate a user
    */
   deactivateUser: protectedProcedure

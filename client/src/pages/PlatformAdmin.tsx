@@ -84,6 +84,10 @@ export default function PlatformAdmin() {
   const [editOrgSlug, setEditOrgSlug] = useState("");
   const [editOrgClientId, setEditOrgClientId] = useState<number | null>(null);
 
+  // Sorting state for organizations
+  const [orgSortBy, setOrgSortBy] = useState<"name" | "completion" | "partner">("name");
+  const [orgSortOrder, setOrgSortOrder] = useState<"asc" | "desc">("asc");
+
   // Access control: Must be an admin (any admin - platform or partner)
   useEffect(() => {
     if (!authLoading && (!user || user.role !== "admin")) {
@@ -288,6 +292,26 @@ export default function PlatformAdmin() {
     },
   });
 
+  const markCompleteMutation = trpc.admin.markOrganizationComplete.useMutation({
+    onSuccess: () => {
+      toast.success("Organization marked as complete");
+      refetchOrgs();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to mark organization as complete");
+    },
+  });
+
+  const reopenOrgMutation = trpc.admin.reopenOrganization.useMutation({
+    onSuccess: () => {
+      toast.success("Organization reopened");
+      refetchOrgs();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to reopen organization");
+    },
+  });
+
   const deactivateUserMutation = trpc.admin.deactivateUser.useMutation({
     onSuccess: () => {
       toast.success("User deactivated successfully!");
@@ -390,8 +414,32 @@ export default function PlatformAdmin() {
     return acc;
   }, {} as Record<number, string>) || {};
 
-  const activeOrgs = orgs?.filter(o => o.status === "active") || [];
-  const inactiveOrgs = orgs?.filter(o => o.status !== "active") || [];
+  // Sort function for organizations
+  const sortOrgs = (orgList: typeof orgs) => {
+    if (!orgList) return [];
+    
+    return [...orgList].sort((a, b) => {
+      let compareValue = 0;
+      
+      if (orgSortBy === "name") {
+        compareValue = a.name.localeCompare(b.name);
+      } else if (orgSortBy === "completion") {
+        const aCompletion = metricsMap[a.id]?.completionPercent || 0;
+        const bCompletion = metricsMap[b.id]?.completionPercent || 0;
+        compareValue = aCompletion - bCompletion;
+      } else if (orgSortBy === "partner") {
+        const aPartner = a.clientId ? clientMap[a.clientId] || "" : "";
+        const bPartner = b.clientId ? clientMap[b.clientId] || "" : "";
+        compareValue = aPartner.localeCompare(bPartner);
+      }
+      
+      return orgSortOrder === "asc" ? compareValue : -compareValue;
+    });
+  };
+
+  const activeOrgs = sortOrgs(orgs?.filter(o => o.status === "active"));
+  const completedOrgs = sortOrgs(orgs?.filter(o => o.status === "completed"));
+  const inactiveOrgs = sortOrgs(orgs?.filter(o => o.status === "inactive" || o.status === "paused"));
   
   // Separate active and inactive users
   // Users with organizationId = null are considered deactivated (soft delete pattern)
@@ -792,6 +840,35 @@ export default function PlatformAdmin() {
               </Dialog>
             </div>
 
+            {/* Sorting Controls */}
+            <div className="flex items-center gap-4 mb-6">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="sort-by" className="text-sm font-medium">Sort by:</Label>
+                <Select value={orgSortBy} onValueChange={(value: "name" | "completion" | "partner") => setOrgSortBy(value)}>
+                  <SelectTrigger id="sort-by" className="w-[180px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="name">Name</SelectItem>
+                    <SelectItem value="completion">Completion %</SelectItem>
+                    {isPlatformAdmin && <SelectItem value="partner">Partner</SelectItem>}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="sort-order" className="text-sm font-medium">Order:</Label>
+                <Select value={orgSortOrder} onValueChange={(value: "asc" | "desc") => setOrgSortOrder(value)}>
+                  <SelectTrigger id="sort-order" className="w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="asc">Ascending</SelectItem>
+                    <SelectItem value="desc">Descending</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             <h3 className="text-lg font-semibold mb-4">Active Organizations ({activeOrgs.length})</h3>
             <Card>
               <Table>
@@ -853,6 +930,20 @@ export default function PlatformAdmin() {
                               <Button
                                 variant="outline"
                                 size="sm"
+                                onClick={() => {
+                                  if (confirm(`Mark ${org.name} as complete?`)) {
+                                    markCompleteMutation.mutate({ organizationId: org.id });
+                                  }
+                                }}
+                                disabled={markCompleteMutation.isPending}
+                                className="bg-green-500/10 text-green-400 border-green-500/30 hover:bg-green-500/20"
+                              >
+                                <CheckCircle2 className="w-4 h-4 mr-1" />
+                                Mark Complete
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
                                 onClick={() => handleDeactivateOrg(org.id)}
                                 disabled={deactivateOrgMutation.isPending}
                               >
@@ -867,6 +958,68 @@ export default function PlatformAdmin() {
                 </TableBody>
               </Table>
             </Card>
+
+            {/* Completed Organizations Section */}
+            {completedOrgs.length > 0 && (
+              <>
+                <h3 className="text-lg font-semibold mt-8 mb-4">Completed Organizations ({completedOrgs.length})</h3>
+                <Card>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        {isPlatformAdmin && <TableHead>Partner</TableHead>}
+                        <TableHead>Status</TableHead>
+                        <TableHead>Users</TableHead>
+                        <TableHead>Completion</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {completedOrgs.map(org => {
+                        const orgMetrics = metricsMap[org.id];
+                        const partnerName = org.clientId ? clientMap[org.clientId] : "N/A";
+                        const completionPercent = orgMetrics?.completionPercent || 0;
+                        const userCount = orgMetrics?.userCount || 0;
+                        
+                        return (
+                          <TableRow key={org.id} className="opacity-75">
+                            <TableCell className="font-medium">{org.name}</TableCell>
+                            {isPlatformAdmin && <TableCell>{partnerName}</TableCell>}
+                            <TableCell>
+                              <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
+                                Completed
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{userCount}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div className="text-sm font-medium">{completionPercent}%</div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => {
+                                  if (confirm(`Reopen ${org.name}?`)) {
+                                    reopenOrgMutation.mutate({ organizationId: org.id });
+                                  }
+                                }}
+                                disabled={reopenOrgMutation.isPending}
+                              >
+                                <RotateCcw className="w-3 h-3 mr-1" />
+                                Reopen
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </Card>
+              </>
+            )}
 
             {/* Deactivated Organizations Section */}
             {inactiveOrgs.length > 0 && (
