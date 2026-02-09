@@ -1351,3 +1351,4 @@
 - [ ] Fix percentage mismatch - admin shows 24% but portal shows 18% for Munson
 - [x] Add tabbed navigation to admin page with Dashboard, Organizations, and Users tabs
 - [ ] Redesign Organizations tab to show table format with Edit/Deactivate/Add actions
+- [ ] Implement Edit Organization dialog with name, slug, and partner fields

@@ -124,6 +124,20 @@ export default function PlatformAdmin() {
     },
   });
 
+  const updateOrgMutation = trpc.admin.updateOrganization.useMutation({
+    onSuccess: () => {
+      toast.success("Organization updated successfully!");
+      setIsEditOrgDialogOpen(false);
+      setEditOrgId(null);
+      setEditOrgName("");
+      setEditOrgSlug("");
+      setEditOrgClientId(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to update organization");
+    },
+  });
+
   const handleCreateOrg = () => {
     if (!newOrgName || !newOrgSlug || !newOrgClientId) {
       toast.error("Please fill in all required fields");
@@ -141,6 +155,27 @@ export default function PlatformAdmin() {
     if (confirm("Are you sure you want to deactivate this organization?")) {
       deactivateOrgMutation.mutate({ organizationId: orgId });
     }
+  };
+
+  const handleEditOrg = (org: NonNullable<typeof orgs>[number]) => {
+    setEditOrgId(org.id);
+    setEditOrgName(org.name);
+    setEditOrgSlug(org.slug);
+    setEditOrgClientId(org.clientId);
+    setIsEditOrgDialogOpen(true);
+  };
+
+  const handleUpdateOrg = () => {
+    if (!editOrgId || !editOrgName || !editOrgSlug || !editOrgClientId) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    updateOrgMutation.mutate({
+      id: editOrgId,
+      name: editOrgName,
+      slug: editOrgSlug,
+    });
   };
 
   if (authLoading || isLoading) {
@@ -446,6 +481,45 @@ export default function PlatformAdmin() {
                       className="w-full"
                     >
                       {createOrgMutation.isPending ? "Creating..." : "Create Organization"}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              {/* Edit Organization Dialog */}
+              <Dialog open={isEditOrgDialogOpen} onOpenChange={setIsEditOrgDialogOpen}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Edit Organization</DialogTitle>
+                    <DialogDescription>
+                      Update organization details.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div>
+                      <Label htmlFor="edit-org-name">Organization Name</Label>
+                      <Input
+                        id="edit-org-name"
+                        placeholder="Memorial General Hospital"
+                        value={editOrgName}
+                        onChange={(e) => setEditOrgName(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-org-slug">URL Slug</Label>
+                      <Input
+                        id="edit-org-slug"
+                        placeholder="memorial-general"
+                        value={editOrgSlug}
+                        onChange={(e) => setEditOrgSlug(e.target.value)}
+                      />
+                    </div>
+                    <Button
+                      onClick={handleUpdateOrg}
+                      disabled={updateOrgMutation.isPending}
+                      className="w-full"
+                    >
+                      {updateOrgMutation.isPending ? "Updating..." : "Update Organization"}
                     </Button>
                   </div>
                 </DialogContent>
