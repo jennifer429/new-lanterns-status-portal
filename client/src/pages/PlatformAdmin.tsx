@@ -30,12 +30,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Activity, Download, Plus, Mail, Edit } from "lucide-react";
+import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Activity, Download, Plus, Mail, Edit, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
 /**
- * Platform Admin Dashboard - New Lantern staff only (@newlantern.ai)
- * Tabbed interface: Organizations | Users
+ * Unified Admin Dashboard
+ * Works for all admin roles:
+ * - Platform Admin (New Lantern staff, clientId = null) → sees all partners, orgs, users
+ * - Partner Admin (SRV, RadOne, etc., clientId set) → sees only their partner's orgs and users
+ * Backend automatically filters data by the logged-in user's clientId.
  */
 export default function PlatformAdmin() {
   const [, setLocation] = useLocation();
@@ -49,6 +52,20 @@ export default function PlatformAdmin() {
   const [newUserOrgId, setNewUserOrgId] = useState<number | undefined>();
   const [newUserRole, setNewUserRole] = useState<"user" | "admin">("user");
 
+  // Edit user dialog state
+  const [isEditUserDialogOpen, setIsEditUserDialogOpen] = useState(false);
+  const [editUserId, setEditUserId] = useState<number | null>(null);
+  const [editUserName, setEditUserName] = useState("");
+  const [editUserEmail, setEditUserEmail] = useState("");
+  const [editUserRole, setEditUserRole] = useState<"user" | "admin">("user");
+  const [editUserOrgId, setEditUserOrgId] = useState<number | null>(null);
+
+  // Reactivate user dialog state
+  const [isReactivateDialogOpen, setIsReactivateDialogOpen] = useState(false);
+  const [reactivateUserId, setReactivateUserId] = useState<number | null>(null);
+  const [reactivateUserName, setReactivateUserName] = useState("");
+  const [reactivateOrgId, setReactivateOrgId] = useState<number | undefined>();
+
   // Organization management state
   const [isCreateOrgDialogOpen, setIsCreateOrgDialogOpen] = useState(false);
   const [newOrgName, setNewOrgName] = useState("");
@@ -60,15 +77,21 @@ export default function PlatformAdmin() {
   const [editOrgSlug, setEditOrgSlug] = useState("");
   const [editOrgClientId, setEditOrgClientId] = useState<number | null>(null);
 
-  // Access control: Only New Lantern staff (clientId = NULL)
+  // Access control: Must be an admin (any admin - platform or partner)
   useEffect(() => {
-    if (!authLoading && (!user || user.clientId !== null)) {
+    if (!authLoading && (!user || user.role !== "admin")) {
       setLocation("/");
     }
   }, [user, authLoading, setLocation]);
 
+  // Determine if this is a platform admin (no clientId) or partner admin
+  const isPlatformAdmin = user?.clientId === null || user?.clientId === undefined;
+
   const { data: orgs, isLoading } = trpc.admin.getAllOrganizations.useQuery();
-  const { data: clients } = trpc.admin.getAllClients.useQuery();
+  // Only platform admins can fetch all clients; partner admins don't need this
+  const { data: clients } = trpc.admin.getAllClients.useQuery(undefined, {
+    enabled: isPlatformAdmin,
+  });
   const { data: metrics } = trpc.admin.getAdminSummary.useQuery();
   const { data: allUsers, refetch: refetchUsers } = trpc.admin.getAllUsers.useQuery();
 
@@ -99,6 +122,81 @@ export default function PlatformAdmin() {
       organizationId: newUserOrgId,
       role: newUserRole,
       clientId: user?.clientId || null,
+    });
+  };
+
+  // Edit user mutation using trpc.users.update
+  const updateUserMutation = trpc.users.update.useMutation({
+    onSuccess: () => {
+      toast.success("User updated successfully!");
+      setIsEditUserDialogOpen(false);
+      setEditUserId(null);
+      setEditUserName("");
+      setEditUserEmail("");
+      setEditUserRole("user");
+      setEditUserOrgId(null);
+      refetchUsers();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to update user");
+    },
+  });
+
+  const handleEditUser = (u: NonNullable<typeof allUsers>[number]) => {
+    setEditUserId(u.id);
+    setEditUserName(u.name || "");
+    setEditUserEmail(u.email || "");
+    setEditUserRole(u.role as "user" | "admin");
+    setEditUserOrgId(u.organizationId || null);
+    setIsEditUserDialogOpen(true);
+  };
+
+  const handleUpdateUser = () => {
+    if (!editUserId || !editUserName || !editUserEmail) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    updateUserMutation.mutate({
+      id: editUserId,
+      name: editUserName,
+      email: editUserEmail,
+      role: editUserRole,
+      organizationId: editUserOrgId,
+    });
+  };
+
+  // Reactivate user mutation
+  const reactivateUserMutation = trpc.admin.reactivateUser.useMutation({
+    onSuccess: () => {
+      toast.success("User reactivated successfully!");
+      setIsReactivateDialogOpen(false);
+      setReactivateUserId(null);
+      setReactivateUserName("");
+      setReactivateOrgId(undefined);
+      refetchUsers();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to reactivate user");
+    },
+  });
+
+  const handleReactivateUser = (u: NonNullable<typeof allUsers>[number]) => {
+    setReactivateUserId(u.id);
+    setReactivateUserName(u.name || "Unknown");
+    setReactivateOrgId(undefined);
+    setIsReactivateDialogOpen(true);
+  };
+
+  const handleConfirmReactivate = () => {
+    if (!reactivateUserId || !reactivateOrgId) {
+      toast.error("Please select an organization");
+      return;
+    }
+
+    reactivateUserMutation.mutate({
+      userId: reactivateUserId,
+      organizationId: reactivateOrgId,
     });
   };
 
@@ -206,10 +304,19 @@ export default function PlatformAdmin() {
   }, {} as Record<number, typeof metrics[number]>) || {};
 
   // Create a map of clientId -> client name
-  const clientMap = clients?.reduce((acc, c) => {
-    acc[c.id] = c.name;
-    return acc;
-  }, {} as Record<number, string>) || {};
+  // For partner admins who can't fetch all clients, build from org data
+  const clientMap = isPlatformAdmin
+    ? (clients?.reduce((acc, c) => {
+        acc[c.id] = c.name;
+        return acc;
+      }, {} as Record<number, string>) || {})
+    : (orgs?.reduce((acc, o) => {
+        if (o.clientId && !acc[o.clientId]) {
+          // Derive partner name from the user context or org data
+          acc[o.clientId] = user?.clientId === o.clientId ? getPartnerDisplayName(user) : `Partner ${o.clientId}`;
+        }
+        return acc;
+      }, {} as Record<number, string>) || {});
 
   // Create a map of organizationId -> organization name
   const orgMap = orgs?.reduce((acc, o) => {
@@ -218,8 +325,15 @@ export default function PlatformAdmin() {
   }, {} as Record<number, string>) || {};
 
   const activeOrgs = orgs?.filter(o => o.status === "active") || [];
-  const activeUsers = allUsers || [];
-  const inactiveUsers: typeof allUsers = [];
+  
+  // Separate active and inactive users
+  // Users with organizationId = null are considered deactivated (soft delete pattern)
+  const activeUsers = allUsers?.filter(u => u.organizationId !== null) || [];
+  const inactiveUsers = allUsers?.filter(u => u.organizationId === null) || [];
+
+  // Dynamic header based on user's role
+  const headerTitle = isPlatformAdmin ? "Platform Admin" : `${getPartnerDisplayName(user)} Admin`;
+  const headerSubtitle = isPlatformAdmin ? "New Lantern - All Partners" : `Manage your organizations`;
 
   return (
     <div className="min-h-screen bg-background">
@@ -230,9 +344,9 @@ export default function PlatformAdmin() {
             <div className="flex items-center gap-4">
               <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-12" />
               <div>
-                <h1 className="text-3xl font-bold text-foreground">Platform Admin</h1>
+                <h1 className="text-3xl font-bold text-foreground">{headerTitle}</h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                  New Lantern - All Partners
+                  {headerSubtitle}
                 </p>
               </div>
             </div>
@@ -421,9 +535,11 @@ export default function PlatformAdmin() {
                             <ClipboardList className="w-6 h-6 text-primary flex-shrink-0" />
                             <div className="min-w-0 flex-1">
                               <h3 className="text-lg font-bold truncate">{org.name}</h3>
-                              <Badge variant="outline" className="text-xs mt-1">
-                                {partnerName}
-                              </Badge>
+                              {isPlatformAdmin && (
+                                <Badge variant="outline" className="text-xs mt-1">
+                                  {partnerName}
+                                </Badge>
+                              )}
                             </div>
                           </div>
                           <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
@@ -576,21 +692,35 @@ export default function PlatformAdmin() {
                         onChange={(e) => setNewOrgSlug(e.target.value)}
                       />
                     </div>
-                    <div>
-                      <Label htmlFor="org-partner">Partner</Label>
-                      <Select value={newOrgClientId?.toString()} onValueChange={(val) => setNewOrgClientId(parseInt(val))}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select partner" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(clientMap).map(([id, name]) => (
-                            <SelectItem key={id} value={id}>{name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    {isPlatformAdmin && (
+                      <div>
+                        <Label htmlFor="org-partner">Partner</Label>
+                        <Select value={newOrgClientId?.toString()} onValueChange={(val) => setNewOrgClientId(parseInt(val))}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select partner" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(clientMap).map(([id, name]) => (
+                              <SelectItem key={id} value={id}>{name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                     <Button
-                      onClick={handleCreateOrg}
+                      onClick={() => {
+                        // For partner admins, auto-assign their clientId
+                        const clientId = isPlatformAdmin ? newOrgClientId : user?.clientId;
+                        if (!newOrgName || !newOrgSlug || !clientId) {
+                          toast.error("Please fill in all required fields");
+                          return;
+                        }
+                        createOrgMutation.mutate({
+                          name: newOrgName,
+                          slug: newOrgSlug,
+                          clientId: clientId,
+                        });
+                      }}
                       disabled={createOrgMutation.isPending}
                       className="w-full"
                     >
@@ -646,7 +776,7 @@ export default function PlatformAdmin() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead>Partner</TableHead>
+                    {isPlatformAdmin && <TableHead>Partner</TableHead>}
                     <TableHead>Status</TableHead>
                     <TableHead>Users</TableHead>
                     <TableHead>Completion</TableHead>
@@ -656,7 +786,7 @@ export default function PlatformAdmin() {
                 <TableBody>
                   {activeOrgs.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={isPlatformAdmin ? 6 : 5} className="text-center py-8 text-muted-foreground">
                         No active organizations
                       </TableCell>
                     </TableRow>
@@ -670,7 +800,7 @@ export default function PlatformAdmin() {
                       return (
                         <TableRow key={org.id}>
                           <TableCell className="font-medium">{org.name}</TableCell>
-                          <TableCell>{partnerName}</TableCell>
+                          {isPlatformAdmin && <TableCell>{partnerName}</TableCell>}
                           <TableCell>
                             <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
                               Active
@@ -722,6 +852,130 @@ export default function PlatformAdmin() {
           <>
             <h2 className="text-2xl font-bold mb-6">User Management</h2>
 
+            {/* Edit User Dialog */}
+            <Dialog open={isEditUserDialogOpen} onOpenChange={setIsEditUserDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Edit User</DialogTitle>
+                  <DialogDescription>
+                    Update user details, role, and organization assignment.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 pt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="editUserName">
+                      Name <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="editUserName"
+                      value={editUserName}
+                      onChange={(e) => setEditUserName(e.target.value)}
+                      placeholder="John Doe"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="editUserEmail">
+                      Email <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="editUserEmail"
+                      type="email"
+                      value={editUserEmail}
+                      onChange={(e) => setEditUserEmail(e.target.value)}
+                      placeholder="user@hospital.org"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="editUserRole">Role</Label>
+                    <Select
+                      value={editUserRole}
+                      onValueChange={(value: "user" | "admin") => setEditUserRole(value)}
+                    >
+                      <SelectTrigger id="editUserRole">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="user">User</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="editUserOrg">Organization</Label>
+                    <Select
+                      value={editUserOrgId?.toString() || "none"}
+                      onValueChange={(value) => setEditUserOrgId(value === "none" ? null : parseInt(value))}
+                    >
+                      <SelectTrigger id="editUserOrg">
+                        <SelectValue placeholder="Select organization" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No Organization (Partner-level)</SelectItem>
+                        {activeOrgs.map(org => (
+                          <SelectItem key={org.id} value={org.id.toString()}>
+                            {org.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Button
+                    onClick={handleUpdateUser}
+                    disabled={updateUserMutation.isPending}
+                    className="w-full"
+                  >
+                    {updateUserMutation.isPending ? "Saving..." : "Save Changes"}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Reactivate User Dialog */}
+            <Dialog open={isReactivateDialogOpen} onOpenChange={setIsReactivateDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Reactivate User</DialogTitle>
+                  <DialogDescription>
+                    Reactivate {reactivateUserName} by assigning them to an organization.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 pt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="reactivateOrg">
+                      Organization <span className="text-destructive">*</span>
+                    </Label>
+                    <Select
+                      value={reactivateOrgId?.toString()}
+                      onValueChange={(value) => setReactivateOrgId(parseInt(value))}
+                    >
+                      <SelectTrigger id="reactivateOrg">
+                        <SelectValue placeholder="Select organization" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {activeOrgs.map(org => (
+                          <SelectItem key={org.id} value={org.id.toString()}>
+                            {org.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Button
+                    onClick={handleConfirmReactivate}
+                    disabled={reactivateUserMutation.isPending}
+                    className="w-full"
+                  >
+                    {reactivateUserMutation.isPending ? "Reactivating..." : "Reactivate User"}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
             {/* Active Users Table */}
             <Card className="mb-8">
               <CardContent className="p-6">
@@ -732,7 +986,7 @@ export default function PlatformAdmin() {
                       <TableHead>Name</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Organization</TableHead>
-                      <TableHead>Partner</TableHead>
+                      {isPlatformAdmin && <TableHead>Partner</TableHead>}
                       <TableHead>Role</TableHead>
                       <TableHead>Last Login</TableHead>
                       <TableHead>Actions</TableHead>
@@ -748,7 +1002,7 @@ export default function PlatformAdmin() {
                           <TableCell className="font-medium">{u.name}</TableCell>
                           <TableCell>{u.email}</TableCell>
                           <TableCell>{orgMap[u.organizationId || 0] || "N/A"}</TableCell>
-                          <TableCell>{partner}</TableCell>
+                          {isPlatformAdmin && <TableCell>{partner}</TableCell>}
                           <TableCell>
                             <Badge variant={u.role === "admin" ? "default" : "secondary"}>
                               {u.role}
@@ -762,7 +1016,7 @@ export default function PlatformAdmin() {
                               <Button 
                                 size="sm" 
                                 variant="outline"
-                                onClick={() => toast.info("Edit user functionality coming soon")}
+                                onClick={() => handleEditUser(u)}
                               >
                                 <Edit className="w-3 h-3 mr-1" />
                                 Edit
@@ -798,23 +1052,20 @@ export default function PlatformAdmin() {
                       <TableRow>
                         <TableHead>Name</TableHead>
                         <TableHead>Email</TableHead>
-                        <TableHead>Organization</TableHead>
-                        <TableHead>Partner</TableHead>
+                        {isPlatformAdmin && <TableHead>Partner</TableHead>}
                         <TableHead>Role</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {inactiveUsers.map(u => {
-                        const org = orgs?.find(o => o.id === u.organizationId);
-                        const partner = org?.clientId ? clientMap[org.clientId] : "N/A";
+                        const partner = u.clientId ? clientMap[u.clientId] : "N/A";
                         
                         return (
                           <TableRow key={u.id} className="opacity-60">
                             <TableCell className="font-medium">{u.name}</TableCell>
                             <TableCell>{u.email}</TableCell>
-                            <TableCell>{orgMap[u.organizationId || 0] || "N/A"}</TableCell>
-                            <TableCell>{partner}</TableCell>
+                            {isPlatformAdmin && <TableCell>{partner}</TableCell>}
                             <TableCell>
                               <Badge variant="secondary">{u.role}</Badge>
                             </TableCell>
@@ -822,8 +1073,9 @@ export default function PlatformAdmin() {
                               <Button 
                                 size="sm" 
                                 variant="outline"
-                                onClick={() => toast.info("Reactivate user functionality coming soon")}
+                                onClick={() => handleReactivateUser(u)}
                               >
+                                <RotateCcw className="w-3 h-3 mr-1" />
                                 Reactivate
                               </Button>
                             </TableCell>
@@ -840,4 +1092,18 @@ export default function PlatformAdmin() {
       </div>
     </div>
   );
+}
+
+/**
+ * Helper to get a display name for the partner based on user context.
+ * Maps known clientIds to display names.
+ */
+function getPartnerDisplayName(user: any): string {
+  if (!user?.clientId) return "Platform";
+  // Known partner mappings
+  const partnerNames: Record<number, string> = {
+    1: "RadOne",
+    2: "SRV",
+  };
+  return partnerNames[user.clientId] || `Partner ${user.clientId}`;
 }
