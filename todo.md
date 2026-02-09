@@ -1456,3 +1456,12 @@
 
 ## Workflow Visualization Update (Feb 9, 2026)
 - [x] Change "Silverback" text to "Manual push to New Lantern" in workflow diagram
+
+## Silverback C-FIND/C-MOVE Workflow (Feb 9, 2026)
+- [x] Database: Add new workflow path field for Silverback C-FIND/C-MOVE retrieval (uses existing WorkflowConfiguration structure)
+- [x] Database: Add source system field (fill-in) for where Silverback queries from (uses existing systems field)
+- [x] Backend: Update configuration save/load to handle new workflow option (no changes needed - already handles dynamic keys)
+- [x] Frontend: Add 4th workflow option with [Fill-in Box] ↔ Silverback → New Lantern visualization
+- [x] Frontend: Add unlabeled fill-in input field for source system name
+- [x] Frontend: Use bidirectional arrows between source box and Silverback (C-FIND/C-MOVE)
+- [x] Frontend: Regular arrow from Silverback to New Lantern

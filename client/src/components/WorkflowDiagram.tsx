@@ -176,6 +176,16 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
     });
   };
 
+  const handleSystemChange = (systemKey: string, value: string) => {
+    onConfigurationChange({
+      ...configuration,
+      systems: {
+        ...configuration.systems,
+        [systemKey]: value,
+      },
+    });
+  };
+
   /**
    * Render Orders Workflow
    */
@@ -424,6 +434,89 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
             className={`
               flex-1
               ${configuration.paths.imagesViaVizAI 
+                ? 'border-primary bg-background' 
+                : 'bg-muted/50 text-muted-foreground'}
+            `}
+          />
+        </div>
+
+        {/* Silverback C-FIND/C-MOVE Workflow: [Source] ↔ Silverback → New Lantern */}
+        <div
+          className={`
+            flex items-center gap-4 p-4 rounded-lg transition-all
+            ${configuration.paths.imagesSilverbackQuery ? 'bg-primary/10' : 'bg-muted/30'}
+          `}
+        >
+          {/* Checkbox */}
+          <Checkbox
+            id="imagesSilverbackQuery"
+            checked={configuration.paths.imagesSilverbackQuery || false}
+            onCheckedChange={(checked) => handleCheckboxChange('imagesSilverbackQuery', checked as boolean)}
+            className={configuration.paths.imagesSilverbackQuery ? 'data-[state=checked]:bg-primary data-[state=checked]:border-primary' : 'border-white bg-transparent'}
+          />
+
+          {/* Source System Input (unlabeled fill-in box) */}
+          <Input
+            placeholder="Source system"
+            value={configuration.systems.silverbackQuerySource || ''}
+            onChange={(e) => handleSystemChange('silverbackQuerySource', e.target.value)}
+            disabled={!configuration.paths.imagesSilverbackQuery}
+            className={`
+              w-[140px] text-center font-medium
+              ${configuration.paths.imagesSilverbackQuery 
+                ? 'bg-primary/20 border-primary text-foreground' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          />
+
+          {/* Bidirectional Arrow (C-FIND query → / ← C-MOVE retrieve) */}
+          <div className="flex items-center gap-1">
+            <ArrowRight
+              className={`w-5 h-5 ${configuration.paths.imagesSilverbackQuery ? 'text-primary' : 'text-muted-foreground'}`}
+            />
+            <ArrowRight
+              className={`w-5 h-5 rotate-180 ${configuration.paths.imagesSilverbackQuery ? 'text-primary' : 'text-muted-foreground'}`}
+            />
+          </div>
+
+          {/* Silverback Box */}
+          <div
+            className={`
+              px-4 py-2 rounded-md font-medium min-w-[120px] text-center
+              ${configuration.paths.imagesSilverbackQuery 
+                ? 'bg-purple-600 text-white' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          >
+            Silverback
+          </div>
+
+          {/* Arrow to New Lantern */}
+          <ArrowRight
+            className={`w-6 h-6 flex-shrink-0 ${configuration.paths.imagesSilverbackQuery ? 'text-primary' : 'text-muted-foreground'}`}
+          />
+
+          {/* New Lantern Box */}
+          <div
+            className={`
+              px-4 py-2 rounded-md font-medium min-w-[120px] text-center
+              ${configuration.paths.imagesSilverbackQuery 
+                ? 'bg-primary text-primary-foreground' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          >
+            New Lantern
+          </div>
+
+          {/* Notes Input Field */}
+          <Input
+            placeholder="e.g., Silverback queries VNA using C-FIND/C-MOVE to retrieve historical studies"
+            value={configuration.notes.imagesSilverbackQuery_note || ''}
+            onChange={(e) => handleNoteChange('imagesSilverbackQuery_note', e.target.value)}
+            disabled={!configuration.paths.imagesSilverbackQuery}
+            className={`
+              flex-1
+              ${configuration.paths.imagesSilverbackQuery 
                 ? 'border-primary bg-background' 
                 : 'bg-muted/50 text-muted-foreground'}
             `}
