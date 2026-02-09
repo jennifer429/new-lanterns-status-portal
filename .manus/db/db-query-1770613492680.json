@@ -1,0 +1,82 @@
+{
+  "query": "SELECT id, slug, name, clientId, status, createdAt FROM organizations ORDER BY name;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, slug, name, clientId, status, createdAt FROM organizations ORDER BY name;",
+  "rows": [
+    {
+      "id": "60009",
+      "slug": "baycare",
+      "name": "Baycare",
+      "clientId": "1",
+      "status": "active",
+      "createdAt": "2026-02-02 00:54:06"
+    },
+    {
+      "id": "60008",
+      "slug": "jcrhc",
+      "name": "JCRHC",
+      "clientId": "1",
+      "status": "active",
+      "createdAt": "2026-02-02 00:54:06"
+    },
+    {
+      "id": "60007",
+      "slug": "munson",
+      "name": "Munson Medical Center",
+      "clientId": "1",
+      "status": "active",
+      "createdAt": "2026-02-02 00:54:05"
+    },
+    {
+      "id": "180001",
+      "slug": "neworg2",
+      "name": "New Org 2",
+      "clientId": "NULL",
+      "status": "inactive",
+      "createdAt": "2026-02-07 22:18:23"
+    },
+    {
+      "id": "210001",
+      "slug": "radone-test-1",
+      "name": "RadOne Test Hospital 1",
+      "clientId": "1",
+      "status": "active",
+      "createdAt": "2026-02-08 21:21:05"
+    },
+    {
+      "id": "210002",
+      "slug": "radone-test-2",
+      "name": "RadOne Test Hospital 2",
+      "clientId": "1",
+      "status": "active",
+      "createdAt": "2026-02-08 21:21:05"
+    },
+    {
+      "id": "180002",
+      "slug": "royorg",
+      "name": "Roy's org",
+      "clientId": "NULL",
+      "status": "inactive",
+      "createdAt": "2026-02-07 22:44:44"
+    },
+    {
+      "id": "210003",
+      "slug": "srv-test-1",
+      "name": "SRV Test Hospital 1",
+      "clientId": "2",
+      "status": "active",
+      "createdAt": "2026-02-08 21:21:05"
+    },
+    {
+      "id": "210004",
+      "slug": "srv-test-2",
+      "name": "SRV Test Hospital 2",
+      "clientId": "2",
+      "status": "active",
+      "createdAt": "2026-02-08 21:21:05"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tslug\tname\tclientId\tstatus\tcreatedAt\n60009\tbaycare\tBaycare\t1\tactive\t2026-02-02 00:54:06\n60008\tjcrhc\tJCRHC\t1\tactive\t2026-02-02 00:54:06\n60007\tmunson\tMunson Medical Center\t1\tactive\t2026-02-02 00:54:05\n180001\tneworg2\tNew Org 2\tNULL\tinactive\t2026-02-07 22:18:23\n210001\tradone-test-1\tRadOne Test Hospital 1\t1\tactive\t2026-02-08 21:21:05\n210002\tradone-test-2\tRadOne Test Hospital 2\t1\tactive\t2026-02-08 21:21:05\n180002\troyorg\tRoy's org\tNULL\tinactive\t2026-02-07 22:44:44\n210003\tsrv-test-1\tSRV Test Hospital 1\t2\tactive\t2026-02-08 21:21:05\n210004\tsrv-test-2\tSRV Test Hospital 2\t2\tactive\t2026-02-08 21:21:05\n",
+  "stderr": "",
+  "execution_time_ms": 55
+}

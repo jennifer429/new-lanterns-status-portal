@@ -1370,3 +1370,13 @@
 
 ## Viz.ai Workflow Architecture Fix
 - [x] Update Viz.ai pathway to show correct 3-column flow: Modality→Viz.ai (Client Site) → Silverback → New Lantern
+
+## Database Reset for Go-Live
+- [x] Audit current database (count organizations, users, responses, files)
+- [x] Delete all test organizations
+- [x] Delete all test users
+- [x] Clear all intake responses/answers
+- [x] Delete all uploaded files
+- [x] Verify all completion percentages are 0%
+- [x] Confirm database is clean and ready for production
+- [x] Added RRMC and Boulder Community Health for SRV partner
