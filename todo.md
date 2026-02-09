@@ -1354,3 +1354,6 @@
 - [ ] Implement Edit Organization dialog with name, slug, and partner fields
 - [x] Remove duplicate Create Organization button from header
 - [x] Fix broken Edit and Deactivate buttons for users
+
+## Workflow Diagram Fixes
+- [x] Add Viz.ai dual-send pathway to Images Workflow: Modalities → Viz.ai → (splits to both PACS and New Lantern)

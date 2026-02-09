@@ -243,6 +243,99 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           onCheckChange={(checked) => handleCheckboxChange('imagesViaVNA', checked)}
           onNoteChange={(value) => handleNoteChange('imagesViaVNA_note', value)}
         />
+
+        {/* Viz.ai Dual-Send Workflow - Special rendering for branching flow */}
+        <div
+          className={`
+            flex items-center gap-4 p-4 rounded-lg transition-all
+            ${configuration.paths.imagesViaVizAI ? 'bg-primary/10' : 'bg-muted/30'}
+          `}
+        >
+          {/* Checkbox */}
+          <Checkbox
+            id="imagesViaVizAI"
+            checked={configuration.paths.imagesViaVizAI || false}
+            onCheckedChange={(checked) => handleCheckboxChange('imagesViaVizAI', checked as boolean)}
+            className={configuration.paths.imagesViaVizAI ? 'data-[state=checked]:bg-primary data-[state=checked]:border-primary' : 'border-white bg-transparent'}
+          />
+
+          {/* Modalities Box */}
+          <div
+            className={`
+              px-4 py-2 rounded-md font-medium min-w-[140px] text-center
+              ${configuration.paths.imagesViaVizAI 
+                ? 'bg-primary text-primary-foreground' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          >
+            Modalities
+          </div>
+
+          {/* Arrow to Viz.ai */}
+          <ArrowRight
+            className={`w-6 h-6 flex-shrink-0 ${configuration.paths.imagesViaVizAI ? 'text-primary' : 'text-muted-foreground'}`}
+          />
+
+          {/* Viz.ai Box */}
+          <div
+            className={`
+              px-4 py-2 rounded-md font-medium min-w-[140px] text-center
+              ${configuration.paths.imagesViaVizAI 
+                ? 'bg-primary text-primary-foreground' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          >
+            Viz.ai
+          </div>
+
+          {/* Dual arrows - branching to both destinations */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <ArrowRight
+                className={`w-6 h-6 flex-shrink-0 ${configuration.paths.imagesViaVizAI ? 'text-primary' : 'text-muted-foreground'}`}
+              />
+              <div
+                className={`
+                  px-3 py-1 rounded-md font-medium text-sm
+                  ${configuration.paths.imagesViaVizAI 
+                    ? 'bg-primary text-primary-foreground' 
+                    : 'bg-muted text-muted-foreground'}
+                `}
+              >
+                PACS
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <ArrowRight
+                className={`w-6 h-6 flex-shrink-0 ${configuration.paths.imagesViaVizAI ? 'text-primary' : 'text-muted-foreground'}`}
+              />
+              <div
+                className={`
+                  px-3 py-1 rounded-md font-medium text-sm
+                  ${configuration.paths.imagesViaVizAI 
+                    ? 'bg-primary text-primary-foreground' 
+                    : 'bg-muted text-muted-foreground'}
+                `}
+              >
+                New Lantern
+              </div>
+            </div>
+          </div>
+
+          {/* Notes Input Field */}
+          <Input
+            placeholder="e.g., CT/MR modalities send to Viz.ai for AI analysis, then dual-send results to both legacy PACS and New Lantern"
+            value={configuration.notes.imagesViaVizAI_note || ''}
+            onChange={(e) => handleNoteChange('imagesViaVizAI_note', e.target.value)}
+            disabled={!configuration.paths.imagesViaVizAI}
+            className={`
+              flex-1
+              ${configuration.paths.imagesViaVizAI 
+                ? 'border-primary bg-background' 
+                : 'bg-muted/50 text-muted-foreground'}
+            `}
+          />
+        </div>
       </div>
     );
   };
