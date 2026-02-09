@@ -45,6 +45,7 @@ interface SwimLaneRowProps {
   id: string;
   label: string;
   sourceSystem: string;
+  middlewareSystem?: string; // Optional middleware (e.g., Silverback)
   destinationSystem: string;
   isActive: boolean;
   noteValue: string;
@@ -57,6 +58,7 @@ const SwimLaneRow: React.FC<SwimLaneRowProps> = ({
   id,
   label,
   sourceSystem,
+  middlewareSystem,
   destinationSystem,
   isActive,
   noteValue,
@@ -96,6 +98,26 @@ const SwimLaneRow: React.FC<SwimLaneRowProps> = ({
       <ArrowRight
         className={`w-6 h-6 flex-shrink-0 ${isActive ? 'text-primary' : 'text-muted-foreground'}`}
       />
+
+      {/* Middleware System Box (if provided) */}
+      {middlewareSystem && (
+        <>
+          <div
+            className={`
+              px-4 py-2 rounded-md font-medium min-w-[140px] text-center
+              ${isActive 
+                ? 'bg-primary/70 text-primary-foreground' 
+                : 'bg-muted text-muted-foreground'
+              }
+            `}
+          >
+            {middlewareSystem}
+          </div>
+          <ArrowRight
+            className={`w-6 h-6 flex-shrink-0 ${isActive ? 'text-primary' : 'text-muted-foreground'}`}
+          />
+        </>
+      )}
 
       {/* Destination System Box */}
       <div
@@ -165,6 +187,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           id="ordersFromRIS"
           label="Orders from RIS (HL7)"
           sourceSystem="RIS"
+          middlewareSystem="Silverback"
           destinationSystem="New Lantern"
           isActive={configuration.paths.ordersFromRIS || false}
           noteValue={configuration.notes.ordersFromRIS_note || ''}
@@ -177,6 +200,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           id="ordersFromEHR"
           label="Orders from EHR (HL7)"
           sourceSystem="EHR"
+          middlewareSystem="Silverback"
           destinationSystem="New Lantern"
           isActive={configuration.paths.ordersFromEHR || false}
           noteValue={configuration.notes.ordersFromEHR_note || ''}
@@ -189,6 +213,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           id="manualEntry"
           label="Manual Entry in PACS (No HL7)"
           sourceSystem="Manual Entry"
+          middlewareSystem="Silverback"
           destinationSystem="New Lantern"
           isActive={configuration.paths.manualEntry || false}
           noteValue={configuration.notes.manualEntry_note || ''}
@@ -212,6 +237,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           id="imagesFromModalities"
           label="Images from Modalities (DICOM)"
           sourceSystem="Modalities"
+          middlewareSystem="Silverback"
           destinationSystem="New Lantern"
           isActive={configuration.paths.imagesFromModalities || false}
           noteValue={configuration.notes.imagesFromModalities_note || ''}
@@ -224,6 +250,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           id="imagesFromPACS"
           label="Images from Existing PACS"
           sourceSystem="Current PACS"
+          middlewareSystem="Silverback"
           destinationSystem="New Lantern"
           isActive={configuration.paths.imagesFromPACS || false}
           noteValue={configuration.notes.imagesFromPACS_note || ''}
@@ -236,6 +263,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           id="imagesViaVNA"
           label="Images via VNA/Archive"
           sourceSystem="VNA"
+          middlewareSystem="Silverback"
           destinationSystem="New Lantern"
           isActive={configuration.paths.imagesViaVNA || false}
           noteValue={configuration.notes.imagesViaVNA_note || ''}
@@ -350,6 +378,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           id="priorsFromPACS"
           label="Priors from Current PACS"
           sourceSystem="Current PACS"
+          middlewareSystem="Silverback"
           destinationSystem="New Lantern"
           isActive={configuration.paths.priorsFromPACS || false}
           noteValue={configuration.notes.priorsFromPACS_note || ''}
@@ -362,6 +391,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           id="priorsFromVNA"
           label="Priors from VNA/Archive"
           sourceSystem="VNA"
+          middlewareSystem="Silverback"
           destinationSystem="New Lantern"
           isActive={configuration.paths.priorsFromVNA || false}
           noteValue={configuration.notes.priorsFromVNA_note || ''}
@@ -374,6 +404,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           id="priorsFromCDImport"
           label="Priors from CD/External Import"
           sourceSystem="CD Import"
+          middlewareSystem="Silverback"
           destinationSystem="New Lantern"
           isActive={configuration.paths.priorsFromCDImport || false}
           noteValue={configuration.notes.priorsFromCDImport_note || ''}
@@ -397,6 +428,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           id="reportsToRIS"
           label="Reports to RIS (HL7)"
           sourceSystem="New Lantern"
+          middlewareSystem="Silverback"
           destinationSystem="RIS"
           isActive={configuration.paths.reportsToRIS || false}
           noteValue={configuration.notes.reportsToRIS_note || ''}
@@ -409,6 +441,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           id="reportsToEHR"
           label="Reports to EHR (HL7)"
           sourceSystem="New Lantern"
+          middlewareSystem="Silverback"
           destinationSystem="EHR"
           isActive={configuration.paths.reportsToEHR || false}
           noteValue={configuration.notes.reportsToEHR_note || ''}
@@ -421,6 +454,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           id="reportsToPortal"
           label="Reports to Patient Portal"
           sourceSystem="New Lantern"
+          middlewareSystem="Silverback"
           destinationSystem="Patient Portal"
           isActive={configuration.paths.reportsToPortal || false}
           noteValue={configuration.notes.reportsToPortal_note || ''}

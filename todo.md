@@ -1380,3 +1380,26 @@
 - [x] Verify all completion percentages are 0%
 - [x] Confirm database is clean and ready for production
 - [x] Added RRMC and Boulder Community Health for SRV partner
+
+## Create Users from Email List
+- [ ] Parse email list and identify organization assignments
+- [ ] Create user accounts for Boulder Community Health team
+- [ ] Create user accounts for SRV/RRMC team
+- [ ] Create user accounts for RadOne partners
+- [ ] Verify all users created successfully
+
+## Admin UI Improvements
+- [ ] Rename "Update Organization" tab to "Organizations"
+
+## Workflow Diagram Updates
+- [x] Update all workflow swim lanes to show 3-column architecture: Client Site → Silverback → New Lantern
+- [x] Apply to Orders workflow
+- [x] Apply to Images workflow (all pathways)
+- [x] Apply to Priors workflow
+- [x] Apply to Reports workflow
+
+## SRV Admin Account Creation
+- [x] Get Rhonda's email address
+- [x] Create SRV admin account for Rhonda Bennett (rbennett@tuscrad.com)
+- [x] Create SRV admin account for Leigh Ann Hobson (lhobson@tuscrad.com)
+- [x] Create SRV admin account for Dr. David Shulman (dshulman@tuscrad.com)
