@@ -1487,3 +1487,7 @@
 - [x] Update Orders Workflow to show: EHR → Silverback → New Lantern
 - [x] Update Orders Workflow to show: Manual Entry → Silverback → New Lantern
 - [x] Remove any incorrect workflow configurations (changed middleware from "Manual push to New Lantern" to "Silverback")
+
+## Workflow Text Updates (Feb 10, 2026)
+- [x] Change "Viz.ai" to "AI" in Images Workflow 4th option
+- [x] Change "CD Import" to "Manual push" in Priors Workflow 3rd option

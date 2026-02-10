@@ -349,7 +349,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           onNoteChange={(value) => handleNoteChange('imagesViaVNA_note', value)}
         />
 
-        {/* Viz.ai 3-Column Workflow: Modality→Viz.ai → Manual push to New Lantern → New Lantern */}
+        {/* AI 3-Column Workflow: Modality→AI → Manual push to New Lantern → New Lantern */}
         <div
           className={`
             flex items-center gap-4 p-4 rounded-lg transition-all
@@ -364,7 +364,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
             className={configuration.paths.imagesViaVizAI ? 'data-[state=checked]:bg-primary data-[state=checked]:border-primary' : 'border-white bg-transparent'}
           />
 
-          {/* Client Site: Modalities → Viz.ai */}
+          {/* Client Site: Modalities → AI */}
           <div className="flex items-center gap-2">
             <div
               className={`
@@ -387,7 +387,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
                   : 'bg-muted text-muted-foreground'}
               `}
             >
-              Viz.ai
+              AI
             </div>
           </div>
 
@@ -427,7 +427,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
 
           {/* Notes Input Field */}
           <Input
-            placeholder="e.g., CT/MR modalities send to Viz.ai for AI analysis, then forward through Manual push to New Lantern to New Lantern"
+            placeholder="e.g., CT/MR modalities send to AI for analysis, then forward through Manual push to New Lantern to New Lantern"
             value={configuration.notes.imagesViaVizAI_note || ''}
             onChange={(e) => handleNoteChange('imagesViaVizAI_note', e.target.value)}
             disabled={!configuration.paths.imagesViaVizAI}
@@ -691,7 +691,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           />
         </div>
 
-        {/* Option 3: "Manual" → Silverback → New Lantern (fixed text) */}
+        {/* Option 3: "Manual push" → Silverback → New Lantern (fixed text) */}
         <div
           className={`
             flex items-center gap-4 p-4 rounded-lg transition-all
@@ -705,16 +705,16 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
             className={configuration.paths.priorsOption3 ? 'data-[state=checked]:bg-primary data-[state=checked]:border-primary' : 'border-white bg-transparent'}
           />
 
-          {/* Fixed "Manual" Box */}
+          {/* Fixed "Manual push" Box */}
           <div
             className={`
               px-4 py-2 rounded-md font-medium min-w-[140px] text-center
               ${configuration.paths.priorsOption3 
-                ? 'bg-primary/20 border-2 border-primary text-foreground' 
+                ? 'bg-primary text-primary-foreground' 
                 : 'bg-muted text-muted-foreground'}
             `}
           >
-            Manual
+            Manual push
           </div>
 
           {/* Unidirectional Arrow */}
