@@ -1,0 +1,46 @@
+{
+  "query": "SELECT questionId, questionText FROM questions WHERE questionId LIKE 'L.%' ORDER BY questionId;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT questionId, questionText FROM questions WHERE questionId LIKE 'L.%' ORDER BY questionId;",
+  "rows": [
+    {
+      "questionId": "L.10",
+      "questionText": "Issue escalation process"
+    },
+    {
+      "questionId": "L.2",
+      "questionText": "Test patient data requirements"
+    },
+    {
+      "questionId": "L.3",
+      "questionText": "Test study requirements"
+    },
+    {
+      "questionId": "L.4",
+      "questionText": "Integration testing timeline"
+    },
+    {
+      "questionId": "L.5",
+      "questionText": "User acceptance testing (UAT) timeline"
+    },
+    {
+      "questionId": "L.6",
+      "questionText": "UAT participants"
+    },
+    {
+      "questionId": "L.7",
+      "questionText": "Production validation timeline"
+    },
+    {
+      "questionId": "L.8",
+      "questionText": "Go-live support requirements"
+    },
+    {
+      "questionId": "L.9",
+      "questionText": "Post go-live monitoring requirements"
+    }
+  ],
+  "messages": [],
+  "stdout": "questionId\tquestionText\nL.10\tIssue escalation process\nL.2\tTest patient data requirements\nL.3\tTest study requirements\nL.4\tIntegration testing timeline\nL.5\tUser acceptance testing (UAT) timeline\nL.6\tUAT participants\nL.7\tProduction validation timeline\nL.8\tGo-live support requirements\nL.9\tPost go-live monitoring requirements\n",
+  "stderr": "",
+  "execution_time_ms": 61
+}

@@ -1627,3 +1627,16 @@
 - [ ] Check if "Save & Continue" explicit save is working for workflows
 - [ ] Verify the save mutation is being called with correct data
 - [ ] Test workflow save and verify data persists in database
+
+## Fix "Question L.11 not found" Error (Feb 10, 2026)
+- [x] Debug why backend rejects L.11 when it exists in questionnaireData.ts
+- [x] Found that backend was validating against incomplete questions table
+- [x] Changed saveResponse to use intakeResponses table (no foreign key validation)
+- [x] intakeResponses stores questionId as varchar, allows any question ID
+- [ ] Test save functionality for all sections including L.11 and A.6.1
+
+## Fix Workflow Sections Not Showing Purple Checkmark (Feb 10, 2026)
+- [ ] Debug why workflow sections don't get purple checkbox after saving
+- [ ] Check how section completion status is calculated
+- [ ] Ensure workflow_config responses are recognized as section completion
+- [ ] Test that purple checkmark appears after saving workflow

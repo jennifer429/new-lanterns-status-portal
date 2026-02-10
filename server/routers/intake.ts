@@ -171,25 +171,15 @@ export const intakeRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this organization" });
       }
 
-      // Find question by questionId (e.g., "H.1" or "orders-workflow_config")
-      const [question] = await db
-        .select()
-        .from(questions)
-        .where(eq(questions.questionId, input.questionId))
-        .limit(1);
-
-      if (!question) {
-        throw new TRPCError({ code: "NOT_FOUND", message: `Question ${input.questionId} not found` });
-      }
-
+      // Use intakeResponses table which stores questionId as varchar (no foreign key validation)
       // Check if response already exists
       const [existing] = await db
         .select()
-        .from(responses)
+        .from(intakeResponses)
         .where(
           and(
-            eq(responses.organizationId, org.id),
-            eq(responses.questionId, question.id)
+            eq(intakeResponses.organizationId, org.id),
+            eq(intakeResponses.questionId, input.questionId)
           )
         )
         .limit(1);
@@ -197,21 +187,22 @@ export const intakeRouter = router({
       if (existing) {
         // Update existing response
         await db
-          .update(responses)
+          .update(intakeResponses)
           .set({
             response: input.response,
-            userEmail: input.userEmail,
+            updatedBy: input.userEmail,
           })
-          .where(eq(responses.id, existing.id));
+          .where(eq(intakeResponses.id, existing.id));
 
         return { success: true, action: "updated" };
       } else {
         // Insert new response
-        await db.insert(responses).values({
+        await db.insert(intakeResponses).values({
           organizationId: org.id,
-          questionId: question.id,
+          questionId: input.questionId,
+          section: 'intake', // Default section
           response: input.response,
-          userEmail: input.userEmail,
+          updatedBy: input.userEmail,
         });
 
         return { success: true, action: "created" };
