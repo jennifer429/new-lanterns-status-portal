@@ -442,9 +442,10 @@ export default function PlatformAdmin() {
   const inactiveOrgs = sortOrgs(orgs?.filter(o => o.status === "inactive" || o.status === "paused"));
   
   // Separate active and inactive users
-  // Users with organizationId = null are considered deactivated (soft delete pattern)
-  const activeUsers = allUsers?.filter(u => u.organizationId !== null) || [];
-  const inactiveUsers = allUsers?.filter(u => u.organizationId === null) || [];
+  // Users with organizationId = null are considered deactivated UNLESS they are admins
+  // Admin users (platform admins and partner admins) don't need an organizationId
+  const activeUsers = allUsers?.filter(u => u.organizationId !== null || u.role === 'admin') || [];
+  const inactiveUsers = allUsers?.filter(u => u.organizationId === null && u.role !== 'admin') || [];
 
   // Dynamic header based on user's role
   const headerTitle = isPlatformAdmin ? "Platform Admin" : `${getPartnerDisplayName(user)} Admin`;

@@ -1,0 +1,42 @@
+{
+  "query": "SELECT id, email, name, role, clientId, organizationId FROM users WHERE email IN ('lhobson@tuscrad.com', 'rbennett@tuscrad.com', 'dshulman@tuscrad.com', 'admin@srv.com') ORDER BY email;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, email, name, role, clientId, organizationId FROM users WHERE email IN ('lhobson@tuscrad.com', 'rbennett@tuscrad.com', 'dshulman@tuscrad.com', 'admin@srv.com') ORDER BY email;",
+  "rows": [
+    {
+      "id": "1530012",
+      "email": "admin@srv.com",
+      "name": "SRV Admin User",
+      "role": "admin",
+      "clientId": "2",
+      "organizationId": "NULL"
+    },
+    {
+      "id": "1800013",
+      "email": "dshulman@tuscrad.com",
+      "name": "Dr. David Shulman",
+      "role": "admin",
+      "clientId": "2",
+      "organizationId": "NULL"
+    },
+    {
+      "id": "1800011",
+      "email": "lhobson@tuscrad.com",
+      "name": "Leigh Ann Hobson",
+      "role": "admin",
+      "clientId": "2",
+      "organizationId": "NULL"
+    },
+    {
+      "id": "1800012",
+      "email": "rbennett@tuscrad.com",
+      "name": "Rhonda Bennett",
+      "role": "admin",
+      "clientId": "2",
+      "organizationId": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\temail\tname\trole\tclientId\torganizationId\n1530012\tadmin@srv.com\tSRV Admin User\tadmin\t2\tNULL\n1800013\tdshulman@tuscrad.com\tDr. David Shulman\tadmin\t2\tNULL\n1800011\tlhobson@tuscrad.com\tLeigh Ann Hobson\tadmin\t2\tNULL\n1800012\trbennett@tuscrad.com\tRhonda Bennett\tadmin\t2\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 59
+}

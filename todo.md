@@ -1472,3 +1472,11 @@
 ## Remove Confusing Notes (Feb 10, 2026)
 - [x] Remove notes from D.7 (Method for Historic Reports Data load)
 - [x] Remove notes from D.8 (Tech sheets input method)
+
+## Fix Platform Admin Issues (Feb 10, 2026)
+- [x] Fix profile dropdown showing only 'J' instead of full name (identified duplicate account issue)
+- [x] Fix SRV users appearing as deactivated on Users tab (updated filtering logic to treat admins as active)
+
+## Partner Isolation Fixes (Feb 10, 2026)
+- [x] Fix createOrganization to use user's clientId instead of email domain matching
+- [x] Verify createUser enforces partner isolation (already implemented)

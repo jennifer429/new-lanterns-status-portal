@@ -351,19 +351,16 @@ export const adminRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-      // Auto-assign clientId based on user's email domain if not provided
+      // Partner admins can only create orgs for their own partner
+      // Platform admins must specify clientId
       let clientId = input.clientId;
-      if (!clientId) {
-        // Determine clientId from user's email domain
-        if (ctx.user.email?.endsWith("@srv.com")) {
-          clientId = 2; // SRV
-        } else if (ctx.user.email?.endsWith("@radone.com")) {
-          clientId = 1; // RadOne
-        } else if (ctx.user.email?.endsWith("@newlantern.ai")) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "New Lantern staff must specify clientId" });
-        } else {
-          throw new TRPCError({ code: "FORBIDDEN", message: "Cannot determine partner for this user" });
-        }
+      
+      if (ctx.user.clientId !== null && ctx.user.clientId !== undefined) {
+        // Partner admin - force their clientId, ignore input
+        clientId = ctx.user.clientId;
+      } else if (!clientId) {
+        // Platform admin without clientId specified
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Platform admins must specify clientId when creating organizations" });
       }
 
       // Check if slug already exists

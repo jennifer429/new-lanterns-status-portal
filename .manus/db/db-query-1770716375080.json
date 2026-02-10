@@ -1,0 +1,24 @@
+{
+  "query": "SELECT id, email, name, role, clientId FROM users WHERE email = 'jennifer@newlantern.ai';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, email, name, role, clientId FROM users WHERE email = 'jennifer@newlantern.ai';",
+  "rows": [
+    {
+      "id": "150019",
+      "email": "jennifer@newlantern.ai",
+      "name": "Jennifer",
+      "role": "admin",
+      "clientId": "NULL"
+    },
+    {
+      "id": "1110035",
+      "email": "jennifer@newlantern.ai",
+      "name": "Jennifer Starling",
+      "role": "admin",
+      "clientId": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\temail\tname\trole\tclientId\n150019\tjennifer@newlantern.ai\tJennifer\tadmin\tNULL\n1110035\tjennifer@newlantern.ai\tJennifer Starling\tadmin\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 54
+}
