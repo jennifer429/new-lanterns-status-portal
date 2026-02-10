@@ -413,42 +413,28 @@ export default function IntakeNewRedesign() {
     reader.readAsDataURL(file);
   };
 
-  // Export pipe-delimited file
+  // Export pipe-delimited file (excludes upload, upload-download, and workflow types)
   const handleExportCSV = () => {
-    const lines = ['Section|Question ID|Question Text|Response Type|Response Value'];
+    const lines = ['Section|Question ID|Question Text|Response Type|Valid Options|Response Value'];
     
     questionnaireSections.forEach(section => {
-      // Handle workflow sections
-      if (section.type === 'workflow') {
-        const configKey = section.id + '_config';
-        const savedConfig = responses[configKey];
-        
-        if (savedConfig) {
-          try {
-            const config = typeof savedConfig === 'string' ? JSON.parse(savedConfig) : savedConfig;
-            
-            // Export each selected path as a separate row
-            Object.keys(config.paths || {}).forEach(pathKey => {
-              if (config.paths[pathKey]) {
-                const systemValue = config.systems?.[pathKey] || '';
-                const notesValue = config.notes?.[pathKey] || '';
-                lines.push(`${section.title}|${section.id}_${pathKey}|${pathKey} workflow path|workflow|Path: ${pathKey}, System: ${systemValue}, Notes: ${notesValue}`);
-              }
-            });
-          } catch (e) {
-            console.error('Error parsing workflow config:', e);
-          }
-        }
-        return;
-      }
+      // Skip workflow sections entirely — not text-answerable
+      if (section.type === 'workflow') return;
       
       // Handle standard question sections
       if (!section.questions) return;
       
       section.questions.forEach(q => {
+        // Skip file upload questions — not text-answerable
+        if (q.type === 'upload' || q.type === 'upload-download') return;
+        
         const response = responses[q.id] || '';
         const responseStr = Array.isArray(response) ? response.join('; ') : String(response);
-        lines.push(`${section.title}|${q.id}|${q.text}|${q.type}|${responseStr}`);
+        
+        // Include valid options for dropdown and multi-select so AI knows what to pick
+        const optionsStr = q.options ? q.options.join('; ') : '';
+        
+        lines.push(`${section.title}|${q.id}|${q.text}|${q.type}|${optionsStr}|${responseStr}`);
       });
     });
     
@@ -460,7 +446,7 @@ export default function IntakeNewRedesign() {
     a.click();
   };
 
-  // Import pipe-delimited file
+  // Import pipe-delimited file (supports both 5-column legacy and 6-column new format)
   const handleImportFile = async () => {
     if (!importFile || !slug) return;
     
@@ -469,71 +455,57 @@ export default function IntakeNewRedesign() {
       const text = await importFile.text();
       const lines = text.split('\n').filter(line => line.trim());
       
+      // Detect format from header
+      const header = lines[0] || '';
+      const headerParts = header.split('|');
+      const hasOptionsColumn = headerParts.length >= 6; // New format has Valid Options column
+      
       // Skip header row
       const dataLines = lines.slice(1);
       
-      const updatedResponses: Record<string, any> = { ...responses };
-      const workflowConfigs: Record<string, any> = {};
+      const importedResponses: Record<string, any> = {};
+      let importCount = 0;
       
       dataLines.forEach(line => {
         const parts = line.split('|');
-        if (parts.length < 5) return; // Skip invalid lines
         
-        const [section, questionId, questionText, responseType, responseValue] = parts;
+        let questionId: string;
+        let responseType: string;
+        let responseValue: string;
         
-        // Handle workflow data
-        if (responseType === 'workflow') {
-          // Parse workflow path data: "Path: X, System: Y, Notes: Z"
-          const pathMatch = responseValue.match(/Path: ([^,]+)/);
-          const systemMatch = responseValue.match(/System: ([^,]+)/);
-          const notesMatch = responseValue.match(/Notes: (.+)/);
-          
-          if (pathMatch) {
-            const pathKey = pathMatch[1].trim();
-            const systemValue = systemMatch ? systemMatch[1].trim() : '';
-            const notesValue = notesMatch ? notesMatch[1].trim() : '';
-            
-            // Extract section ID from questionId (format: sectionId_pathKey)
-            const sectionId = questionId.replace(`_${pathKey}`, '');
-            const configKey = sectionId + '_config';
-            
-            if (!workflowConfigs[configKey]) {
-              workflowConfigs[configKey] = {
-                paths: {},
-                systems: {},
-                notes: {}
-              };
-            }
-            
-            workflowConfigs[configKey].paths[pathKey] = true;
-            workflowConfigs[configKey].systems[pathKey] = systemValue;
-            workflowConfigs[configKey].notes[pathKey] = notesValue;
-          }
+        if (hasOptionsColumn) {
+          // New 6-column format: Section|Question ID|Question Text|Response Type|Valid Options|Response Value
+          if (parts.length < 6) return;
+          questionId = parts[1]?.trim();
+          responseType = parts[3]?.trim();
+          responseValue = parts[5]?.trim();
         } else {
-          // Handle standard question responses
-          const trimmedValue = responseValue.trim();
-          
-          // Convert to appropriate type based on response type
-          if (responseType === 'multiple-choice') {
-            updatedResponses[questionId] = trimmedValue.split('; ');
-          } else if (responseType === 'yes-no' || responseType === 'radio') {
-            updatedResponses[questionId] = trimmedValue;
-          } else {
-            updatedResponses[questionId] = trimmedValue;
-          }
+          // Legacy 5-column format: Section|Question ID|Question Text|Response Type|Response Value
+          if (parts.length < 5) return;
+          questionId = parts[1]?.trim();
+          responseType = parts[3]?.trim();
+          responseValue = parts[4]?.trim();
         }
+        
+        if (!questionId || !responseValue) return;
+        
+        // Skip workflow types (shouldn't be in export, but handle gracefully)
+        if (responseType === 'workflow') return;
+        
+        // Convert to appropriate type based on response type
+        if (responseType === 'multi-select' || responseType === 'multiple-choice') {
+          importedResponses[questionId] = responseValue.split('; ').map(v => v.trim()).filter(Boolean);
+        } else {
+          importedResponses[questionId] = responseValue;
+        }
+        importCount++;
       });
       
-      // Merge workflow configs into responses
-      Object.keys(workflowConfigs).forEach(configKey => {
-        updatedResponses[configKey] = workflowConfigs[configKey];
-      });
+      // Merge imported responses into existing state
+      setResponses(prev => ({ ...prev, ...importedResponses }));
       
-      // Update state
-      setResponses(updatedResponses);
-      
-      // Save to database - save each response individually
-      const savePromises = Object.entries(updatedResponses).map(([questionId, value]) => {
+      // Save only the imported responses to database
+      const savePromises = Object.entries(importedResponses).map(([questionId, value]) => {
         return saveMutation.mutateAsync({
           organizationSlug: slug,
           questionId,
@@ -545,7 +517,7 @@ export default function IntakeNewRedesign() {
       await Promise.all(savePromises);
       
       toast.success('Import successful', {
-        description: `Imported ${dataLines.length} responses`
+        description: `Imported ${importCount} responses`
       });
       
       setImportDialogOpen(false);
