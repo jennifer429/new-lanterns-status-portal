@@ -704,7 +704,7 @@ export default function IntakeNewRedesign() {
 
   // Show loading until responses are loaded into state
   // This ensures calculateSectionProgress has data to work with
-  if (orgLoading || (existingResponses && Object.keys(responses).length === 0)) {
+  if (orgLoading || existingResponses === undefined) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

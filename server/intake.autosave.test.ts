@@ -2,7 +2,7 @@
  * Test auto-save functionality for intake wizard
  */
 
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { getDb } from "./db";
 import { organizations, intakeResponses, users } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -151,5 +151,15 @@ describe("Intake Auto-Save", () => {
     const createdTime = new Date(saved.createdAt!).getTime();
     expect(createdTime).toBeGreaterThanOrEqual(beforeSave.getTime() - 1000);
     expect(createdTime).toBeLessThanOrEqual(afterSave.getTime() + 1000);
+  });
+
+  afterAll(async () => {
+    const db = await getDb();
+    if (!db) return;
+
+    // Clean up test data
+    await db.delete(intakeResponses).where(eq(intakeResponses.organizationId, testOrgId));
+    await db.delete(users).where(eq(users.organizationId, testOrgId));
+    await db.delete(organizations).where(eq(organizations.id, testOrgId));
   });
 });

@@ -687,22 +687,19 @@ export default function PlatformAdmin() {
                             {filesCount === 0 ? (
                               <p className="text-xs text-muted-foreground">No files uploaded yet</p>
                             ) : (
-                              <div className="space-y-1 max-h-32 overflow-y-auto">
-                                {orgMetrics?.files.slice(0, 3).map((file) => (
-                                  <a
-                                    key={file.id}
-                                    href={file.fileUrl}
-                                    download
-                                    className="flex items-center gap-2 text-xs text-primary hover:underline"
-                                  >
-                                    <Download className="w-3 h-3" />
-                                    <span className="truncate">{file.fileName}</span>
-                                  </a>
-                                ))}
-                                {filesCount > 3 && (
-                                  <p className="text-xs text-muted-foreground">+{filesCount - 3} more files</p>
-                                )}
-                              </div>
+              <div className="space-y-1 max-h-32 overflow-y-auto">
+                {orgMetrics?.files.map((file) => (
+                  <a
+                    key={file.id}
+                    href={file.fileUrl}
+                    download
+                    className="flex items-center gap-2 text-xs text-primary hover:underline"
+                  >
+                    <Download className="w-3 h-3" />
+                    <span className="truncate">{file.fileName}</span>
+                  </a>
+                ))}
+              </div>
                             )}
                           </div>
 

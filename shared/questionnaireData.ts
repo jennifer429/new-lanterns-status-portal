@@ -29,7 +29,7 @@ export interface Section {
 export const questionnaireSections: Section[] = [
   {
     id: 'org-info',
-    title: 'Organization Information',
+    title: 'Organization Info',
     description: 'Sites, contacts, and testing timelines',
     questions: [
       { id: 'H.1', text: 'Number of sites/locations (this determines how many VPN tunnels Rad1 needs to build)', type: 'text', placeholder: 'Enter number of sites' },
@@ -87,7 +87,7 @@ export const questionnaireSections: Section[] = [
     id: 'images-workflow',
     type: 'workflow',
     workflowType: 'images',
-    title: 'Images Workflow (DICOM)',
+    title: 'Images Workflow',
     description: 'Configure how new images flow to New Lantern',
   },
   {

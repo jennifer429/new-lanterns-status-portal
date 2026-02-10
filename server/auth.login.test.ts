@@ -2,7 +2,7 @@
  * Test login session creation
  */
 
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { getDb } from "./db";
 import { organizations, users } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -75,5 +75,14 @@ describe("Login Session Creation", () => {
     expect(user.openId).toBeDefined();
     expect(typeof user.openId).toBe("string");
     expect(user.openId.length).toBeGreaterThan(0);
+  });
+
+  afterAll(async () => {
+    const db = await getDb();
+    if (!db) return;
+
+    // Clean up test data
+    await db.delete(users).where(eq(users.organizationId, testOrgId));
+    await db.delete(organizations).where(eq(organizations.id, testOrgId));
   });
 });

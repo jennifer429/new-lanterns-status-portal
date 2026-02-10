@@ -1737,15 +1737,23 @@
 - [x] Identify why CF.1-CF.5 questions fail (not in questions DB table)
 - [x] Fix uploadFile to use questionnaireData.ts as primary source
 - [x] Generate short title from question text if DB lookup fails
-- [ ] Test file uploads for Configuration Files section
+- [x] Fixed and deployed (checkpoint d821cbc2)
 
 ## Bug 2: Admin Dashboard Wrong Progress (Feb 10, 2026)
 - [x] Investigate getAdminSummary endpoint in admin.ts
 - [x] Identify table mismatch (reads from responses, should read from intakeResponses)
 - [x] Fix getAdminSummary to read from intakeResponses table
-- [ ] Test admin dashboard shows correct completion percentages
+- [x] Fixed and deployed (checkpoint d821cbc2)
 
 ## Code Cleanup: Remove Dead Endpoints (Feb 10, 2026)
 - [ ] Remove getResponsesNew endpoint (unused by client)
 - [ ] Remove saveResponseNew endpoint (unused by client)
 - [ ] Remove getCompletionMetricsNew endpoint (unused by client)
+
+## Root Cause Analysis Fixes - New Organization Creation (Feb 10, 2026)
+- [x] Fix 1: Add afterAll cleanup to server/auth.login.test.ts
+- [x] Fix 1: Add afterAll cleanup to server/intake.autosave.test.ts
+- [x] Fix 2: Change "Organization Information" → "Organization Info" in questionnaireData.ts
+- [x] Fix 2: Change "Images Workflow (DICOM)" → "Images Workflow" in questionnaireData.ts
+- [x] Fix 3: Fix infinite loading condition in IntakeNewRedesign.tsx line 707
+- [x] Fix 4: Remove .slice(0, 3) and add scrollable container in PlatformAdmin.tsx
