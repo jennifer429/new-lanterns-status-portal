@@ -6,6 +6,7 @@
 export interface Question {
   id: string | number;
   sectionTitle: string;
+  isWorkflow?: boolean; // True for workflow sections
 }
 
 export interface Response {
@@ -64,13 +65,30 @@ export function calculateProgress(
     
     sectionStats[q.sectionTitle].total++;
     
-    // Check if question has a text response OR uploaded file
-    const resp = responseMap.get(q.id);
-    const hasResponse = resp && resp.response && resp.response.trim() !== '';
-    const hasFile = fileMap.has(q.id);
-    
-    if (hasResponse || hasFile) {
-      sectionStats[q.sectionTitle].completed++;
+    // For workflow sections, check for _config response
+    if (q.isWorkflow) {
+      const resp = responseMap.get(q.id);
+      if (resp && resp.response && resp.response.trim() !== '') {
+        // Check if config has at least one path selected
+        try {
+          const config = JSON.parse(resp.response);
+          const hasPath = config.paths && Object.values(config.paths).some((v: any) => v === true);
+          if (hasPath) {
+            sectionStats[q.sectionTitle].completed++;
+          }
+        } catch (e) {
+          // Invalid JSON, don't count as complete
+        }
+      }
+    } else {
+      // For regular questions, check if question has a text response OR uploaded file
+      const resp = responseMap.get(q.id);
+      const hasResponse = resp && resp.response && resp.response.trim() !== '';
+      const hasFile = fileMap.has(q.id);
+      
+      if (hasResponse || hasFile) {
+        sectionStats[q.sectionTitle].completed++;
+      }
     }
   });
 

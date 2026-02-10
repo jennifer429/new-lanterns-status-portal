@@ -584,15 +584,25 @@ export const adminRouter = router({
           .from(intakeFileAttachments)
           .where(eq(intakeFileAttachments.organizationId, org.id));
 
-        // Build question list (exclude workflow sections, same as frontend)
-        const allQuestions = questionnaireSections
-          .filter(section => section.questions) // Skip workflow sections
-          .flatMap(section =>
-            section.questions!.map(q => ({
+        // Build question list (include workflow sections)
+        const allQuestions = questionnaireSections.flatMap(section => {
+          if (section.questions) {
+            // Regular question sections
+            return section.questions.map(q => ({
               id: q.id,
-              sectionTitle: section.title
-            }))
-          );
+              sectionTitle: section.title,
+              isWorkflow: false
+            }));
+          } else if (section.type === 'workflow') {
+            // Workflow sections - count as 1 item each
+            return [{
+              id: `${section.id}_config`,
+              sectionTitle: section.title,
+              isWorkflow: true
+            }];
+          }
+          return [];
+        });
 
         // Calculate progress using shared utility
         const progress = calculateProgress(allQuestions, orgResponses, orgFiles);

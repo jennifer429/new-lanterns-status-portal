@@ -1649,3 +1649,11 @@
 - [x] Ensure both admin and client portals use same data source (single source of truth)
 - [x] Updated section count from "of 6 sections" to dynamic "of {questionnaireSections.length} sections"
 - [ ] Test that all 9 sections appear uniformly in both portals
+
+## Fix Backend Progress Calculation for Workflows (Feb 10, 2026)
+- [x] Debug why completing all questions shows 65% instead of 100%
+- [x] Found that backend filters out workflow sections in progress calculation
+- [x] Updated calculateProgress() to handle workflow sections (check for _config with paths)
+- [x] Fixed admin.ts to include workflow sections as 1 item each
+- [x] Fixed organizations.ts to include workflow sections in progress
+- [ ] Test that completing all sections shows 100% and checkmarks appear

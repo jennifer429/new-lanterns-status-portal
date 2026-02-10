@@ -300,16 +300,27 @@ export const organizationsRouter = router({
         const lastLoginAt = lastLoginResult?.lastLoginAt || null;
 
         // Get section-by-section progress using questionnaireSections (same source as Home.tsx)
-        // Filter out workflow sections (they don't have questions array)
-        const allQuestions = questionnaireSections
-          .filter(section => section.questions) // Only process sections with questions
-          .flatMap(section =>
-            section.questions!.map(q => ({
+        // Include workflow sections
+        const allQuestions = questionnaireSections.flatMap(section => {
+          if (section.questions) {
+            // Regular question sections
+            return section.questions.map(q => ({
               id: q.id,
               sectionTitle: section.title,
-              questionText: q.text
-            }))
-          );
+              questionText: q.text,
+              isWorkflow: false
+            }));
+          } else if (section.type === 'workflow') {
+            // Workflow sections - count as 1 item each
+            return [{
+              id: `${section.id}_config`,
+              sectionTitle: section.title,
+              questionText: `${section.title} Configuration`,
+              isWorkflow: true
+            }];
+          }
+          return [];
+        });
         const allResponses = await db
           .select()
           .from(intakeResponses)
