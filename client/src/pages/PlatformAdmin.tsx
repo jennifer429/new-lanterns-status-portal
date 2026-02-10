@@ -277,6 +277,7 @@ export default function PlatformAdmin() {
       setNewOrgName("");
       setNewOrgSlug("");
       setNewOrgClientId(undefined);
+      refetchOrgs(); // Refresh organization list to show new org
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to create organization");

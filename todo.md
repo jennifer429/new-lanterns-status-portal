@@ -1700,3 +1700,10 @@
 - [x] Update progress calculation to only count upload questions as complete if files exist
 - [x] Test that Configuration Files shows 0% when no files uploaded (74 vitest tests passing)
 - [ ] Verify Boulder and RRAL show correct completion percentages in browser
+
+## Fix Organization Creation Infinite Spinner (Feb 10, 2026)
+- [x] Investigate where organization creation happens (PlatformAdmin.tsx line 273)
+- [x] Check if loading state is properly reset after creation
+- [x] Check if there's a data refetch issue causing infinite loading (missing refetchOrgs call)
+- [x] Fix the loading state management (added refetchOrgs() to onSuccess)
+- [ ] Test that creating new org completes without spinning
