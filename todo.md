@@ -1641,3 +1641,11 @@
 - [ ] Check how section completion status is calculated
 - [ ] Ensure workflow_config responses are recognized as section completion
 - [ ] Test that purple checkmark appears after saving workflow
+
+## Fix Admin Dashboard to Show All 9 Sections (Feb 10, 2026)
+- [x] Debug why admin dashboard only shows 5 sections instead of 9 (hardcoded list)
+- [x] Found that Admin.tsx has hardcoded section list instead of using questionnaireSections
+- [x] Replace hardcoded section lists in Admin.tsx with questionnaireSections import
+- [x] Ensure both admin and client portals use same data source (single source of truth)
+- [x] Updated section count from "of 6 sections" to dynamic "of {questionnaireSections.length} sections"
+- [ ] Test that all 9 sections appear uniformly in both portals

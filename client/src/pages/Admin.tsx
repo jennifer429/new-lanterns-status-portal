@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
+import { questionnaireSections } from "@shared/questionnaireData";
 import { Link } from "wouter";
 import { ExternalLink, Building2, Calendar, CheckCircle2, Clock, Users, TrendingUp, Activity, FileText, Download, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -187,7 +188,7 @@ export default function Admin() {
                     <div className="border-t border-purple-500/20 pt-3 mt-3">
                       <h3 className="text-white font-semibold text-sm mb-1">Overall Progress</h3>
                       <p className="text-xs text-gray-400 mb-3">
-                        {Object.values(org.sectionProgress || {}).filter((s: any) => s.completed === s.total && s.total > 0).length} of 6 sections complete
+                        {Object.values(org.sectionProgress || {}).filter((s: any) => s.completed === s.total && s.total > 0).length} of {questionnaireSections.length} sections complete
                       </p>
                       
                       {/* Big Percentage Display */}
@@ -198,22 +199,15 @@ export default function Admin() {
 
                       {/* Section Checklist */}
                       <div className="space-y-2">
-                        {[
-                          'Organization Information',
-                          'Overview & Architecture',
-                          'Data & Integration',
-                          'Configuration Files',
-                          'Connectivity',
-                          'HL7 Data Validation'
-                        ].map((sectionName) => {
-                          const stats = org.sectionProgress?.[sectionName];
+                        {questionnaireSections.map((section) => {
+                          const stats = org.sectionProgress?.[section.title];
                           const percentage = stats && stats.total > 0 
                             ? Math.round((stats.completed / stats.total) * 100)
                             : 0;
                           const isComplete = stats && stats.completed === stats.total && stats.total > 0;
                           
                           return (
-                            <div key={sectionName} className="flex items-center justify-between text-xs">
+                            <div key={section.id} className="flex items-center justify-between text-xs">
                               <div className="flex items-center gap-2 flex-1">
                                 <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
                                   isComplete 
@@ -224,7 +218,7 @@ export default function Admin() {
                                     <CheckCircle2 className="w-3 h-3 text-white" />
                                   )}
                                 </div>
-                                <span className="text-gray-300">{sectionName}</span>
+                                <span className="text-gray-300">{section.title}</span>
                               </div>
                               <span className="text-white font-semibold">{percentage}%</span>
                             </div>
