@@ -1620,3 +1620,10 @@
 - [x] Ensure workflow sections contribute to overall progress percentage
 - [x] Made counting fully dynamic (no hardcoded numbers)
 - [ ] Test progress calculation with different completion states
+
+## Fix Workflow Configurations Not Saving to Database (Feb 10, 2026)
+- [ ] Debug why workflow configs show 0 rows in database
+- [ ] Check if auto-save is triggering for workflow changes
+- [ ] Check if "Save & Continue" explicit save is working for workflows
+- [ ] Verify the save mutation is being called with correct data
+- [ ] Test workflow save and verify data persists in database

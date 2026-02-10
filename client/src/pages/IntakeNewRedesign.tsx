@@ -1004,16 +1004,30 @@ export default function IntakeNewRedesign() {
                       return { paths: {}, systems: {}, notes: {} };
                     })()}
                     onConfigurationChange={(config) => {
+                      console.log('[Workflow Debug] Configuration changed:', currentSectionData.id, config);
+                      console.log('[Workflow Debug] slug:', slug, 'user.email:', user?.email);
+                      
                       // Store workflow configuration in responses
                       setResponses(prev => ({ ...prev, [currentSectionData.id + '_config']: JSON.stringify(config) }));
+                      
                       // Also trigger save mutation
                       if (slug && user?.email) {
+                        console.log('[Workflow Debug] Calling save mutation for:', currentSectionData.id + '_config');
                         saveMutation.mutate({
                           organizationSlug: slug,
                           questionId: currentSectionData.id + '_config',
                           response: JSON.stringify(config),
                           userEmail: user.email,
+                        }, {
+                          onSuccess: () => {
+                            console.log('[Workflow Debug] Save successful for:', currentSectionData.id + '_config');
+                          },
+                          onError: (error) => {
+                            console.error('[Workflow Debug] Save failed:', error);
+                          }
                         });
+                      } else {
+                        console.warn('[Workflow Debug] Cannot save - missing slug or user.email');
                       }
                     }}
                   />
