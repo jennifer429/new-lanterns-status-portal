@@ -660,10 +660,10 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           {/* Manual Push */}
           <div
             className={`
-              px-4 py-2 rounded-md font-medium min-w-[140px] text-center text-sm
+              px-4 py-2 rounded-md font-medium min-w-[140px] text-center text-sm border-2
               ${configuration.paths.priorsManual 
-                ? 'bg-primary text-primary-foreground' 
-                : 'bg-muted text-muted-foreground'}
+                ? 'border-primary bg-primary/20 text-primary' 
+                : 'border-muted bg-muted/30 text-muted-foreground'}
             `}
           >
             Manual Push
@@ -746,18 +746,60 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           onNoteChange={(value) => handleNoteChange('reportsToEHR_note', value)}
         />
 
-        <SwimLaneRow
-          id="reportsToPortal"
-          label="Reports to Patient Portal"
-          sourceSystem="New Lantern"
-          middlewareSystem="Silverback"
-          destinationSystem="Patient Portal"
-          isActive={configuration.paths.reportsToPortal || false}
-          noteValue={configuration.notes.reportsToPortal_note || ''}
-          notePlaceholder="e.g., MyChart integration for patient access to imaging reports"
-          onCheckChange={(checked) => handleCheckboxChange('reportsToPortal', checked)}
-          onNoteChange={(value) => handleNoteChange('reportsToPortal_note', value)}
-        />
+        {/* Manual PDF Download to Client EHR/RIS */}
+        <div
+          className={`
+            flex items-center gap-4 p-4 rounded-lg transition-all
+            ${configuration.paths.reportsToPortal ? 'bg-primary/10' : 'bg-muted/30'}
+          `}
+        >
+          <Checkbox
+            id="reportsToPortal"
+            checked={configuration.paths.reportsToPortal || false}
+            onCheckedChange={(checked) => handleCheckboxChange('reportsToPortal', checked as boolean)}
+            className={configuration.paths.reportsToPortal ? 'data-[state=checked]:bg-primary data-[state=checked]:border-primary' : 'border-white bg-transparent'}
+          />
+
+          {/* New Lantern Source */}
+          <div
+            className={`
+              px-4 py-2 rounded-md font-medium min-w-[140px] text-center text-sm
+              ${configuration.paths.reportsToPortal 
+                ? 'bg-primary text-primary-foreground' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          >
+            New Lantern
+          </div>
+
+          {/* Long Dotted Line Arrow */}
+          <div className={`flex items-center gap-1 min-w-[120px] ${configuration.paths.reportsToPortal ? 'text-primary' : 'text-muted-foreground'}`}>
+            <div className="flex-1 border-t-2 border-dashed" style={{ borderColor: 'currentColor' }} />
+            <ArrowRight className="w-5 h-5 flex-shrink-0" />
+          </div>
+
+          {/* Client EHR/RIS Input Field */}
+          <Input
+            placeholder="Client EHR/RIS"
+            value={configuration.systems.reportsPortalDestination || ''}
+            onChange={(e) => handleSystemChange('reportsPortalDestination', e.target.value)}
+            disabled={!configuration.paths.reportsToPortal}
+            className={`w-[160px] text-center font-medium ${
+              configuration.paths.reportsToPortal 
+                ? 'border-primary bg-primary/20 text-primary' 
+                : 'bg-muted text-muted-foreground'
+            }`}
+          />
+
+          {/* Notes Field */}
+          <Textarea
+            placeholder="e.g., Manual PDF download from New Lantern for patient portal integration"
+            value={configuration.notes.reportsToPortal_note || ''}
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleNoteChange('reportsToPortal_note', e.target.value)}
+            disabled={!configuration.paths.reportsToPortal}
+            className={`flex-1 min-w-[200px] ${!configuration.paths.reportsToPortal ? 'opacity-50' : ''}`}
+          />
+        </div>
       </div>
     );
   };

@@ -927,11 +927,10 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Cannot deactivate yourself" });
       }
 
-      // Mark as inactive by setting a flag (we'll add an 'active' field to schema)
-      // For now, we can set organizationId to null as a soft delete
+      // Mark as inactive using isActive field
       await db
         .update(users)
-        .set({ organizationId: null })
+        .set({ isActive: 0 })
         .where(eq(users.id, input.userId));
 
       return { success: true };
@@ -961,10 +960,10 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Cannot reactivate other partner's users" });
       }
 
-      // Restore user by setting organizationId
+      // Restore user by setting isActive to 1 and optionally updating organizationId
       await db
         .update(users)
-        .set({ organizationId: input.organizationId })
+        .set({ isActive: 1, organizationId: input.organizationId })
         .where(eq(users.id, input.userId));
 
       return { success: true };

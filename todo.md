@@ -1493,3 +1493,29 @@
 
 ## Export All Function Fix (Feb 10, 2026)
 - [ ] Fix "Export All" button to export organizations, users, and intake data (not just users)
+
+## Visual Indicators for Deactivated Users (Feb 10, 2026)
+- [ ] Add visual styling to distinguish deactivated users in the Users table
+- [ ] Consider: grayed out text, strikethrough, or "Inactive" badge
+- [ ] Ensure consistent styling across all user lists
+- [ ] Test visibility of deactivated vs active users
+
+## Workflow Diagram Styling Consistency (Feb 10, 2026)
+- [x] Fix inconsistent box colors in Priors Workflow
+- [x] Make "Manual Push" box match the outline style of "VNA or PACS" boxes
+- [x] Ensure all workflow boxes have consistent styling (outline vs filled)
+
+## Fix Reports Out Patient Portal Workflow (Feb 10, 2026)
+- [x] Remove Silverback from Patient Portal workflow
+- [x] Change to: New Lantern -------- (dotted line) --------> [Client EHR/RIS]
+- [x] Add placeholder text: "Manual PDF download from New Lantern"
+- [x] Make destination box an input field for client to specify their system
+
+## Fix User Deactivation Logic (Feb 10, 2026)
+- [x] Debug why deactivated users don't move to Inactive Users table (admin users need isActive field)
+- [x] Add isActive boolean field to users table schema
+- [x] Update deactivateUser mutation to set isActive = 0
+- [x] Update reactivateUser mutation to set isActive = 1
+- [x] Update frontend filtering to use isActive field instead of organizationId check
+- [x] Run database migration (pnpm db:push)
+- [ ] Test deactivation flow for both admin and regular users

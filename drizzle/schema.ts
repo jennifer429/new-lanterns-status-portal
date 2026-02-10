@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, tinyint, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -20,6 +20,7 @@ export const users = mysqlTable("users", {
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   clientId: int("clientId"), // Link user to client (RadOne, SRV, etc.)
   organizationId: int("organizationId"), // Link user to organization (null for admins)
+  isActive: tinyint("isActive").default(1).notNull(), // 1 = active, 0 = deactivated (works for all user types)
   lastLoginAt: timestamp("lastLoginAt"), // Track last login for admin dashboard metrics
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

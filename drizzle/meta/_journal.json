@@ -134,6 +134,13 @@
       "when": 1770500362963,
       "tag": "0018_tan_ink",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "5",
+      "when": 1770719691353,
+      "tag": "0019_peaceful_solo",
+      "breakpoints": true
     }
   ]
 }
