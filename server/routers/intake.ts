@@ -425,23 +425,32 @@ export const intakeRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this organization" });
       }
 
-      // Get question details for short title
-      // Use questionnaireData as primary source (it has ALL questions), DB as optional enhancement
+      // Get question details from questionnaireData.ts (primary source)
+      // This ensures CF.1-CF.5 and other questions work even if not in DB
       const { questionnaireSections } = await import("../../shared/questionnaireData");
-      let shortTitle = input.questionId; // Default fallback
+      let questionText = "";
+      let shortTitle = "file";
+      
+      // Find question in questionnaireData.ts
       for (const section of questionnaireSections) {
-        const found = section.questions?.find(q => q.id === input.questionId);
-        if (found) {
-          shortTitle = found.text.split(/[:\-,]/)[0].trim().replace(/[^a-zA-Z0-9]/g, '-').substring(0, 40);
+        if (!section.questions) continue; // Skip workflow sections without questions
+        const foundQuestion = section.questions.find(q => q.id === input.questionId);
+        if (foundQuestion) {
+          questionText = foundQuestion.text; // Use 'text' property, not 'question'
+          // Generate short title from question text (first 3-4 words)
+          const words = questionText.split(' ').slice(0, 4).join('_');
+          shortTitle = words.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase();
           break;
         }
       }
-      // Also check DB for a curated shortTitle (optional, won't fail if missing)
+      
+      // Optionally check DB for curated shortTitle (if question exists there)
       const [dbQuestion] = await db
         .select()
         .from(questions)
         .where(eq(questions.questionId, input.questionId))
         .limit(1);
+
       if (dbQuestion?.shortTitle) {
         shortTitle = dbQuestion.shortTitle;
       }

@@ -1731,3 +1731,21 @@
 - [x] Fix getResponses: Changed to read from intakeResponses table (line 109-123)
 - [x] Fix getProgress: Changed to read from intakeResponses and use questionnaireData (line 329-377)
 - [ ] Test that all data saves correctly and persists after refresh
+
+## Bug 1: File Upload "Question not found" Error (Feb 10, 2026)
+- [x] Investigate uploadFile endpoint in intake.ts
+- [x] Identify why CF.1-CF.5 questions fail (not in questions DB table)
+- [x] Fix uploadFile to use questionnaireData.ts as primary source
+- [x] Generate short title from question text if DB lookup fails
+- [ ] Test file uploads for Configuration Files section
+
+## Bug 2: Admin Dashboard Wrong Progress (Feb 10, 2026)
+- [x] Investigate getAdminSummary endpoint in admin.ts
+- [x] Identify table mismatch (reads from responses, should read from intakeResponses)
+- [x] Fix getAdminSummary to read from intakeResponses table
+- [ ] Test admin dashboard shows correct completion percentages
+
+## Code Cleanup: Remove Dead Endpoints (Feb 10, 2026)
+- [ ] Remove getResponsesNew endpoint (unused by client)
+- [ ] Remove saveResponseNew endpoint (unused by client)
+- [ ] Remove getCompletionMetricsNew endpoint (unused by client)

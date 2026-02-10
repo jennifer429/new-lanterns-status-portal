@@ -562,13 +562,17 @@ export const adminRouter = router({
         const { calculateProgress } = await import("../../shared/progressCalculation");
         const { questionnaireSections } = await import("../../shared/questionnaireData");
         
-        // Get responses and files for this org
-        // Read from intakeResponses table (where saveResponse writes to)
+        // Get responses from intakeResponses table (where saveResponse writes)
         const { intakeResponses } = await import("../../drizzle/schema");
         const orgResponses = await db
           .select({
-            questionId: intakeResponses.questionId,
+            id: intakeResponses.id,
+            organizationId: intakeResponses.organizationId,
+            questionId: intakeResponses.questionId, // Already a string (e.g., "H.1", "A.2")
             response: intakeResponses.response,
+            fileUrl: intakeResponses.fileUrl,
+            createdAt: intakeResponses.createdAt,
+            updatedAt: intakeResponses.updatedAt
           })
           .from(intakeResponses)
           .where(eq(intakeResponses.organizationId, org.id));
