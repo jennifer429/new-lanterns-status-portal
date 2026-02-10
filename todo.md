@@ -1481,3 +1481,9 @@
 ## Remove Duplicate Priors Question (Feb 9, 2026)
 - [x] Find and remove the old "How will comparison images for priors be obtained?" dropdown question (D.5)
 - [x] Ensure only the new Priors workflow diagram is displayed
+
+## Orders Workflow Fix (Feb 10, 2026)
+- [x] Update Orders Workflow to show: RIS → Silverback → New Lantern
+- [x] Update Orders Workflow to show: EHR → Silverback → New Lantern
+- [x] Update Orders Workflow to show: Manual Entry → Silverback → New Lantern
+- [x] Remove any incorrect workflow configurations (changed middleware from "Manual push to New Lantern" to "Silverback")
