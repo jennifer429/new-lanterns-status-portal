@@ -1468,3 +1468,7 @@
 - [x] Delete "How will comparison images for priors be obtained?" (D.5)
 - [x] Change "How will prior reports be obtained?" to "Method for Historic Reports Data load"
 - [x] Update options to clarify pre-go-live bulk data loading purpose
+
+## Remove Confusing Notes (Feb 10, 2026)
+- [x] Remove notes from D.7 (Method for Historic Reports Data load)
+- [x] Remove notes from D.8 (Tech sheets input method)

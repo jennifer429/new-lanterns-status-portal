@@ -59,8 +59,8 @@ export const questionnaireSections: Section[] = [
       { id: 'D.2', text: 'Requested go-live date', type: 'date', placeholder: 'MM/DD/YYYY' },
       { id: 'D.3', text: 'Expected modalities', type: 'multi-select', options: ['CT', 'MRI', 'X-Ray', 'Ultrasound', 'Nuclear Medicine', 'Mammography'] },
 
-      { id: 'D.7', text: 'Method for Historic Reports Data load', type: 'dropdown', options: ['HL7 messages bulk sent prior to go-live', 'Pipe delimited flat file (3-4 weeks lead time)', 'Automatically with images', 'Not needed'], notes: 'Optional: Sites can choose to push historic reports to New Lantern before go-live for data backfill' },
-      { id: 'D.8', text: 'Tech sheets input method (Note: Tech sheets come automatically with images in PACS as DICOM PDF or images, not SR)', type: 'dropdown', options: ['1) Automatically with images', '2) Manually as PDF'], notes: 'Prior reports are SR (text), but tech sheets are typically DICOM PDF or actual images' },
+      { id: 'D.7', text: 'Method for Historic Reports Data load', type: 'dropdown', options: ['HL7 messages bulk sent prior to go-live', 'Pipe delimited flat file (3-4 weeks lead time)', 'Automatically with images - Reports sent as DICOM with the images, so no historic data load required'] },
+      { id: 'D.8', text: 'Tech sheets input method', type: 'dropdown', options: ['Automatically with images', 'Manually as PDF'] },
       { id: 'D.9', text: 'Are there DICOM SR or other data sources for auto-populating fields?', type: 'textarea', placeholder: 'List DICOM SR sources' },
       { id: 'D.10', text: 'What are the HL7 priority values in your orders (OBR:27.1) and what do they mean?', type: 'textarea', placeholder: 'Example: S=Stat, R=Routine' },
       { id: 'D.11', text: 'What patient identifier do you use for matching (e.g. MRN) and is it in PID:3.1?', type: 'textarea', placeholder: 'Document patient identifier field' },
