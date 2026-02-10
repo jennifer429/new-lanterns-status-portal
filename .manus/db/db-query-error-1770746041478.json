@@ -1,0 +1,8 @@
+{
+  "query": "SELECT \n  o.name,\n  o.slug,\n  COUNT(DISTINCT r.questionId) as response_count\nFROM organizations o\nLEFT JOIN responses r ON o.organizationId = r.organizationId\nWHERE o.status = 'active' AND o.name IN ('Baycare', 'Boulder Community Health', 'JCRHC')\nGROUP BY o.id, o.name, o.slug\nORDER BY o.name;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT \n  o.name,\n  o.slug,\n  COUNT(DISTINCT r.questionId) as response_count\nFROM organizations o\nLEFT JOIN responses r ON o.organizationId = r.organizationId\nWHERE o.status = 'active' AND o.name IN ('Baycare', 'Boulder Community Health', 'JCRHC')\nGROUP BY o.id, o.name, o.slug\nORDER BY o.name;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'o.organizationid' in 'on clause'"
+  ]
+}

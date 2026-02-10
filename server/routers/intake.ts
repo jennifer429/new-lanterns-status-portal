@@ -107,15 +107,15 @@ export const intakeRouter = router({
       }
 
       // Get all responses for this organization from intakeResponses table
-      // This must match the table used by saveResponse/saveResponses (intakeResponses)
+      // This table stores questionId as varchar (e.g., "H.1", "A.2") directly
       const responsesData = await db
         .select({
           id: intakeResponses.id,
           organizationId: intakeResponses.organizationId,
-          questionId: intakeResponses.questionId, // Already a string (e.g., "H.1", "A.2")
+          questionId: intakeResponses.questionId, // Already a string identifier
           response: intakeResponses.response,
           fileUrl: intakeResponses.fileUrl,
-          userEmail: intakeResponses.updatedBy,
+          userEmail: intakeResponses.updatedBy, // Map updatedBy to userEmail for compatibility
           createdAt: intakeResponses.createdAt,
           updatedAt: intakeResponses.updatedAt,
         })
@@ -327,46 +327,53 @@ export const intakeRouter = router({
       }
 
       // Get all responses for this organization from intakeResponses table
-      // This must match the table used by saveResponse/saveResponses
       const responsesData = await db
         .select()
         .from(intakeResponses)
         .where(eq(intakeResponses.organizationId, org.id));
 
-      // Get total question count from the questionnaire data (source of truth)
-      // The questions table may be incomplete, so we use the shared questionnaire data
-      const { questionnaireSections } = await import("../../shared/questionnaireData");
-      const totalQuestions = questionnaireSections.reduce(
-        (sum: number, section: any) => sum + (section.questions?.length || 0),
-        0
-      );
+      // Use questionnaireData as source of truth for total questions and sections
+      const questionnaireModule = await import('../../shared/questionnaireData');
+      const questionnaireSections = questionnaireModule.questionnaireSections;
+      
+      // Count total questions from questionnaireData
+      const totalQuestions = questionnaireSections.reduce((sum: number, section: any) => {
+        return sum + (section.questions?.length || 0);
+      }, 0);
 
-      // Calculate completion by section using intakeResponses data
-      const sectionProgressMap: Record<string, { total: number; completed: number }> = {};
-
-      // Build a map of questionId -> sectionId from questionnaire data
-      const questionToSection: Record<string, string> = {};
+      // Build a map of questionId -> sectionTitle from questionnaireData
+      const questionToSection = new Map<string, string>();
       questionnaireSections.forEach((section: any) => {
-        if (section.questions) {
-          section.questions.forEach((q: any) => {
-            questionToSection[q.id] = section.id;
-          });
+        section.questions?.forEach((q: any) => {
+          questionToSection.set(q.id, section.title);
+        });
+      });
+
+      // Calculate completion by section
+      const sectionProgress: Record<string, { total: number; completed: number }> = {};
+      
+      // Initialize all sections with totals from questionnaireData
+      questionnaireSections.forEach((section: any) => {
+        if (section.questions && section.questions.length > 0) {
+          sectionProgress[section.title] = {
+            total: section.questions.length,
+            completed: 0
+          };
         }
       });
 
-      responsesData.forEach((response) => {
-        const section = questionToSection[response.questionId] || 'unknown';
-        if (!sectionProgressMap[section]) {
-          sectionProgressMap[section] = { total: 0, completed: 0 };
-        }
-        sectionProgressMap[section].total++;
-        if (response.response && response.response.trim() !== '') {
-          sectionProgressMap[section].completed++;
+      // Count completed questions from actual responses
+      responsesData.forEach(response => {
+        const sectionTitle = questionToSection.get(response.questionId);
+        if (sectionTitle && sectionProgress[sectionTitle]) {
+          if (response.response && response.response.trim() !== '') {
+            sectionProgress[sectionTitle].completed++;
+          }
         }
       });
 
       // Calculate overall completion
-      const completedCount = responsesData.filter((response) => 
+      const completedCount = responsesData.filter(response => 
         response.response && response.response.trim() !== ''
       ).length;
 

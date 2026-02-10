@@ -1713,3 +1713,21 @@
 - [x] Identified issue: No onError handler, so failed uploads never clear loading state
 - [x] Fix the upload completion logic (added onError handler)
 - [x] Ready to test in production (dev server broken due to EMFILE)
+
+## Fix Dashboard Showing Inconsistent Section Progress (Feb 10, 2026)
+- [ ] Investigate why Baycare shows only 4 sections instead of 9
+- [ ] Investigate why JCRHC shows no section breakdown at all
+- [ ] Check backend sectionProgress data structure
+- [ ] Check frontend rendering logic in PlatformAdmin.tsx
+- [ ] Ensure all orgs show all 9 sections with correct percentages
+- [ ] Test that dashboard displays consistently for all organizations
+
+## CRITICAL: Nothing Saves in Application (Feb 10, 2026)
+- [x] Check server logs for save errors
+- [x] Check network requests for failed API calls
+- [x] Check if database connection is working
+- [x] Check if saveResponse mutation is working
+- [x] Identify root cause: saveResponse writes to intakeResponses, getResponses reads from responses
+- [x] Fix getResponses: Changed to read from intakeResponses table (line 109-123)
+- [x] Fix getProgress: Changed to read from intakeResponses and use questionnaireData (line 329-377)
+- [ ] Test that all data saves correctly and persists after refresh
