@@ -1,0 +1,388 @@
+{
+  "query": "\nSELECT \n  section,\n  COUNT(*) as total_rows,\n  COUNT(DISTINCT questionId) as unique_questions,\n  SUM(CASE WHEN response IS NOT NULL AND response != '' THEN 1 ELSE 0 END) as completed_rows,\n  COUNT(DISTINCT CASE WHEN response IS NOT NULL AND response != '' THEN questionId END) as unique_completed\nFROM intakeResponses\nWHERE organizationId = (SELECT id FROM organizations WHERE slug = 'radone-munson' LIMIT 1)\nGROUP BY section\nORDER BY section;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute \nSELECT \n  section,\n  COUNT(*) as total_rows,\n  COUNT(DISTINCT questionId) as unique_questions,\n  SUM(CASE WHEN response IS NOT NULL AND response != '' THEN 1 ELSE 0 END) as completed_rows,\n  COUNT(DISTINCT CASE WHEN response IS NOT NULL AND response != '' THEN questionId END) as unique_completed\nFROM intakeResponses\nWHERE organizationId = (SELECT id FROM organizations WHERE slug = 'radone-munson' LIMIT 1)\nGROUP BY section\nORDER BY section;\n",
+  "rows": [
+    {
+      "section": "1.2",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "4.1.7",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "6.3.1",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "7.1.4",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "7.1.5",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "active",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "admin",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "B.1",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "B.4",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "B.5",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "B.6",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "central",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "clinical",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "comparison",
+      "total_rows": "2",
+      "unique_questions": "2",
+      "completed_rows": "2",
+      "unique_completed": "2"
+    },
+    {
+      "section": "credentialing",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "critical",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "current",
+      "total_rows": "4",
+      "unique_questions": "4",
+      "completed_rows": "4",
+      "unique_completed": "4"
+    },
+    {
+      "section": "custom",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "D.4",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "D.5",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "D.8",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "dicom",
+      "total_rows": "3",
+      "unique_questions": "3",
+      "completed_rows": "3",
+      "unique_completed": "3"
+    },
+    {
+      "section": "document",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "downtime",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "ehr",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "emr",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "expected",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "go",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "integration",
+      "total_rows": "3",
+      "unique_questions": "3",
+      "completed_rows": "3",
+      "unique_completed": "3"
+    },
+    {
+      "section": "it",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "modalities",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "modality",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "monthly",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "multiple",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "multitenancy",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "overlay",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "peer",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "prelim",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "production",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "project",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "qaqc",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "rad",
+      "total_rows": "2",
+      "unique_questions": "2",
+      "completed_rows": "2",
+      "unique_completed": "2"
+    },
+    {
+      "section": "radiologist",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "reporting",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "ris",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "role",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "router",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "secondary",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "security",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "sor",
+      "total_rows": "2",
+      "unique_questions": "2",
+      "completed_rows": "2",
+      "unique_completed": "2"
+    },
+    {
+      "section": "tech",
+      "total_rows": "2",
+      "unique_questions": "2",
+      "completed_rows": "2",
+      "unique_completed": "2"
+    },
+    {
+      "section": "universal",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "vna",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    },
+    {
+      "section": "vpn",
+      "total_rows": "1",
+      "unique_questions": "1",
+      "completed_rows": "1",
+      "unique_completed": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "section\ttotal_rows\tunique_questions\tcompleted_rows\tunique_completed\n1.2\t1\t1\t1\t1\n4.1.7\t1\t1\t1\t1\n6.3.1\t1\t1\t1\t1\n7.1.4\t1\t1\t1\t1\n7.1.5\t1\t1\t1\t1\nactive\t1\t1\t1\t1\nadmin\t1\t1\t1\t1\nB.1\t1\t1\t1\t1\nB.4\t1\t1\t1\t1\nB.5\t1\t1\t1\t1\nB.6\t1\t1\t1\t1\ncentral\t1\t1\t1\t1\nclinical\t1\t1\t1\t1\ncomparison\t2\t2\t2\t2\ncredentialing\t1\t1\t1\t1\ncritical\t1\t1\t1\t1\ncurrent\t4\t4\t4\t4\ncustom\t1\t1\t1\t1\nD.4\t1\t1\t1\t1\nD.5\t1\t1\t1\t1\nD.8\t1\t1\t1\t1\ndicom\t3\t3\t3\t3\ndocument\t1\t1\t1\t1\ndowntime\t1\t1\t1\t1\nehr\t1\t1\t1\t1\nemr\t1\t1\t1\t1\nexpected\t1\t1\t1\t1\ngo\t1\t1\t1\t1\nintegration\t3\t3\t3\t3\nit\t1\t1\t1\t1\nmodalities\t1\t1\t1\t1\nmodality\t1\t1\t1\t1\nmonthly\t1\t1\t1\t1\nmultiple\t1\t1\t1\t1\nmultitenancy\t1\t1\t1\t1\noverlay\t1\t1\t1\t1\npeer\t1\t1\t1\t1\nprelim\t1\t1\t1\t1\nproduction\t1\t1\t1\t1\nproject\t1\t1\t1\t1\nqaqc\t1\t1\t1\t1\nrad\t2\t2\t2\t2\nradiologist\t1\t1\t1\t1\nreporting\t1\t1\t1\t1\nris\t1\t1\t1\t1\nrole\t1\t1\t1\t1\nrouter\t1\t1\t1\t1\nsecondary\t1\t1\t1\t1\nsecurity\t1\t1\t1\t1\nsor\t2\t2\t2\t2\ntech\t2\t2\t2\t2\nuniversal\t1\t1\t1\t1\nvna\t1\t1\t1\t1\nvpn\t1\t1\t1\t1\n",
+  "stderr": "",
+  "execution_time_ms": 55
+}

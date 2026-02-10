@@ -1,0 +1,60 @@
+{
+  "query": "\nSELECT section, questionId, LEFT(response, 50) as response_preview\nFROM intakeResponses\nWHERE organizationId = (SELECT id FROM organizations WHERE slug = 'radone-munson' LIMIT 1)\nLIMIT 10;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute \nSELECT section, questionId, LEFT(response, 50) as response_preview\nFROM intakeResponses\nWHERE organizationId = (SELECT id FROM organizations WHERE slug = 'radone-munson' LIMIT 1)\nLIMIT 10;\n",
+  "rows": [
+    {
+      "section": "project",
+      "questionId": "project_manager",
+      "response_preview": "{\"name\":\"j\",\"email\":\"j\",\"phone\":\"j\"}"
+    },
+    {
+      "section": "admin",
+      "questionId": "admin_contact",
+      "response_preview": "{\"name\":\"jj\",\"email\":\"jj\",\"phone\":\"jj\"}"
+    },
+    {
+      "section": "it",
+      "questionId": "it_contact",
+      "response_preview": "{\"name\":\"jj\",\"email\":\"j\",\"phone\":\"j\"}"
+    },
+    {
+      "section": "clinical",
+      "questionId": "clinical_contact",
+      "response_preview": "{\"name\":\"j\",\"email\":\"j\",\"phone\":\"j\"}"
+    },
+    {
+      "section": "radiologist",
+      "questionId": "radiologist_champion",
+      "response_preview": "{\"name\":\"j\",\"email\":\"j\",\"phone\":\"j\"}"
+    },
+    {
+      "section": "integration",
+      "questionId": "integration_checklist",
+      "response_preview": "yes"
+    },
+    {
+      "section": "modality",
+      "questionId": "modality_worklist_retiring",
+      "response_preview": "no"
+    },
+    {
+      "section": "sor",
+      "questionId": "sor_retiring",
+      "response_preview": "yes"
+    },
+    {
+      "section": "router",
+      "questionId": "router_retiring",
+      "response_preview": "yes"
+    },
+    {
+      "section": "ris",
+      "questionId": "ris_retiring",
+      "response_preview": "yes"
+    }
+  ],
+  "messages": [],
+  "stdout": "section\tquestionId\tresponse_preview\nproject\tproject_manager\t{\"name\":\"j\",\"email\":\"j\",\"phone\":\"j\"}\nadmin\tadmin_contact\t{\"name\":\"jj\",\"email\":\"jj\",\"phone\":\"jj\"}\nit\tit_contact\t{\"name\":\"jj\",\"email\":\"j\",\"phone\":\"j\"}\nclinical\tclinical_contact\t{\"name\":\"j\",\"email\":\"j\",\"phone\":\"j\"}\nradiologist\tradiologist_champion\t{\"name\":\"j\",\"email\":\"j\",\"phone\":\"j\"}\nintegration\tintegration_checklist\tyes\nmodality\tmodality_worklist_retiring\tno\nsor\tsor_retiring\tyes\nrouter\trouter_retiring\tyes\nris\tris_retiring\tyes\n",
+  "stderr": "",
+  "execution_time_ms": 60
+}

@@ -1,0 +1,31 @@
+{
+  "query": "SELECT u.email, u.name, u.role, c.name as clientName, o.name as orgName\nFROM users u \nLEFT JOIN clients c ON u.clientId = c.id \nLEFT JOIN organizations o ON u.organizationId = o.id\nWHERE c.name = 'SRV';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT u.email, u.name, u.role, c.name as clientName, o.name as orgName\nFROM users u \nLEFT JOIN clients c ON u.clientId = c.id \nLEFT JOIN organizations o ON u.organizationId = o.id\nWHERE c.name = 'SRV';",
+  "rows": [
+    {
+      "email": "admin@srv.com",
+      "name": "SRV Admin User",
+      "role": "admin",
+      "clientName": "SRV",
+      "orgName": "NULL"
+    },
+    {
+      "email": "test@srv",
+      "name": "Test User",
+      "role": "user",
+      "clientName": "SRV",
+      "orgName": "SRV Test Hospital 1"
+    },
+    {
+      "email": "jj@star.com",
+      "name": "jj",
+      "role": "user",
+      "clientName": "SRV",
+      "orgName": "SRV Test Hospital 1"
+    }
+  ],
+  "messages": [],
+  "stdout": "email\tname\trole\tclientName\torgName\nadmin@srv.com\tSRV Admin User\tadmin\tSRV\tNULL\ntest@srv\tTest User\tuser\tSRV\tSRV Test Hospital 1\njj@star.com\tjj\tuser\tSRV\tSRV Test Hospital 1\n",
+  "stderr": "",
+  "execution_time_ms": 50
+}

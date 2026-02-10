@@ -1,0 +1,30 @@
+{
+  "query": "SELECT questionId, sectionId, questionText FROM questions WHERE questionId LIKE '%workflow_config';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT questionId, sectionId, questionText FROM questions WHERE questionId LIKE '%workflow_config';",
+  "rows": [
+    {
+      "questionId": "orders-workflow_config",
+      "sectionId": "orders-workflow",
+      "questionText": "Orders Workflow Configuration"
+    },
+    {
+      "questionId": "images-workflow_config",
+      "sectionId": "images-workflow",
+      "questionText": "Images Workflow Configuration"
+    },
+    {
+      "questionId": "priors-workflow_config",
+      "sectionId": "priors-workflow",
+      "questionText": "Priors Workflow Configuration"
+    },
+    {
+      "questionId": "reports-out-workflow_config",
+      "sectionId": "reports-out-workflow",
+      "questionText": "Reports Out Workflow Configuration"
+    }
+  ],
+  "messages": [],
+  "stdout": "questionId\tsectionId\tquestionText\norders-workflow_config\torders-workflow\tOrders Workflow Configuration\nimages-workflow_config\timages-workflow\tImages Workflow Configuration\npriors-workflow_config\tpriors-workflow\tPriors Workflow Configuration\nreports-out-workflow_config\treports-out-workflow\tReports Out Workflow Configuration\n",
+  "stderr": "",
+  "execution_time_ms": 54
+}

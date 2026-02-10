@@ -1,0 +1,19 @@
+{
+  "query": "\nSELECT \n  r.id,\n  q.questionId,\n  q.questionText,\n  q.sectionId,\n  r.response,\n  r.fileUrl,\n  r.createdAt\nFROM responses r\nJOIN questions q ON r.questionId = q.id\nJOIN organizations o ON r.organizationId = o.id\nWHERE o.slug = 'srv-rrmc'\nORDER BY q.sectionId, q.questionId;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute \nSELECT \n  r.id,\n  q.questionId,\n  q.questionText,\n  q.sectionId,\n  r.response,\n  r.fileUrl,\n  r.createdAt\nFROM responses r\nJOIN questions q ON r.questionId = q.id\nJOIN organizations o ON r.organizationId = o.id\nWHERE o.slug = 'srv-rrmc'\nORDER BY q.sectionId, q.questionId;\n",
+  "rows": [
+    {
+      "id": "30002",
+      "questionId": "D.14",
+      "questionText": "User list: Please upload a file of all users and their roles.",
+      "sectionId": "config-files",
+      "response": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/intake/srv-rrmc/D.14/1770402784300-2407excl (1).csv",
+      "fileUrl": "NULL",
+      "createdAt": "2026-02-06 18:33:05"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tquestionId\tquestionText\tsectionId\tresponse\tfileUrl\tcreatedAt\n30002\tD.14\tUser list: Please upload a file of all users and their roles.\tconfig-files\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/intake/srv-rrmc/D.14/1770402784300-2407excl (1).csv\tNULL\t2026-02-06 18:33:05\n",
+  "stderr": "",
+  "execution_time_ms": 56
+}

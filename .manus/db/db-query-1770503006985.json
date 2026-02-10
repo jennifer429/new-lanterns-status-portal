@@ -1,0 +1,138 @@
+{
+  "query": "SELECT id, email, name, role, organizationId, createdAt FROM users ORDER BY createdAt DESC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, email, name, role, organizationId, createdAt FROM users ORDER BY createdAt DESC;",
+  "rows": [
+    {
+      "id": "1110035",
+      "email": "jennifer@newlantern.ai",
+      "name": "Jennifer Starling",
+      "role": "admin",
+      "organizationId": "NULL",
+      "createdAt": "2026-02-07 20:09:41"
+    },
+    {
+      "id": "150177",
+      "email": "heather.morrison@baycare.org",
+      "name": "Heather Morrison",
+      "role": "user",
+      "organizationId": "60009",
+      "createdAt": "2026-02-02 00:54:07"
+    },
+    {
+      "id": "150180",
+      "email": "shanon.carter@baycare.org",
+      "name": "Shanon Carter",
+      "role": "user",
+      "organizationId": "60009",
+      "createdAt": "2026-02-02 00:54:07"
+    },
+    {
+      "id": "150179",
+      "email": "joyce.lachapelle@baycare.org",
+      "name": "Joyce La Chapelle",
+      "role": "user",
+      "organizationId": "60009",
+      "createdAt": "2026-02-02 00:54:07"
+    },
+    {
+      "id": "150178",
+      "email": "carl.blackman@baycare.org",
+      "name": "Carl Blackman",
+      "role": "user",
+      "organizationId": "60009",
+      "createdAt": "2026-02-02 00:54:07"
+    },
+    {
+      "id": "150169",
+      "email": "ashley.morgan@radiologyone.com",
+      "name": "Ashley Morgan",
+      "role": "user",
+      "organizationId": "60007",
+      "createdAt": "2026-02-02 00:54:06"
+    },
+    {
+      "id": "150171",
+      "email": "kathy.rangel@mercyone.org",
+      "name": "Kathaleen Rangel",
+      "role": "user",
+      "organizationId": "60008",
+      "createdAt": "2026-02-02 00:54:06"
+    },
+    {
+      "id": "150172",
+      "email": "kolin.w.huth@mercyone.org",
+      "name": "Kolin Huth",
+      "role": "user",
+      "organizationId": "60008",
+      "createdAt": "2026-02-02 00:54:06"
+    },
+    {
+      "id": "150173",
+      "email": "shonna.simpson@baycare.org",
+      "name": "Shonna Simpson",
+      "role": "user",
+      "organizationId": "60009",
+      "createdAt": "2026-02-02 00:54:06"
+    },
+    {
+      "id": "150174",
+      "email": "christopher.parisi@baycare.org",
+      "name": "Christopher Parisi",
+      "role": "user",
+      "organizationId": "60009",
+      "createdAt": "2026-02-02 00:54:06"
+    },
+    {
+      "id": "150175",
+      "email": "jessica.reilly@baycare.org",
+      "name": "Jessica Reilly",
+      "role": "user",
+      "organizationId": "60009",
+      "createdAt": "2026-02-02 00:54:06"
+    },
+    {
+      "id": "150170",
+      "email": "kevin.kadakia@radiologyone.com",
+      "name": "Kevin Kadakia",
+      "role": "user",
+      "organizationId": "60007",
+      "createdAt": "2026-02-02 00:54:06"
+    },
+    {
+      "id": "150168",
+      "email": "dharrison@mhc.net",
+      "name": "Drew Harrison",
+      "role": "user",
+      "organizationId": "60007",
+      "createdAt": "2026-02-02 00:54:06"
+    },
+    {
+      "id": "150167",
+      "email": "lgenwright@mhc.net",
+      "name": "Lorrin Genwright",
+      "role": "user",
+      "organizationId": "60007",
+      "createdAt": "2026-02-02 00:54:06"
+    },
+    {
+      "id": "150166",
+      "email": "dsuida@mhc.net",
+      "name": "Doug Suida",
+      "role": "user",
+      "organizationId": "60007",
+      "createdAt": "2026-02-02 00:54:06"
+    },
+    {
+      "id": "150019",
+      "email": "jennifer@newlantern.ai",
+      "name": "Jennifer",
+      "role": "admin",
+      "organizationId": "NULL",
+      "createdAt": "2026-02-02 00:07:01"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\temail\tname\trole\torganizationId\tcreatedAt\n1110035\tjennifer@newlantern.ai\tJennifer Starling\tadmin\tNULL\t2026-02-07 20:09:41\n150177\theather.morrison@baycare.org\tHeather Morrison\tuser\t60009\t2026-02-02 00:54:07\n150180\tshanon.carter@baycare.org\tShanon Carter\tuser\t60009\t2026-02-02 00:54:07\n150179\tjoyce.lachapelle@baycare.org\tJoyce La Chapelle\tuser\t60009\t2026-02-02 00:54:07\n150178\tcarl.blackman@baycare.org\tCarl Blackman\tuser\t60009\t2026-02-02 00:54:07\n150169\tashley.morgan@radiologyone.com\tAshley Morgan\tuser\t60007\t2026-02-02 00:54:06\n150171\tkathy.rangel@mercyone.org\tKathaleen Rangel\tuser\t60008\t2026-02-02 00:54:06\n150172\tkolin.w.huth@mercyone.org\tKolin Huth\tuser\t60008\t2026-02-02 00:54:06\n150173\tshonna.simpson@baycare.org\tShonna Simpson\tuser\t60009\t2026-02-02 00:54:06\n150174\tchristopher.parisi@baycare.org\tChristopher Parisi\tuser\t60009\t2026-02-02 00:54:06\n150175\tjessica.reilly@baycare.org\tJessica Reilly\tuser\t60009\t2026-02-02 00:54:06\n150170\tkevin.kadakia@radiologyone.com\tKevin Kadakia\tuser\t60007\t2026-02-02 00:54:06\n150168\tdharrison@mhc.net\tDrew Harrison\tuser\t60007\t2026-02-02 00:54:06\n150167\tlgenwright@mhc.net\tLorrin Genwright\tuser\t60007\t2026-02-02 00:54:06\n150166\tdsuida@mhc.net\tDoug Suida\tuser\t60007\t2026-02-02 00:54:06\n150019\tjennifer@newlantern.ai\tJennifer\tadmin\tNULL\t2026-02-02 00:07:01\n",
+  "stderr": "",
+  "execution_time_ms": 54
+}

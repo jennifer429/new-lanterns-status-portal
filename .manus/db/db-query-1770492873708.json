@@ -1,0 +1,18 @@
+{
+  "query": "SELECT * FROM onboardingFeedback ORDER BY createdAt DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT * FROM onboardingFeedback ORDER BY createdAt DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "1",
+      "organizationId": "60007",
+      "rating": "5",
+      "comments": "The onboarding process was very smooth and well-organized. The file upload feature worked great!",
+      "submittedBy": "jennifer@newlantern.ai",
+      "createdAt": "2026-02-07 19:34:00"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\torganizationId\trating\tcomments\tsubmittedBy\tcreatedAt\n1\t60007\t5\tThe onboarding process was very smooth and well-organized. The file upload feature worked great!\tjennifer@newlantern.ai\t2026-02-07 19:34:00\n",
+  "stderr": "",
+  "execution_time_ms": 60
+}

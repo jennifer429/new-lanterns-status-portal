@@ -1,0 +1,17 @@
+{
+  "query": "SELECT id, email, name, role, organizationId FROM users WHERE email LIKE '%ashley%' OR name LIKE '%ashley%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, email, name, role, organizationId FROM users WHERE email LIKE '%ashley%' OR name LIKE '%ashley%';",
+  "rows": [
+    {
+      "id": "150169",
+      "email": "ashley.morgan@radiologyone.com",
+      "name": "Ashley Morgan",
+      "role": "user",
+      "organizationId": "60007"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\temail\tname\trole\torganizationId\n150169\tashley.morgan@radiologyone.com\tAshley Morgan\tuser\t60007\n",
+  "stderr": "",
+  "execution_time_ms": 92
+}

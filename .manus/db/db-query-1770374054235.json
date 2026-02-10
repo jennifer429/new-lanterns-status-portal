@@ -1,0 +1,46 @@
+{
+  "query": "\nSHOW TABLES;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute \nSHOW TABLES;\n",
+  "rows": [
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "__drizzle_migrations"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "activityFeed"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "fileAttachments"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "intakeFileAttachments"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "intakeResponses"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "organizations"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "passwordResetTokens"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "questions"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "responses"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "sectionProgress"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "taskCompletion"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "users"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_hgGEXRHUCG7apwzJRKH7LF\n__drizzle_migrations\nactivityFeed\nfileAttachments\nintakeFileAttachments\nintakeResponses\norganizations\npasswordResetTokens\nquestions\nresponses\nsectionProgress\ntaskCompletion\nusers\n",
+  "stderr": "",
+  "execution_time_ms": 54
+}

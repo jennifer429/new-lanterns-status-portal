@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO clients (name, slug, description, status) VALUES \n('RadOne', 'RadOne', 'Radiology One - Partner organization', 'active'),\n('SRV', 'SRV', 'SRV - Partner organization', 'active')\nON DUPLICATE KEY UPDATE name=name;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute INSERT INTO clients (name, slug, description, status) VALUES \n('RadOne', 'RadOne', 'Radiology One - Partner organization', 'active'),\n('SRV', 'SRV', 'SRV - Partner organization', 'active')\nON DUPLICATE KEY UPDATE name=name;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 74
+}

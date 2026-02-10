@@ -1,0 +1,17 @@
+{
+  "query": "SELECT \n  (SELECT COUNT(*) FROM organizations) as total_orgs,\n  (SELECT COUNT(*) FROM users) as total_users,\n  (SELECT COUNT(*) FROM responses) as total_responses,\n  (SELECT COUNT(*) FROM intakeFileAttachments) as total_files,\n  (SELECT COUNT(*) FROM sectionProgress) as total_section_progress;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT \n  (SELECT COUNT(*) FROM organizations) as total_orgs,\n  (SELECT COUNT(*) FROM users) as total_users,\n  (SELECT COUNT(*) FROM responses) as total_responses,\n  (SELECT COUNT(*) FROM intakeFileAttachments) as total_files,\n  (SELECT COUNT(*) FROM sectionProgress) as total_section_progress;",
+  "rows": [
+    {
+      "total_orgs": "9",
+      "total_users": "23",
+      "total_responses": "46",
+      "total_files": "1",
+      "total_section_progress": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "total_orgs\ttotal_users\ttotal_responses\ttotal_files\ttotal_section_progress\n9\t23\t46\t1\t0\n",
+  "stderr": "",
+  "execution_time_ms": 63
+}

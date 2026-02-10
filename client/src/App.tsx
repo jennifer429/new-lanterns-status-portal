@@ -5,12 +5,48 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
-
+import Admin from "./pages/Admin";
+import PlatformAdmin from "./pages/PlatformAdmin";
+import IntakeNewRedesign from "./pages/IntakeNewRedesign";
+import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import Tasks from "./pages/Tasks";
+import CreateOrganization from "./pages/CreateOrganization";
 
 function Router() {
+  // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
+      <Route path="/login" component={Login} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
+      <Route path="/admin" component={Admin} />
+      <Route path="/org/admin/create" component={CreateOrganization} />
+      {/* Unified admin page - works for all admin roles (Platform, SRV, RadOne, etc.) */}
+      {/* Backend automatically filters data by the logged-in user's clientId */}
+      <Route path="/org/admin/users">
+        {() => <PlatformAdmin />}
+      </Route>
+      <Route path="/org/admin">
+        {() => <PlatformAdmin />}
+      </Route>
+      <Route path="/org/SRV/admin/users">
+        {() => <PlatformAdmin />}
+      </Route>
+      <Route path="/org/SRV/admin">
+        {() => <PlatformAdmin />}
+      </Route>
+      <Route path="/org/RadOne/admin/users">
+        {() => <PlatformAdmin />}
+      </Route>
+      <Route path="/org/RadOne/admin">
+        {() => <PlatformAdmin />}
+      </Route>
+      <Route path="/org/:slug/intake" component={IntakeNewRedesign} />
+      <Route path="/org/:slug/tasks" component={Tasks} />
+      <Route path="/org/:slug" component={Home} />
+      <Route path={"/"} component={Login} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

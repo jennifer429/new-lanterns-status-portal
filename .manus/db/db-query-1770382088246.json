@@ -1,0 +1,35 @@
+{
+  "query": "\n-- Check SRV client ID\nSELECT id, name FROM clients WHERE name = 'SRV';\n\n-- Check users with SRV clientId\nSELECT id, email, clientId FROM users WHERE clientId = (SELECT id FROM clients WHERE name = 'SRV' LIMIT 1);\n\n-- Check all users and their clientIds\nSELECT id, email, clientId FROM users ORDER BY clientId, id;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute \n-- Check SRV client ID\nSELECT id, name FROM clients WHERE name = 'SRV';\n\n-- Check users with SRV clientId\nSELECT id, email, clientId FROM users WHERE clientId = (SELECT id FROM clients WHERE name = 'SRV' LIMIT 1);\n\n-- Check all users and their clientIds\nSELECT id, email, clientId FROM users ORDER BY clientId, id;\n",
+  "rows": [
+    {
+      "id": "30001",
+      "name": "SRV"
+    }
+  ],
+  "messages": [
+    "id\temail\tclientId",
+    "150019\tjennifer@newlantern.ai\tNULL",
+    "210001\tryan@newlantern.ai\tNULL",
+    "240013\tjennifer@newlantern.ai\tNULL",
+    "271709\ttest-reset@example.com\tNULL",
+    "150166\tdsuida@mhc.net\t1",
+    "150167\tlgenwright@mhc.net\t1",
+    "150168\tdharrison@mhc.net\t1",
+    "150169\tashley.morgan@radiologyone.com\t1",
+    "150170\tkevin.kadakia@radiologyone.com\t1",
+    "150171\tkathy.rangel@mercyone.org\t1",
+    "150172\tkolin.w.huth@mercyone.org\t1",
+    "150173\tshonna.simpson@baycare.org\t1",
+    "150174\tchristopher.parisi@baycare.org\t1",
+    "150175\tjessica.reilly@baycare.org\t1",
+    "150176\tjaime.hernandez@baycare.org\t1",
+    "150177\theather.morrison@baycare.org\t1",
+    "150178\tcarl.blackman@baycare.org\t1",
+    "150179\tjoyce.lachapelle@baycare.org\t1",
+    "150180\tshanon.carter@baycare.org\t1"
+  ],
+  "stdout": "id\tname\n30001\tSRV\nid\temail\tclientId\n150019\tjennifer@newlantern.ai\tNULL\n210001\tryan@newlantern.ai\tNULL\n240013\tjennifer@newlantern.ai\tNULL\n271709\ttest-reset@example.com\tNULL\n150166\tdsuida@mhc.net\t1\n150167\tlgenwright@mhc.net\t1\n150168\tdharrison@mhc.net\t1\n150169\tashley.morgan@radiologyone.com\t1\n150170\tkevin.kadakia@radiologyone.com\t1\n150171\tkathy.rangel@mercyone.org\t1\n150172\tkolin.w.huth@mercyone.org\t1\n150173\tshonna.simpson@baycare.org\t1\n150174\tchristopher.parisi@baycare.org\t1\n150175\tjessica.reilly@baycare.org\t1\n150176\tjaime.hernandez@baycare.org\t1\n150177\theather.morrison@baycare.org\t1\n150178\tcarl.blackman@baycare.org\t1\n150179\tjoyce.lachapelle@baycare.org\t1\n150180\tshanon.carter@baycare.org\t1\n",
+  "stderr": "",
+  "execution_time_ms": 73
+}

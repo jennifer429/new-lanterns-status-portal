@@ -1,0 +1,8 @@
+{
+  "query": "\nSELECT \n  r.questionId,\n  r.response,\n  r.submittedAt\nFROM responses r\nJOIN organizations o ON r.organizationId = o.id\nWHERE o.slug = 'radone-munson'\nORDER BY r.questionId;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute \nSELECT \n  r.questionId,\n  r.response,\n  r.submittedAt\nFROM responses r\nJOIN organizations o ON r.organizationId = o.id\nWHERE o.slug = 'radone-munson'\nORDER BY r.questionId;\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 2: Unknown column 'r.submittedat' in 'field list'"
+  ]
+}

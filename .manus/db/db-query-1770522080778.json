@@ -1,0 +1,35 @@
+{
+  "query": "SELECT id, name, slug FROM organizations WHERE status = 'active' ORDER BY name;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, name, slug FROM organizations WHERE status = 'active' ORDER BY name;",
+  "rows": [
+    {
+      "id": "60009",
+      "name": "Baycare",
+      "slug": "baycare"
+    },
+    {
+      "id": "60008",
+      "name": "JCRHC",
+      "slug": "jcrhc"
+    },
+    {
+      "id": "60007",
+      "name": "Munson",
+      "slug": "munson"
+    },
+    {
+      "id": "180001",
+      "name": "New Org 2",
+      "slug": "neworg2"
+    },
+    {
+      "id": "180002",
+      "name": "Roy's org",
+      "slug": "royorg"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tslug\n60009\tBaycare\tbaycare\n60008\tJCRHC\tjcrhc\n60007\tMunson\tmunson\n180001\tNew Org 2\tneworg2\n180002\tRoy's org\troyorg\n",
+  "stderr": "",
+  "execution_time_ms": 710
+}

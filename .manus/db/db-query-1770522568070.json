@@ -1,0 +1,62 @@
+{
+  "query": "\nSELECT \n  ir.questionId,\n  ir.response\nFROM intakeResponses ir\nJOIN organizations o ON ir.organizationId = o.id\nWHERE o.slug = 'munson'\nORDER BY ir.questionId;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute \nSELECT \n  ir.questionId,\n  ir.response\nFROM intakeResponses ir\nJOIN organizations o ON ir.organizationId = o.id\nWHERE o.slug = 'munson'\nORDER BY ir.questionId;\n",
+  "rows": [
+    {
+      "questionId": "A.1",
+      "response": "fjidao;"
+    },
+    {
+      "questionId": "A.2",
+      "response": "fjas;"
+    },
+    {
+      "questionId": "A.3",
+      "response": "fjids;a"
+    },
+    {
+      "questionId": "A.4",
+      "response": "jfiesoa;"
+    },
+    {
+      "questionId": "A.5",
+      "response": "fjioaes;"
+    },
+    {
+      "questionId": "A.6",
+      "response": "Yes"
+    },
+    {
+      "questionId": "H.1",
+      "response": "2"
+    },
+    {
+      "questionId": "H.2",
+      "response": "fjdisao;f"
+    },
+    {
+      "questionId": "H.3",
+      "response": "faikfj"
+    },
+    {
+      "questionId": "L.10",
+      "response": "fjosae"
+    },
+    {
+      "questionId": "L.2",
+      "response": "fjsao;"
+    },
+    {
+      "questionId": "L.7",
+      "response": "2020-01-01"
+    },
+    {
+      "questionId": "L.9",
+      "response": "fjsaio;"
+    }
+  ],
+  "messages": [],
+  "stdout": "questionId\tresponse\nA.1\tfjidao;\nA.2\tfjas;\nA.3\tfjids;a\nA.4\tjfiesoa;\nA.5\tfjioaes;\nA.6\tYes\nH.1\t2\nH.2\tfjdisao;f\nH.3\tfaikfj\nL.10\tfjosae\nL.2\tfjsao;\nL.7\t2020-01-01\nL.9\tfjsaio;\n",
+  "stderr": "",
+  "execution_time_ms": 61
+}

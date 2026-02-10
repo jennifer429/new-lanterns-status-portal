@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO users (email, name, role, clientId, organizationId, openId, createdAt, updatedAt) VALUES\n('lhobson@tuscrad.com', 'Leigh Ann Hobson', 'admin', 2, NULL, 'lhobson@tuscrad.com', NOW(), NOW()),\n('rbennett@tuscrad.com', 'Rhonda Bennett', 'admin', 2, NULL, 'rbennett@tuscrad.com', NOW(), NOW()),\n('dshulman@tuscrad.com', 'Dr. David Shulman', 'admin', 2, NULL, 'dshulman@tuscrad.com', NOW(), NOW());",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute INSERT INTO users (email, name, role, clientId, organizationId, openId, createdAt, updatedAt) VALUES\n('lhobson@tuscrad.com', 'Leigh Ann Hobson', 'admin', 2, NULL, 'lhobson@tuscrad.com', NOW(), NOW()),\n('rbennett@tuscrad.com', 'Rhonda Bennett', 'admin', 2, NULL, 'rbennett@tuscrad.com', NOW(), NOW()),\n('dshulman@tuscrad.com', 'Dr. David Shulman', 'admin', 2, NULL, 'dshulman@tuscrad.com', NOW(), NOW());",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 53
+}

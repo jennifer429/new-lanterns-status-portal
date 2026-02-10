@@ -1,0 +1,9 @@
+{
+  "query": "DELETE FROM users WHERE email IN ('admin@srv.com', 'admin@radone.com');\n\nINSERT INTO users (openId, name, email, passwordHash, loginMethod, role, clientId) VALUES\n('srv-admin-test', 'SRV Admin User', 'admin@srv.com', '$2b$10$ehnZ8IxQlHk2knSrZ5pD/.YRvZBrqX1vpSH4XTUBYe4n6s/q8Rsq2', 'email', 'admin', 2),\n('radone-admin-test', 'RadOne Admin User', 'admin@radone.com', '$2b$10$ehnZ8IxQlHk2knSrZ5pD/.YRvZBrqX1vpSH4XTUBYe4n6s/q8Rsq2', 'email', 'admin', 1);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute DELETE FROM users WHERE email IN ('admin@srv.com', 'admin@radone.com');\n\nINSERT INTO users (openId, name, email, passwordHash, loginMethod, role, clientId) VALUES\n('srv-admin-test', 'SRV Admin User', 'admin@srv.com', '$2b$10$ehnZ8IxQlHk2knSrZ5pD/.YRvZBrqX1vpSH4XTUBYe4n6s/q8Rsq2', 'email', 'admin', 2),\n('radone-admin-test', 'RadOne Admin User', 'admin@radone.com', '$2b$10$ehnZ8IxQlHk2knSrZ5pD/.YRvZBrqX1vpSH4XTUBYe4n6s/q8Rsq2', 'email', 'admin', 1);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 73
+}
