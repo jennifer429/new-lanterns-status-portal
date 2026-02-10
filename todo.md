@@ -1491,3 +1491,9 @@
 ## Workflow Text Updates (Feb 10, 2026)
 - [x] Change "Viz.ai" to "AI" in Images Workflow 4th option
 - [x] Change "CD Import" to "Manual push" in Priors Workflow 3rd option
+
+## Priors Workflow 4th Option (Feb 10, 2026)
+- [x] Add 4th option: [PACS or VNA] ↔ Silverback → New Lantern (bidirectional)
+- [x] Fill-in field for PACS/VNA system name
+- [x] Bidirectional arrows between source and Silverback (Query/Retrieve)
+- [x] Regular arrow from Silverback to New Lantern

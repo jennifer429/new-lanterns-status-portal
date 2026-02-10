@@ -519,15 +519,16 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
               ${configuration.paths.imagesSilverbackQuery 
                 ? 'border-primary bg-background' 
                 : 'bg-muted/50 text-muted-foreground'}
-            `}
-          />
+            `}          />
         </div>
+
+
       </div>
     );
   };
 
   /**
-   * Render Priors Workflow
+   * Render Reports Workflow
    */
   const renderPriorsWorkflow = () => {
     return (
@@ -759,6 +760,87 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
             className={`
               flex-1
               ${configuration.paths.priorsOption3 
+                ? 'border-primary bg-background' 
+                : 'bg-muted/50 text-muted-foreground'}
+            `}
+          />
+        </div>
+
+        {/* Option 4: [PACS or VNA] ↔ Silverback → New Lantern (bidirectional Query/Retrieve) */}
+        <div
+          className={`
+            flex items-center gap-4 p-4 rounded-lg transition-all
+            ${configuration.paths.priorsOption4 ? 'bg-primary/10' : 'bg-muted/30'}
+          `}
+        >
+          <Checkbox
+            id="priorsOption4"
+            checked={configuration.paths.priorsOption4 || false}
+            onCheckedChange={(checked) => handleCheckboxChange('priorsOption4', checked as boolean)}
+            className={configuration.paths.priorsOption4 ? 'data-[state=checked]:bg-primary data-[state=checked]:border-primary' : 'border-white bg-transparent'}
+          />
+
+          {/* PACS/VNA System Input */}
+          <Input
+            placeholder="PACS or VNA"
+            value={configuration.systems.priorsOption4Source || ''}
+            onChange={(e) => handleSystemChange('priorsOption4Source', e.target.value)}
+            disabled={!configuration.paths.priorsOption4}
+            className={`
+              w-[140px] text-center font-medium
+              ${configuration.paths.priorsOption4 
+                ? 'bg-primary/20 border-primary text-foreground' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          />
+
+          {/* Bidirectional Arrow */}
+          <div className="flex items-center gap-1">
+            <ArrowRight
+              className={`w-5 h-5 ${configuration.paths.priorsOption4 ? 'text-primary' : 'text-muted-foreground'}`}
+            />
+            <ArrowRight
+              className={`w-5 h-5 rotate-180 ${configuration.paths.priorsOption4 ? 'text-primary' : 'text-muted-foreground'}`}
+            />
+          </div>
+
+          {/* Silverback Box */}
+          <div
+            className={`
+              px-4 py-2 rounded-md font-medium min-w-[120px] text-center
+              ${configuration.paths.priorsOption4 
+                ? 'bg-purple-600 text-white' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          >
+            Silverback
+          </div>
+
+          <ArrowRight
+            className={`w-6 h-6 flex-shrink-0 ${configuration.paths.priorsOption4 ? 'text-primary' : 'text-muted-foreground'}`}
+          />
+
+          {/* New Lantern Box */}
+          <div
+            className={`
+              px-4 py-2 rounded-md font-medium min-w-[120px] text-center
+              ${configuration.paths.priorsOption4 
+                ? 'bg-primary text-primary-foreground' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          >
+            New Lantern
+          </div>
+
+          {/* Notes */}
+          <Input
+            placeholder="e.g., Query/Retrieve from PACS for comparison studies"
+            value={configuration.notes.priorsOption4_note || ''}
+            onChange={(e) => handleNoteChange('priorsOption4_note', e.target.value)}
+            disabled={!configuration.paths.priorsOption4}
+            className={`
+              flex-1
+              ${configuration.paths.priorsOption4 
                 ? 'border-primary bg-background' 
                 : 'bg-muted/50 text-muted-foreground'}
             `}
