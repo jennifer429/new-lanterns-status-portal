@@ -318,9 +318,26 @@ export default function IntakeNewRedesign() {
         
         if (selectedPathKeys.length === 0) return 0;
         
-        // Check if all selected paths have their system names filled in
+        // Orders and Images workflows have fixed systems (no input fields)
+        // Only Priors and Reports workflows require system name inputs
+        const workflowsRequiringSystemNames = ['priors-workflow', 'reports-out-workflow'];
+        
+        if (!workflowsRequiringSystemNames.includes(section.id)) {
+          // For Orders/Images: complete if at least one path is selected
+          return 100;
+        }
+        
+        // For Priors/Reports: check if all selected paths have their system names filled in
+        const pathToSystemKeyMap: Record<string, string> = {
+          'priorsPush': 'priorsPushSource',
+          'priorsQuery': 'priorsQuerySource',
+          'reportsToPortal': 'reportsPortalDestination'
+        };
+        
         const allSystemsFilled = selectedPathKeys.every(pathKey => {
-          const systemValue = config.systems?.[pathKey];
+          const systemKey = pathToSystemKeyMap[pathKey];
+          if (!systemKey) return true; // Path doesn't require system name
+          const systemValue = config.systems?.[systemKey];
           return systemValue && systemValue.trim() !== '';
         });
         
@@ -674,8 +691,9 @@ export default function IntakeNewRedesign() {
   const currentSectionIndex = questionnaireSections.findIndex(s => s.id === currentSection);
   const isLastSection = currentSectionIndex === questionnaireSections.length - 1;
 
-  // Show loading only if we don't have data yet
-  if (orgLoading && !existingResponses) {
+  // Show loading until responses are loaded into state
+  // This ensures calculateSectionProgress has data to work with
+  if (orgLoading || (existingResponses && Object.keys(responses).length === 0)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

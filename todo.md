@@ -1671,3 +1671,18 @@
 - [x] Update Admin.tsx to use shared utility
 - [x] Update PlatformAdmin.tsx to use shared utility
 - [x] Test that both admin pages work correctly with shared function
+
+## Fix Workflow Checkmarks Not Appearing (Feb 10, 2026)
+- [x] Debug why Orders Workflow doesn't show checkmark after completion
+- [x] Check if workflow configs are being saved to database correctly
+- [x] Check if workflow configs are being loaded from database correctly
+- [x] Fix section completion detection logic for workflow sections (Orders/Images don't need system names)
+- [x] Fix race condition where sidebar renders before responses loaded into state
+- [ ] Test that all 4 workflow sections show checkmarks when completed
+
+## Fix RRMC 73% Completion Bug (Feb 10, 2026)
+- [ ] Query database to check all RRMC responses
+- [ ] Identify which questions/sections are missing
+- [ ] Check if workflow configs are being counted correctly
+- [ ] Verify progress calculation logic matches actual data
+- [ ] Fix completion percentage to show 100% when all sections complete
