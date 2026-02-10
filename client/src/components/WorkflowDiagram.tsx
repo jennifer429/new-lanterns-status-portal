@@ -176,6 +176,16 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
     });
   };
 
+  const handleSystemChange = (systemKey: string, value: string) => {
+    onConfigurationChange({
+      ...configuration,
+      systems: {
+        ...configuration.systems,
+        [systemKey]: value,
+      },
+    });
+  };
+
   /**
    * Render Orders Workflow
    */
@@ -313,53 +323,108 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           />
         </div>
 
-        <SwimLaneRow
-          id="imagesFromPACS"
-          label="Images from Existing PACS"
-          sourceSystem="Current PACS"
-          middlewareSystem="Silverback"
-          destinationSystem="New Lantern"
-          isActive={configuration.paths.imagesFromPACS || false}
-          noteValue={configuration.notes.imagesFromPACS_note || ''}
-          notePlaceholder="e.g., Migration from legacy PACS - historical studies"
-          onCheckChange={(checked) => handleCheckboxChange('imagesFromPACS', checked)}
-          onNoteChange={(value) => handleNoteChange('imagesFromPACS_note', value)}
-        />
 
-        <SwimLaneRow
-          id="imagesViaVNA"
-          label="Images via VNA/Archive"
-          sourceSystem="VNA"
-          middlewareSystem="Silverback"
-          destinationSystem="New Lantern"
-          isActive={configuration.paths.imagesViaVNA || false}
-          noteValue={configuration.notes.imagesViaVNA_note || ''}
-          notePlaceholder="e.g., Enterprise imaging archive integration"
-          onCheckChange={(checked) => handleCheckboxChange('imagesViaVNA', checked)}
-          onNoteChange={(value) => handleNoteChange('imagesViaVNA_note', value)}
-        />
 
-        {/* Viz.ai 3-Column Workflow: Modality→Viz.ai → Silverback → New Lantern */}
+        {/* Modalities → VNA → Silverback → New Lantern */}
         <div
           className={`
             flex items-center gap-4 p-4 rounded-lg transition-all
-            ${configuration.paths.imagesViaVizAI ? 'bg-primary/10' : 'bg-muted/30'}
+            ${configuration.paths.imagesViaVNA ? 'bg-primary/10' : 'bg-muted/30'}
           `}
         >
-          {/* Checkbox */}
           <Checkbox
-            id="imagesViaVizAI"
-            checked={configuration.paths.imagesViaVizAI || false}
-            onCheckedChange={(checked) => handleCheckboxChange('imagesViaVizAI', checked as boolean)}
-            className={configuration.paths.imagesViaVizAI ? 'data-[state=checked]:bg-primary data-[state=checked]:border-primary' : 'border-white bg-transparent'}
+            id="imagesViaVNA"
+            checked={configuration.paths.imagesViaVNA || false}
+            onCheckedChange={(checked) => handleCheckboxChange('imagesViaVNA', checked as boolean)}
+            className={configuration.paths.imagesViaVNA ? 'data-[state=checked]:bg-primary data-[state=checked]:border-primary' : 'border-white bg-transparent'}
           />
 
-          {/* Client Site: Modalities → Viz.ai */}
+          {/* Client Site: Modalities → VNA */}
           <div className="flex items-center gap-2">
             <div
               className={`
                 px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm
-                ${configuration.paths.imagesViaVizAI 
+                ${configuration.paths.imagesViaVNA 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'bg-muted text-muted-foreground'}
+              `}
+            >
+              Modalities
+            </div>
+            <ArrowRight className={`w-5 h-5 ${configuration.paths.imagesViaVNA ? 'text-primary' : 'text-muted-foreground'}`} />
+            <div
+              className={`
+                px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm
+                ${configuration.paths.imagesViaVNA 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'bg-muted text-muted-foreground'}
+              `}
+            >
+              VNA
+            </div>
+          </div>
+
+          {/* Arrow to Silverback */}
+          <ArrowRight className={`w-5 h-5 ${configuration.paths.imagesViaVNA ? 'text-primary' : 'text-muted-foreground'}`} />
+
+          {/* Silverback (Middleware) */}
+          <div
+            className={`
+              px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm
+              ${configuration.paths.imagesViaVNA 
+                ? 'bg-purple-600 text-white' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          >
+            Silverback
+          </div>
+
+          {/* Arrow to New Lantern */}
+          <ArrowRight className={`w-5 h-5 ${configuration.paths.imagesViaVNA ? 'text-primary' : 'text-muted-foreground'}`} />
+
+          {/* New Lantern (Destination) */}
+          <div
+            className={`
+              px-4 py-2 rounded-md font-medium min-w-[120px] text-center text-sm
+              ${configuration.paths.imagesViaVNA 
+                ? 'bg-primary text-primary-foreground' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          >
+            New Lantern
+          </div>
+
+          {/* Notes Input */}
+          <Textarea
+            placeholder="e.g., Enterprise imaging archive integration"
+            value={configuration.notes.imagesViaVNA_note || ''}
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleNoteChange('imagesViaVNA_note', e.target.value)}
+            disabled={!configuration.paths.imagesViaVNA}
+            className={`flex-1 min-w-[200px] ${!configuration.paths.imagesViaVNA ? 'opacity-50' : ''}`}
+          />
+        </div>
+
+        {/* AI 3-Column Workflow: Modality→AI → Silverback → New Lantern */}
+        <div
+          className={`
+            flex items-center gap-4 p-4 rounded-lg transition-all
+            ${configuration.paths.imagesViaAI ? 'bg-primary/10' : 'bg-muted/30'}
+          `}
+        >
+          {/* Checkbox */}
+          <Checkbox
+            id="imagesViaAI"
+            checked={configuration.paths.imagesViaAI || false}
+            onCheckedChange={(checked) => handleCheckboxChange('imagesViaAI', checked as boolean)}
+            className={configuration.paths.imagesViaAI ? 'data-[state=checked]:bg-primary data-[state=checked]:border-primary' : 'border-white bg-transparent'}
+          />
+
+          {/* Client Site: Modalities → AI */}
+          <div className="flex items-center gap-2">
+            <div
+              className={`
+                px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm
+                ${configuration.paths.imagesViaAI 
                   ? 'bg-primary text-primary-foreground' 
                   : 'bg-muted text-muted-foreground'}
               `}
@@ -367,23 +432,23 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
               Modality
             </div>
             <ArrowRight
-              className={`w-5 h-5 flex-shrink-0 ${configuration.paths.imagesViaVizAI ? 'text-primary' : 'text-muted-foreground'}`}
+              className={`w-5 h-5 flex-shrink-0 ${configuration.paths.imagesViaAI ? 'text-primary' : 'text-muted-foreground'}`}
             />
             <div
               className={`
                 px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm
-                ${configuration.paths.imagesViaVizAI 
+                ${configuration.paths.imagesViaAI 
                   ? 'bg-primary text-primary-foreground' 
                   : 'bg-muted text-muted-foreground'}
               `}
             >
-              Viz.ai
+              AI
             </div>
           </div>
 
           {/* Arrow to Silverback */}
           <ArrowRight
-            className={`w-6 h-6 flex-shrink-0 ${configuration.paths.imagesViaVizAI ? 'text-primary' : 'text-muted-foreground'}`}
+            className={`w-6 h-6 flex-shrink-0 ${configuration.paths.imagesViaAI ? 'text-primary' : 'text-muted-foreground'}`}
           />
 
           {/* Silverback Box */}
@@ -400,7 +465,7 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
 
           {/* Arrow to New Lantern */}
           <ArrowRight
-            className={`w-6 h-6 flex-shrink-0 ${configuration.paths.imagesViaVizAI ? 'text-primary' : 'text-muted-foreground'}`}
+            className={`w-6 h-6 flex-shrink-0 ${configuration.paths.imagesViaAI ? 'text-primary' : 'text-muted-foreground'}`}
           />
 
           {/* New Lantern Box */}
@@ -417,13 +482,13 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
 
           {/* Notes Input Field */}
           <Input
-            placeholder="e.g., CT/MR modalities send to Viz.ai for AI analysis, then forward through Silverback to New Lantern"
-            value={configuration.notes.imagesViaVizAI_note || ''}
-            onChange={(e) => handleNoteChange('imagesViaVizAI_note', e.target.value)}
-            disabled={!configuration.paths.imagesViaVizAI}
+            placeholder="e.g., CT/MR modalities send to AI for analysis, then forward through Silverback to New Lantern"
+            value={configuration.notes.imagesViaAI_note || ''}
+            onChange={(e) => handleNoteChange('imagesViaAI_note', e.target.value)}
+            disabled={!configuration.paths.imagesViaAI}
             className={`
               flex-1
-              ${configuration.paths.imagesViaVizAI 
+              ${configuration.paths.imagesViaAI 
                 ? 'border-primary bg-background' 
                 : 'bg-muted/50 text-muted-foreground'}
             `}
@@ -441,44 +506,208 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
       <div className="space-y-4">
         <h3 className="font-semibold text-lg mb-4">Configure Prior Study Access</h3>
         
-        <SwimLaneRow
-          id="priorsFromPACS"
-          label="Priors from Current PACS"
-          sourceSystem="Current PACS"
-          middlewareSystem="Silverback"
-          destinationSystem="New Lantern"
-          isActive={configuration.paths.priorsFromPACS || false}
-          noteValue={configuration.notes.priorsFromPACS_note || ''}
-          notePlaceholder="e.g., Query/Retrieve from legacy PACS for comparison studies"
-          onCheckChange={(checked) => handleCheckboxChange('priorsFromPACS', checked)}
-          onNoteChange={(value) => handleNoteChange('priorsFromPACS_note', value)}
-        />
+        {/* Option 1: VNA or PACS → Silverback → New Lantern (Push) */}
+        <div
+          className={`
+            flex items-center gap-4 p-4 rounded-lg transition-all
+            ${configuration.paths.priorsPush ? 'bg-primary/10' : 'bg-muted/30'}
+          `}
+        >
+          <Checkbox
+            id="priorsPush"
+            checked={configuration.paths.priorsPush || false}
+            onCheckedChange={(checked) => handleCheckboxChange('priorsPush', checked as boolean)}
+            className={configuration.paths.priorsPush ? 'data-[state=checked]:bg-primary data-[state=checked]:border-primary' : 'border-white bg-transparent'}
+          />
 
-        <SwimLaneRow
-          id="priorsFromVNA"
-          label="Priors from VNA/Archive"
-          sourceSystem="VNA"
-          middlewareSystem="Silverback"
-          destinationSystem="New Lantern"
-          isActive={configuration.paths.priorsFromVNA || false}
-          noteValue={configuration.notes.priorsFromVNA_note || ''}
-          notePlaceholder="e.g., Enterprise archive for historical studies across facilities"
-          onCheckChange={(checked) => handleCheckboxChange('priorsFromVNA', checked)}
-          onNoteChange={(value) => handleNoteChange('priorsFromVNA_note', value)}
-        />
+          {/* VNA or PACS Input */}
+          <Input
+            placeholder="VNA or PACS"
+            value={configuration.systems.priorsPushSource || ''}
+            onChange={(e) => handleSystemChange('priorsPushSource', e.target.value)}
+            disabled={!configuration.paths.priorsPush}
+            className={`w-[140px] text-center font-medium ${
+              configuration.paths.priorsPush 
+                ? 'bg-primary text-primary-foreground border-primary' 
+                : 'bg-muted text-muted-foreground'
+            }`}
+          />
 
-        <SwimLaneRow
-          id="priorsFromCDImport"
-          label="Priors from CD/External Import"
-          sourceSystem="CD Import"
-          middlewareSystem="Silverback"
-          destinationSystem="New Lantern"
-          isActive={configuration.paths.priorsFromCDImport || false}
-          noteValue={configuration.notes.priorsFromCDImport_note || ''}
-          notePlaceholder="e.g., Outside studies brought in by patients on CD/DVD"
-          onCheckChange={(checked) => handleCheckboxChange('priorsFromCDImport', checked)}
-          onNoteChange={(value) => handleNoteChange('priorsFromCDImport_note', value)}
-        />
+          {/* Arrow */}
+          <ArrowRight className={`w-5 h-5 ${configuration.paths.priorsPush ? 'text-primary' : 'text-muted-foreground'}`} />
+
+          {/* Silverback */}
+          <div
+            className={`
+              px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm
+              ${configuration.paths.priorsPush 
+                ? 'bg-purple-600 text-white' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          >
+            Silverback
+          </div>
+
+          {/* Arrow */}
+          <ArrowRight className={`w-5 h-5 ${configuration.paths.priorsPush ? 'text-primary' : 'text-muted-foreground'}`} />
+
+          {/* New Lantern */}
+          <div
+            className={`
+              px-4 py-2 rounded-md font-medium min-w-[120px] text-center text-sm
+              ${configuration.paths.priorsPush 
+                ? 'bg-primary text-primary-foreground' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          >
+            New Lantern
+          </div>
+
+          {/* Notes */}
+          <Textarea
+            placeholder="e.g., Push from VNA or PACS"
+            value={configuration.notes.priorsPush_note || ''}
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleNoteChange('priorsPush_note', e.target.value)}
+            disabled={!configuration.paths.priorsPush}
+            className={`flex-1 min-w-[200px] ${!configuration.paths.priorsPush ? 'opacity-50' : ''}`}
+          />
+        </div>
+
+        {/* Option 2: VNA or PACS ↔ Silverback → New Lantern (Query/Retrieve) */}
+        <div
+          className={`
+            flex items-center gap-4 p-4 rounded-lg transition-all
+            ${configuration.paths.priorsQuery ? 'bg-primary/10' : 'bg-muted/30'}
+          `}
+        >
+          <Checkbox
+            id="priorsQuery"
+            checked={configuration.paths.priorsQuery || false}
+            onCheckedChange={(checked) => handleCheckboxChange('priorsQuery', checked as boolean)}
+            className={configuration.paths.priorsQuery ? 'data-[state=checked]:bg-primary data-[state=checked]:border-primary' : 'border-white bg-transparent'}
+          />
+
+          {/* VNA or PACS Input */}
+          <Input
+            placeholder="VNA or PACS"
+            value={configuration.systems.priorsQuerySource || ''}
+            onChange={(e) => handleSystemChange('priorsQuerySource', e.target.value)}
+            disabled={!configuration.paths.priorsQuery}
+            className={`w-[140px] text-center font-medium ${
+              configuration.paths.priorsQuery 
+                ? 'bg-primary text-primary-foreground border-primary' 
+                : 'bg-muted text-muted-foreground'
+            }`}
+          />
+
+          {/* Bidirectional Arrow (↔) */}
+          <div className={`flex items-center gap-1 ${configuration.paths.priorsQuery ? 'text-primary' : 'text-muted-foreground'}`}>
+            <ArrowRight className="w-4 h-4" />
+            <ArrowRight className="w-4 h-4 rotate-180" />
+          </div>
+
+          {/* Silverback */}
+          <div
+            className={`
+              px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm
+              ${configuration.paths.priorsQuery 
+                ? 'bg-purple-600 text-white' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          >
+            Silverback
+          </div>
+
+          {/* Arrow */}
+          <ArrowRight className={`w-5 h-5 ${configuration.paths.priorsQuery ? 'text-primary' : 'text-muted-foreground'}`} />
+
+          {/* New Lantern */}
+          <div
+            className={`
+              px-4 py-2 rounded-md font-medium min-w-[120px] text-center text-sm
+              ${configuration.paths.priorsQuery 
+                ? 'bg-primary text-primary-foreground' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          >
+            New Lantern
+          </div>
+
+          {/* Notes */}
+          <Textarea
+            placeholder="e.g., Query/Retrieve from VNA or PACS using C-FIND/C-MOVE"
+            value={configuration.notes.priorsQuery_note || ''}
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleNoteChange('priorsQuery_note', e.target.value)}
+            disabled={!configuration.paths.priorsQuery}
+            className={`flex-1 min-w-[200px] ${!configuration.paths.priorsQuery ? 'opacity-50' : ''}`}
+          />
+        </div>
+
+        {/* Option 3: Manual Push → Silverback → New Lantern */}
+        <div
+          className={`
+            flex items-center gap-4 p-4 rounded-lg transition-all
+            ${configuration.paths.priorsManual ? 'bg-primary/10' : 'bg-muted/30'}
+          `}
+        >
+          <Checkbox
+            id="priorsManual"
+            checked={configuration.paths.priorsManual || false}
+            onCheckedChange={(checked) => handleCheckboxChange('priorsManual', checked as boolean)}
+            className={configuration.paths.priorsManual ? 'data-[state=checked]:bg-primary data-[state=checked]:border-primary' : 'border-white bg-transparent'}
+          />
+
+          {/* Manual Push */}
+          <div
+            className={`
+              px-4 py-2 rounded-md font-medium min-w-[140px] text-center text-sm
+              ${configuration.paths.priorsManual 
+                ? 'bg-primary text-primary-foreground' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          >
+            Manual Push
+          </div>
+
+          {/* Arrow */}
+          <ArrowRight className={`w-5 h-5 ${configuration.paths.priorsManual ? 'text-primary' : 'text-muted-foreground'}`} />
+
+          {/* Silverback */}
+          <div
+            className={`
+              px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm
+              ${configuration.paths.priorsManual 
+                ? 'bg-purple-600 text-white' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          >
+            Silverback
+          </div>
+
+          {/* Arrow */}
+          <ArrowRight className={`w-5 h-5 ${configuration.paths.priorsManual ? 'text-primary' : 'text-muted-foreground'}`} />
+
+          {/* New Lantern */}
+          <div
+            className={`
+              px-4 py-2 rounded-md font-medium min-w-[120px] text-center text-sm
+              ${configuration.paths.priorsManual 
+                ? 'bg-primary text-primary-foreground' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          >
+            New Lantern
+          </div>
+
+          {/* Notes */}
+          <Textarea
+            placeholder="e.g., Site manually pushes priors to Silverback"
+            value={configuration.notes.priorsManual_note || ''}
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleNoteChange('priorsManual_note', e.target.value)}
+            disabled={!configuration.paths.priorsManual}
+            className={`flex-1 min-w-[200px] ${!configuration.paths.priorsManual ? 'opacity-50' : ''}`}
+          />
+        </div>
       </div>
     );
   };

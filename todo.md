@@ -1453,3 +1453,8 @@
 - [x] Frontend: Add "Mark as Complete" button for active organizations
 - [x] Frontend: Add "Reopen" button for completed organizations
 - [x] Test all status transitions (active → completed → reopened, active → deactivated → reactivated)
+
+## Priors Workflow Updates (Feb 10, 2026)
+- [x] Option 1: VNA or PACS → Silverback → New Lantern (unidirectional push)
+- [x] Option 2: VNA or PACS ↔ Silverback → New Lantern (bidirectional C-FIND/C-MOVE query/retrieve)
+- [x] Option 3: Manual Push → Silverback → New Lantern (site manually pushes)
