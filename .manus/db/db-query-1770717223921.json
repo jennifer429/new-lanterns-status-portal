@@ -1,0 +1,31 @@
+{
+  "query": "SELECT email, name, role, clientId, organizationId FROM users WHERE email IN ('lhobson@tuscrad.com', 'rbennett@tuscrad.com', 'dshulman@tuscrad.com');",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT email, name, role, clientId, organizationId FROM users WHERE email IN ('lhobson@tuscrad.com', 'rbennett@tuscrad.com', 'dshulman@tuscrad.com');",
+  "rows": [
+    {
+      "email": "lhobson@tuscrad.com",
+      "name": "Leigh Ann Hobson",
+      "role": "admin",
+      "clientId": "2",
+      "organizationId": "NULL"
+    },
+    {
+      "email": "rbennett@tuscrad.com",
+      "name": "Rhonda Bennett",
+      "role": "admin",
+      "clientId": "2",
+      "organizationId": "NULL"
+    },
+    {
+      "email": "dshulman@tuscrad.com",
+      "name": "Dr. David Shulman",
+      "role": "admin",
+      "clientId": "2",
+      "organizationId": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "email\tname\trole\tclientId\torganizationId\nlhobson@tuscrad.com\tLeigh Ann Hobson\tadmin\t2\tNULL\nrbennett@tuscrad.com\tRhonda Bennett\tadmin\t2\tNULL\ndshulman@tuscrad.com\tDr. David Shulman\tadmin\t2\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 57
+}

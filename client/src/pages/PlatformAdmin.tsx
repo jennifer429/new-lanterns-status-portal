@@ -1301,6 +1301,7 @@ export default function PlatformAdmin() {
                       <TableHead>Email</TableHead>
                       <TableHead>Organization</TableHead>
                       {isPlatformAdmin && <TableHead>Partner</TableHead>}
+                      {isPlatformAdmin && <TableHead>Client ID</TableHead>}
                       <TableHead>Role</TableHead>
                       <TableHead>Last Login</TableHead>
                       <TableHead>Actions</TableHead>
@@ -1309,7 +1310,9 @@ export default function PlatformAdmin() {
                   <TableBody>
                     {activeUsers.map(u => {
                       const org = orgs?.find(o => o.id === u.organizationId);
-                      const partner = org?.clientId ? clientMap[org.clientId] : "N/A";
+                      // For admins without org, use their direct clientId; for regular users, use org's clientId
+                      const userClientId = u.clientId || org?.clientId || null;
+                      const partner = userClientId ? clientMap[userClientId] : "N/A";
                       
                       return (
                         <TableRow key={u.id}>
@@ -1317,6 +1320,7 @@ export default function PlatformAdmin() {
                           <TableCell>{u.email}</TableCell>
                           <TableCell>{orgMap[u.organizationId || 0] || "N/A"}</TableCell>
                           {isPlatformAdmin && <TableCell>{partner}</TableCell>}
+                          {isPlatformAdmin && <TableCell>{userClientId ?? "N/A"}</TableCell>}
                           <TableCell>
                             <Badge variant={u.role === "admin" ? "default" : "secondary"}>
                               {u.role}
@@ -1367,6 +1371,7 @@ export default function PlatformAdmin() {
                         <TableHead>Name</TableHead>
                         <TableHead>Email</TableHead>
                         {isPlatformAdmin && <TableHead>Partner</TableHead>}
+                        {isPlatformAdmin && <TableHead>Client ID</TableHead>}
                         <TableHead>Role</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
@@ -1380,6 +1385,7 @@ export default function PlatformAdmin() {
                             <TableCell className="font-medium">{u.name}</TableCell>
                             <TableCell>{u.email}</TableCell>
                             {isPlatformAdmin && <TableCell>{partner}</TableCell>}
+                            {isPlatformAdmin && <TableCell>{u.clientId ?? "N/A"}</TableCell>}
                             <TableCell>
                               <Badge variant="secondary">{u.role}</Badge>
                             </TableCell>

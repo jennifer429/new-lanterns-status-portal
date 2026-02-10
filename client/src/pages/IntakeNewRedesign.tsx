@@ -464,18 +464,29 @@ export default function IntakeNewRedesign() {
         );
 
       case 'upload-download':
+        // Get partner-specific template or fall back to default
+        const clientId = org?.clientId;
+        const partnerTemplate = clientId && question.partnerTemplates ? question.partnerTemplates[clientId] : undefined;
+        const templateUrl = partnerTemplate?.url || question.templateUrl;
+        const templateFileName = partnerTemplate?.fileName || question.templateFileName;
+        
         return (
           <div className="space-y-4">
             {/* Download Template Button */}
-            {question.templateUrl && (
+            {templateUrl && (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => window.open(question.templateUrl, '_blank')}
+                onClick={() => {
+                  const link = document.createElement('a');
+                  link.href = templateUrl;
+                  link.download = templateFileName || 'template';
+                  link.click();
+                }}
                 className="bg-purple-600 hover:bg-purple-700 text-white border-purple-500"
               >
                 <Download className="w-4 h-4 mr-2" />
-                Download Template
+                Download Template {templateFileName && `(${templateFileName})`}
               </Button>
             )}
             

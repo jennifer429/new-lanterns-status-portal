@@ -1480,3 +1480,16 @@
 ## Partner Isolation Fixes (Feb 10, 2026)
 - [x] Fix createOrganization to use user's clientId instead of email domain matching
 - [x] Verify createUser enforces partner isolation (already implemented)
+- [x] Add Client ID column to Users table
+- [x] Update SRV admin users (Leigh Ann, Rhonda, Dr. Shulman) to have clientId = 2
+- [x] Fix getAllUsers query to show partner admin users for partner admins like Leigh Ann
+- [x] Fix getAllClients query to allow partner admins to view their own client## Partner-Specific VPN Forms (Feb 10, 2026)
+- [x] Upload SRV VPN form (TRC_RRMC-VPN-Form-v3.docx) to S3
+- [x] Update VPN section to show RadOne template for RadOne orgs  
+- [x] Update VPN section to show SRV template for SRV orgs
+- [x] Implement partner-specific template selection in intake page
+- [x] Write vitest tests for VPN template configuration
+- [x] Test download templates for both partnerst tests for VPN template configurationts for VPN template configuration
+
+## Export All Function Fix (Feb 10, 2026)
+- [ ] Fix "Export All" button to export organizations, users, and intake data (not just users)

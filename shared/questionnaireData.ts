@@ -13,6 +13,7 @@ export interface Question {
   placeholder?: string;
   templateUrl?: string; // For upload-download questions: URL to download template
   templateFileName?: string; // Display name for template download
+  partnerTemplates?: { [clientId: number]: { url: string; fileName: string } }; // Partner-specific templates
   conditionalOn?: { questionId: string; value: string }; // Show this question only if another question has specific value
 }
 
@@ -120,13 +121,21 @@ export const questionnaireSections: Section[] = [
     title: 'VPN & Connectivity',
     description: 'VPN setup and network connectivity (DICOM requires: IP address, port | HL7 requires: IP address, port)',
     questions: [
-      { 
+       { 
         id: 'E.1', 
         text: 'VPN form exchange', 
         type: 'upload-download', 
         notes: 'Upload your completed VPN form or download our template. MUST include IP addresses and ports for all DICOM endpoints and HL7 interfaces.',
-        templateUrl: 'https://files.manuscdn.com/user_upload_by_module/session_file/310519663326227304/NfNtZiMfXpqdbVqa.xlsx',
-        templateFileName: 'VPN_Form_Template.xlsx'
+        partnerTemplates: {
+          1: { // RadOne
+            url: 'https://files.manuscdn.com/user_upload_by_module/session_file/310519663326227304/NfNtZiMfXpqdbVqa.xlsx',
+            fileName: 'VPN-Configuration-Form-RadOne.xlsx'
+          },
+          2: { // SRV
+            url: 'https://files.manuscdn.com/user_upload_by_module/session_file/310519663326227304/MFEsljZLLtNyBZWF.docx',
+            fileName: 'VPN-Configuration-Form-SRV.docx'
+          }
+        }
       },
       { 
         id: 'E.2', 

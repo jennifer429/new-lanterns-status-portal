@@ -3,7 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { questions, questionOptions, organizations, users, clients, intakeFileAttachments } from "../../drizzle/schema";
-import { eq, and, desc, inArray, sql } from "drizzle-orm";
+import { eq, and, or, desc, inArray, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
 /**
@@ -281,17 +281,22 @@ export const adminRouter = router({
   // ============================================================================
 
   /**
-   * Get all clients (partners) - New Lantern staff only
+   * Get clients (partners) - Platform admins see all, partner admins see only their own
    */
   getAllClients: protectedProcedure.query(async ({ ctx }) => {
-    if (ctx.user.role !== "admin" || !ctx.user.email?.endsWith("@newlantern.ai")) {
-      throw new TRPCError({ code: "FORBIDDEN", message: "Only New Lantern staff can view all clients" });
+    if (ctx.user.role !== "admin") {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
     }
 
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-    return await db.select().from(clients).orderBy(clients.name);
+    // Platform admins see all clients, partner admins see only their own
+    if (ctx.user.clientId) {
+      return await db.select().from(clients).where(eq(clients.id, ctx.user.clientId));
+    } else {
+      return await db.select().from(clients).orderBy(clients.name);
+    }
   }),
 
   // ============================================================================
@@ -660,7 +665,7 @@ export const adminRouter = router({
     // Platform admins see all users, partner admins see only their partner's users
     let allUsers;
     if (ctx.user.clientId) {
-      // Partner admin: filter users by organizations that belong to their partner
+      // Partner admin: show users from their partner's orgs + other partner admins with same clientId
       const partnerOrgs = await db
         .select({ id: organizations.id })
         .from(organizations)
@@ -671,7 +676,17 @@ export const adminRouter = router({
       allUsers = await db
         .select()
         .from(users)
-        .where(orgIds.length > 0 ? inArray(users.organizationId, orgIds) : sql`1=0`);
+        .where(
+          or(
+            // Users assigned to partner's organizations
+            orgIds.length > 0 ? inArray(users.organizationId, orgIds) : sql`1=0`,
+            // Partner admin users with same clientId (no org assignment)
+            and(
+              eq(users.clientId, ctx.user.clientId),
+              eq(users.role, 'admin')
+            )
+          )
+        );
     } else {
       // Platform admin: see all users
       allUsers = await db.select().from(users);
