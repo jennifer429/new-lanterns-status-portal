@@ -1686,3 +1686,17 @@
 - [ ] Check if workflow configs are being counted correctly
 - [ ] Verify progress calculation logic matches actual data
 - [ ] Fix completion percentage to show 100% when all sections complete
+
+## RRAL Should Be 100% Complete (Feb 10, 2026)
+- [ ] Compare RRAL responses (46 saved) against all required questions in questionnaireData
+- [ ] Identify which specific questions are missing
+- [ ] Check if conditional questions are being counted incorrectly
+- [ ] Verify all sections should show 100% when user filled everything out
+- [ ] Fix any calculation or data loading issues
+
+## Fix Configuration Files Showing 100% With No Files (Feb 10, 2026)
+- [x] Fix duplicate D.13 question ID (exists as both textarea and upload)
+- [x] Rename Configuration Files upload questions to unique IDs (CF.1-CF.5)
+- [x] Update progress calculation to only count upload questions as complete if files exist
+- [x] Test that Configuration Files shows 0% when no files uploaded (74 vitest tests passing)
+- [ ] Verify Boulder and RRAL show correct completion percentages in browser

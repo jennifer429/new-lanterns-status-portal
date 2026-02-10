@@ -591,7 +591,8 @@ export const adminRouter = router({
             return section.questions.map(q => ({
               id: q.id,
               sectionTitle: section.title,
-              isWorkflow: false
+              isWorkflow: false,
+              type: q.type // Pass question type for upload detection
             }));
           } else if (section.type === 'workflow') {
             // Workflow sections - count as 1 item each

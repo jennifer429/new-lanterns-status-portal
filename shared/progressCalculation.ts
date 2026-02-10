@@ -7,6 +7,7 @@ export interface Question {
   id: string | number;
   sectionTitle: string;
   isWorkflow?: boolean; // True for workflow sections
+  type?: string; // Question type: 'text', 'textarea', 'upload', 'dropdown', etc.
 }
 
 export interface Response {
@@ -81,13 +82,21 @@ export function calculateProgress(
         }
       }
     } else {
-      // For regular questions, check if question has a text response OR uploaded file
-      const resp = responseMap.get(q.id);
-      const hasResponse = resp && resp.response && resp.response.trim() !== '';
-      const hasFile = fileMap.has(q.id);
-      
-      if (hasResponse || hasFile) {
-        sectionStats[q.sectionTitle].completed++;
+      // For upload questions, ONLY count as complete if file exists
+      if (q.type === 'upload' || q.type === 'upload-download') {
+        const hasFile = fileMap.has(q.id);
+        if (hasFile) {
+          sectionStats[q.sectionTitle].completed++;
+        }
+      } else {
+        // For text/textarea/dropdown questions, check if question has a text response OR uploaded file
+        const resp = responseMap.get(q.id);
+        const hasResponse = resp && resp.response && resp.response.trim() !== '';
+        const hasFile = fileMap.has(q.id);
+        
+        if (hasResponse || hasFile) {
+          sectionStats[q.sectionTitle].completed++;
+        }
       }
     }
   });

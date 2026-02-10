@@ -109,11 +109,11 @@ export const questionnaireSections: Section[] = [
     title: 'Configuration Files',
     description: 'Required file uploads for configuration (IMPORTANT: Please de-identify all files before uploading)',
     questions: [
-      { id: 'D.13', text: 'Procedure code list: Please upload your list of all procedure codes with modality that you will be sending in the order message.', type: 'upload', notes: 'Required: Procedure code, Description, Modality. Optional: CPT, Body part, Subspecialty' },
-      { id: 'D.14', text: 'User list: Please upload a file of all users and their roles.', type: 'upload', notes: 'Required: User email, User name, Role (Admin/PACS Admin/Tech)' },
-      { id: 'D.15', text: 'Sample ORU report: Please upload a sample ORU report showing the expected format we will send to you', type: 'upload' },
-      { id: 'D.16', text: 'ORM/ORU specifications: Please upload your ORM specification and ORU specification if sending to New Lantern', type: 'upload' },
-      { id: 'D.17', text: 'Sample ORM report: Please upload a sample ORM report showing the expected format you will be sending', type: 'upload' },
+      { id: 'CF.1', text: 'Procedure code list: Please upload your list of all procedure codes with modality that you will be sending in the order message.', type: 'upload', notes: 'Required: Procedure code, Description, Modality. Optional: CPT, Body part, Subspecialty' },
+      { id: 'CF.2', text: 'User list: Please upload a file of all users and their roles.', type: 'upload', notes: 'Required: User email, User name, Role (Admin/PACS Admin/Tech)' },
+      { id: 'CF.3', text: 'Sample ORU report: Please upload a sample ORU report showing the expected format we will send to you', type: 'upload' },
+      { id: 'CF.4', text: 'ORM/ORU specifications: Please upload your ORM specification and ORU specification if sending to New Lantern', type: 'upload' },
+      { id: 'CF.5', text: 'Sample ORM report: Please upload a sample ORM report showing the expected format you will be sending', type: 'upload' },
     ],
   },
   {
