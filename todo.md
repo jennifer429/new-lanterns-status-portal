@@ -1580,3 +1580,12 @@
 - [x] Validate imported data before saving (basic validation)
 - [x] Show success/error messages for import operation
 - [ ] Test export/import round-trip with all question types
+
+## Fix VPN Section Answer Persistence (Feb 10, 2026)
+- [x] Debug why VPN section answers don't persist when user fills them out
+- [x] Check auto-save logic for VPN questions
+- [x] Verify VPN question IDs are correct in questionnaireData.ts
+- [x] Add explicit save to database when clicking "Save & Continue"
+- [x] Prevent navigation if save fails
+- [ ] Test VPN section with real data entry (user to verify)
+- [ ] Ensure answers reload correctly when user returns to VPN section (user to verify)

@@ -244,7 +244,9 @@ export default function IntakeNewRedesign() {
     
     const timer = setTimeout(() => {
       setSaveStatus("saving");
+      console.log('[VPN Debug] Auto-saving responses:', Object.keys(responses));
       Object.entries(responses).forEach(([questionId, value]) => {
+        console.log(`[VPN Debug] Saving ${questionId}:`, value);
         saveMutation.mutate({
           organizationSlug: slug,
           questionId,
@@ -1017,7 +1019,7 @@ export default function IntakeNewRedesign() {
                   Back to Overview
                 </Button>
                 <Button
-                  onClick={() => {
+                  onClick={async () => {
                     // Validate workflow sections
                     if (currentSectionData?.type === 'workflow') {
                       const configKey = currentSectionData.id + '_config';
@@ -1096,6 +1098,27 @@ export default function IntakeNewRedesign() {
                     
                     // Clear validation flags
                     setUnansweredQuestions(new Set());
+                    
+                    // IMPORTANT: Save all current responses to database before proceeding
+                    // This ensures responses are persisted even if auto-save hasn't completed
+                    try {
+                      setSaveStatus('saving');
+                      const savePromises = Object.entries(responses).map(([questionId, value]) => {
+                        return saveMutation.mutateAsync({
+                          organizationSlug: slug || '',
+                          questionId,
+                          response: typeof value === 'object' ? JSON.stringify(value) : String(value),
+                          userEmail: user?.email || '',
+                        });
+                      });
+                      
+                      await Promise.all(savePromises);
+                      setSaveStatus('saved');
+                    } catch (error) {
+                      console.error('Failed to save responses:', error);
+                      toast.error('Failed to save responses. Please try again.');
+                      return; // Don't proceed if save failed
+                    }
                     
                     if (!isLastSection) {
                       setCurrentSection(questionnaireSections[currentSectionIndex + 1].id);
