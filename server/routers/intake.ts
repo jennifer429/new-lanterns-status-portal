@@ -106,22 +106,21 @@ export const intakeRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this organization" });
       }
 
-      // Get all responses for this organization from new responses table
-      // Join with questions table to get the questionId string (e.g., "H.1", "A.2")
+      // Get all responses for this organization from intakeResponses table
+      // This must match the table used by saveResponse/saveResponses (intakeResponses)
       const responsesData = await db
         .select({
-          id: responses.id,
-          organizationId: responses.organizationId,
-          questionId: questions.questionId, // Get the string identifier from questions table
-          response: responses.response,
-          fileUrl: responses.fileUrl,
-          userEmail: responses.userEmail,
-          createdAt: responses.createdAt,
-          updatedAt: responses.updatedAt,
+          id: intakeResponses.id,
+          organizationId: intakeResponses.organizationId,
+          questionId: intakeResponses.questionId, // Already a string (e.g., "H.1", "A.2")
+          response: intakeResponses.response,
+          fileUrl: intakeResponses.fileUrl,
+          userEmail: intakeResponses.updatedBy,
+          createdAt: intakeResponses.createdAt,
+          updatedAt: intakeResponses.updatedAt,
         })
-        .from(responses)
-        .leftJoin(questions, eq(responses.questionId, questions.id))
-        .where(eq(responses.organizationId, org.id));
+        .from(intakeResponses)
+        .where(eq(intakeResponses.organizationId, org.id));
 
       // Include organization name in each response
       const responsesWithOrgName = responsesData.map(r => ({
@@ -327,45 +326,54 @@ export const intakeRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this organization" });
       }
 
-      // Get all responses for this organization with question details
+      // Get all responses for this organization from intakeResponses table
+      // This must match the table used by saveResponse/saveResponses
       const responsesData = await db
-        .select({
-          response: responses,
-          question: questions,
-        })
-        .from(responses)
-        .leftJoin(questions, eq(responses.questionId, questions.id))
-        .where(eq(responses.organizationId, org.id));
+        .select()
+        .from(intakeResponses)
+        .where(eq(intakeResponses.organizationId, org.id));
 
-      // Get total question count from database
-      const [{ count: totalQuestions }] = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(questions);
+      // Get total question count from the questionnaire data (source of truth)
+      // The questions table may be incomplete, so we use the shared questionnaire data
+      const { questionnaireSections } = await import("../../shared/questionnaireData");
+      const totalQuestions = questionnaireSections.reduce(
+        (sum: number, section: any) => sum + (section.questions?.length || 0),
+        0
+      );
 
-      // Calculate completion by section
-      const sectionProgress: Record<string, { total: number; completed: number }> = {};
+      // Calculate completion by section using intakeResponses data
+      const sectionProgressMap: Record<string, { total: number; completed: number }> = {};
 
-      responsesData.forEach(({ response, question }) => {
-        if (!question) return;
-        const section = question.sectionId;
-        if (!sectionProgress[section]) {
-          sectionProgress[section] = { total: 0, completed: 0 };
+      // Build a map of questionId -> sectionId from questionnaire data
+      const questionToSection: Record<string, string> = {};
+      questionnaireSections.forEach((section: any) => {
+        if (section.questions) {
+          section.questions.forEach((q: any) => {
+            questionToSection[q.id] = section.id;
+          });
         }
-        sectionProgress[section].total++;
+      });
+
+      responsesData.forEach((response) => {
+        const section = questionToSection[response.questionId] || 'unknown';
+        if (!sectionProgressMap[section]) {
+          sectionProgressMap[section] = { total: 0, completed: 0 };
+        }
+        sectionProgressMap[section].total++;
         if (response.response && response.response.trim() !== '') {
-          sectionProgress[section].completed++;
+          sectionProgressMap[section].completed++;
         }
       });
 
       // Calculate overall completion
-      const completedCount = responsesData.filter(({ response }) => 
+      const completedCount = responsesData.filter((response) => 
         response.response && response.response.trim() !== ''
       ).length;
 
       return {
         totalQuestions,
         completedQuestions: completedCount,
-        sectionProgress,
+        sectionProgress: sectionProgressMap,
       };
     }),
 
