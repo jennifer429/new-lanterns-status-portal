@@ -1612,3 +1612,11 @@
 - [x] Fixed validation to use correct section IDs (reports-out-workflow not reports-workflow)
 - [x] Fixed validation to map path keys to correct system keys (reportsToPortal → reportsPortalDestination)
 - [ ] Test workflow save after fixing the validation logic
+
+## Fix Progress Calculation to Count Workflow Sections (Feb 10, 2026)
+- [x] Change progress calculation from question-based to item-based
+- [x] Count each workflow section as 1 item (not 0 questions)
+- [x] Update display from "X/48 questions" to "X/54 items" (dynamic counting)
+- [x] Ensure workflow sections contribute to overall progress percentage
+- [x] Made counting fully dynamic (no hardcoded numbers)
+- [ ] Test progress calculation with different completion states

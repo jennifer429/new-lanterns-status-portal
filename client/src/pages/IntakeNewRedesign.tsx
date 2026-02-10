@@ -872,30 +872,74 @@ export default function IntakeNewRedesign() {
                 <div className="flex items-center gap-3">
                   <Progress 
                     value={(() => {
-                      const totalQuestions = questionnaireSections.reduce((sum, s) => sum + (s.questions?.length || 0), 0);
-                      const answeredQuestions = questionnaireSections.reduce((sum, section) => {
+                      // Count total items: questions + workflow sections
+                      const totalItems = questionnaireSections.reduce((sum, s) => {
+                        if (s.type === 'workflow') return sum + 1; // Each workflow counts as 1 item
+                        return sum + (s.questions?.length || 0); // Count questions
+                      }, 0);
+                      
+                      // Count answered items
+                      const answeredItems = questionnaireSections.reduce((sum, section) => {
+                        if (section.type === 'workflow') {
+                          // Check if workflow is configured (has at least one path selected)
+                          const configKey = section.id + '_config';
+                          const savedConfig = responses[configKey];
+                          if (savedConfig) {
+                            try {
+                              const config = typeof savedConfig === 'string' ? JSON.parse(savedConfig) : savedConfig;
+                              const hasSelectedPaths = Object.values(config.paths || {}).some(v => v === true);
+                              return sum + (hasSelectedPaths ? 1 : 0);
+                            } catch {
+                              return sum;
+                            }
+                          }
+                          return sum;
+                        }
+                        // Count answered questions
                         return sum + (section.questions?.filter(q => {
                           const hasResponse = responses[q.id];
                           const hasUploadedFile = allUploadedFiles.some(f => f.questionId === q.id);
                           return hasResponse || hasUploadedFile;
                         }).length || 0);
                       }, 0);
-                      return Math.round((answeredQuestions / totalQuestions) * 100);
+                      
+                      return Math.round((answeredItems / totalItems) * 100);
                     })()} 
                     className="w-48 h-2"
                   />
                   <span className="text-lg font-bold">
                     {(() => {
-                      const totalQuestions = questionnaireSections.reduce((sum, s) => sum + (s.questions?.length || 0), 0);
-                      const answeredQuestions = questionnaireSections.reduce((sum, section) => {
+                      // Count total items: questions + workflow sections
+                      const totalItems = questionnaireSections.reduce((sum, s) => {
+                        if (s.type === 'workflow') return sum + 1;
+                        return sum + (s.questions?.length || 0);
+                      }, 0);
+                      
+                      // Count answered items
+                      const answeredItems = questionnaireSections.reduce((sum, section) => {
+                        if (section.type === 'workflow') {
+                          const configKey = section.id + '_config';
+                          const savedConfig = responses[configKey];
+                          if (savedConfig) {
+                            try {
+                              const config = typeof savedConfig === 'string' ? JSON.parse(savedConfig) : savedConfig;
+                              const hasSelectedPaths = Object.values(config.paths || {}).some(v => v === true);
+                              return sum + (hasSelectedPaths ? 1 : 0);
+                            } catch {
+                              return sum;
+                            }
+                          }
+                          return sum;
+                        }
                         return sum + (section.questions?.filter(q => {
                           const hasResponse = responses[q.id];
                           const hasUploadedFile = allUploadedFiles.some(f => f.questionId === q.id);
                           return hasResponse || hasUploadedFile;
                         }).length || 0);
                       }, 0);
-                      return `${answeredQuestions}/${totalQuestions}`;
-                    })()} questions
+                      
+                      return `${answeredItems}/${totalItems}`;
+                    })()} items
                   </span>
                 </div>
               </div>
