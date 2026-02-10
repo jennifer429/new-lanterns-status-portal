@@ -563,22 +563,15 @@ export const adminRouter = router({
         const { questionnaireSections } = await import("../../shared/questionnaireData");
         
         // Get responses and files for this org
-        // Join with questions table to get string questionIds (e.g., "H.1", "A.2")
-        const { responses: responsesTable } = await import("../../drizzle/schema");
+        // Read from intakeResponses table (where saveResponse writes to)
+        const { intakeResponses } = await import("../../drizzle/schema");
         const orgResponses = await db
           .select({
-            id: responsesTable.id,
-            organizationId: responsesTable.organizationId,
-            questionId: questions.questionId, // Get string identifier from questions table
-            response: responsesTable.response,
-            fileUrl: responsesTable.fileUrl,
-            userEmail: responsesTable.userEmail,
-            createdAt: responsesTable.createdAt,
-            updatedAt: responsesTable.updatedAt,
+            questionId: intakeResponses.questionId,
+            response: intakeResponses.response,
           })
-          .from(responsesTable)
-          .leftJoin(questions, eq(responsesTable.questionId, questions.id))
-          .where(eq(responsesTable.organizationId, org.id));
+          .from(intakeResponses)
+          .where(eq(intakeResponses.organizationId, org.id));
         const orgFiles = await db
           .select()
           .from(intakeFileAttachments)

@@ -426,14 +426,24 @@ export const intakeRouter = router({
       }
 
       // Get question details for short title
-      const [question] = await db
+      // Use questionnaireData as primary source (it has ALL questions), DB as optional enhancement
+      const { questionnaireSections } = await import("../../shared/questionnaireData");
+      let shortTitle = input.questionId; // Default fallback
+      for (const section of questionnaireSections) {
+        const found = section.questions?.find(q => q.id === input.questionId);
+        if (found) {
+          shortTitle = found.text.split(/[:\-,]/)[0].trim().replace(/[^a-zA-Z0-9]/g, '-').substring(0, 40);
+          break;
+        }
+      }
+      // Also check DB for a curated shortTitle (optional, won't fail if missing)
+      const [dbQuestion] = await db
         .select()
         .from(questions)
         .where(eq(questions.questionId, input.questionId))
         .limit(1);
-      
-      if (!question) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Question not found" });
+      if (dbQuestion?.shortTitle) {
+        shortTitle = dbQuestion.shortTitle;
       }
 
       // Decode base64 file data
@@ -445,7 +455,7 @@ export const intakeRouter = router({
         const fileExt = input.fileName.split('.').pop();
         const sanitizedEmail = input.userEmail.replace(/@/g, '-at-').replace(/[^a-zA-Z0-9.-]/g, '_');
         const sanitizedOrgName = org.name.replace(/[^a-zA-Z0-9-]/g, '_');
-        const fileName = `${sanitizedOrgName}_${sanitizedEmail}_${input.questionId}-${question.shortTitle}_${timestamp}.${fileExt}`;
+        const fileName = `${sanitizedOrgName}_${sanitizedEmail}_${input.questionId}-${shortTitle}_${timestamp}.${fileExt}`;
         
         // Upload to S3 using built-in storage helper
         const { storagePut } = await import("../storage");
