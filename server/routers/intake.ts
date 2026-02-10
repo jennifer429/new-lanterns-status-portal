@@ -380,7 +380,7 @@ export const intakeRouter = router({
       return {
         totalQuestions,
         completedQuestions: completedCount,
-        sectionProgress: sectionProgressMap,
+        sectionProgress,
       };
     }),
 
