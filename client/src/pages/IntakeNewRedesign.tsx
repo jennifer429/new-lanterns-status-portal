@@ -29,6 +29,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { questionnaireSections, type Question, type Section } from "@shared/questionnaireData";
 import { toast } from "sonner";
 import { WorkflowDiagram } from "@/components/WorkflowDiagram";
+import { TranscriptImporter } from "@/components/TranscriptImporter";
 
 // Section icons mapping
 const sectionIcons: Record<string, any> = {
@@ -958,6 +959,17 @@ export default function IntakeNewRedesign() {
         <div className="flex-1 overflow-y-auto p-8">
           <Card className="max-w-6xl mx-auto bg-black/40 backdrop-blur-sm border-purple-500/20">
             <div className="p-8">
+              {/* AI Transcript Importer - Always visible at top */}
+              <div className="mb-6">
+                <TranscriptImporter 
+                  organizationSlug={slug || ''}
+                  onImportComplete={() => {
+                    // Refetch responses after import
+                    utils.intake.getResponses.invalidate({ organizationSlug: slug || '' });
+                  }}
+                />
+              </div>
+
               {/* Section Header */}
               <div className="mb-6">
                 <h2 className="text-2xl font-bold mb-2">{currentSectionData?.title}</h2>
