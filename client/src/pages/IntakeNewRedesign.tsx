@@ -281,6 +281,17 @@ export default function IntakeNewRedesign() {
         organizationSlug: slug || "",
       });
     },
+    onError: (error, variables) => {
+      // Clear uploading state even on error
+      setUploadingFiles(prev => {
+        const next = new Set(prev);
+        next.delete(variables.questionId);
+        return next;
+      });
+      // Show error toast
+      console.error('File upload failed:', error);
+      alert(`File upload failed: ${error.message}. Please try again.`);
+    },
   });
 
   // Delete file mutation

@@ -1700,3 +1700,16 @@
 - [x] Update progress calculation to only count upload questions as complete if files exist
 - [x] Test that Configuration Files shows 0% when no files uploaded (74 vitest tests passing)
 - [ ] Verify Boulder and RRAL show correct completion percentages in browser
+
+## Remove Deprecated Unload Event Listener (Feb 10, 2026)
+- [ ] Find unload event listener in Admin.tsx around line 79
+- [ ] Remove or replace with modern alternative (visibilitychange or pagehide)
+- [ ] Test that deprecation warning no longer appears
+
+## Fix File Uploads Stuck in "Uploading..." State (Feb 10, 2026)
+- [x] Find file upload component in IntakeNewRedesign.tsx (line 263)
+- [x] Check if uploadFile mutation onSuccess is being called
+- [x] Check if loading state is being reset after upload completes
+- [x] Identified issue: No onError handler, so failed uploads never clear loading state
+- [x] Fix the upload completion logic (added onError handler)
+- [x] Ready to test in production (dev server broken due to EMFILE)
