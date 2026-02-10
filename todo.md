@@ -1529,3 +1529,35 @@
 - [x] Update getBySlug to include clientName in response
 - [x] Update header to use org.clientName instead of hardcoded "Radiology One"
 - [x] Boulder now shows "SRV - Boulder" in header
+
+## Add Partner Selection to User Management (Feb 10, 2026)
+- [ ] Add partner/clientId dropdown to create user form
+- [ ] Add partner/clientId dropdown to edit user dialog
+- [ ] Platform admins: show editable dropdown with all partners
+- [ ] Partner admins: auto-populate with their clientId and make read-only
+- [ ] Update createUser mutation to accept and save clientId
+- [ ] Update editUser mutation to accept and save clientId
+- [ ] Test creating and editing users with different partners
+
+## Fix Organization Name Display in Header (Feb 10, 2026)
+- [ ] Change header from displaying slug to displaying org.name
+- [ ] Keep slug in URL but show actual organization name in header
+- [ ] Verify renamed organizations show updated name in header
+
+## Fix Organization Name Display in Header (Feb 10, 2026)
+- [x] Change header from displaying slug to displaying org.name
+- [x] Keep slug in URL but show actual organization name in header
+- [x] Example: RRMC renamed to RRAL now shows "SRV - RRAL" not "SRV - RRMC"
+
+## Fix Workflow Diagram Responses Not Saving (Feb 10, 2026)
+- [ ] Debug why workflow diagram selections don't save
+- [ ] Fix workflow responses not counting toward completion percentage
+- [ ] Fix workflow data not exporting in CSV
+- [ ] Test Priors Workflow saves correctly
+- [ ] Test Reports Out Workflow saves correctly
+- [ ] Verify completion percentage updates when workflow is filled
+
+## Fix Organization Name Not Updating After Rename (Feb 10, 2026)
+- [x] Add cache invalidation when organization is renamed (refetchOrgs in updateOrgMutation)
+- [x] Admin panel shows updated names immediately
+- [ ] Test: Rename Boulder to "Boulder Community Health" and verify header updates after page refresh

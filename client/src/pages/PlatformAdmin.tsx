@@ -58,6 +58,7 @@ export default function PlatformAdmin() {
   const [newUserName, setNewUserName] = useState("");
   const [newUserOrgId, setNewUserOrgId] = useState<number | undefined>();
   const [newUserRole, setNewUserRole] = useState<"user" | "admin">("user");
+  const [newUserClientId, setNewUserClientId] = useState<number | null>(null);
 
   // Edit user dialog state
   const [isEditUserDialogOpen, setIsEditUserDialogOpen] = useState(false);
@@ -66,6 +67,7 @@ export default function PlatformAdmin() {
   const [editUserEmail, setEditUserEmail] = useState("");
   const [editUserRole, setEditUserRole] = useState<"user" | "admin">("user");
   const [editUserOrgId, setEditUserOrgId] = useState<number | null>(null);
+  const [editUserClientId, setEditUserClientId] = useState<number | null>(null);
 
   // Reactivate user dialog state
   const [isReactivateDialogOpen, setIsReactivateDialogOpen] = useState(false);
@@ -175,12 +177,20 @@ export default function PlatformAdmin() {
       return;
     }
 
+    // Platform admins must select a partner; partner admins use their own clientId
+    const clientIdToUse = isPlatformAdmin ? newUserClientId : user?.clientId;
+    
+    if (isPlatformAdmin && !clientIdToUse) {
+      toast.error("Please select a partner");
+      return;
+    }
+
     createUserMutation.mutate({
       email: newUserEmail,
       name: newUserName,
       organizationId: newUserOrgId,
       role: newUserRole,
-      clientId: user?.clientId || null,
+      clientId: clientIdToUse,
     });
   };
 
@@ -330,6 +340,7 @@ export default function PlatformAdmin() {
       setEditOrgName("");
       setEditOrgSlug("");
       setEditOrgClientId(null);
+      refetchOrgs(); // Refresh organization list to show updated name
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to update organization");
@@ -1135,6 +1146,39 @@ export default function PlatformAdmin() {
                           ))}
                         </SelectContent>
                       </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="userPartner">
+                        Partner {isPlatformAdmin && <span className="text-destructive">*</span>}
+                      </Label>
+                      <Select
+                        value={newUserClientId?.toString() || (user?.clientId?.toString() || "")}
+                        onValueChange={(value) => setNewUserClientId(parseInt(value))}
+                        disabled={!isPlatformAdmin}
+                      >
+                        <SelectTrigger id="userPartner">
+                          <SelectValue placeholder="Select partner" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {isPlatformAdmin ? (
+                            clients?.map(client => (
+                              <SelectItem key={client.id} value={client.id.toString()}>
+                                {client.name}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            user?.clientId && clients?.find(c => c.id === user.clientId) && (
+                              <SelectItem value={user.clientId.toString()}>
+                                {clients.find(c => c.id === user.clientId)?.name}
+                              </SelectItem>
+                            )
+                          )}
+                        </SelectContent>
+                      </Select>
+                      {!isPlatformAdmin && (
+                        <p className="text-xs text-muted-foreground">Partner is auto-assigned based on your account</p>
+                      )}
                     </div>
 
                     <div className="space-y-2">
