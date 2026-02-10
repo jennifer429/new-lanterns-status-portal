@@ -1,0 +1,8 @@
+{
+  "query": "SELECT questionId, LEFT(response, 80) as response_sample, COUNT(*) as count \nFROM intakeResponses \nGROUP BY questionId \nORDER BY questionId;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT questionId, LEFT(response, 80) as response_sample, COUNT(*) as count \nFROM intakeResponses \nGROUP BY questionId \nORDER BY questionId;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1055 (42000) at line 1: Expression #2 of SELECT list is not in GROUP BY clause and contains nonaggregated column 'hgGEXRHUCG7apwzJRKH7LF.intakeResponses.response' which is not functionally dependent on columns in GROUP BY clause; this is incompatible with sql_mode=only_full_group_by"
+  ]
+}

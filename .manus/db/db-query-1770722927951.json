@@ -1,0 +1,55 @@
+{
+  "query": "SELECT DISTINCT questionId FROM intakeResponses ORDER BY questionId LIMIT 50;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT DISTINCT questionId FROM intakeResponses ORDER BY questionId LIMIT 50;",
+  "rows": [
+    {
+      "questionId": "A.1"
+    },
+    {
+      "questionId": "A.2"
+    },
+    {
+      "questionId": "A.3"
+    },
+    {
+      "questionId": "A.4"
+    },
+    {
+      "questionId": "A.5"
+    },
+    {
+      "questionId": "A.6"
+    },
+    {
+      "questionId": "H.1"
+    },
+    {
+      "questionId": "H.2"
+    },
+    {
+      "questionId": "H.3"
+    },
+    {
+      "questionId": "INFO.1"
+    },
+    {
+      "questionId": "INFO.3"
+    },
+    {
+      "questionId": "L.10"
+    },
+    {
+      "questionId": "L.2"
+    },
+    {
+      "questionId": "L.7"
+    },
+    {
+      "questionId": "L.9"
+    }
+  ],
+  "messages": [],
+  "stdout": "questionId\nA.1\nA.2\nA.3\nA.4\nA.5\nA.6\nH.1\nH.2\nH.3\nINFO.1\nINFO.3\nL.10\nL.2\nL.7\nL.9\n",
+  "stderr": "",
+  "execution_time_ms": 70
+}

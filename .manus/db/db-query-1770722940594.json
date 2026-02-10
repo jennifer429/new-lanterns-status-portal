@@ -1,0 +1,70 @@
+{
+  "query": "SELECT questionId, COUNT(*) as count \nFROM intakeResponses \nGROUP BY questionId \nORDER BY questionId;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT questionId, COUNT(*) as count \nFROM intakeResponses \nGROUP BY questionId \nORDER BY questionId;",
+  "rows": [
+    {
+      "questionId": "A.1",
+      "count": "1"
+    },
+    {
+      "questionId": "A.2",
+      "count": "1"
+    },
+    {
+      "questionId": "A.3",
+      "count": "1"
+    },
+    {
+      "questionId": "A.4",
+      "count": "1"
+    },
+    {
+      "questionId": "A.5",
+      "count": "1"
+    },
+    {
+      "questionId": "A.6",
+      "count": "1"
+    },
+    {
+      "questionId": "H.1",
+      "count": "1"
+    },
+    {
+      "questionId": "H.2",
+      "count": "1"
+    },
+    {
+      "questionId": "H.3",
+      "count": "1"
+    },
+    {
+      "questionId": "INFO.1",
+      "count": "3"
+    },
+    {
+      "questionId": "INFO.3",
+      "count": "1"
+    },
+    {
+      "questionId": "L.10",
+      "count": "1"
+    },
+    {
+      "questionId": "L.2",
+      "count": "1"
+    },
+    {
+      "questionId": "L.7",
+      "count": "1"
+    },
+    {
+      "questionId": "L.9",
+      "count": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "questionId\tcount\nA.1\t1\nA.2\t1\nA.3\t1\nA.4\t1\nA.5\t1\nA.6\t1\nH.1\t1\nH.2\t1\nH.3\t1\nINFO.1\t3\nINFO.3\t1\nL.10\t1\nL.2\t1\nL.7\t1\nL.9\t1\n",
+  "stderr": "",
+  "execution_time_ms": 64
+}

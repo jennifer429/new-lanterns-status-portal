@@ -1036,15 +1036,37 @@ export default function IntakeNewRedesign() {
                           if (selectedPathKeys.length === 0) {
                             errorMessage = 'Please select at least one workflow path';
                           } else {
-                            // Check if all selected paths have system names
-                            const missingSystems = selectedPathKeys.filter(pathKey => {
-                              const systemValue = config.systems?.[pathKey];
-                              return !systemValue || systemValue.trim() === '';
-                            });
+                            // For workflows that require system names (priors, reports), check if they're filled
+                            // Orders and Images workflows have fixed systems, so they don't need system name validation
+                            const workflowsRequiringSystemNames = ['priors-workflow', 'reports-out-workflow'];
+                            const requiresSystemNames = workflowsRequiringSystemNames.includes(currentSectionData.id);
                             
-                            if (missingSystems.length > 0) {
-                              errorMessage = 'Please fill in system names for all selected workflow paths';
+                            if (requiresSystemNames) {
+                              // Map path keys to their corresponding system keys
+                              const pathToSystemKeyMap: Record<string, string> = {
+                                // Priors workflow
+                                'priorsPush': 'priorsPushSource',
+                                'priorsQuery': 'priorsQuerySource',
+                                // Reports workflow  
+                                'reportsToPortal': 'reportsPortalDestination',
+                              };
+                              
+                              const missingSystems = selectedPathKeys.filter(pathKey => {
+                                // If this path doesn't need a system name input, skip it
+                                const systemKey = pathToSystemKeyMap[pathKey];
+                                if (!systemKey) return false;
+                                
+                                const systemValue = config.systems?.[systemKey];
+                                return !systemValue || systemValue.trim() === '';
+                              });
+                              
+                              if (missingSystems.length > 0) {
+                                errorMessage = 'Please fill in system names for all selected workflow paths';
+                              } else {
+                                isValid = true;
+                              }
                             } else {
+                              // Orders and Images workflows are valid if at least one path is selected
                               isValid = true;
                             }
                           }

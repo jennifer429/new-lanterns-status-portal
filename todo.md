@@ -1589,3 +1589,26 @@
 - [x] Prevent navigation if save fails
 - [ ] Test VPN section with real data entry (user to verify)
 - [ ] Ensure answers reload correctly when user returns to VPN section (user to verify)
+
+## Test Workflow Export/Import and Calculations (Feb 10, 2026)
+- [ ] Test exporting workflow sections (Orders, Images, Priors, Reports)
+- [ ] Verify workflow paths, systems, and notes are in export file
+- [ ] Test importing workflow data back into the system
+- [ ] Verify workflow configurations are reconstructed correctly
+- [ ] Check if workflow data affects any calculations or summaries
+- [ ] Ensure workflow data displays correctly after import
+
+## Fix Overall Progress Calculation Bug (Feb 10, 2026)
+- [ ] Debug why "Overall Progress" shows "2/48 questions" instead of correct count
+- [ ] Fix progress calculation to properly handle workflow sections (they don't have traditional questions)
+- [ ] Ensure workflow sections are counted correctly in overall progress
+- [ ] Verify progress percentages match actual completion state
+- [ ] Test with different combinations of completed sections
+
+## Fix Workflow System Name Not Saving (Feb 10, 2026)
+- [x] Debug why workflow system names don't save when typed in the input field
+- [x] Identified that Orders/Images workflows don't have system name inputs (fixed systems)
+- [x] Fixed validation to not require system names for Orders/Images workflows
+- [x] Fixed validation to use correct section IDs (reports-out-workflow not reports-workflow)
+- [x] Fixed validation to map path keys to correct system keys (reportsToPortal → reportsPortalDestination)
+- [ ] Test workflow save after fixing the validation logic
