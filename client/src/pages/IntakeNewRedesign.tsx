@@ -637,7 +637,7 @@ export default function IntakeNewRedesign() {
         {/* Header */}
         <header className="border-b border-purple-500/20 bg-black/40 backdrop-blur-sm">
           <div className="px-8 py-4 flex items-center justify-between">
-            <h1 className="text-xl font-bold">Radiology One - {slug ? slug.charAt(0).toUpperCase() + slug.slice(1) : ''}</h1>
+            <h1 className="text-xl font-bold">{org?.clientName || 'Loading...'} - {slug ? slug.charAt(0).toUpperCase() + slug.slice(1) : ''}</h1>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"

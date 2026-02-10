@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { organizations, sectionProgress, taskCompletion, activityFeed, users, intakeResponses, questions, responses, intakeFileAttachments } from "../../drizzle/schema";
+import { organizations, clients, sectionProgress, taskCompletion, activityFeed, users, intakeResponses, questions, responses, intakeFileAttachments } from "../../drizzle/schema";
 import { questionnaireSections } from "../../shared/questionnaireData";
 import { calculateProgress } from "../../shared/progressCalculation";
 import { eq, and, desc, count, sql } from "drizzle-orm";
@@ -54,7 +54,20 @@ export const organizationsRouter = router({
         throw new Error("Organization not found");
       }
 
-      return org;
+      // Fetch client name if clientId exists
+      let clientName = "Unknown Client";
+      if (org.clientId) {
+        const [client] = await db
+          .select()
+          .from(clients)
+          .where(eq(clients.id, org.clientId))
+          .limit(1);
+        if (client) {
+          clientName = client.name;
+        }
+      }
+
+      return { ...org, clientName };
     }),
 
   /**

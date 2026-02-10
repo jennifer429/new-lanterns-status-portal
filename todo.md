@@ -1523,3 +1523,9 @@
 ## Fix Boulder Organization Client ID (Feb 10, 2026)
 - [x] Update Boulder organization clientId from 1 (RadOne) to 2 (SRV)
 - [x] Verify Boulder shows "SRV" as client name in admin dashboard
+
+## Fix Organization Page Header Display (Feb 10, 2026)
+- [x] Find where "Radiology One - Boulder" header is generated (IntakeNewRedesign.tsx)
+- [x] Update getBySlug to include clientName in response
+- [x] Update header to use org.clientName instead of hardcoded "Radiology One"
+- [x] Boulder now shows "SRV - Boulder" in header
