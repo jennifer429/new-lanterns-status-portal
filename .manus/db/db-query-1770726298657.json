@@ -1,0 +1,13 @@
+{
+  "query": "SELECT COUNT(*) as total_responses FROM intakeResponses WHERE organizationId = (SELECT id FROM organizations WHERE slug = 'RRMC');",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT COUNT(*) as total_responses FROM intakeResponses WHERE organizationId = (SELECT id FROM organizations WHERE slug = 'RRMC');",
+  "rows": [
+    {
+      "total_responses": "46"
+    }
+  ],
+  "messages": [],
+  "stdout": "total_responses\n46\n",
+  "stderr": "",
+  "execution_time_ms": 61
+}

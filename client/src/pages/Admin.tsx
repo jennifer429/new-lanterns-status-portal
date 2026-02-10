@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { questionnaireSections } from "@shared/questionnaireData";
+import { transformSectionProgress } from "@/lib/adminUtils";
 import { Link } from "wouter";
 import { ExternalLink, Building2, Calendar, CheckCircle2, Clock, Users, TrendingUp, Activity, FileText, Download, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";

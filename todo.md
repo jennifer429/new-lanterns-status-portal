@@ -1657,3 +1657,17 @@
 - [x] Fixed admin.ts to include workflow sections as 1 item each
 - [x] Fixed organizations.ts to include workflow sections in progress
 - [ ] Test that completing all sections shows 100% and checkmarks appear
+
+## Fix Progress Not Updating After Saves (Feb 10, 2026)
+- [x] Debug why progress percentage doesn't increase after saving sections
+- [x] Confirmed responses ARE being saved to database (G.5, G.6, G.7 exist in DB)
+- [ ] Fix backend getResponses to return ALL responses (not filtering by questions table)
+- [ ] Verify frontend loads all responses into form fields
+- [ ] Test that progress percentage updates correctly after saves
+- [ ] Ensure checkmarks appear for completed sections
+
+## Refactor Duplicated Code (Feb 10, 2026)
+- [x] Create shared utility function for sectionProgress transformation
+- [x] Update Admin.tsx to use shared utility
+- [x] Update PlatformAdmin.tsx to use shared utility
+- [x] Test that both admin pages work correctly with shared function

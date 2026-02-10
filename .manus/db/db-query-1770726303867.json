@@ -1,0 +1,40 @@
+{
+  "query": "SELECT questionId FROM intakeResponses WHERE organizationId = (SELECT id FROM organizations WHERE slug = 'RRMC') ORDER BY updatedAt DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT questionId FROM intakeResponses WHERE organizationId = (SELECT id FROM organizations WHERE slug = 'RRMC') ORDER BY updatedAt DESC LIMIT 10;",
+  "rows": [
+    {
+      "questionId": "A.6.1"
+    },
+    {
+      "questionId": "L.11"
+    },
+    {
+      "questionId": "images-workflow_config"
+    },
+    {
+      "questionId": "priors-workflow_config"
+    },
+    {
+      "questionId": "reports-out-workflow_config"
+    },
+    {
+      "questionId": "G.7"
+    },
+    {
+      "questionId": "G.5"
+    },
+    {
+      "questionId": "G.6"
+    },
+    {
+      "questionId": "E.6.1"
+    },
+    {
+      "questionId": "E.5.1"
+    }
+  ],
+  "messages": [],
+  "stdout": "questionId\nA.6.1\nL.11\nimages-workflow_config\npriors-workflow_config\nreports-out-workflow_config\nG.7\nG.5\nG.6\nE.6.1\nE.5.1\n",
+  "stderr": "",
+  "execution_time_ms": 55
+}

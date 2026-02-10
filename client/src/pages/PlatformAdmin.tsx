@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
+import { transformSectionProgress, getInProgressSections } from "@/lib/adminUtils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -591,21 +592,9 @@ export default function PlatformAdmin() {
                   const filesCount = orgMetrics?.files.length || 0;
                   const userCount = orgMetrics?.userCount || 0;
 
-                  // Get section progress
-                  const sectionProgress = [
-                    { name: "Organization Information", progress: orgMetrics?.sectionProgress?.organizationInfo || 0 },
-                    { name: "Orders Workflow", progress: orgMetrics?.sectionProgress?.ordersWorkflow || 0 },
-                    { name: "Images Workflow", progress: orgMetrics?.sectionProgress?.imagesWorkflow || 0 },
-                    { name: "Priors Workflow", progress: orgMetrics?.sectionProgress?.priorsWorkflow || 0 },
-                    { name: "Reports Out", progress: orgMetrics?.sectionProgress?.reportsOutWorkflow || 0 },
-                    { name: "Data & Integration", progress: orgMetrics?.sectionProgress?.dataIntegration || 0 },
-                    { name: "Configuration Files", progress: orgMetrics?.sectionProgress?.configurationFiles || 0 },
-                    { name: "VPN & Connectivity", progress: orgMetrics?.sectionProgress?.vpnConnectivity || 0 },
-                    { name: "HL7 Configuration", progress: orgMetrics?.sectionProgress?.hl7Configuration || 0 },
-                  ];
-
-                  // Show only sections in progress (> 0%)
-                  const inProgressSections = sectionProgress.filter(s => s.progress > 0);
+                  // Convert sectionProgress using shared utility
+                  const sectionProgress = transformSectionProgress(orgMetrics?.sectionProgress);
+                  const inProgressSections = getInProgressSections(sectionProgress);
 
                   return (
                     <Card key={org.id} className="border-2 border-primary/30 bg-gradient-to-b from-card to-card/50">

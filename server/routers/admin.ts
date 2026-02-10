@@ -621,16 +621,13 @@ export const adminRouter = router({
           "HL7 Configuration": "hl7Configuration"
         };
         
-        const sectionProgress: Record<string, number> = {};
+        const sectionProgress: Record<string, {completed: number, total: number}> = {};
         Object.entries(progress.sectionProgress).forEach(([title, stats]) => {
-          const sectionId = sectionTitleToId[title];
-          if (sectionId) {
-            const percent = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
-            sectionProgress[sectionId] = percent;
-          }
+          // Use title as key (not sectionId) to match frontend expectations
+          sectionProgress[title] = stats;
         });
         
-        const sectionsComplete = Object.values(sectionProgress).filter(p => p === 100).length;
+        const sectionsComplete = Object.values(sectionProgress).filter(stats => stats.completed === stats.total && stats.total > 0).length;
 
         // Get files
         const files = await db

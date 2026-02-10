@@ -1,0 +1,22 @@
+{
+  "query": "SELECT questionId, response FROM intakeResponses WHERE organizationId = (SELECT id FROM organizations WHERE slug = 'RRMC') AND questionId IN ('G.5', 'G.6', 'G.7');",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT questionId, response FROM intakeResponses WHERE organizationId = (SELECT id FROM organizations WHERE slug = 'RRMC') AND questionId IN ('G.5', 'G.6', 'G.7');",
+  "rows": [
+    {
+      "questionId": "G.5",
+      "response": "d"
+    },
+    {
+      "questionId": "G.7",
+      "response": "d"
+    },
+    {
+      "questionId": "G.6",
+      "response": "d"
+    }
+  ],
+  "messages": [],
+  "stdout": "questionId\tresponse\nG.5\td\nG.7\td\nG.6\td\n",
+  "stderr": "",
+  "execution_time_ms": 56
+}

@@ -97,6 +97,45 @@ describe('Progress Calculation', () => {
     expect(result.sectionProgress['Section 2'].total).toBe(2);
   });
 
+  it('should handle workflow sections correctly', () => {
+    const questions = [
+      { id: 'H.1', sectionTitle: 'Organization Information', isWorkflow: false },
+      { id: 'orders-workflow_config', sectionTitle: 'Orders Workflow', isWorkflow: true },
+      { id: 'priors-workflow_config', sectionTitle: 'Priors Workflow', isWorkflow: true },
+    ];
+    const responses = [
+      { questionId: 'H.1', response: 'Test Org' },
+      { questionId: 'orders-workflow_config', response: JSON.stringify({ paths: { risToNewLantern: true }, systems: {}, notes: {} }) },
+      // priors-workflow has no response (not configured)
+    ];
+    const files: any[] = [];
+
+    const result = calculateProgress(questions, responses, files);
+
+    // H.1 complete, orders-workflow complete (has path), priors-workflow incomplete
+    expect(result.completedQuestions).toBe(2);
+    expect(result.totalQuestions).toBe(3);
+    expect(result.completionPercentage).toBe(67); // 2/3 = 66.67% rounded to 67
+    expect(result.sectionProgress['Organization Information'].completed).toBe(1);
+    expect(result.sectionProgress['Orders Workflow'].completed).toBe(1);
+    expect(result.sectionProgress['Priors Workflow'].completed).toBe(0);
+  });
+
+  it('should not count workflow with no paths selected', () => {
+    const questions = [
+      { id: 'orders-workflow_config', sectionTitle: 'Orders Workflow', isWorkflow: true },
+    ];
+    const responses = [
+      { questionId: 'orders-workflow_config', response: JSON.stringify({ paths: {}, systems: {}, notes: {} }) },
+    ];
+    const files: any[] = [];
+
+    const result = calculateProgress(questions, responses, files);
+
+    expect(result.completedQuestions).toBe(0); // No paths selected
+    expect(result.sectionProgress['Orders Workflow'].completed).toBe(0);
+  });
+
   it('should ignore null questionIds', () => {
     const questions = [
       { id: '1', sectionTitle: 'Section 1' },
