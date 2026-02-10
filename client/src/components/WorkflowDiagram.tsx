@@ -36,6 +36,7 @@ interface WorkflowDiagramProps {
   workflowType: 'orders' | 'images' | 'priors' | 'reports';
   configuration: WorkflowConfiguration;
   onConfigurationChange: (config: WorkflowConfiguration) => void;
+  validationErrors?: Set<string>; // Set of path IDs that have validation errors
 }
 
 /**

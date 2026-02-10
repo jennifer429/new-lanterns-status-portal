@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { questionnaireSections, type Question, type Section } from "@shared/questionnaireData";
+import { toast } from "sonner";
 import { WorkflowDiagram } from "@/components/WorkflowDiagram";
 
 // Section icons mapping
@@ -297,7 +298,35 @@ export default function IntakeNewRedesign() {
 
   // Calculate section progress (including uploaded files)
   const calculateSectionProgress = (section: Section) => {
-    // Workflow sections don't have questions
+    // Handle workflow sections differently
+    if (section.type === 'workflow') {
+      const configKey = section.id + '_config';
+      const savedConfig = responses[configKey];
+      
+      if (!savedConfig) return 0;
+      
+      try {
+        const config = typeof savedConfig === 'string' ? JSON.parse(savedConfig) : savedConfig;
+        
+        // Get all selected path keys
+        const selectedPathKeys = Object.keys(config.paths || {}).filter(key => config.paths[key]);
+        
+        if (selectedPathKeys.length === 0) return 0;
+        
+        // Check if all selected paths have their system names filled in
+        const allSystemsFilled = selectedPathKeys.every(pathKey => {
+          const systemValue = config.systems?.[pathKey];
+          return systemValue && systemValue.trim() !== '';
+        });
+        
+        // Complete only if at least one path is selected AND all selected paths have system names
+        return allSystemsFilled ? 100 : Math.round((selectedPathKeys.length / (selectedPathKeys.length + 1)) * 100);
+      } catch {
+        return 0;
+      }
+    }
+    
+    // Standard sections with questions
     if (!section.questions) return 0;
     
     // Filter out hidden conditional questions first
@@ -852,6 +881,53 @@ export default function IntakeNewRedesign() {
                 </Button>
                 <Button
                   onClick={() => {
+                    // Validate workflow sections
+                    if (currentSectionData?.type === 'workflow') {
+                      const configKey = currentSectionData.id + '_config';
+                      const savedConfig = responses[configKey];
+                      
+                      let isValid = false;
+                      let errorMessage = 'Please select at least one workflow path';
+                      
+                      if (savedConfig) {
+                        try {
+                          const config = typeof savedConfig === 'string' ? JSON.parse(savedConfig) : savedConfig;
+                          const selectedPathKeys = Object.keys(config.paths || {}).filter(key => config.paths[key]);
+                          
+                          if (selectedPathKeys.length === 0) {
+                            errorMessage = 'Please select at least one workflow path';
+                          } else {
+                            // Check if all selected paths have system names
+                            const missingSystems = selectedPathKeys.filter(pathKey => {
+                              const systemValue = config.systems?.[pathKey];
+                              return !systemValue || systemValue.trim() === '';
+                            });
+                            
+                            if (missingSystems.length > 0) {
+                              errorMessage = 'Please fill in system names for all selected workflow paths';
+                            } else {
+                              isValid = true;
+                            }
+                          }
+                        } catch (e) {
+                          errorMessage = 'Invalid workflow configuration';
+                        }
+                      }
+                      
+                      if (!isValid) {
+                        toast.error(errorMessage);
+                        return;
+                      }
+                      
+                      // Workflow is valid, proceed to next section
+                      if (!isLastSection) {
+                        setCurrentSection(questionnaireSections[currentSectionIndex + 1].id);
+                      } else {
+                        setShowFeedbackModal(true);
+                      }
+                      return;
+                    }
+                    
                     // Check for unanswered questions in current section
                     const currentQuestions = currentSectionData?.questions || [];
                     const unanswered = currentQuestions

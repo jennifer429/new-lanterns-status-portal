@@ -1550,8 +1550,9 @@
 - [x] Example: RRMC renamed to RRAL now shows "SRV - RRAL" not "SRV - RRMC"
 
 ## Fix Workflow Diagram Responses Not Saving (Feb 10, 2026)
-- [ ] Debug why workflow diagram selections don't save
-- [ ] Fix workflow responses not counting toward completion percentage
+- [x] Debug why workflow diagram selections don't save (save logic exists, works correctly)
+- [x] Fix workflow responses not counting toward completion percentage (added workflow-specific progress calculation)
+- [x] Require system names to be filled for all checked paths before marking complete
 - [ ] Fix workflow data not exporting in CSV
 - [ ] Test Priors Workflow saves correctly
 - [ ] Test Reports Out Workflow saves correctly
@@ -1561,3 +1562,10 @@
 - [x] Add cache invalidation when organization is renamed (refetchOrgs in updateOrgMutation)
 - [x] Admin panel shows updated names immediately
 - [ ] Test: Rename Boulder to "Boulder Community Health" and verify header updates after page refresh
+
+## Add Workflow Section Validation (Feb 10, 2026)
+- [x] Prevent Save & Continue if no workflow paths are checked
+- [x] Prevent Save & Continue if checked paths are missing system names
+- [x] Show error message explaining validation requirements (toast notifications)
+- [ ] Add red highlighting to incomplete workflow fields (optional enhancement)
+- [ ] Test validation on all workflow sections (Orders, Images, Priors, Reports)
