@@ -1,95 +1,122 @@
 /**
- * Organization Landing Page - Matches Admin Dashboard Card Design
- * Single card layout with progress overview and file list
+ * Dark Theme with Purple Accents: Clean 2-column layout
+ * Left: Stage details and progress using real Boulder/Template Client Checklist data
+ * Right: Big status bar showing days to goal with intelligent shading for on-track/behind status
  */
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Activity, Download } from "lucide-react";
-import { Link, useRoute } from "wouter";
-import { trpc } from "@/lib/trpc";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { 
+  CheckCircle2, 
+  Circle, 
+  Clock, 
+  PlayCircle,
+  Users,
+  Calendar,
+  TrendingUp,
+  AlertTriangle,
+  Building2
+} from "lucide-react";
 import { useEffect, useState } from "react";
-import { questionnaireSections } from "@shared/questionnaireData";
-import { calculateProgress } from "@shared/progressCalculation";
-import { PhiDisclaimer } from "@/components/PhiDisclaimer";
+
+// Mock hospital data - in production this would come from backend
+const hospitalData = {
+  name: "Memorial General Hospital",
+  contactName: "Dr. Sarah Chen",
+  contactEmail: "sarah.chen@memorialgeneral.org",
+  contactPhone: "(555) 123-4567",
+  startDate: "January 15, 2026",
+  goalDate: "March 1, 2026",
+  today: "January 31, 2026",
+  daysElapsed: 16,
+  totalDays: 45,
+  daysRemaining: 29,
+};
+
+// Stage progress - maps sections to completion status
+const stageProgress: Record<string, { status: string; progress: number; daysFromStart: number; expectedEnd: string }> = {
+  "Header Info": { status: "complete", progress: 100, daysFromStart: 2, expectedEnd: "January 17, 2026" },
+  "Overview & Architecture": { status: "complete", progress: 100, daysFromStart: 5, expectedEnd: "January 20, 2026" },
+  "Security & Permissions": { status: "in-progress", progress: 75, daysFromStart: 10, expectedEnd: "February 5, 2026" },
+  "Imaging Routing & Connectivity": { status: "in-progress", progress: 60, daysFromStart: 12, expectedEnd: "February 8, 2026" },
+  "Data & Integration": { status: "in-progress", progress: 40, daysFromStart: 18, expectedEnd: "February 15, 2026" },
+  "Additional Workflows": { status: "pending", progress: 0, daysFromStart: 22, expectedEnd: "February 20, 2026" },
+  "Rad Workflows": { status: "pending", progress: 0, daysFromStart: 25, expectedEnd: "February 24, 2026" },
+  "DICOM Data Validation": { status: "pending", progress: 0, daysFromStart: 28, expectedEnd: "February 27, 2026" },
+  "Institution Group Configuration": { status: "pending", progress: 0, daysFromStart: 32, expectedEnd: "March 3, 2026" },
+  "User & Access Configuration": { status: "pending", progress: 0, daysFromStart: 35, expectedEnd: "March 6, 2026" },
+  "Template & RVU Configuration": { status: "pending", progress: 0, daysFromStart: 38, expectedEnd: "March 10, 2026" },
+  "Worklist Configuration": { status: "pending", progress: 0, daysFromStart: 40, expectedEnd: "March 12, 2026" },
+  "End-to-End Validation": { status: "pending", progress: 0, daysFromStart: 43, expectedEnd: "March 15, 2026" },
+};
+
+interface ChecklistSection {
+  section: string;
+  tasks: Array<{
+    id: string;
+    task: string;
+    owner: string;
+  }>;
+}
 
 export default function Home() {
-  const [, params] = useRoute("/org/:slug");
-  const orgSlug = params?.slug || "demo";
-  
-  const [organizationId, setOrganizationId] = useState<number | null>(null);
-  
-  // Fetch organization data
-  const { data: organization, isLoading: orgLoading } = trpc.organizations.getBySlug.useQuery(
-    { slug: orgSlug },
-    { enabled: !!orgSlug }
-  );
-  
-  // Update organizationId when organization loads
-  useEffect(() => {
-    if (organization) {
-      setOrganizationId(organization.id);
-    }
-  }, [organization]);
+  const [checklistData, setChecklistData] = useState<ChecklistSection[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const orgData = {
-    name: organization?.name || "Your Organization",
-    goalDate: organization?.goalDate || "TBD",
+  useEffect(() => {
+    // Load checklist data
+    fetch('/checklist.json')
+      .then(res => res.json())
+      .then(data => {
+        setChecklistData(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to load checklist:', err);
+        setLoading(false);
+      });
+  }, []);
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "complete":
+        return <CheckCircle2 className="w-5 h-5 text-primary" />;
+      case "in-progress":
+        return <PlayCircle className="w-5 h-5 text-primary fill-primary/20" />;
+      default:
+        return <Circle className="w-5 h-5 text-muted-foreground" />;
+    }
   };
 
-  // Fetch existing responses to calculate real progress
-  const { data: existingResponses = [] } = trpc.intake.getResponses.useQuery(
-    { organizationSlug: orgSlug },
-    { enabled: !!orgSlug }
-  );
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "complete":
+        return <Badge className="bg-primary/20 text-primary border-primary/30">Complete</Badge>;
+      case "in-progress":
+        return <Badge className="bg-primary text-primary-foreground">In Progress</Badge>;
+      default:
+        return <Badge variant="outline" className="text-muted-foreground border-muted">Not Started</Badge>;
+    }
+  };
 
-  // Fetch all uploaded files
-  const { data: allFiles = [] } = trpc.intake.getAllUploadedFiles.useQuery(
-    { organizationSlug: orgSlug },
-    { enabled: !!orgSlug }
-  );
-  
-  const filesUploaded = allFiles.length;
+  // Calculate if on track
+  const allSections = Object.values(stageProgress);
+  const expectedProgress = (hospitalData.daysElapsed / hospitalData.totalDays) * 100;
+  const actualProgress = allSections.reduce((sum, stage) => sum + stage.progress, 0) / allSections.length;
+  const isOnTrack = actualProgress >= expectedProgress - 5;
 
-  // Flatten all questions from sections (filter out workflow sections)
-  const allQuestions = questionnaireSections
-    .filter(section => section.questions) // Skip workflow sections
-    .flatMap(section =>
-      section.questions!.map(q => ({
-        id: q.id,
-        sectionTitle: section.title
-      }))
-    );
+  const activeSections = checklistData.filter(s => stageProgress[s.section]?.status === "in-progress");
+  const completedSections = checklistData.filter(s => stageProgress[s.section]?.status === "complete");
 
-  // Use shared progress calculation function
-  const progress = calculateProgress(
-    allQuestions,
-    existingResponses,
-    allFiles
-  );
-
-  const intakeCompletion = progress.completionPercentage;
-  
-  // Calculate completed sections (100% complete)
-  const completedSections = Object.values(progress.sectionProgress).filter(
-    section => section.completed === section.total
-  ).length;
-
-  // Convert section progress to array format for display
-  const sectionProgress = Object.entries(progress.sectionProgress).map(([name, stats]) => ({
-    name,
-    progress: stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0
-  }));
-
-  // Mock user count (you can add real user count query later)
-  const userCount = 5;
-
-  if (orgLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
+          <p className="text-muted-foreground">Loading checklist...</p>
         </div>
       </div>
     );
@@ -97,124 +124,293 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* PHI Disclaimer - At top */}
-      <PhiDisclaimer />
-      
-      <div className="flex items-center justify-center p-6">
-        <div className="w-full max-w-3xl">
-        <Card className="border-2 border-primary/30 bg-gradient-to-b from-card to-card/50">
-          <CardContent className="p-8">
-            {/* Header with Organization Name */}
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-3">
-                <ClipboardList className="w-8 h-8 text-primary" />
-                <h1 className="text-2xl font-bold">{orgData.name}</h1>
-              </div>
-              <CheckCircle2 className="w-6 h-6 text-green-500" />
-            </div>
-
-            {/* Stats Row */}
-            <div className="grid grid-cols-3 gap-6 mb-8">
-              <div className="flex items-center gap-3">
-                <TrendingUp className="w-5 h-5 text-muted-foreground" />
-                <div>
-                  <div className="text-2xl font-bold">{intakeCompletion}%</div>
-                  <div className="text-sm text-muted-foreground">Complete</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Users className="w-5 h-5 text-muted-foreground" />
-                <div>
-                  <div className="text-2xl font-bold">{userCount}</div>
-                  <div className="text-sm text-muted-foreground">Users</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <FileText className="w-5 h-5 text-muted-foreground" />
-                <div>
-                  <div className="text-2xl font-bold">{filesUploaded}</div>
-                  <div className="text-sm text-muted-foreground">Files</div>
-                </div>
+      {/* Header */}
+      <header className="border-b border-border bg-card/50 backdrop-blur-sm">
+        <div className="container py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-8" />
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">PACS Onboarding</h1>
+                <p className="text-sm text-muted-foreground mt-1">Status Portal</p>
               </div>
             </div>
+            <div className="text-right">
+              <p className="text-sm font-medium text-foreground">{hospitalData.name}</p>
+              <p className="text-xs text-muted-foreground">{hospitalData.contactName}</p>
+            </div>
+          </div>
+        </div>
+      </header>
 
-            <div className="border-t border-border/50 pt-6 mb-6">
-              {/* Overall Progress Section */}
-              <div className="mb-6">
-                <h2 className="text-xl font-semibold mb-2">Overall Progress</h2>
-                <p className="text-sm text-muted-foreground mb-4">
-                  {completedSections} of {questionnaireSections.length} sections complete
-                </p>
-
-                {/* Big Percentage Box */}
-                <div className="text-center p-8 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 border-2 border-primary/30 mb-6">
-                  <div className="text-7xl font-bold text-primary mb-2">
-                    {intakeCompletion}%
+      {/* Main Content - 2 Column Layout */}
+      <div className="container py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-8">
+          {/* Left Column - Stage Details */}
+          <div className="space-y-6">
+            {/* Header Card */}
+            <Card className="border-primary/20">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-xl">Your Onboarding Journey</CardTitle>
+                    <CardDescription className="mt-2">
+                      Started {hospitalData.startDate} • Goal: {hospitalData.goalDate}
+                    </CardDescription>
                   </div>
-                  <div className="text-lg text-muted-foreground">Complete</div>
-                </div>
-
-                {/* Section List */}
-                <div className="space-y-3 mb-6">
-                  {sectionProgress.map((section, index) => (
-                    <div key={index} className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        {section.progress === 100 ? (
-                          <CheckCircle2 className="w-5 h-5 text-primary" />
-                        ) : (
-                          <Circle className="w-5 h-5 text-muted-foreground" />
-                        )}
-                        <span className="text-sm">{section.name}</span>
-                      </div>
-                      <span className="text-sm font-bold">{section.progress}%</span>
+                  {isOnTrack ? (
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/30">
+                      <CheckCircle2 className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-medium text-primary">On Track</span>
                     </div>
-                  ))}
+                  ) : (
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/30">
+                      <AlertTriangle className="w-4 h-4 text-yellow-400" />
+                      <span className="text-sm font-medium text-yellow-400">Needs Attention</span>
+                    </div>
+                  )}
                 </div>
+              </CardHeader>
+            </Card>
 
-                {/* Status */}
-                <div className="text-sm text-muted-foreground mb-6">
-                  In Progress
-                </div>
-              </div>
+            {/* Sections Accordion */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Implementation Checklist</CardTitle>
+                <CardDescription>
+                  {completedSections.length} of {checklistData.length} sections complete • {activeSections.length} in progress
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Accordion type="multiple" className="w-full">
+                  {checklistData.map((section, index) => {
+                    const progress = stageProgress[section.section] || { status: "pending", progress: 0, expectedEnd: "TBD" };
+                    
+                    return (
+                      <AccordionItem key={index} value={`section-${index}`}>
+                        <AccordionTrigger className="hover:no-underline">
+                          <div className="flex items-center justify-between w-full pr-4">
+                            <div className="flex items-center gap-3 flex-1">
+                              {getStatusIcon(progress.status)}
+                              <div className="text-left">
+                                <div className="font-semibold text-sm">{section.section}</div>
+                                <div className="text-xs text-muted-foreground">{section.tasks.length} tasks</div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              {progress.status !== "pending" && (
+                                <span className="text-sm font-bold text-primary">{progress.progress}%</span>
+                              )}
+                              {getStatusBadge(progress.status)}
+                            </div>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="space-y-4 pt-4">
+                            {progress.status !== "pending" && (
+                              <div className="px-4">
+                                <Progress value={progress.progress} className="h-2 mb-4" />
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
+                                  <Calendar className="w-3 h-3" />
+                                  <span>Target completion: {progress.expectedEnd}</span>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Tasks */}
+                            <div className="space-y-2 px-4">
+                              {section.tasks.map((task, taskIndex) => (
+                                <div key={taskIndex} className="flex items-start justify-between p-3 rounded-lg bg-muted/30 border border-border hover:bg-muted/50 transition-colors">
+                                  <div className="flex items-start gap-3 flex-1">
+                                    <Circle className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium">{task.task}</p>
+                                      <p className="text-xs text-muted-foreground mt-1">ID: {task.id}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2 ml-3 flex-shrink-0">
+                                    {task.owner === "Client" ? (
+                                      <Badge variant="outline" className="text-xs">
+                                        <Building2 className="w-3 h-3 mr-1" />
+                                        Client
+                                      </Badge>
+                                    ) : (
+                                      <Badge className="bg-primary/20 text-primary border-primary/30 text-xs">
+                                        New Lantern
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    );
+                  })}
+                </Accordion>
+              </CardContent>
+            </Card>
+          </div>
 
-              {/* Uploaded Files Section */}
-              <div className="border-t border-border/50 pt-6 mb-6">
-                <h3 className="text-base font-semibold mb-3">Uploaded Files:</h3>
-                {allFiles.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No files uploaded yet</p>
-                ) : (
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {allFiles.map((file) => (
-                      <a
-                        key={file.id}
-                        href={file.fileUrl}
-                        download
-                        className="flex items-center gap-2 text-sm text-primary hover:underline"
-                      >
-                        <Download className="w-4 h-4" />
-                        <span>{file.fileName}</span>
-                      </a>
-                    ))}
+          {/* Right Column - Big Status Bar */}
+          <div className="space-y-6">
+            <Card className="sticky top-8 border-primary/30 bg-gradient-to-b from-card to-card/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-primary" />
+                  Days to Goal
+                </CardTitle>
+                <CardDescription>Progress toward {hospitalData.goalDate}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Big Status Bar */}
+                <div className="space-y-4">
+                  {/* Days Remaining - Big Display */}
+                  <div className="text-center p-6 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/30">
+                    <div className="text-6xl font-bold text-primary mb-2">{hospitalData.daysRemaining}</div>
+                    <p className="text-sm text-muted-foreground">Days Remaining</p>
                   </div>
-                )}
-              </div>
 
-              {/* Last Login */}
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-                <Activity className="w-4 h-4" />
-                <span>Last login: about 5 hours ago</span>
-              </div>
+                  {/* Visual Timeline Bar */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{hospitalData.startDate}</span>
+                      <span>{hospitalData.goalDate}</span>
+                    </div>
+                    <div className="relative h-12 bg-muted/30 rounded-lg overflow-hidden border border-border">
+                      {/* Elapsed time (filled) */}
+                      <div 
+                        className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary to-primary/80"
+                        style={{ width: `${(hospitalData.daysElapsed / hospitalData.totalDays) * 100}%` }}
+                      />
+                      
+                      {/* Stage markers */}
+                      {Object.entries(stageProgress).map(([section, data]) => {
+                        const position = (data.daysFromStart / hospitalData.totalDays) * 100;
+                        if (position > 100) return null;
+                        
+                        return (
+                          <div
+                            key={section}
+                            className="absolute top-0 bottom-0 w-0.5 bg-card"
+                            style={{ left: `${position}%` }}
+                          >
+                            <div className="absolute -top-1 left-1/2 -translate-x-1/2">
+                              {data.status === "complete" ? (
+                                <CheckCircle2 className="w-3 h-3 text-primary" />
+                              ) : data.status === "in-progress" ? (
+                                <PlayCircle className="w-3 h-3 text-primary fill-primary/20" />
+                              ) : (
+                                <Circle className="w-3 h-3 text-muted-foreground" />
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
 
-              {/* Open Portal Button */}
-              <Link href={`/org/${orgSlug}/intake`}>
-                <Button size="lg" className="w-full text-lg py-6">
-                  <ExternalLink className="w-5 h-5 mr-2" />
-                  Open Portal
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
+                      {/* Today marker */}
+                      <div
+                        className="absolute top-0 bottom-0 w-1 bg-foreground/50"
+                        style={{ left: `${(hospitalData.daysElapsed / hospitalData.totalDays) * 100}%` }}
+                      >
+                        <div className="absolute -top-2 left-1/2 -translate-x-1/2 text-xs font-bold text-foreground whitespace-nowrap">
+                          Today
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-primary font-medium">{hospitalData.daysElapsed} days elapsed</span>
+                      <span className="text-muted-foreground">{hospitalData.totalDays} total days</span>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Status Indicator */}
+                <div className={`p-4 rounded-lg border-2 ${
+                  isOnTrack 
+                    ? "bg-primary/10 border-primary/30" 
+                    : "bg-yellow-500/10 border-yellow-500/30"
+                }`}>
+                  <div className="flex items-center gap-3 mb-3">
+                    {isOnTrack ? (
+                      <>
+                        <CheckCircle2 className="w-6 h-6 text-primary" />
+                        <div>
+                          <h4 className="font-semibold text-primary">On Track</h4>
+                          <p className="text-xs text-muted-foreground">Meeting timeline expectations</p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <AlertTriangle className="w-6 h-6 text-yellow-400" />
+                        <div>
+                          <h4 className="font-semibold text-yellow-400">Behind Schedule</h4>
+                          <p className="text-xs text-muted-foreground">Action needed to meet goal date</p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Expected progress:</span>
+                      <span className="font-bold">{Math.round(expectedProgress)}%</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Actual progress:</span>
+                      <span className="font-bold text-primary">{Math.round(actualProgress)}%</span>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Section Summary */}
+                <div>
+                  <h4 className="font-semibold text-sm mb-3">Section Status</h4>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {checklistData.slice(0, 8).map((section) => {
+                      const progress = stageProgress[section.section] || { status: "pending", progress: 0 };
+                      return (
+                        <div key={section.section} className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            {getStatusIcon(progress.status)}
+                            <span className="truncate">{section.section}</span>
+                          </div>
+                          <div className="ml-2 flex-shrink-0">
+                            {progress.status === "complete" ? (
+                              <CheckCircle2 className="w-4 h-4 text-primary" />
+                            ) : progress.status === "in-progress" ? (
+                              <span className="font-bold text-primary">{progress.progress}%</span>
+                            ) : (
+                              <Circle className="w-4 h-4 text-muted-foreground" />
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Contact */}
+                <div className="p-4 rounded-lg bg-muted/30">
+                  <h4 className="font-semibold text-sm mb-3">Need Help?</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-primary" />
+                      <a href={`mailto:${hospitalData.contactEmail}`} className="text-primary hover:underline text-xs">
+                        Contact Support
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>

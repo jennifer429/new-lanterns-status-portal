@@ -1,9 +1,0 @@
-{
-  "query": "INSERT INTO questions (questionId, sectionId, sectionTitle, questionNumber, shortTitle, questionText, questionType, required) VALUES \n('orders-workflow_config', 'orders-workflow', 'Orders Workflow', 1, 'Orders-Workflow-Config', 'Orders Workflow Configuration', 'workflow', 0),\n('images-workflow_config', 'images-workflow', 'Images Workflow (DICOM)', 1, 'Images-Workflow-Config', 'Images Workflow Configuration', 'workflow', 0),\n('priors-workflow_config', 'priors-workflow', 'Priors Workflow', 1, 'Priors-Workflow-Config', 'Priors Workflow Configuration', 'workflow', 0),\n('reports-workflow_config', 'reports-workflow', 'Reports Out Workflow', 1, 'Reports-Workflow-Config', 'Reports Out Workflow Configuration', 'workflow', 0)\nON DUPLICATE KEY UPDATE questionText=VALUES(questionText);",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute INSERT INTO questions (questionId, sectionId, sectionTitle, questionNumber, shortTitle, questionText, questionType, required) VALUES \n('orders-workflow_config', 'orders-workflow', 'Orders Workflow', 1, 'Orders-Workflow-Config', 'Orders Workflow Configuration', 'workflow', 0),\n('images-workflow_config', 'images-workflow', 'Images Workflow (DICOM)', 1, 'Images-Workflow-Config', 'Images Workflow Configuration', 'workflow', 0),\n('priors-workflow_config', 'priors-workflow', 'Priors Workflow', 1, 'Priors-Workflow-Config', 'Priors Workflow Configuration', 'workflow', 0),\n('reports-workflow_config', 'reports-workflow', 'Reports Out Workflow', 1, 'Reports-Workflow-Config', 'Reports Out Workflow Configuration', 'workflow', 0)\nON DUPLICATE KEY UPDATE questionText=VALUES(questionText);",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 66
-}

@@ -1,1 +1,0 @@
-ALTER TABLE `intakeFileAttachments` MODIFY COLUMN `driveFileId` varchar(500);

@@ -1,9 +1,0 @@
-{
-  "query": "INSERT INTO organizations (clientId, name, slug, contactName, contactEmail, status) VALUES\n(1, 'RadOne Test Hospital 1', 'radone-test-1', 'John Doe', 'john@radone-test-1.com', 'active'),\n(1, 'RadOne Test Hospital 2', 'radone-test-2', 'Jane Smith', 'jane@radone-test-2.com', 'active'),\n(2, 'SRV Test Hospital 1', 'srv-test-1', 'Bob Johnson', 'bob@srv-test-1.com', 'active'),\n(2, 'SRV Test Hospital 2', 'srv-test-2', 'Alice Williams', 'alice@srv-test-2.com', 'active')\nON DUPLICATE KEY UPDATE name=name;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute INSERT INTO organizations (clientId, name, slug, contactName, contactEmail, status) VALUES\n(1, 'RadOne Test Hospital 1', 'radone-test-1', 'John Doe', 'john@radone-test-1.com', 'active'),\n(1, 'RadOne Test Hospital 2', 'radone-test-2', 'Jane Smith', 'jane@radone-test-2.com', 'active'),\n(2, 'SRV Test Hospital 1', 'srv-test-1', 'Bob Johnson', 'bob@srv-test-1.com', 'active'),\n(2, 'SRV Test Hospital 2', 'srv-test-2', 'Alice Williams', 'alice@srv-test-2.com', 'active')\nON DUPLICATE KEY UPDATE name=name;",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 70
-}

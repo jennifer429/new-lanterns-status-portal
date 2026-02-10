@@ -1,8 +1,0 @@
-{
-  "query": "\nSELECT \n  q.sectionId,\n  s.title as sectionTitle,\n  COUNT(DISTINCT q.id) as totalQuestions,\n  COUNT(DISTINCT r.questionId) as answeredQuestions\nFROM questions q\nLEFT JOIN responses r ON q.id = r.questionId \n  AND r.organizationId = (SELECT id FROM organizations WHERE slug = 'radone-munson')\nLEFT JOIN (\n  SELECT 'A' as id, 'Organization Information' as title\n  UNION SELECT 'B', 'Overview & Architecture'\n  UNION SELECT 'C', 'Data & Integration'\n  UNION SELECT 'D', 'Configuration Files'\n  UNION SELECT 'E', 'Connectivity'\n  UNION SELECT 'F', 'DICOM Data Validation'\n) s ON q.sectionId = s.id\nGROUP BY q.sectionId, s.title\nORDER BY q.sectionId;\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute \nSELECT \n  q.sectionId,\n  s.title as sectionTitle,\n  COUNT(DISTINCT q.id) as totalQuestions,\n  COUNT(DISTINCT r.questionId) as answeredQuestions\nFROM questions q\nLEFT JOIN responses r ON q.id = r.questionId \n  AND r.organizationId = (SELECT id FROM organizations WHERE slug = 'radone-munson')\nLEFT JOIN (\n  SELECT 'A' as id, 'Organization Information' as title\n  UNION SELECT 'B', 'Overview & Architecture'\n  UNION SELECT 'C', 'Data & Integration'\n  UNION SELECT 'D', 'Configuration Files'\n  UNION SELECT 'E', 'Connectivity'\n  UNION SELECT 'F', 'DICOM Data Validation'\n) s ON q.sectionId = s.id\nGROUP BY q.sectionId, s.title\nORDER BY q.sectionId;\n",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1267 (HY000) at line 2: Illegal mix of collations (utf8mb4_unicode_ci,IMPLICIT) and (utf8mb4_0900_ai_ci,IMPLICIT) for operation '='"
-  ]
-}

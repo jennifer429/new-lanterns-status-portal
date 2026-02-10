@@ -1,9 +1,0 @@
-{
-  "query": "UPDATE questions SET questionId = 'reports-out-workflow_config', sectionId = 'reports-out-workflow' WHERE questionId = 'reports-workflow_config';",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute UPDATE questions SET questionId = 'reports-out-workflow_config', sectionId = 'reports-out-workflow' WHERE questionId = 'reports-workflow_config';",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 69
-}

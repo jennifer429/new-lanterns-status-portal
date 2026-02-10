@@ -1,1 +1,0 @@
-ALTER TABLE `questions` ADD `shortTitle` varchar(100) NOT NULL;

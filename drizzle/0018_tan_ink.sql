@@ -1,1 +1,0 @@
-ALTER TABLE `organizations` MODIFY COLUMN `status` enum('active','completed','paused','inactive') NOT NULL DEFAULT 'active';

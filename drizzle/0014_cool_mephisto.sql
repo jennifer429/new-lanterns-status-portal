@@ -1,1 +1,0 @@
-ALTER TABLE `organizations` MODIFY COLUMN `clientId` int;

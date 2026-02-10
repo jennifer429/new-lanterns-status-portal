@@ -1,9 +1,0 @@
-{
-  "query": "INSERT INTO intakeFileAttachments (organizationId, questionId, fileName, fileUrl, driveFileId, fileSize, mimeType, uploadedBy) VALUES (60007, 'D.13', 'test.csv', 'https://example.com/test.csv', 'test-key', 100, 'text/csv', 'test@example.com');",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute INSERT INTO intakeFileAttachments (organizationId, questionId, fileName, fileUrl, driveFileId, fileSize, mimeType, uploadedBy) VALUES (60007, 'D.13', 'test.csv', 'https://example.com/test.csv', 'test-key', 100, 'text/csv', 'test@example.com');",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 76
-}

@@ -1,9 +1,0 @@
-{
-  "query": "\nSELECT \n  r.id,\n  r.organizationId,\n  q.questionId,\n  q.questionText,\n  q.sectionId,\n  r.response,\n  r.fileUrl\nFROM responses r\nJOIN questions q ON r.questionId = q.id\nJOIN organizations o ON r.organizationId = o.id\nWHERE o.slug = 'srv-rrmc' AND q.sectionId = 4;\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute \nSELECT \n  r.id,\n  r.organizationId,\n  q.questionId,\n  q.questionText,\n  q.sectionId,\n  r.response,\n  r.fileUrl\nFROM responses r\nJOIN questions q ON r.questionId = q.id\nJOIN organizations o ON r.organizationId = o.id\nWHERE o.slug = 'srv-rrmc' AND q.sectionId = 4;\n",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 49
-}

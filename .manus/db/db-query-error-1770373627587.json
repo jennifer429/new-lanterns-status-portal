@@ -1,8 +1,0 @@
-{
-  "query": "\nSELECT \n  o.name as org_name,\n  o.id as org_id,\n  COUNT(*) as total_responses,\n  COUNT(DISTINCT ir.question_id) as unique_questions,\n  SUM(CASE WHEN ir.response IS NOT NULL AND ir.response != '' THEN 1 ELSE 0 END) as completed_responses,\n  COUNT(DISTINCT CASE WHEN ir.response IS NOT NULL AND ir.response != '' THEN ir.question_id END) as unique_completed\nFROM organizations o\nLEFT JOIN intake_responses ir ON o.id = ir.organization_id\nWHERE o.slug = 'radone-munson'\nGROUP BY o.id;\n\nSELECT question_id, COUNT(*) as count\nFROM intake_responses\nWHERE organization_id = (SELECT id FROM organizations WHERE slug = 'radone-munson' LIMIT 1)\nGROUP BY question_id\nHAVING COUNT(*) > 1;\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute \nSELECT \n  o.name as org_name,\n  o.id as org_id,\n  COUNT(*) as total_responses,\n  COUNT(DISTINCT ir.question_id) as unique_questions,\n  SUM(CASE WHEN ir.response IS NOT NULL AND ir.response != '' THEN 1 ELSE 0 END) as completed_responses,\n  COUNT(DISTINCT CASE WHEN ir.response IS NOT NULL AND ir.response != '' THEN ir.question_id END) as unique_completed\nFROM organizations o\nLEFT JOIN intake_responses ir ON o.id = ir.organization_id\nWHERE o.slug = 'radone-munson'\nGROUP BY o.id;\n\nSELECT question_id, COUNT(*) as count\nFROM intake_responses\nWHERE organization_id = (SELECT id FROM organizations WHERE slug = 'radone-munson' LIMIT 1)\nGROUP BY question_id\nHAVING COUNT(*) > 1;\n",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1146 (42S02) at line 2: Table 'hggexrhucg7apwzjrkh7lf.intake_responses' doesn't exist"
-  ]
-}

@@ -1,8 +1,0 @@
-{
-  "query": "INSERT INTO questions (questionId, text, type, sectionId) VALUES \n('orders-workflow_config', 'Orders Workflow Configuration', 'workflow', 'orders-workflow'),\n('images-workflow_config', 'Images Workflow Configuration', 'workflow', 'images-workflow'),\n('priors-workflow_config', 'Priors Workflow Configuration', 'workflow', 'priors-workflow'),\n('reports-workflow_config', 'Reports Out Workflow Configuration', 'workflow', 'reports-workflow')\nON DUPLICATE KEY UPDATE text=VALUES(text);",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute INSERT INTO questions (questionId, text, type, sectionId) VALUES \n('orders-workflow_config', 'Orders Workflow Configuration', 'workflow', 'orders-workflow'),\n('images-workflow_config', 'Images Workflow Configuration', 'workflow', 'images-workflow'),\n('priors-workflow_config', 'Priors Workflow Configuration', 'workflow', 'priors-workflow'),\n('reports-workflow_config', 'Reports Out Workflow Configuration', 'workflow', 'reports-workflow')\nON DUPLICATE KEY UPDATE text=VALUES(text);",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 1: Unknown column 'text' in 'field list'"
-  ]
-}
