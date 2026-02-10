@@ -272,3 +272,19 @@ export const onboardingFeedback = mysqlTable("onboardingFeedback", {
 
 export type OnboardingFeedback = typeof onboardingFeedback.$inferSelect;
 export type InsertOnboardingFeedback = typeof onboardingFeedback.$inferInsert;
+
+/**
+ * Audit Log - tracks important system events like imports/exports
+ */
+export const auditLog = mysqlTable("auditLog", {
+  id: int("id").autoincrement().primaryKey(),
+  organizationId: int("organizationId").notNull(),
+  eventType: mysqlEnum("eventType", ["import", "export", "delete", "update"]).notNull(),
+  eventDescription: text("eventDescription"), // Human-readable description
+  userEmail: varchar("userEmail", { length: 320 }).notNull(), // Who performed the action
+  metadata: text("metadata"), // JSON with additional details (e.g., number of responses imported)
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AuditLog = typeof auditLog.$inferSelect;
+export type InsertAuditLog = typeof auditLog.$inferInsert;

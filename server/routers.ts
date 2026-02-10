@@ -6,6 +6,7 @@ import { organizationsRouter } from "./routers/organizations";
 import { filesRouter } from "./routers/files";
 import { webhooksRouter } from "./routers/webhooks";
 import { intakeRouter } from "./routers/intake";
+import { intakeAiRouter } from "./routers/intake-ai";
 import { authRouter } from "./routers/auth";
 import { usersRouter } from "./routers/users";
 import { adminRouter } from "./routers/admin";
@@ -32,6 +33,7 @@ export const appRouter = router({
   files: filesRouter,
   webhooks: webhooksRouter,
   intake: intakeRouter,
+  intakeAi: intakeAiRouter,
   users: usersRouter,
 });
 

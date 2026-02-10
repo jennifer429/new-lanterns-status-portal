@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { intakeResponses, intakeFileAttachments, organizations, questions, questionOptions, responses, onboardingFeedback, clients } from "../../drizzle/schema";
+import { intakeResponses, intakeFileAttachments, organizations, questions, questionOptions, responses, onboardingFeedback, clients, auditLog } from "../../drizzle/schema";
 import { eq, and, sql } from "drizzle-orm";
 
 export const intakeRouter = router({
@@ -950,5 +950,175 @@ export const intakeRouter = router({
       });
 
       return { success: true };
+    }),
+
+  /**
+   * Export questionnaire responses as JSON
+   */
+  exportResponses: publicProcedure
+    .input(
+      z.object({
+        organizationSlug: z.string(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Get organization by slug
+      const [org] = await db
+        .select()
+        .from(organizations)
+        .where(eq(organizations.slug, input.organizationSlug))
+        .limit(1);
+
+      if (!org) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      }
+
+      // Validate user has access to this organization's client
+      if (ctx.user?.clientId && org.clientId !== ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this organization" });
+      }
+
+      // Get all responses from intakeResponses table
+      const responsesData = await db
+        .select()
+        .from(intakeResponses)
+        .where(eq(intakeResponses.organizationId, org.id));
+
+      // Create audit log entry
+      await db.insert(auditLog).values({
+        organizationId: org.id,
+        eventType: "export",
+        eventDescription: `Exported ${responsesData.length} questionnaire responses`,
+        userEmail: ctx.user?.email || "unknown@system",
+        metadata: JSON.stringify({
+          responseCount: responsesData.length,
+          exportedAt: new Date().toISOString(),
+        }),
+      });
+
+      // Return the responses as JSON
+      return {
+        success: true,
+        organizationName: org.name,
+        organizationSlug: org.slug,
+        exportedAt: new Date().toISOString(),
+        exportedBy: ctx.user?.email || "unknown@system",
+        responses: responsesData,
+      };
+    }),
+
+  /**
+   * Import questionnaire responses from JSON
+   * All imported responses are attributed to the importing user
+   */
+  importResponses: publicProcedure
+    .input(
+      z.object({
+        organizationSlug: z.string(),
+        responses: z.array(
+          z.object({
+            questionId: z.string(),
+            section: z.string(),
+            response: z.string().nullable(),
+            fileUrl: z.string().nullable().optional(),
+          })
+        ),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Get organization by slug
+      const [org] = await db
+        .select()
+        .from(organizations)
+        .where(eq(organizations.slug, input.organizationSlug))
+        .limit(1);
+
+      if (!org) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      }
+
+      // Validate user has access to this organization's client
+      if (ctx.user?.clientId && org.clientId !== ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this organization" });
+      }
+
+      const importingUser = ctx.user?.email || "unknown@system";
+      let importedCount = 0;
+      let updatedCount = 0;
+      let skippedCount = 0;
+
+      // Process each response
+      for (const resp of input.responses) {
+        // Skip empty responses
+        if (!resp.response || resp.response.trim() === "") {
+          skippedCount++;
+          continue;
+        }
+
+        // Check if response already exists
+        const [existing] = await db
+          .select()
+          .from(intakeResponses)
+          .where(
+            and(
+              eq(intakeResponses.organizationId, org.id),
+              eq(intakeResponses.questionId, resp.questionId)
+            )
+          )
+          .limit(1);
+
+        if (existing) {
+          // Update existing response, attributing to importing user
+          await db
+            .update(intakeResponses)
+            .set({
+              response: resp.response,
+              fileUrl: resp.fileUrl || existing.fileUrl,
+              updatedBy: importingUser,
+            })
+            .where(eq(intakeResponses.id, existing.id));
+          updatedCount++;
+        } else {
+          // Insert new response, attributing to importing user
+          await db.insert(intakeResponses).values({
+            organizationId: org.id,
+            questionId: resp.questionId,
+            section: resp.section,
+            response: resp.response,
+            fileUrl: resp.fileUrl || null,
+            updatedBy: importingUser,
+          });
+          importedCount++;
+        }
+      }
+
+      // Create audit log entry
+      await db.insert(auditLog).values({
+        organizationId: org.id,
+        eventType: "import",
+        eventDescription: `Imported questionnaire responses: ${importedCount} new, ${updatedCount} updated, ${skippedCount} skipped`,
+        userEmail: importingUser,
+        metadata: JSON.stringify({
+          totalResponses: input.responses.length,
+          importedCount,
+          updatedCount,
+          skippedCount,
+          importedAt: new Date().toISOString(),
+        }),
+      });
+
+      return {
+        success: true,
+        importedCount,
+        updatedCount,
+        skippedCount,
+        totalProcessed: input.responses.length,
+      };
     }),
 });
