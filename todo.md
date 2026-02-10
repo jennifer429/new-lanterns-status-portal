@@ -1519,3 +1519,7 @@
 - [x] Update frontend filtering to use isActive field instead of organizationId check
 - [x] Run database migration (pnpm db:push)
 - [ ] Test deactivation flow for both admin and regular users
+
+## Fix Boulder Organization Client ID (Feb 10, 2026)
+- [x] Update Boulder organization clientId from 1 (RadOne) to 2 (SRV)
+- [x] Verify Boulder shows "SRV" as client name in admin dashboard
