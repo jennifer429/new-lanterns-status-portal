@@ -884,18 +884,70 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           onNoteChange={(value) => handleNoteChange('reportsToEHR_note', value)}
         />
 
-        <SwimLaneRow
-          id="reportsToPortal"
-          label="Reports to Patient Portal"
-          sourceSystem="New Lantern"
-          middlewareSystem="Manual push to New Lantern"
-          destinationSystem="Patient Portal"
-          isActive={configuration.paths.reportsToPortal || false}
-          noteValue={configuration.notes.reportsToPortal_note || ''}
-          notePlaceholder="e.g., MyChart integration for patient access to imaging reports"
-          onCheckChange={(checked) => handleCheckboxChange('reportsToPortal', checked)}
-          onNoteChange={(value) => handleNoteChange('reportsToPortal_note', value)}
-        />
+        {/* Patient Portal: New Lantern ------------ "Manual download" */}
+        <div
+          className={`
+            flex items-center gap-4 p-4 rounded-lg transition-all
+            ${configuration.paths.reportsToPortal ? 'bg-primary/10' : 'bg-muted/30'}
+          `}
+        >
+          <Checkbox
+            id="reportsToPortal"
+            checked={configuration.paths.reportsToPortal || false}
+            onCheckedChange={(checked) => handleCheckboxChange('reportsToPortal', checked as boolean)}
+            className={configuration.paths.reportsToPortal ? 'data-[state=checked]:bg-primary data-[state=checked]:border-primary' : 'border-white bg-transparent'}
+          />
+
+          {/* New Lantern Box */}
+          <div
+            className={`
+              px-4 py-2 rounded-md font-medium min-w-[120px] text-center
+              ${configuration.paths.reportsToPortal 
+                ? 'bg-primary text-primary-foreground' 
+                : 'bg-muted text-muted-foreground'}
+            `}
+          >
+            New Lantern
+          </div>
+
+          {/* Long Dotted Line with "Manual download" text */}
+          <div className="flex-1 flex items-center gap-2">
+            <div 
+              className={`
+                flex-1 border-t-2 border-dashed
+                ${configuration.paths.reportsToPortal ? 'border-primary' : 'border-muted-foreground'}
+              `}
+            />
+            <span 
+              className={`
+                text-sm font-medium whitespace-nowrap
+                ${configuration.paths.reportsToPortal ? 'text-primary' : 'text-muted-foreground'}
+              `}
+            >
+              Manual download
+            </span>
+            <div 
+              className={`
+                flex-1 border-t-2 border-dashed
+                ${configuration.paths.reportsToPortal ? 'border-primary' : 'border-muted-foreground'}
+              `}
+            />
+          </div>
+
+          {/* Notes */}
+          <Input
+            placeholder="e.g., MyChart integration for patient access to imaging reports"
+            value={configuration.notes.reportsToPortal_note || ''}
+            onChange={(e) => handleNoteChange('reportsToPortal_note', e.target.value)}
+            disabled={!configuration.paths.reportsToPortal}
+            className={`
+              flex-1
+              ${configuration.paths.reportsToPortal 
+                ? 'border-primary bg-background' 
+                : 'bg-muted/50 text-muted-foreground'}
+            `}
+          />
+        </div>
 
         {/* Manual Download Option: New Lantern → [Site] - Manual download from New Lantern */}
         <div

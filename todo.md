@@ -1497,3 +1497,9 @@
 - [x] Fill-in field for PACS/VNA system name
 - [x] Bidirectional arrows between source and Silverback (Query/Retrieve)
 - [x] Regular arrow from Silverback to New Lantern
+
+## Reports Out Patient Portal Redesign (Feb 10, 2026)
+- [x] Change Patient Portal option from: New Lantern → Silverback → Patient Portal
+- [x] To: New Lantern ------------ "Manual download" (long dotted line with text)
+- [x] Remove Silverback and Patient Portal boxes from this option
+- [x] Add dotted line visual element spanning the width
