@@ -1569,3 +1569,14 @@
 - [x] Show error message explaining validation requirements (toast notifications)
 - [ ] Add red highlighting to incomplete workflow fields (optional enhancement)
 - [ ] Test validation on all workflow sections (Orders, Images, Priors, Reports)
+
+## Fix Export and Add Import Functionality (Feb 10, 2026)
+- [x] Debug why workflow data doesn't export in CSV (was skipping workflow sections)
+- [x] Include workflow configuration in export (paths, systems, notes)
+- [x] Change export format from CSV to pipe-delimited (|)
+- [x] Add "Import" button next to "Export" button
+- [x] Create import dialog for uploading pipe-delimited file
+- [x] Parse imported file and update responses in database
+- [x] Validate imported data before saving (basic validation)
+- [x] Show success/error messages for import operation
+- [ ] Test export/import round-trip with all question types

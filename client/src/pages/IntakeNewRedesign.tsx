@@ -138,6 +138,9 @@ export default function IntakeNewRedesign() {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackRating, setFeedbackRating] = useState(0);
   const [feedbackComments, setFeedbackComments] = useState("");
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hasNavigatedRef = useRef(false); // Track if we've already auto-navigated
   const { user } = useAuth();
@@ -380,26 +383,151 @@ export default function IntakeNewRedesign() {
     reader.readAsDataURL(file);
   };
 
-  // Export CSV
+  // Export pipe-delimited file
   const handleExportCSV = () => {
-    const lines = ['Question ID,Question Text,Response'];
+    const lines = ['Section|Question ID|Question Text|Response Type|Response Value'];
+    
     questionnaireSections.forEach(section => {
-      // Skip workflow sections (no questions)
+      // Handle workflow sections
+      if (section.type === 'workflow') {
+        const configKey = section.id + '_config';
+        const savedConfig = responses[configKey];
+        
+        if (savedConfig) {
+          try {
+            const config = typeof savedConfig === 'string' ? JSON.parse(savedConfig) : savedConfig;
+            
+            // Export each selected path as a separate row
+            Object.keys(config.paths || {}).forEach(pathKey => {
+              if (config.paths[pathKey]) {
+                const systemValue = config.systems?.[pathKey] || '';
+                const notesValue = config.notes?.[pathKey] || '';
+                lines.push(`${section.title}|${section.id}_${pathKey}|${pathKey} workflow path|workflow|Path: ${pathKey}, System: ${systemValue}, Notes: ${notesValue}`);
+              }
+            });
+          } catch (e) {
+            console.error('Error parsing workflow config:', e);
+          }
+        }
+        return;
+      }
+      
+      // Handle standard question sections
       if (!section.questions) return;
       
       section.questions.forEach(q => {
         const response = responses[q.id] || '';
         const responseStr = Array.isArray(response) ? response.join('; ') : String(response);
-        lines.push(`"${q.id}","${q.text}","${responseStr}"`);
+        lines.push(`${section.title}|${q.id}|${q.text}|${q.type}|${responseStr}`);
       });
     });
     
-    const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${slug}-intake-responses.csv`;
+    a.download = `${slug}-intake-responses.txt`;
     a.click();
+  };
+
+  // Import pipe-delimited file
+  const handleImportFile = async () => {
+    if (!importFile || !slug) return;
+    
+    setIsImporting(true);
+    try {
+      const text = await importFile.text();
+      const lines = text.split('\n').filter(line => line.trim());
+      
+      // Skip header row
+      const dataLines = lines.slice(1);
+      
+      const updatedResponses: Record<string, any> = { ...responses };
+      const workflowConfigs: Record<string, any> = {};
+      
+      dataLines.forEach(line => {
+        const parts = line.split('|');
+        if (parts.length < 5) return; // Skip invalid lines
+        
+        const [section, questionId, questionText, responseType, responseValue] = parts;
+        
+        // Handle workflow data
+        if (responseType === 'workflow') {
+          // Parse workflow path data: "Path: X, System: Y, Notes: Z"
+          const pathMatch = responseValue.match(/Path: ([^,]+)/);
+          const systemMatch = responseValue.match(/System: ([^,]+)/);
+          const notesMatch = responseValue.match(/Notes: (.+)/);
+          
+          if (pathMatch) {
+            const pathKey = pathMatch[1].trim();
+            const systemValue = systemMatch ? systemMatch[1].trim() : '';
+            const notesValue = notesMatch ? notesMatch[1].trim() : '';
+            
+            // Extract section ID from questionId (format: sectionId_pathKey)
+            const sectionId = questionId.replace(`_${pathKey}`, '');
+            const configKey = sectionId + '_config';
+            
+            if (!workflowConfigs[configKey]) {
+              workflowConfigs[configKey] = {
+                paths: {},
+                systems: {},
+                notes: {}
+              };
+            }
+            
+            workflowConfigs[configKey].paths[pathKey] = true;
+            workflowConfigs[configKey].systems[pathKey] = systemValue;
+            workflowConfigs[configKey].notes[pathKey] = notesValue;
+          }
+        } else {
+          // Handle standard question responses
+          const trimmedValue = responseValue.trim();
+          
+          // Convert to appropriate type based on response type
+          if (responseType === 'multiple-choice') {
+            updatedResponses[questionId] = trimmedValue.split('; ');
+          } else if (responseType === 'yes-no' || responseType === 'radio') {
+            updatedResponses[questionId] = trimmedValue;
+          } else {
+            updatedResponses[questionId] = trimmedValue;
+          }
+        }
+      });
+      
+      // Merge workflow configs into responses
+      Object.keys(workflowConfigs).forEach(configKey => {
+        updatedResponses[configKey] = workflowConfigs[configKey];
+      });
+      
+      // Update state
+      setResponses(updatedResponses);
+      
+      // Save to database - save each response individually
+      const savePromises = Object.entries(updatedResponses).map(([questionId, value]) => {
+        return saveMutation.mutateAsync({
+          organizationSlug: slug,
+          questionId,
+          response: typeof value === 'object' ? JSON.stringify(value) : String(value),
+          userEmail: user?.email || '',
+        });
+      });
+      
+      await Promise.all(savePromises);
+      
+      toast.success('Import successful', {
+        description: `Imported ${dataLines.length} responses`
+      });
+      
+      setImportDialogOpen(false);
+      setImportFile(null);
+    } catch (error) {
+      console.error('Import error:', error);
+      toast.error('Import failed', {
+        description: error instanceof Error ? error.message : 'Failed to parse import file'
+      });
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   // Render question input
@@ -676,6 +804,15 @@ export default function IntakeNewRedesign() {
               >
                 <Download className="w-4 h-4" />
                 Export
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setImportDialogOpen(true)}
+                className="gap-2"
+              >
+                <Upload className="w-4 h-4" />
+                Import
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -1043,6 +1180,64 @@ export default function IntakeNewRedesign() {
                 disabled={feedbackRating === 0 || submitFeedbackMutation.isPending}
               >
                 {submitFeedbackMutation.isPending ? 'Submitting...' : 'Submit Feedback'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Dialog */}
+      <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Import Questionnaire Data</DialogTitle>
+            <DialogDescription>
+              Upload a pipe-delimited file to update questionnaire responses. The file must match the export format.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="import-file">Select File</Label>
+              <Input
+                id="import-file"
+                type="file"
+                accept=".txt,.csv"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  setImportFile(file || null);
+                }}
+                className="!bg-white !text-black"
+              />
+              {importFile && (
+                <div className="text-sm text-muted-foreground">
+                  Selected: {importFile.name}
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setImportDialogOpen(false);
+                  setImportFile(null);
+                }}
+                disabled={isImporting}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleImportFile}
+                disabled={!importFile || isImporting}
+              >
+                {isImporting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Importing...
+                  </>
+                ) : (
+                  'Import'
+                )}
               </Button>
             </div>
           </div>
