@@ -245,7 +245,7 @@ export const intakeRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this organization" });
       }
 
-      // Process each response
+      // Process each response using intakeResponses table (no question validation)
       const results = [];
       for (const [questionIdStr, response] of Object.entries(input.responses)) {
         // Skip empty responses
@@ -254,26 +254,14 @@ export const intakeRouter = router({
         // Convert response to string for storage
         const responseStr = typeof response === 'object' ? JSON.stringify(response) : String(response);
 
-        // Find question by questionId
-        const [question] = await db
-          .select()
-          .from(questions)
-          .where(eq(questions.questionId, questionIdStr))
-          .limit(1);
-
-        if (!question) {
-          console.warn(`Question ${questionIdStr} not found, skipping`);
-          continue;
-        }
-
-        // Check if response already exists
+        // Check if response already exists in intakeResponses table
         const [existing] = await db
           .select()
-          .from(responses)
+          .from(intakeResponses)
           .where(
             and(
-              eq(responses.organizationId, org.id),
-              eq(responses.questionId, question.id)
+              eq(intakeResponses.organizationId, org.id),
+              eq(intakeResponses.questionId, questionIdStr)
             )
           )
           .limit(1);
@@ -281,20 +269,21 @@ export const intakeRouter = router({
         if (existing) {
           // Update existing response
           await db
-            .update(responses)
+            .update(intakeResponses)
             .set({
               response: responseStr,
-              userEmail: 'batch-save@system', // TODO: Get from context
+              updatedBy: ctx.user?.email || 'batch-save@system',
             })
-            .where(eq(responses.id, existing.id));
+            .where(eq(intakeResponses.id, existing.id));
           results.push({ questionId: questionIdStr, action: "updated" });
         } else {
           // Insert new response
-          await db.insert(responses).values({
+          await db.insert(intakeResponses).values({
             organizationId: org.id,
-            questionId: question.id,
+            questionId: questionIdStr,
+            section: 'intake', // Default section
             response: responseStr,
-            userEmail: 'batch-save@system', // TODO: Get from context
+            updatedBy: ctx.user?.email || 'batch-save@system',
           });
           results.push({ questionId: questionIdStr, action: "created" });
         }

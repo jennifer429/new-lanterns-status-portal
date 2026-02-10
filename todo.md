@@ -1632,8 +1632,9 @@
 - [x] Debug why backend rejects L.11 when it exists in questionnaireData.ts
 - [x] Found that backend was validating against incomplete questions table
 - [x] Changed saveResponse to use intakeResponses table (no foreign key validation)
+- [x] Changed saveResponses (batch save) to use intakeResponses table
 - [x] intakeResponses stores questionId as varchar, allows any question ID
-- [ ] Test save functionality for all sections including L.11 and A.6.1
+- [ ] Test save functionality for all sections including E.2.1, E.3.1, E.4, etc.
 
 ## Fix Workflow Sections Not Showing Purple Checkmark (Feb 10, 2026)
 - [ ] Debug why workflow sections don't get purple checkbox after saving
