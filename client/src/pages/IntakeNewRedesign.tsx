@@ -796,7 +796,7 @@ export default function IntakeNewRedesign() {
                   />
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-x-8 gap-y-6">
+                <div className={`grid ${currentSection === 'data-integration' ? 'grid-cols-1' : 'grid-cols-2'} gap-x-8 gap-y-6`}>
                   {currentSectionData?.questions?.map((question) => {
                     // Check if question should be displayed based on conditionalOn
                     if (question.conditionalOn) {
@@ -812,7 +812,7 @@ export default function IntakeNewRedesign() {
                         key={question.id} 
                         data-question-id={question.id}
                         className={`${
-                          question.type === 'textarea' || question.type === 'upload' || question.type === 'upload-download' ? 'col-span-2' : 'col-span-1'
+                          currentSection === 'data-integration' ? 'col-span-1' : (question.type === 'textarea' || question.type === 'upload' || question.type === 'upload-download' ? 'col-span-2' : 'col-span-1')
                         } ${
                           isUnanswered ? 'p-4 border-2 border-red-500 rounded-lg bg-red-500/5' : ''
                         }`}

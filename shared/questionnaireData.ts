@@ -50,6 +50,24 @@ export const questionnaireSections: Section[] = [
       { id: 'L.11', text: 'Downtime Plans - Please describe how your organization handles downtimes planned and unplanned that impact orders and reports or backup reading', type: 'textarea', placeholder: 'Example: During planned maintenance windows (announced 2 weeks in advance), we route orders to backup PACS. For unplanned outages, we have 4-hour SLA for critical systems and maintain paper backup procedures for order entry.' },
     ],
   },
+  {
+    id: 'data-integration',
+    title: 'Data & Integration',
+    description: 'Data exchange and integration configuration',
+    questions: [
+      { id: 'D.1', text: 'Can production systems be configured for testing prior to go-live?', type: 'dropdown', options: ['Yes', 'No'] },
+      { id: 'D.2', text: 'Requested go-live date', type: 'date', placeholder: 'MM/DD/YYYY' },
+      { id: 'D.3', text: 'Expected modalities', type: 'multi-select', options: ['CT', 'MRI', 'X-Ray', 'Ultrasound', 'Nuclear Medicine', 'Mammography'] },
+
+      { id: 'D.7', text: 'Method for Historic Reports Data load', type: 'dropdown', options: ['HL7 messages bulk sent prior to go-live', 'Pipe delimited flat file (3-4 weeks lead time)', 'Automatically with images', 'Not needed'], notes: 'Optional: Sites can choose to push historic reports to New Lantern before go-live for data backfill' },
+      { id: 'D.8', text: 'Tech sheets input method (Note: Tech sheets come automatically with images in PACS as DICOM PDF or images, not SR)', type: 'dropdown', options: ['1) Automatically with images', '2) Manually as PDF'], notes: 'Prior reports are SR (text), but tech sheets are typically DICOM PDF or actual images' },
+      { id: 'D.9', text: 'Are there DICOM SR or other data sources for auto-populating fields?', type: 'textarea', placeholder: 'List DICOM SR sources' },
+      { id: 'D.10', text: 'What are the HL7 priority values in your orders (OBR:27.1) and what do they mean?', type: 'textarea', placeholder: 'Example: S=Stat, R=Routine' },
+      { id: 'D.11', text: 'What patient identifier do you use for matching (e.g. MRN) and is it in PID:3.1?', type: 'textarea', placeholder: 'Document patient identifier field' },
+      { id: 'D.12', text: 'Is the patient identifier in your order the same as in prior reports and comparison images?', type: 'textarea', placeholder: 'Yes/No and explain any differences' },
+      { id: 'D.13', text: 'Please document DICOM tag 0008,1040 value and corresponding PV1:11 value for matching (Note: DICOM tagging is handled by Silverback, not client sites)', type: 'textarea', placeholder: 'Document tag values for patient matching' },
+    ],
+  },
   /**
    * MAJOR CHANGE: Replaced text-based "Overview & Architecture" section
    * with 4 interactive visual workflow diagrams
@@ -84,24 +102,6 @@ export const questionnaireSections: Section[] = [
     workflowType: 'reports',
     title: 'Reports Out Workflow',
     description: 'Configure where finalized reports are sent',
-  },
-  {
-    id: 'data-integration',
-    title: 'Data & Integration',
-    description: 'Data exchange and integration configuration',
-    questions: [
-      { id: 'D.1', text: 'Can production systems be configured for testing prior to go-live?', type: 'dropdown', options: ['Yes', 'No'] },
-      { id: 'D.2', text: 'Confirmed go-live date', type: 'date', placeholder: 'MM/DD/YYYY' },
-      { id: 'D.3', text: 'Expected modalities', type: 'multi-select', options: ['CT', 'MRI', 'X-Ray', 'Ultrasound', 'Nuclear Medicine', 'Mammography'] },
-      { id: 'D.5', text: 'How will comparison images for priors be obtained?', type: 'dropdown', options: ['1) Manually pushed', '2) Automatically pushed by your system', '3) Query Retrieve'] },
-      { id: 'D.7', text: 'How will prior reports be obtained?', type: 'dropdown', options: ['1) HL7 messages', '2) Flat file (requires 3-4 weeks for processing)', '3) DICOM SR images'] },
-      { id: 'D.8', text: 'Tech sheets input method (Note: Tech sheets come automatically with images in PACS as DICOM PDF or images, not SR)', type: 'dropdown', options: ['1) Automatically with images', '2) Manually as PDF'], notes: 'Prior reports are SR (text), but tech sheets are typically DICOM PDF or actual images' },
-      { id: 'D.9', text: 'Are there DICOM SR or other data sources for auto-populating fields?', type: 'textarea', placeholder: 'List DICOM SR sources' },
-      { id: 'D.10', text: 'What are the HL7 priority values in your orders (OBR:27.1) and what do they mean?', type: 'textarea', placeholder: 'Example: S=Stat, R=Routine' },
-      { id: 'D.11', text: 'What patient identifier do you use for matching (e.g. MRN) and is it in PID:3.1?', type: 'textarea', placeholder: 'Document patient identifier field' },
-      { id: 'D.12', text: 'Is the patient identifier in your order the same as in prior reports and comparison images?', type: 'textarea', placeholder: 'Yes/No and explain any differences' },
-      { id: 'D.13', text: 'Please document DICOM tag 0008,1040 value and corresponding PV1:11 value for matching (Note: DICOM tagging is handled by Silverback, not client sites)', type: 'textarea', placeholder: 'Document tag values for patient matching' },
-    ],
   },
   {
     id: 'config-files',

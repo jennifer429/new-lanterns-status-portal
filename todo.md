@@ -1458,3 +1458,13 @@
 - [x] Option 1: VNA or PACS → Silverback → New Lantern (unidirectional push)
 - [x] Option 2: VNA or PACS ↔ Silverback → New Lantern (bidirectional C-FIND/C-MOVE query/retrieve)
 - [x] Option 3: Manual Push → Silverback → New Lantern (site manually pushes)
+
+## Section Reordering (Feb 10, 2026)
+- [x] Move "Data & Integration" section to position 2 (right after Organization Information)
+- [x] Shift all other sections down accordingly
+
+## Data & Integration Section Cleanup (Feb 10, 2026)
+- [x] Change "Confirmed go-live date" to "Requested go-live date"
+- [x] Delete "How will comparison images for priors be obtained?" (D.5)
+- [x] Change "How will prior reports be obtained?" to "Method for Historic Reports Data load"
+- [x] Update options to clarify pre-go-live bulk data loading purpose
