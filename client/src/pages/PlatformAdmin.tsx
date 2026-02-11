@@ -102,10 +102,8 @@ export default function PlatformAdmin() {
   const isPlatformAdmin = user?.clientId === null || user?.clientId === undefined;
 
   const { data: orgs, isLoading, refetch: refetchOrgs } = trpc.admin.getAllOrganizations.useQuery();
-  // Only platform admins can fetch all clients; partner admins don't need this
-  const { data: clients } = trpc.admin.getAllClients.useQuery(undefined, {
-    enabled: isPlatformAdmin,
-  });
+  // Platform admins need the full clients list; partner admins see their own client name from the query
+  const { data: clients } = trpc.admin.getAllClients.useQuery();
   const { data: metrics } = trpc.admin.getAdminSummary.useQuery();
   const { data: allUsers, refetch: refetchUsers } = trpc.admin.getAllUsers.useQuery();
 
@@ -1133,34 +1131,26 @@ export default function PlatformAdmin() {
 
                     <div className="space-y-2">
                       <Label htmlFor="userPartner">
-                        Partner {isPlatformAdmin && <span className="text-destructive">*</span>}
+                        Client ID <span className="text-destructive">*</span>
                       </Label>
                       <Select
-                        value={newUserClientId?.toString() || (user?.clientId?.toString() || "")}
+                        value={!isPlatformAdmin ? (user?.clientId?.toString() || "") : (newUserClientId?.toString() || "")}
                         onValueChange={(value) => setNewUserClientId(parseInt(value))}
                         disabled={!isPlatformAdmin}
                       >
                         <SelectTrigger id="userPartner">
-                          <SelectValue placeholder="Select partner" />
+                          <SelectValue placeholder="Select client" />
                         </SelectTrigger>
                         <SelectContent>
-                          {isPlatformAdmin ? (
-                            clients?.map(client => (
-                              <SelectItem key={client.id} value={client.id.toString()}>
-                                {client.name}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            user?.clientId && clients?.find(c => c.id === user.clientId) && (
-                              <SelectItem value={user.clientId.toString()}>
-                                {clients.find(c => c.id === user.clientId)?.name}
-                              </SelectItem>
-                            )
-                          )}
+                          {clients?.map(client => (
+                            <SelectItem key={client.id} value={client.id.toString()}>
+                              {client.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       {!isPlatformAdmin && (
-                        <p className="text-xs text-muted-foreground">Partner is auto-assigned based on your account</p>
+                        <p className="text-xs text-muted-foreground">Auto-assigned to your partner</p>
                       )}
                     </div>
 
