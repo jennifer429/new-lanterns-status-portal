@@ -1,0 +1,26 @@
+{
+  "query": "SELECT id, clientId, questionId, label, fileName, isActive FROM partnerTemplates;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, clientId, questionId, label, fileName, isActive FROM partnerTemplates;",
+  "rows": [
+    {
+      "id": "1",
+      "clientId": "1",
+      "questionId": "E.1",
+      "label": "VPN Configuration Form - RadOne",
+      "fileName": "VPN-Configuration-Form-RadOne.xlsx",
+      "isActive": "1"
+    },
+    {
+      "id": "2",
+      "clientId": "2",
+      "questionId": "E.1",
+      "label": "VPN Configuration Form - SRV",
+      "fileName": "VPN-Configuration-Form-SRV.docx",
+      "isActive": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tclientId\tquestionId\tlabel\tfileName\tisActive\n1\t1\tE.1\tVPN Configuration Form - RadOne\tVPN-Configuration-Form-RadOne.xlsx\t1\n2\t2\tE.1\tVPN Configuration Form - SRV\tVPN-Configuration-Form-SRV.docx\t1\n",
+  "stderr": "",
+  "execution_time_ms": 66
+}

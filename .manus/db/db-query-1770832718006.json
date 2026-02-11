@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO partnerTemplates (clientId, questionId, label, fileName, fileUrl, s3Key, fileSize, uploadedBy, isActive, createdAt, updatedAt)\nVALUES (\n  2,\n  'E.1',\n  'VPN Configuration Form - SRV',\n  'VPN-Configuration-Form-SRV.docx',\n  'https://files.manuscdn.com/user_upload_by_module/session_file/310519663326227304/MFEsljZLLtNyBZWF.docx',\n  'legacy/VPN-Configuration-Form-SRV.docx',\n  0,\n  'system-migration',\n  1,\n  NOW(),\n  NOW()\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute INSERT INTO partnerTemplates (clientId, questionId, label, fileName, fileUrl, s3Key, fileSize, uploadedBy, isActive, createdAt, updatedAt)\nVALUES (\n  2,\n  'E.1',\n  'VPN Configuration Form - SRV',\n  'VPN-Configuration-Form-SRV.docx',\n  'https://files.manuscdn.com/user_upload_by_module/session_file/310519663326227304/MFEsljZLLtNyBZWF.docx',\n  'legacy/VPN-Configuration-Form-SRV.docx',\n  0,\n  'system-migration',\n  1,\n  NOW(),\n  NOW()\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 66
+}

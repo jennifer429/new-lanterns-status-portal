@@ -1780,3 +1780,12 @@
 - [x] Delete all records from fileAttachments table
 - [x] Verify all data has been deleted (0 responses, 0 files remaining)
 - [x] Organizations preserved (count unchanged)
+
+## Partner Templates System Setup (Feb 11, 2026)
+- [x] Run pnpm db:push to create partnerTemplates table (already exists)
+- [x] Check for seed SQL scripts for initial template data (found seed-vpn-templates.sql)
+- [x] Verify Templates tab UI in admin dashboard (fully functional)
+- [x] Run seed SQL to insert RadOne and SRV VPN templates
+- [x] Verify templates are in database (2 templates: RadOne E.1, SRV E.1)
+- [x] Code review: IntakeNewRedesign correctly uses dbTemplateMap for rendering
+- [x] GitHub sync: Removed hardcoded template URLs, single source of truth is DB
