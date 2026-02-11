@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { transformSectionProgress, getInProgressSections } from "@/lib/adminUtils";
+import { transformSectionProgress } from "@/lib/adminUtils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -594,7 +594,6 @@ export default function PlatformAdmin() {
 
                   // Convert sectionProgress using shared utility
                   const sectionProgress = transformSectionProgress(orgMetrics?.sectionProgress);
-                  const inProgressSections = getInProgressSections(sectionProgress);
 
                   return (
                     <Card key={org.id} className="border-2 border-primary/30 bg-gradient-to-b from-card to-card/50">
@@ -656,10 +655,9 @@ export default function PlatformAdmin() {
                               <div className="text-sm text-muted-foreground">Complete</div>
                             </div>
 
-                            {/* Section List - Only show sections in progress */}
-                            {inProgressSections.length > 0 && (
+                            {/* Section List - Show all sections */}
                               <div className="space-y-2 mb-4">
-                                {inProgressSections.map((section, index) => (
+                                {sectionProgress.map((section, index) => (
                                   <div key={index} className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                       {section.progress === 100 ? (
@@ -673,7 +671,6 @@ export default function PlatformAdmin() {
                                   </div>
                                 ))}
                               </div>
-                            )}
 
                             {/* Status */}
                             <div className="text-xs text-muted-foreground mb-4">
