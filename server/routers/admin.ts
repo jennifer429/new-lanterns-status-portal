@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { questions, questionOptions, organizations, users, clients, intakeFileAttachments } from "../../drizzle/schema";
+import { questions, questionOptions, organizations, users, clients, intakeFileAttachments, partnerTemplates } from "../../drizzle/schema";
 import { eq, and, or, desc, inArray, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
@@ -965,11 +965,193 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Cannot reactivate other partner's users" });
       }
 
-      // Restore user by setting isActive to 1 and optionally updating organizationId
+       // Restore user by setting isActive to 1 and optionally updating organizationId
       await db
         .update(users)
         .set({ isActive: 1, organizationId: input.organizationId })
         .where(eq(users.id, input.userId));
+      return { success: true };
+    }),
+
+  // ============================================================================
+  // PARTNER TEMPLATES CRUD
+  // ============================================================================
+
+  /**
+   * Get all partner templates (filtered by clientId for partner admins)
+   */
+  getTemplates: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user.role !== "admin") {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+    }
+
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+    if (ctx.user.clientId) {
+      // Partner admin: only see their own templates
+      return await db.select().from(partnerTemplates)
+        .where(eq(partnerTemplates.clientId, ctx.user.clientId))
+        .orderBy(desc(partnerTemplates.updatedAt));
+    } else {
+      // Platform admin: see all templates
+      return await db.select().from(partnerTemplates)
+        .orderBy(desc(partnerTemplates.updatedAt));
+    }
+  }),
+
+  /**
+   * Get templates for a specific client (used by intake page)
+   */
+  getTemplatesByClient: protectedProcedure
+    .input(z.object({ clientId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      return await db.select().from(partnerTemplates)
+        .where(eq(partnerTemplates.clientId, input.clientId))
+        .orderBy(partnerTemplates.questionId);
+    }),
+
+  /**
+   * Upload a new partner template
+   */
+  uploadTemplate: protectedProcedure
+    .input(
+      z.object({
+        clientId: z.number(),
+        questionId: z.string(),
+        label: z.string(),
+        fileName: z.string(),
+        fileData: z.string(), // base64 encoded
+        mimeType: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+
+      // Partner admins can only upload templates for their own partner
+      if (ctx.user.clientId && input.clientId !== ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot upload templates for other partners" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Decode base64 file data
+      const fileBuffer = Buffer.from(input.fileData, "base64");
+
+      // Upload to S3
+      const { storagePut } = await import("../storage");
+      const timestamp = Date.now();
+      const fileExt = input.fileName.split('.').pop();
+      const s3Key = `partner-templates/${input.clientId}/${input.questionId}_${timestamp}.${fileExt}`;
+      const { url: fileUrl } = await storagePut(s3Key, fileBuffer, input.mimeType);
+
+      // Insert into database
+      await db.insert(partnerTemplates).values({
+        clientId: input.clientId,
+        questionId: input.questionId,
+        label: input.label,
+        fileName: input.fileName,
+        fileUrl,
+        s3Key,
+        fileSize: fileBuffer.length,
+        mimeType: input.mimeType,
+        uploadedBy: ctx.user.email || "unknown",
+      });
+
+      return { success: true, fileUrl };
+    }),
+
+  /**
+   * Update (replace) a partner template file
+   */
+  updateTemplate: protectedProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        label: z.string().optional(),
+        fileName: z.string().optional(),
+        fileData: z.string().optional(), // base64 encoded - if provided, replaces the file
+        mimeType: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Get existing template
+      const [existing] = await db.select().from(partnerTemplates)
+        .where(eq(partnerTemplates.id, input.id)).limit(1);
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Template not found" });
+      }
+
+      // Partner admins can only update their own templates
+      if (ctx.user.clientId && existing.clientId !== ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot update other partner's templates" });
+      }
+
+      const updateData: any = {};
+      if (input.label) updateData.label = input.label;
+
+      // If new file data is provided, upload it
+      if (input.fileData && input.fileName && input.mimeType) {
+        const fileBuffer = Buffer.from(input.fileData, "base64");
+        const { storagePut } = await import("../storage");
+        const timestamp = Date.now();
+        const fileExt = input.fileName.split('.').pop();
+        const s3Key = `partner-templates/${existing.clientId}/${existing.questionId}_${timestamp}.${fileExt}`;
+        const { url: fileUrl } = await storagePut(s3Key, fileBuffer, input.mimeType);
+
+        updateData.fileName = input.fileName;
+        updateData.fileUrl = fileUrl;
+        updateData.s3Key = s3Key;
+        updateData.fileSize = fileBuffer.length;
+        updateData.mimeType = input.mimeType;
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        await db.update(partnerTemplates).set(updateData).where(eq(partnerTemplates.id, input.id));
+      }
+
+      return { success: true };
+    }),
+
+  /**
+   * Delete a partner template
+   */
+  deleteTemplate: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Get existing template
+      const [existing] = await db.select().from(partnerTemplates)
+        .where(eq(partnerTemplates.id, input.id)).limit(1);
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Template not found" });
+      }
+
+      // Partner admins can only delete their own templates
+      if (ctx.user.clientId && existing.clientId !== ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot delete other partner's templates" });
+      }
+
+      await db.delete(partnerTemplates).where(eq(partnerTemplates.id, input.id));
 
       return { success: true };
     }),

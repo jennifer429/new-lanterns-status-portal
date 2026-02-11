@@ -272,3 +272,27 @@ export const onboardingFeedback = mysqlTable("onboardingFeedback", {
 
 export type OnboardingFeedback = typeof onboardingFeedback.$inferSelect;
 export type InsertOnboardingFeedback = typeof onboardingFeedback.$inferInsert;
+
+/**
+ * Partner templates - stores downloadable template files scoped to a client (partner)
+ * Each template is tied to a questionId (e.g., VPN form = E.1) and a clientId.
+ * Partners can only see/manage their own templates. Platform admins can manage all.
+ * Templates are displayed on the intake form for the matching question and partner.
+ */
+export const partnerTemplates = mysqlTable("partnerTemplates", {
+  id: int("id").autoincrement().primaryKey(),
+  clientId: int("clientId").notNull(), // FK to clients.id - which partner owns this template
+  questionId: varchar("questionId", { length: 50 }).notNull(), // Which intake question this template belongs to (e.g., "E.1" for VPN form)
+  label: varchar("label", { length: 255 }).notNull(), // Display name (e.g., "VPN Configuration Form")
+  fileName: varchar("fileName", { length: 255 }).notNull(), // Original uploaded file name
+  fileUrl: text("fileUrl").notNull(), // S3 URL for download
+  s3Key: varchar("s3Key", { length: 500 }).notNull(), // S3 key for reference
+  fileSize: int("fileSize"), // bytes
+  mimeType: varchar("mimeType", { length: 100 }),
+  uploadedBy: varchar("uploadedBy", { length: 320 }), // Admin email who uploaded
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PartnerTemplate = typeof partnerTemplates.$inferSelect;
+export type InsertPartnerTemplate = typeof partnerTemplates.$inferInsert;

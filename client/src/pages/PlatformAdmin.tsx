@@ -31,7 +31,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Activity, Download, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle } from "lucide-react";
+import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Activity, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, Trash2, FileUp } from "lucide-react";
+import { questionnaireSections } from "@shared/questionnaireData";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -51,7 +52,18 @@ import {
 export default function PlatformAdmin() {
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"dashboard" | "users" | "organizations">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "users" | "organizations" | "templates">("dashboard");
+
+  // Template management state
+  const [isUploadTemplateDialogOpen, setIsUploadTemplateDialogOpen] = useState(false);
+  const [templateClientId, setTemplateClientId] = useState<number | undefined>();
+  const [templateQuestionId, setTemplateQuestionId] = useState("");
+  const [templateLabel, setTemplateLabel] = useState("");
+  const [templateFile, setTemplateFile] = useState<File | null>(null);
+  const [isReplaceTemplateDialogOpen, setIsReplaceTemplateDialogOpen] = useState(false);
+  const [replaceTemplateId, setReplaceTemplateId] = useState<number | null>(null);
+  const [replaceTemplateFile, setReplaceTemplateFile] = useState<File | null>(null);
+  const [replaceTemplateLabel, setReplaceTemplateLabel] = useState("");
   
   // User creation dialog state
   const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
@@ -106,6 +118,7 @@ export default function PlatformAdmin() {
   const { data: clients } = trpc.admin.getAllClients.useQuery();
   const { data: metrics } = trpc.admin.getAdminSummary.useQuery();
   const { data: allUsers, refetch: refetchUsers } = trpc.admin.getAllUsers.useQuery();
+  const { data: templates, refetch: refetchTemplates } = trpc.admin.getTemplates.useQuery();
 
   // Logout mutation
   const logoutMutation = trpc.auth.logout.useMutation({
@@ -330,6 +343,104 @@ export default function PlatformAdmin() {
       toast.error(error.message || "Failed to deactivate user");
     },
   });
+
+  // Template mutations
+  const uploadTemplateMutation = trpc.admin.uploadTemplate.useMutation({
+    onSuccess: () => {
+      toast.success("Template uploaded successfully!");
+      setIsUploadTemplateDialogOpen(false);
+      setTemplateClientId(undefined);
+      setTemplateQuestionId("");
+      setTemplateLabel("");
+      setTemplateFile(null);
+      refetchTemplates();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to upload template");
+    },
+  });
+
+  const updateTemplateMutation = trpc.admin.updateTemplate.useMutation({
+    onSuccess: () => {
+      toast.success("Template updated successfully!");
+      setIsReplaceTemplateDialogOpen(false);
+      setReplaceTemplateId(null);
+      setReplaceTemplateFile(null);
+      setReplaceTemplateLabel("");
+      refetchTemplates();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to update template");
+    },
+  });
+
+  const deleteTemplateMutation = trpc.admin.deleteTemplate.useMutation({
+    onSuccess: () => {
+      toast.success("Template deleted");
+      refetchTemplates();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to delete template");
+    },
+  });
+
+  // Build list of questions that support templates (upload-download and upload types)
+  const templateQuestions = questionnaireSections.flatMap(section =>
+    (section.questions || []).filter(q => q.type === 'upload-download' || q.type === 'upload').map(q => ({
+      id: q.id,
+      text: q.text,
+      sectionTitle: section.title,
+    }))
+  );
+
+  const handleUploadTemplate = async () => {
+    const clientIdToUse = isPlatformAdmin ? templateClientId : user?.clientId;
+    if (!clientIdToUse || !templateQuestionId || !templateLabel || !templateFile) {
+      toast.error("Please fill in all required fields and select a file");
+      return;
+    }
+
+    // Read file as base64
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(',')[1];
+      uploadTemplateMutation.mutate({
+        clientId: clientIdToUse,
+        questionId: templateQuestionId,
+        label: templateLabel,
+        fileName: templateFile.name,
+        fileData: base64,
+        mimeType: templateFile.type || 'application/octet-stream',
+      });
+    };
+    reader.readAsDataURL(templateFile);
+  };
+
+  const handleReplaceTemplate = async () => {
+    if (!replaceTemplateId) return;
+
+    if (replaceTemplateFile) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(',')[1];
+        updateTemplateMutation.mutate({
+          id: replaceTemplateId,
+          label: replaceTemplateLabel || undefined,
+          fileName: replaceTemplateFile.name,
+          fileData: base64,
+          mimeType: replaceTemplateFile.type || 'application/octet-stream',
+        });
+      };
+      reader.readAsDataURL(replaceTemplateFile);
+    } else if (replaceTemplateLabel) {
+      updateTemplateMutation.mutate({
+        id: replaceTemplateId,
+        label: replaceTemplateLabel,
+      });
+    } else {
+      toast.error("Please update the label or select a new file");
+    }
+  };
 
   const updateOrgMutation = trpc.admin.updateOrganization.useMutation({
     onSuccess: () => {
@@ -561,6 +672,19 @@ export default function PlatformAdmin() {
             >
               Organizations
               {activeTab === "organizations" && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab("templates")}
+              className={`pb-3 px-1 font-medium transition-colors relative ${
+                activeTab === "templates"
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Templates
+              {activeTab === "templates" && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
               )}
             </button>
@@ -1423,6 +1547,234 @@ export default function PlatformAdmin() {
                 </CardContent>
               </Card>
             )}
+          </>
+        )}
+
+        {activeTab === "templates" && (
+          <>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold">Partner Templates ({templates?.length || 0})</h2>
+              <Dialog open={isUploadTemplateDialogOpen} onOpenChange={setIsUploadTemplateDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="gap-2">
+                    <Upload className="w-4 h-4" />
+                    Upload Template
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Upload New Template</DialogTitle>
+                    <DialogDescription>
+                      Upload a template file that will be available for download on the intake form for the selected partner's organizations.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 mt-4">
+                    {isPlatformAdmin && (
+                      <div className="space-y-2">
+                        <Label>Partner <span className="text-destructive">*</span></Label>
+                        <Select
+                          value={templateClientId?.toString() || ""}
+                          onValueChange={(value) => setTemplateClientId(parseInt(value))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select partner" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {clients?.map(client => (
+                              <SelectItem key={client.id} value={client.id.toString()}>
+                                {client.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    {!isPlatformAdmin && (
+                      <div className="space-y-2">
+                        <Label>Partner</Label>
+                        <Input value={getPartnerDisplayName(user)} disabled />
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <Label>Question <span className="text-destructive">*</span></Label>
+                      <Select
+                        value={templateQuestionId}
+                        onValueChange={(value) => setTemplateQuestionId(value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select question" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {templateQuestions.map(q => (
+                            <SelectItem key={q.id} value={q.id}>
+                              {q.id} - {q.text.substring(0, 60)}{q.text.length > 60 ? '...' : ''}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Label <span className="text-destructive">*</span></Label>
+                      <Input
+                        placeholder="e.g., VPN Configuration Form"
+                        value={templateLabel}
+                        onChange={(e) => setTemplateLabel(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>File <span className="text-destructive">*</span></Label>
+                      <Input
+                        type="file"
+                        onChange={(e) => setTemplateFile(e.target.files?.[0] || null)}
+                      />
+                      {templateFile && (
+                        <p className="text-xs text-muted-foreground">
+                          {templateFile.name} ({(templateFile.size / 1024).toFixed(1)} KB)
+                        </p>
+                      )}
+                    </div>
+
+                    <Button
+                      onClick={handleUploadTemplate}
+                      disabled={uploadTemplateMutation.isPending}
+                      className="w-full"
+                    >
+                      {uploadTemplateMutation.isPending ? "Uploading..." : "Upload Template"}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            {/* Replace Template Dialog */}
+            <Dialog open={isReplaceTemplateDialogOpen} onOpenChange={setIsReplaceTemplateDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Update Template</DialogTitle>
+                  <DialogDescription>
+                    Update the label or replace the file for this template.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <Label>Label</Label>
+                    <Input
+                      value={replaceTemplateLabel}
+                      onChange={(e) => setReplaceTemplateLabel(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Replace File (optional)</Label>
+                    <Input
+                      type="file"
+                      onChange={(e) => setReplaceTemplateFile(e.target.files?.[0] || null)}
+                    />
+                    {replaceTemplateFile && (
+                      <p className="text-xs text-muted-foreground">
+                        {replaceTemplateFile.name} ({(replaceTemplateFile.size / 1024).toFixed(1)} KB)
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    onClick={handleReplaceTemplate}
+                    disabled={updateTemplateMutation.isPending}
+                    className="w-full"
+                  >
+                    {updateTemplateMutation.isPending ? "Updating..." : "Update Template"}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Templates Table */}
+            <Card>
+              <CardContent className="p-6">
+                {!templates || templates.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <FileUp className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium">No templates yet</p>
+                    <p className="text-sm">Upload a template to make it available on the intake form for your organizations.</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        {isPlatformAdmin && <TableHead>Partner</TableHead>}
+                        <TableHead>Question</TableHead>
+                        <TableHead>Label</TableHead>
+                        <TableHead>File</TableHead>
+                        <TableHead>Size</TableHead>
+                        <TableHead>Uploaded By</TableHead>
+                        <TableHead>Updated</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {templates.map(t => (
+                        <TableRow key={t.id}>
+                          {isPlatformAdmin && (
+                            <TableCell>
+                              <Badge variant="outline">{clientMap[t.clientId] || `Client ${t.clientId}`}</Badge>
+                            </TableCell>
+                          )}
+                          <TableCell className="font-mono text-sm">{t.questionId}</TableCell>
+                          <TableCell className="font-medium">{t.label}</TableCell>
+                          <TableCell>
+                            <a
+                              href={t.fileUrl}
+                              download={t.fileName}
+                              className="text-primary hover:underline flex items-center gap-1"
+                            >
+                              <Download className="w-3 h-3" />
+                              {t.fileName}
+                            </a>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {t.fileSize ? `${(t.fileSize / 1024).toFixed(1)} KB` : 'N/A'}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{t.uploadedBy || 'N/A'}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {new Date(t.updatedAt).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setReplaceTemplateId(t.id);
+                                  setReplaceTemplateLabel(t.label);
+                                  setReplaceTemplateFile(null);
+                                  setIsReplaceTemplateDialogOpen(true);
+                                }}
+                              >
+                                <Edit className="w-3 h-3 mr-1" />
+                                Edit
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  if (confirm(`Delete template "${t.label}"?`)) {
+                                    deleteTemplateMutation.mutate({ id: t.id });
+                                  }
+                                }}
+                              >
+                                <Trash2 className="w-3 h-3 mr-1" />
+                                Delete
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
           </>
         )}
       </div>

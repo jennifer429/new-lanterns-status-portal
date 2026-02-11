@@ -170,6 +170,23 @@ export default function IntakeNewRedesign() {
     { enabled: !!slug }
   );
 
+  // Fetch partner templates from database
+  const { data: dbTemplates = [] } = trpc.intake.getTemplatesForOrg.useQuery(
+    { organizationSlug: slug || "" },
+    { enabled: !!slug }
+  );
+
+  // Build a map of questionId -> template(s) from database
+  const dbTemplateMap = useMemo(() => {
+    const map = new Map<string, Array<{ label: string; fileName: string; fileUrl: string }>>(); 
+    dbTemplates.forEach(t => {
+      const existing = map.get(t.questionId) || [];
+      existing.push({ label: t.label, fileName: t.fileName, fileUrl: t.fileUrl });
+      map.set(t.questionId, existing);
+    });
+    return map;
+  }, [dbTemplates]);
+
   // Create a map of questionId -> file count for validation
   const uploadedFilesMap = useMemo(() => {
     const map = new Map<string, number>();
@@ -607,46 +624,82 @@ export default function IntakeNewRedesign() {
         );
 
       case 'upload':
+        const uploadTemplates = dbTemplateMap.get(question.id) || [];
         return (
-          <FileUploadField
-            questionId={question.id}
-            isUploading={isUploading}
-            organizationSlug={slug || ''}
-            onFileUpload={handleFileUpload}
-            onFileDelete={(fileId) => {
-              deleteMutation.mutate({
-                organizationSlug: slug || '',
-                fileId,
-              });
-            }}
-          />
+          <div className="space-y-4">
+            {/* Show DB templates if any exist for this upload question */}
+            {uploadTemplates.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {uploadTemplates.map((tmpl, idx) => (
+                  <Button
+                    key={idx}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = tmpl.fileUrl;
+                      link.download = tmpl.fileName;
+                      link.click();
+                    }}
+                    className="bg-purple-600 hover:bg-purple-700 text-white border-purple-500"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download {tmpl.label} ({tmpl.fileName})
+                  </Button>
+                ))}
+              </div>
+            )}
+            <FileUploadField
+              questionId={question.id}
+              isUploading={isUploading}
+              organizationSlug={slug || ''}
+              onFileUpload={handleFileUpload}
+              onFileDelete={(fileId) => {
+                deleteMutation.mutate({
+                  organizationSlug: slug || '',
+                  fileId,
+                });
+              }}
+            />
+          </div>
         );
 
       case 'upload-download':
-        // Get partner-specific template or fall back to default
+        // Get templates from DB first, then fall back to hardcoded partnerTemplates
+        const dbTemplatesForQ = dbTemplateMap.get(question.id) || [];
         const clientId = org?.clientId;
-        const partnerTemplate = clientId && question.partnerTemplates ? question.partnerTemplates[clientId] : undefined;
-        const templateUrl = partnerTemplate?.url || question.templateUrl;
-        const templateFileName = partnerTemplate?.fileName || question.templateFileName;
+        const hardcodedTemplate = clientId && question.partnerTemplates ? question.partnerTemplates[clientId] : undefined;
+        const fallbackUrl = hardcodedTemplate?.url || question.templateUrl;
+        const fallbackFileName = hardcodedTemplate?.fileName || question.templateFileName;
+        
+        // Use DB templates if available, otherwise fall back to hardcoded
+        const templatesToShow = dbTemplatesForQ.length > 0 
+          ? dbTemplatesForQ 
+          : (fallbackUrl ? [{ label: 'Template', fileName: fallbackFileName || 'template', fileUrl: fallbackUrl }] : []);
         
         return (
           <div className="space-y-4">
-            {/* Download Template Button */}
-            {templateUrl && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const link = document.createElement('a');
-                  link.href = templateUrl;
-                  link.download = templateFileName || 'template';
-                  link.click();
-                }}
-                className="bg-purple-600 hover:bg-purple-700 text-white border-purple-500"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Download Template {templateFileName && `(${templateFileName})`}
-              </Button>
+            {/* Download Template Button(s) */}
+            {templatesToShow.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {templatesToShow.map((tmpl, idx) => (
+                  <Button
+                    key={idx}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = tmpl.fileUrl;
+                      link.download = tmpl.fileName;
+                      link.click();
+                    }}
+                    className="bg-purple-600 hover:bg-purple-700 text-white border-purple-500"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download {tmpl.label} ({tmpl.fileName})
+                  </Button>
+                ))}
+              </div>
             )}
             
             {/* File Upload Field */}

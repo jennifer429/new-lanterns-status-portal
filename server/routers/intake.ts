@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { intakeResponses, intakeFileAttachments, organizations, questions, questionOptions, responses, onboardingFeedback, clients } from "../../drizzle/schema";
+import { intakeResponses, intakeFileAttachments, organizations, questions, questionOptions, responses, onboardingFeedback, clients, partnerTemplates } from "../../drizzle/schema";
 import { eq, and, sql } from "drizzle-orm";
 
 export const intakeRouter = router({
@@ -984,5 +984,26 @@ export const intakeRouter = router({
       });
 
       return { success: true };
+    }),
+
+  /**
+   * Get partner templates for an organization (by slug → clientId)
+   * Returns templates scoped to the org's partner so the intake form can show download buttons
+   */
+  getTemplatesForOrg: publicProcedure
+    .input(z.object({ organizationSlug: z.string() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Get the org to find its clientId
+      const [org] = await db.select().from(organizations)
+        .where(eq(organizations.slug, input.organizationSlug)).limit(1);
+      if (!org || !org.clientId) return [];
+
+      // Get all templates for this org's partner
+      return await db.select().from(partnerTemplates)
+        .where(eq(partnerTemplates.clientId, org.clientId))
+        .orderBy(partnerTemplates.questionId);
     }),
 });
