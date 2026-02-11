@@ -1,0 +1,14 @@
+{
+  "query": "SELECT COUNT(*) as total_orgs, SUM(CASE WHEN slug LIKE 'test-%' THEN 1 ELSE 0 END) as test_orgs FROM organizations;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT COUNT(*) as total_orgs, SUM(CASE WHEN slug LIKE 'test-%' THEN 1 ELSE 0 END) as test_orgs FROM organizations;",
+  "rows": [
+    {
+      "total_orgs": "11",
+      "test_orgs": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "total_orgs\ttest_orgs\n11\t0\n",
+  "stderr": "",
+  "execution_time_ms": 55
+}

@@ -39,11 +39,3 @@ export function transformSectionProgress(
   });
 }
 
-/**
- * Filter sections to show only those in progress (> 0%)
- */
-export function getInProgressSections(
-  sectionProgress: Array<{ name: string; progress: number }>
-): Array<{ name: string; progress: number }> {
-  return sectionProgress.filter((s) => s.progress > 0);
-}

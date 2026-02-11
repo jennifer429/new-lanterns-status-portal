@@ -1,0 +1,38 @@
+{
+  "query": "SELECT id, slug, name, contactEmail, createdAt FROM organizations WHERE slug LIKE 'test-%' ORDER BY createdAt DESC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, slug, name, contactEmail, createdAt FROM organizations WHERE slug LIKE 'test-%' ORDER BY createdAt DESC;",
+  "rows": [
+    {
+      "id": "390003",
+      "slug": "test-autosave-1770756210915",
+      "name": "Test AutoSave Org",
+      "contactEmail": "test@autosave.com",
+      "createdAt": "2026-02-10 20:43:31"
+    },
+    {
+      "id": "390004",
+      "slug": "test-login-1770756211743",
+      "name": "Test Login Org",
+      "contactEmail": "test@login.com",
+      "createdAt": "2026-02-10 20:43:31"
+    },
+    {
+      "id": "300004",
+      "slug": "test-login-1770728560156",
+      "name": "Test Login Org",
+      "contactEmail": "test@login.com",
+      "createdAt": "2026-02-10 13:02:40"
+    },
+    {
+      "id": "300003",
+      "slug": "test-autosave-1770728559366",
+      "name": "Test AutoSave Org",
+      "contactEmail": "test@autosave.com",
+      "createdAt": "2026-02-10 13:02:39"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tslug\tname\tcontactEmail\tcreatedAt\n390003\ttest-autosave-1770756210915\tTest AutoSave Org\ttest@autosave.com\t2026-02-10 20:43:31\n390004\ttest-login-1770756211743\tTest Login Org\ttest@login.com\t2026-02-10 20:43:31\n300004\ttest-login-1770728560156\tTest Login Org\ttest@login.com\t2026-02-10 13:02:40\n300003\ttest-autosave-1770728559366\tTest AutoSave Org\ttest@autosave.com\t2026-02-10 13:02:39\n",
+  "stderr": "",
+  "execution_time_ms": 85
+}

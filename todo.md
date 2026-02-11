@@ -1757,3 +1757,19 @@
 - [x] Fix 2: Change "Images Workflow (DICOM)" → "Images Workflow" in questionnaireData.ts
 - [x] Fix 3: Fix infinite loading condition in IntakeNewRedesign.tsx line 707
 - [x] Fix 4: Remove .slice(0, 3) and add scrollable container in PlatformAdmin.tsx
+
+## Test Data Cleanup (Feb 10, 2026)
+- [x] Query database to find all test organizations (test-login-*, test-autosave-*, etc.)
+- [x] Delete associated intakeResponses for test organizations
+- [x] Delete associated intakeFileAttachments for test organizations
+- [x] Delete associated fileAttachments for test organizations
+- [x] Delete associated users for test organizations
+- [x] Delete test organizations
+- [x] Verify all test data has been removed (0 test orgs remaining)
+
+## Admin Dashboard Section Visibility Bug (Feb 10, 2026)
+- [x] Fix transformSectionProgress in adminUtils.ts to return all 9 sections at 0% for new orgs
+- [x] Remove getInProgressSections filter and conditional rendering in PlatformAdmin.tsx
+- [x] Fixed by user in commit 833f482 (synced from GitHub)
+- [x] Remove unused getInProgressSections function and update tests
+- [x] All 70 tests passing
