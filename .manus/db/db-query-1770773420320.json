@@ -1,0 +1,15 @@
+{
+  "query": "SELECT \n  (SELECT COUNT(*) FROM intakeResponses) as intake_responses_count,\n  (SELECT COUNT(*) FROM intakeFileAttachments) as intake_files_count,\n  (SELECT COUNT(*) FROM fileAttachments) as file_attachments_count;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT \n  (SELECT COUNT(*) FROM intakeResponses) as intake_responses_count,\n  (SELECT COUNT(*) FROM intakeFileAttachments) as intake_files_count,\n  (SELECT COUNT(*) FROM fileAttachments) as file_attachments_count;",
+  "rows": [
+    {
+      "intake_responses_count": "161",
+      "intake_files_count": "18",
+      "file_attachments_count": "24"
+    }
+  ],
+  "messages": [],
+  "stdout": "intake_responses_count\tintake_files_count\tfile_attachments_count\n161\t18\t24\n",
+  "stderr": "",
+  "execution_time_ms": 60
+}

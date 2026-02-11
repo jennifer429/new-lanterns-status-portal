@@ -1,0 +1,16 @@
+{
+  "query": "SELECT \n  (SELECT COUNT(*) FROM intakeResponses) as intake_responses_remaining,\n  (SELECT COUNT(*) FROM intakeFileAttachments) as intake_files_remaining,\n  (SELECT COUNT(*) FROM fileAttachments) as file_attachments_remaining,\n  (SELECT COUNT(*) FROM organizations) as organizations_remaining;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT \n  (SELECT COUNT(*) FROM intakeResponses) as intake_responses_remaining,\n  (SELECT COUNT(*) FROM intakeFileAttachments) as intake_files_remaining,\n  (SELECT COUNT(*) FROM fileAttachments) as file_attachments_remaining,\n  (SELECT COUNT(*) FROM organizations) as organizations_remaining;",
+  "rows": [
+    {
+      "intake_responses_remaining": "0",
+      "intake_files_remaining": "0",
+      "file_attachments_remaining": "0",
+      "organizations_remaining": "11"
+    }
+  ],
+  "messages": [],
+  "stdout": "intake_responses_remaining\tintake_files_remaining\tfile_attachments_remaining\torganizations_remaining\n0\t0\t0\t11\n",
+  "stderr": "",
+  "execution_time_ms": 54
+}

@@ -1773,3 +1773,10 @@
 - [x] Fixed by user in commit 833f482 (synced from GitHub)
 - [x] Remove unused getInProgressSections function and update tests
 - [x] All 70 tests passing
+
+## Delete All Data for All Organizations (Feb 10, 2026)
+- [x] Delete all records from intakeResponses table
+- [x] Delete all records from intakeFileAttachments table
+- [x] Delete all records from fileAttachments table
+- [x] Verify all data has been deleted (0 responses, 0 files remaining)
+- [x] Organizations preserved (count unchanged)
