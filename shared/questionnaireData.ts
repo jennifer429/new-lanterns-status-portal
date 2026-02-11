@@ -126,16 +126,10 @@ export const questionnaireSections: Section[] = [
         text: 'VPN form exchange', 
         type: 'upload-download', 
         notes: 'Upload your completed VPN form or download our template. MUST include IP addresses and ports for all DICOM endpoints and HL7 interfaces.',
-        partnerTemplates: {
-          1: { // RadOne
-            url: 'https://files.manuscdn.com/user_upload_by_module/session_file/310519663326227304/NfNtZiMfXpqdbVqa.xlsx',
-            fileName: 'VPN-Configuration-Form-RadOne.xlsx'
-          },
-          2: { // SRV
-            url: 'https://files.manuscdn.com/user_upload_by_module/session_file/310519663326227304/MFEsljZLLtNyBZWF.docx',
-            fileName: 'VPN-Configuration-Form-SRV.docx'
-          }
-        }
+        // Templates are now managed via the Templates tab in the admin dashboard (partnerTemplates DB table)
+        // Previously hardcoded VPN form URLs:
+        //   RadOne (clientId=1): https://files.manuscdn.com/user_upload_by_module/session_file/310519663326227304/NfNtZiMfXpqdbVqa.xlsx
+        //   SRV (clientId=2): https://files.manuscdn.com/user_upload_by_module/session_file/310519663326227304/MFEsljZLLtNyBZWF.docx
       },
       { 
         id: 'E.2', 

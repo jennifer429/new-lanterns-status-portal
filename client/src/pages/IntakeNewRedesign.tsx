@@ -665,17 +665,8 @@ export default function IntakeNewRedesign() {
         );
 
       case 'upload-download':
-        // Get templates from DB first, then fall back to hardcoded partnerTemplates
-        const dbTemplatesForQ = dbTemplateMap.get(question.id) || [];
-        const clientId = org?.clientId;
-        const hardcodedTemplate = clientId && question.partnerTemplates ? question.partnerTemplates[clientId] : undefined;
-        const fallbackUrl = hardcodedTemplate?.url || question.templateUrl;
-        const fallbackFileName = hardcodedTemplate?.fileName || question.templateFileName;
-        
-        // Use DB templates if available, otherwise fall back to hardcoded
-        const templatesToShow = dbTemplatesForQ.length > 0 
-          ? dbTemplatesForQ 
-          : (fallbackUrl ? [{ label: 'Template', fileName: fallbackFileName || 'template', fileUrl: fallbackUrl }] : []);
+        // Templates are managed via the Templates tab in the admin dashboard
+        const templatesToShow = dbTemplateMap.get(question.id) || [];
         
         return (
           <div className="space-y-4">
@@ -1100,8 +1091,7 @@ export default function IntakeNewRedesign() {
                   }).map((question, qIndex) => {
                     const isUnanswered = unansweredQuestions.has(question.id);
                     const hasTemplate = (question.type === 'upload' || question.type === 'upload-download') && 
-                      ((dbTemplateMap.get(question.id) || []).length > 0 || 
-                       (question.type === 'upload-download' && (question as any).partnerTemplates));
+                      (dbTemplateMap.get(question.id) || []).length > 0;
                     
                     return (
                       <div 
