@@ -1088,16 +1088,21 @@ export default function IntakeNewRedesign() {
                 </div>
               ) : (
                 <div className={`grid ${currentSection === 'data-integration' ? 'grid-cols-1' : 'grid-cols-2'} gap-x-8 gap-y-6`}>
-                  {currentSectionData?.questions?.map((question) => {
-                    // Check if question should be displayed based on conditionalOn
+                  {currentSectionData?.questions?.filter((question) => {
+                    // Filter out hidden conditional questions for numbering
                     if (question.conditionalOn) {
                       const parentResponse = responses[question.conditionalOn.questionId];
                       if (parentResponse !== question.conditionalOn.value) {
-                        return null; // Hide this question
+                        return false;
                       }
                     }
-                    
+                    return true;
+                  }).map((question, qIndex) => {
                     const isUnanswered = unansweredQuestions.has(question.id);
+                    const hasTemplate = (question.type === 'upload' || question.type === 'upload-download') && 
+                      ((dbTemplateMap.get(question.id) || []).length > 0 || 
+                       (question.type === 'upload-download' && (question as any).partnerTemplates));
+                    
                     return (
                       <div 
                         key={question.id} 
@@ -1108,10 +1113,21 @@ export default function IntakeNewRedesign() {
                           isUnanswered ? 'p-4 border-2 border-red-500 rounded-lg bg-red-500/5' : ''
                         }`}
                       >
-                        <Label className="mb-2 block">
+                        <Label className="mb-2 block text-base">
+                          <span className="text-purple-400 font-bold mr-2">{qIndex + 1}.</span>
                           {question.text}
                           {isUnanswered && <span className="text-red-500 ml-2 font-semibold">* Required</span>}
                         </Label>
+                        {/* Show download-fill-upload instructions for file questions with templates */}
+                        {hasTemplate && (
+                          <div className="flex items-center gap-3 mb-3 px-4 py-2 bg-purple-500/10 border border-purple-500/30 rounded-md">
+                            <span className="text-sm text-purple-300">
+                              <span className="font-semibold">① Download</span> the template below → 
+                              <span className="font-semibold"> ② Fill it out</span> → 
+                              <span className="font-semibold"> ③ Upload</span> your completed file
+                            </span>
+                          </div>
+                        )}
                         {renderQuestion(question)}
                         {question.notes && (
                           <p className="text-xs text-muted-foreground mt-1">{question.notes}</p>
