@@ -1114,7 +1114,7 @@ export default function IntakeNewRedesign() {
                         }`}
                       >
                         <Label className="mb-2 block text-base">
-                          <span className="text-purple-400 font-bold mr-2">{qIndex + 1}.</span>
+                          <span className="text-purple-400 font-bold mr-2">[{question.id}]</span>
                           {question.text}
                           {isUnanswered && <span className="text-red-500 ml-2 font-semibold">* Required</span>}
                         </Label>
