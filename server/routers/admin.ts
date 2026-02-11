@@ -989,14 +989,37 @@ export const adminRouter = router({
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
     if (ctx.user.clientId) {
-      // Partner admin: only see their own templates
+      // Partner admin: only see their own active templates
       return await db.select().from(partnerTemplates)
-        .where(eq(partnerTemplates.clientId, ctx.user.clientId))
+        .where(and(eq(partnerTemplates.clientId, ctx.user.clientId), eq(partnerTemplates.isActive, 1)))
         .orderBy(desc(partnerTemplates.updatedAt));
     } else {
-      // Platform admin: see all templates
+      // Platform admin: see all active templates
       return await db.select().from(partnerTemplates)
+        .where(eq(partnerTemplates.isActive, 1))
         .orderBy(desc(partnerTemplates.updatedAt));
+    }
+  }),
+
+  /**
+   * Get inactive (soft-deleted) partner templates for the history/audit view
+   */
+  getInactiveTemplates: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user.role !== "admin") {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+    }
+
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+    if (ctx.user.clientId) {
+      return await db.select().from(partnerTemplates)
+        .where(and(eq(partnerTemplates.clientId, ctx.user.clientId), eq(partnerTemplates.isActive, 0)))
+        .orderBy(desc(partnerTemplates.deactivatedAt));
+    } else {
+      return await db.select().from(partnerTemplates)
+        .where(eq(partnerTemplates.isActive, 0))
+        .orderBy(desc(partnerTemplates.deactivatedAt));
     }
   }),
 
@@ -1010,7 +1033,7 @@ export const adminRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       return await db.select().from(partnerTemplates)
-        .where(eq(partnerTemplates.clientId, input.clientId))
+        .where(and(eq(partnerTemplates.clientId, input.clientId), eq(partnerTemplates.isActive, 1)))
         .orderBy(partnerTemplates.questionId);
     }),
 
@@ -1041,6 +1064,21 @@ export const adminRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
+      // Check if an active template already exists for this question+client
+      const [existing] = await db.select().from(partnerTemplates)
+        .where(and(
+          eq(partnerTemplates.clientId, input.clientId),
+          eq(partnerTemplates.questionId, input.questionId),
+          eq(partnerTemplates.isActive, 1)
+        )).limit(1);
+
+      if (existing) {
+        throw new TRPCError({ 
+          code: "CONFLICT", 
+          message: `A template already exists for this question. Use 'Replace' to update it.` 
+        });
+      }
+
       // Decode base64 file data
       const fileBuffer = Buffer.from(input.fileData, "base64");
 
@@ -1068,16 +1106,16 @@ export const adminRouter = router({
     }),
 
   /**
-   * Update (replace) a partner template file
+   * Replace a partner template — soft-deletes the old one and creates a new active one
    */
-  updateTemplate: protectedProcedure
+  replaceTemplate: protectedProcedure
     .input(
       z.object({
-        id: z.number(),
-        label: z.string().optional(),
-        fileName: z.string().optional(),
-        fileData: z.string().optional(), // base64 encoded - if provided, replaces the file
-        mimeType: z.string().optional(),
+        id: z.number(), // ID of the template being replaced
+        label: z.string(),
+        fileName: z.string(),
+        fileData: z.string(), // base64 encoded
+        mimeType: z.string(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -1090,69 +1128,44 @@ export const adminRouter = router({
 
       // Get existing template
       const [existing] = await db.select().from(partnerTemplates)
-        .where(eq(partnerTemplates.id, input.id)).limit(1);
+        .where(and(eq(partnerTemplates.id, input.id), eq(partnerTemplates.isActive, 1))).limit(1);
       if (!existing) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Template not found" });
       }
 
-      // Partner admins can only update their own templates
+      // Partner admins can only replace their own templates
       if (ctx.user.clientId && existing.clientId !== ctx.user.clientId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot update other partner's templates" });
+        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot replace other partner's templates" });
       }
 
-      const updateData: any = {};
-      if (input.label) updateData.label = input.label;
+      // Soft-delete the old template with audit trail
+      await db.update(partnerTemplates).set({ 
+        isActive: 0, 
+        deactivatedBy: ctx.user.email || "unknown",
+        deactivatedAt: new Date(),
+      }).where(eq(partnerTemplates.id, input.id));
 
-      // If new file data is provided, upload it
-      if (input.fileData && input.fileName && input.mimeType) {
-        const fileBuffer = Buffer.from(input.fileData, "base64");
-        const { storagePut } = await import("../storage");
-        const timestamp = Date.now();
-        const fileExt = input.fileName.split('.').pop();
-        const s3Key = `partner-templates/${existing.clientId}/${existing.questionId}_${timestamp}.${fileExt}`;
-        const { url: fileUrl } = await storagePut(s3Key, fileBuffer, input.mimeType);
+      // Upload new file to S3
+      const fileBuffer = Buffer.from(input.fileData, "base64");
+      const { storagePut } = await import("../storage");
+      const timestamp = Date.now();
+      const fileExt = input.fileName.split('.').pop();
+      const s3Key = `partner-templates/${existing.clientId}/${existing.questionId}_${timestamp}.${fileExt}`;
+      const { url: fileUrl } = await storagePut(s3Key, fileBuffer, input.mimeType);
 
-        updateData.fileName = input.fileName;
-        updateData.fileUrl = fileUrl;
-        updateData.s3Key = s3Key;
-        updateData.fileSize = fileBuffer.length;
-        updateData.mimeType = input.mimeType;
-      }
+      // Insert new active template
+      await db.insert(partnerTemplates).values({
+        clientId: existing.clientId,
+        questionId: existing.questionId,
+        label: input.label,
+        fileName: input.fileName,
+        fileUrl,
+        s3Key,
+        fileSize: fileBuffer.length,
+        mimeType: input.mimeType,
+        uploadedBy: ctx.user.email || "unknown",
+      });
 
-      if (Object.keys(updateData).length > 0) {
-        await db.update(partnerTemplates).set(updateData).where(eq(partnerTemplates.id, input.id));
-      }
-
-      return { success: true };
-    }),
-
-  /**
-   * Delete a partner template
-   */
-  deleteTemplate: protectedProcedure
-    .input(z.object({ id: z.number() }))
-    .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
-      // Get existing template
-      const [existing] = await db.select().from(partnerTemplates)
-        .where(eq(partnerTemplates.id, input.id)).limit(1);
-      if (!existing) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Template not found" });
-      }
-
-      // Partner admins can only delete their own templates
-      if (ctx.user.clientId && existing.clientId !== ctx.user.clientId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot delete other partner's templates" });
-      }
-
-      await db.delete(partnerTemplates).where(eq(partnerTemplates.id, input.id));
-
-      return { success: true };
+      return { success: true, fileUrl };
     }),
 });

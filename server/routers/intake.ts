@@ -1001,9 +1001,9 @@ export const intakeRouter = router({
         .where(eq(organizations.slug, input.organizationSlug)).limit(1);
       if (!org || !org.clientId) return [];
 
-      // Get all templates for this org's partner
+      // Get all active templates for this org's partner
       return await db.select().from(partnerTemplates)
-        .where(eq(partnerTemplates.clientId, org.clientId))
+        .where(and(eq(partnerTemplates.clientId, org.clientId), eq(partnerTemplates.isActive, 1)))
         .orderBy(partnerTemplates.questionId);
     }),
 });

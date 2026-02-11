@@ -290,9 +290,11 @@ export const partnerTemplates = mysqlTable("partnerTemplates", {
   fileSize: int("fileSize"), // bytes
   mimeType: varchar("mimeType", { length: 100 }),
   uploadedBy: varchar("uploadedBy", { length: 320 }), // Admin email who uploaded
+  isActive: tinyint("isActive").default(1).notNull(), // 1 = active, 0 = soft-deleted
+  deactivatedBy: varchar("deactivatedBy", { length: 320 }), // Admin email who deactivated/replaced this template
+  deactivatedAt: timestamp("deactivatedAt"), // When the template was deactivated
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
-
-export type PartnerTemplate = typeof partnerTemplates.$inferSelect;
+export type PartnerTemplate = typeof partnerTemplates.$inferSelect;;
 export type InsertPartnerTemplate = typeof partnerTemplates.$inferInsert;

@@ -31,7 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Activity, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, Trash2, FileUp } from "lucide-react";
+import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Activity, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp } from "lucide-react";
 import { questionnaireSections } from "@shared/questionnaireData";
 import { toast } from "sonner";
 import {
@@ -64,6 +64,7 @@ export default function PlatformAdmin() {
   const [replaceTemplateId, setReplaceTemplateId] = useState<number | null>(null);
   const [replaceTemplateFile, setReplaceTemplateFile] = useState<File | null>(null);
   const [replaceTemplateLabel, setReplaceTemplateLabel] = useState("");
+  const [showInactiveTemplates, setShowInactiveTemplates] = useState(false);
   
   // User creation dialog state
   const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
@@ -119,6 +120,7 @@ export default function PlatformAdmin() {
   const { data: metrics } = trpc.admin.getAdminSummary.useQuery();
   const { data: allUsers, refetch: refetchUsers } = trpc.admin.getAllUsers.useQuery();
   const { data: templates, refetch: refetchTemplates } = trpc.admin.getTemplates.useQuery();
+  const { data: inactiveTemplates, refetch: refetchInactiveTemplates } = trpc.admin.getInactiveTemplates.useQuery();
 
   // Logout mutation
   const logoutMutation = trpc.auth.logout.useMutation({
@@ -360,27 +362,18 @@ export default function PlatformAdmin() {
     },
   });
 
-  const updateTemplateMutation = trpc.admin.updateTemplate.useMutation({
+  const replaceTemplateMutation = trpc.admin.replaceTemplate.useMutation({
     onSuccess: () => {
-      toast.success("Template updated successfully!");
+      toast.success("Template replaced successfully!");
       setIsReplaceTemplateDialogOpen(false);
       setReplaceTemplateId(null);
       setReplaceTemplateFile(null);
       setReplaceTemplateLabel("");
       refetchTemplates();
+      refetchInactiveTemplates();
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to update template");
-    },
-  });
-
-  const deleteTemplateMutation = trpc.admin.deleteTemplate.useMutation({
-    onSuccess: () => {
-      toast.success("Template deleted");
-      refetchTemplates();
-    },
-    onError: (error: any) => {
-      toast.error(error.message || "Failed to delete template");
+      toast.error(error.message || "Failed to replace template");
     },
   });
 
@@ -417,29 +410,23 @@ export default function PlatformAdmin() {
   };
 
   const handleReplaceTemplate = async () => {
-    if (!replaceTemplateId) return;
+    if (!replaceTemplateId || !replaceTemplateFile || !replaceTemplateLabel) {
+      toast.error("Please provide a label and select a new file");
+      return;
+    }
 
-    if (replaceTemplateFile) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const base64 = (reader.result as string).split(',')[1];
-        updateTemplateMutation.mutate({
-          id: replaceTemplateId,
-          label: replaceTemplateLabel || undefined,
-          fileName: replaceTemplateFile.name,
-          fileData: base64,
-          mimeType: replaceTemplateFile.type || 'application/octet-stream',
-        });
-      };
-      reader.readAsDataURL(replaceTemplateFile);
-    } else if (replaceTemplateLabel) {
-      updateTemplateMutation.mutate({
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(',')[1];
+      replaceTemplateMutation.mutate({
         id: replaceTemplateId,
         label: replaceTemplateLabel,
+        fileName: replaceTemplateFile.name,
+        fileData: base64,
+        mimeType: replaceTemplateFile.type || 'application/octet-stream',
       });
-    } else {
-      toast.error("Please update the label or select a new file");
-    }
+    };
+    reader.readAsDataURL(replaceTemplateFile);
   };
 
   const updateOrgMutation = trpc.admin.updateOrganization.useMutation({
@@ -1653,21 +1640,24 @@ export default function PlatformAdmin() {
             <Dialog open={isReplaceTemplateDialogOpen} onOpenChange={setIsReplaceTemplateDialogOpen}>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Update Template</DialogTitle>
+                  <DialogTitle>Replace Template</DialogTitle>
                   <DialogDescription>
-                    Update the label or replace the file for this template.
+                    This will replace the current template file. The old version will be kept in the inactive history for reference.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 mt-4">
+                  <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-md">
+                    <p className="text-sm text-yellow-400 font-medium">⚠ Warning: This will deactivate the current template and replace it with a new file.</p>
+                  </div>
                   <div className="space-y-2">
-                    <Label>Label</Label>
+                    <Label>Label <span className="text-destructive">*</span></Label>
                     <Input
                       value={replaceTemplateLabel}
                       onChange={(e) => setReplaceTemplateLabel(e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Replace File (optional)</Label>
+                    <Label>New File <span className="text-destructive">*</span></Label>
                     <Input
                       type="file"
                       onChange={(e) => setReplaceTemplateFile(e.target.files?.[0] || null)}
@@ -1680,18 +1670,19 @@ export default function PlatformAdmin() {
                   </div>
                   <Button
                     onClick={handleReplaceTemplate}
-                    disabled={updateTemplateMutation.isPending}
+                    disabled={replaceTemplateMutation.isPending || !replaceTemplateFile}
                     className="w-full"
                   >
-                    {updateTemplateMutation.isPending ? "Updating..." : "Update Template"}
+                    {replaceTemplateMutation.isPending ? "Replacing..." : "Replace Template"}
                   </Button>
                 </div>
               </DialogContent>
             </Dialog>
 
-            {/* Templates Table */}
+            {/* Active Templates Table */}
             <Card>
               <CardContent className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Active Templates</h3>
                 {!templates || templates.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
                     <FileUp className="w-12 h-12 mx-auto mb-4 opacity-50" />
@@ -1741,6 +1732,14 @@ export default function PlatformAdmin() {
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
+                              <a
+                                href={t.fileUrl}
+                                download={t.fileName}
+                                className="inline-flex items-center justify-center rounded-md text-sm font-medium h-8 px-3 border border-input bg-background hover:bg-accent hover:text-accent-foreground"
+                              >
+                                <Download className="w-3 h-3 mr-1" />
+                                Download
+                              </a>
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -1751,20 +1750,8 @@ export default function PlatformAdmin() {
                                   setIsReplaceTemplateDialogOpen(true);
                                 }}
                               >
-                                <Edit className="w-3 h-3 mr-1" />
-                                Edit
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  if (confirm(`Delete template "${t.label}"?`)) {
-                                    deleteTemplateMutation.mutate({ id: t.id });
-                                  }
-                                }}
-                              >
-                                <Trash2 className="w-3 h-3 mr-1" />
-                                Delete
+                                <Upload className="w-3 h-3 mr-1" />
+                                Replace
                               </Button>
                             </div>
                           </TableCell>
@@ -1772,6 +1759,75 @@ export default function PlatformAdmin() {
                       ))}
                     </TableBody>
                   </Table>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Inactive Templates History */}
+            <Card className="mt-6">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-muted-foreground">Inactive Templates History</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowInactiveTemplates(!showInactiveTemplates)}
+                  >
+                    {showInactiveTemplates ? 'Hide' : 'Show'} ({inactiveTemplates?.length || 0})
+                  </Button>
+                </div>
+                {showInactiveTemplates && (
+                  <>
+                    {!inactiveTemplates || inactiveTemplates.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">No inactive templates.</p>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            {isPlatformAdmin && <TableHead>Partner</TableHead>}
+                            <TableHead>Question</TableHead>
+                            <TableHead>Label</TableHead>
+                            <TableHead>File</TableHead>
+                            <TableHead>Uploaded By</TableHead>
+                            <TableHead>Created</TableHead>
+                            <TableHead>Deactivated By</TableHead>
+                            <TableHead>Deactivated At</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {inactiveTemplates.map(t => (
+                            <TableRow key={t.id} className="opacity-60">
+                              {isPlatformAdmin && (
+                                <TableCell>
+                                  <Badge variant="secondary">{clientMap[t.clientId] || `Client ${t.clientId}`}</Badge>
+                                </TableCell>
+                              )}
+                              <TableCell className="font-mono text-sm">{t.questionId}</TableCell>
+                              <TableCell className="font-medium">{t.label}</TableCell>
+                              <TableCell>
+                                <a
+                                  href={t.fileUrl}
+                                  download={t.fileName}
+                                  className="text-muted-foreground hover:underline flex items-center gap-1"
+                                >
+                                  <Download className="w-3 h-3" />
+                                  {t.fileName}
+                                </a>
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">{t.uploadedBy || 'N/A'}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {new Date(t.createdAt).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">{t.deactivatedBy || 'N/A'}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {t.deactivatedAt ? new Date(t.deactivatedAt).toLocaleDateString() : 'N/A'}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </>
                 )}
               </CardContent>
             </Card>
