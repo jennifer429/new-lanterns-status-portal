@@ -115,7 +115,15 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* PHI Disclaimer - At top */}
+      {/* Header with Logo */}
+      <div className="border-b border-border/50 bg-card">
+        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
+          <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-10" />
+          <div className="text-sm text-muted-foreground">{orgData.name}</div>
+        </div>
+      </div>
+
+      {/* PHI Disclaimer */}
       <PhiDisclaimer />
       
       <div className="flex items-center justify-center p-6">

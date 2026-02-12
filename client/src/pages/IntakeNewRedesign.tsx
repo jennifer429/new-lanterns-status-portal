@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useParams, useLocation } from "wouter";
+import { useParams, useLocation, Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -738,9 +738,11 @@ export default function IntakeNewRedesign() {
     >
       {/* Left Sidebar */}
       <div className="w-80 bg-black border-r border-purple-500/20 flex flex-col">
-        {/* Logo */}
+        {/* Logo - links back to dashboard */}
         <div className="p-6 border-b">
-          <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-10" />
+          <Link href={`/org/${slug}`}>
+            <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-10 cursor-pointer hover:opacity-80 transition-opacity" />
+          </Link>
         </div>
 
         {/* Progress Overview Card */}
