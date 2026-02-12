@@ -298,3 +298,25 @@ export const partnerTemplates = mysqlTable("partnerTemplates", {
 });
 export type PartnerTemplate = typeof partnerTemplates.$inferSelect;;
 export type InsertPartnerTemplate = typeof partnerTemplates.$inferInsert;
+/**
+ * New Lantern Specifications - global documents uploaded by admins, visible to all logged-in users.
+ * These are spec sheets, integration guides, reference docs, etc. from New Lantern.
+ */
+export const specifications = mysqlTable("specifications", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(), // Display title (e.g., "HL7 Integration Guide")
+  description: text("description"), // Optional description
+  category: varchar("category", { length: 100 }), // Optional category for grouping (e.g., "Integration", "Security")
+  fileName: varchar("fileName", { length: 255 }).notNull(), // Original uploaded file name
+  fileUrl: text("fileUrl").notNull(), // S3 URL for download
+  s3Key: varchar("s3Key", { length: 500 }).notNull(), // S3 key for reference
+  fileSize: int("fileSize"), // bytes
+  mimeType: varchar("mimeType", { length: 100 }),
+  uploadedBy: varchar("uploadedBy", { length: 320 }), // Admin email who uploaded
+  isActive: tinyint("isActive").default(1).notNull(), // 1 = active, 0 = soft-deleted
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Specification = typeof specifications.$inferSelect;
+export type InsertSpecification = typeof specifications.$inferInsert;

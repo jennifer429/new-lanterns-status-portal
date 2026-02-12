@@ -6,7 +6,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ClipboardList, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Download, PartyPopper, ArrowRight, Pencil } from "lucide-react";
+import { ClipboardList, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Download, PartyPopper, ArrowRight, Pencil, BookOpen } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useEffect, useState } from "react";
@@ -49,6 +49,9 @@ export default function Home() {
     { organizationSlug: orgSlug },
     { enabled: !!orgSlug }
   );
+
+  // Fetch New Lantern specifications (available to all authenticated users)
+  const { data: specs = [] } = trpc.admin.getSpecifications.useQuery();
   
   const filesUploaded = allFiles.length;
 
@@ -258,6 +261,41 @@ export default function Home() {
                       >
                         <Download className="w-4 h-4" />
                         <span>{file.fileName}</span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* New Lantern Specifications Section */}
+              {specs.length > 0 && (
+                <div className="border-t border-border/50 pt-6 mb-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <BookOpen className="w-5 h-5 text-primary" />
+                    <h3 className="text-base font-semibold">New Lantern Specifications</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3">Reference documents from the New Lantern team.</p>
+                  <div className="space-y-2">
+                    {specs.map((spec) => (
+                      <a
+                        key={spec.id}
+                        href={spec.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:bg-muted/50 transition-colors group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Download className="w-4 h-4 text-primary group-hover:text-primary/80" />
+                          <div>
+                            <div className="text-sm font-medium">{spec.title}</div>
+                            {spec.description && (
+                              <div className="text-xs text-muted-foreground">{spec.description}</div>
+                            )}
+                          </div>
+                        </div>
+                        {spec.category && (
+                          <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">{spec.category}</span>
+                        )}
                       </a>
                     ))}
                   </div>

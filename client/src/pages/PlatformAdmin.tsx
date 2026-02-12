@@ -52,7 +52,7 @@ import {
 export default function PlatformAdmin() {
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"dashboard" | "users" | "organizations" | "templates" | "partners">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "users" | "organizations" | "templates" | "partners" | "specs">("dashboard");
 
   // Template management state
   const [isUploadTemplateDialogOpen, setIsUploadTemplateDialogOpen] = useState(false);
@@ -111,6 +111,18 @@ export default function PlatformAdmin() {
   const [editPartnerSlug, setEditPartnerSlug] = useState("");
   const [editPartnerDescription, setEditPartnerDescription] = useState("");
 
+  // Specifications management state
+  const [isUploadSpecDialogOpen, setIsUploadSpecDialogOpen] = useState(false);
+  const [specTitle, setSpecTitle] = useState("");
+  const [specDescription, setSpecDescription] = useState("");
+  const [specCategory, setSpecCategory] = useState("");
+  const [specFile, setSpecFile] = useState<File | null>(null);
+  const [isEditSpecDialogOpen, setIsEditSpecDialogOpen] = useState(false);
+  const [editSpecId, setEditSpecId] = useState<number | null>(null);
+  const [editSpecTitle, setEditSpecTitle] = useState("");
+  const [editSpecDescription, setEditSpecDescription] = useState("");
+  const [editSpecCategory, setEditSpecCategory] = useState("");
+
   // Sorting state for organizations
   const [orgSortBy, setOrgSortBy] = useState<"name" | "completion" | "partner">("name");
   const [orgSortOrder, setOrgSortOrder] = useState<"asc" | "desc">("asc");
@@ -132,6 +144,7 @@ export default function PlatformAdmin() {
   const { data: allUsers, refetch: refetchUsers } = trpc.admin.getAllUsers.useQuery();
   const { data: templates, refetch: refetchTemplates } = trpc.admin.getTemplates.useQuery();
   const { data: inactiveTemplates, refetch: refetchInactiveTemplates } = trpc.admin.getInactiveTemplates.useQuery();
+  const { data: specs, refetch: refetchSpecs } = trpc.admin.getSpecifications.useQuery();
 
   // Logout mutation
   const logoutMutation = trpc.auth.logout.useMutation({
@@ -564,6 +577,91 @@ export default function PlatformAdmin() {
     reactivateClientMutation.mutate({ id });
   };
 
+  // Specifications mutations
+  const uploadSpecMutation = trpc.admin.uploadSpecification.useMutation({
+    onSuccess: () => {
+      toast.success("Specification uploaded successfully!");
+      setIsUploadSpecDialogOpen(false);
+      setSpecTitle("");
+      setSpecDescription("");
+      setSpecCategory("");
+      setSpecFile(null);
+      refetchSpecs();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to upload specification");
+    },
+  });
+
+  const updateSpecMutation = trpc.admin.updateSpecification.useMutation({
+    onSuccess: () => {
+      toast.success("Specification updated!");
+      setIsEditSpecDialogOpen(false);
+      setEditSpecId(null);
+      refetchSpecs();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to update specification");
+    },
+  });
+
+  const deactivateSpecMutation = trpc.admin.deactivateSpecification.useMutation({
+    onSuccess: () => {
+      toast.success("Specification removed");
+      refetchSpecs();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to remove specification");
+    },
+  });
+
+  const handleUploadSpec = async () => {
+    if (!specTitle || !specFile) {
+      toast.error("Please provide a title and file");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(",")[1];
+      uploadSpecMutation.mutate({
+        title: specTitle,
+        description: specDescription || undefined,
+        category: specCategory || undefined,
+        fileName: specFile.name,
+        fileData: base64,
+        mimeType: specFile.type,
+      });
+    };
+    reader.readAsDataURL(specFile);
+  };
+
+  const handleEditSpec = (spec: NonNullable<typeof specs>[number]) => {
+    setEditSpecId(spec.id);
+    setEditSpecTitle(spec.title);
+    setEditSpecDescription(spec.description || "");
+    setEditSpecCategory(spec.category || "");
+    setIsEditSpecDialogOpen(true);
+  };
+
+  const handleUpdateSpec = () => {
+    if (!editSpecId || !editSpecTitle) {
+      toast.error("Please provide a title");
+      return;
+    }
+    updateSpecMutation.mutate({
+      id: editSpecId,
+      title: editSpecTitle,
+      description: editSpecDescription || undefined,
+      category: editSpecCategory || undefined,
+    });
+  };
+
+  const handleDeactivateSpec = (id: number) => {
+    if (confirm("Are you sure you want to remove this specification? Clients will no longer see it.")) {
+      deactivateSpecMutation.mutate({ id });
+    }
+  };
+
   const handleCreateOrg = () => {
     if (!newOrgName || !newOrgSlug || !newOrgClientId) {
       toast.error("Please fill in all required fields");
@@ -807,6 +905,21 @@ export default function PlatformAdmin() {
               >
                 Partners
                 {activeTab === "partners" && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                )}
+              </button>
+            )}
+            {isPlatformAdmin && (
+              <button
+                onClick={() => setActiveTab("specs")}
+                className={`pb-3 px-1 font-medium transition-colors relative ${
+                  activeTab === "specs"
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Specifications
+                {activeTab === "specs" && (
                   <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
                 )}
               </button>
@@ -2143,6 +2256,185 @@ export default function PlatformAdmin() {
                           </TableRow>
                         );
                       })}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        )}
+
+        {activeTab === "specs" && isPlatformAdmin && (
+          <>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold">New Lantern Specifications</h2>
+              <Dialog open={isUploadSpecDialogOpen} onOpenChange={setIsUploadSpecDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Upload Specification
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Upload Specification</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Title *</Label>
+                      <Input
+                        placeholder="e.g., HL7 Integration Guide"
+                        value={specTitle}
+                        onChange={(e) => setSpecTitle(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label>Category</Label>
+                      <Input
+                        placeholder="e.g., Integration, Security, Setup"
+                        value={specCategory}
+                        onChange={(e) => setSpecCategory(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label>Description</Label>
+                      <Input
+                        placeholder="Optional description"
+                        value={specDescription}
+                        onChange={(e) => setSpecDescription(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label>File *</Label>
+                      <Input
+                        type="file"
+                        onChange={(e) => setSpecFile(e.target.files?.[0] || null)}
+                      />
+                    </div>
+                    <Button
+                      onClick={handleUploadSpec}
+                      disabled={uploadSpecMutation.isPending || !specTitle || !specFile}
+                      className="w-full"
+                    >
+                      {uploadSpecMutation.isPending ? "Uploading..." : "Upload"}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            {/* Edit Spec Dialog */}
+            <Dialog open={isEditSpecDialogOpen} onOpenChange={setIsEditSpecDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Edit Specification</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Title *</Label>
+                    <Input
+                      value={editSpecTitle}
+                      onChange={(e) => setEditSpecTitle(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Category</Label>
+                    <Input
+                      value={editSpecCategory}
+                      onChange={(e) => setEditSpecCategory(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Description</Label>
+                    <Input
+                      value={editSpecDescription}
+                      onChange={(e) => setEditSpecDescription(e.target.value)}
+                    />
+                  </div>
+                  <Button
+                    onClick={handleUpdateSpec}
+                    disabled={updateSpecMutation.isPending || !editSpecTitle}
+                    className="w-full"
+                  >
+                    {updateSpecMutation.isPending ? "Saving..." : "Save Changes"}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Card>
+              <CardContent className="p-6">
+                {!specs || specs.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <p className="text-lg font-medium">No specifications uploaded yet</p>
+                    <p className="text-sm">Upload specification documents for clients to download.</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>File</TableHead>
+                        <TableHead>Size</TableHead>
+                        <TableHead>Uploaded By</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {specs.map(spec => (
+                        <TableRow key={spec.id}>
+                          <TableCell>
+                            <div>
+                              <div className="font-medium">{spec.title}</div>
+                              {spec.description && (
+                                <div className="text-sm text-muted-foreground">{spec.description}</div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {spec.category ? (
+                              <Badge variant="outline">{spec.category}</Badge>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm">{spec.fileName}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {spec.fileSize ? `${(spec.fileSize / 1024).toFixed(0)} KB` : '—'}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{spec.uploadedBy}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {new Date(spec.createdAt).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button size="sm" variant="outline" asChild>
+                                <a href={spec.fileUrl} target="_blank" rel="noopener noreferrer">
+                                  <Download className="w-3 h-3 mr-1" />
+                                  Download
+                                </a>
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleEditSpec(spec)}
+                              >
+                                <Edit className="w-3 h-3 mr-1" />
+                                Edit
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleDeactivateSpec(spec.id)}
+                              >
+                                Remove
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
                     </TableBody>
                   </Table>
                 )}

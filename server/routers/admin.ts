@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { questions, questionOptions, organizations, users, clients, intakeFileAttachments, partnerTemplates } from "../../drizzle/schema";
+import { questions, questionOptions, organizations, users, clients, intakeFileAttachments, partnerTemplates, specifications } from "../../drizzle/schema";
 import { eq, and, or, desc, inArray, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
@@ -1301,5 +1301,118 @@ export const adminRouter = router({
       });
 
       return { success: true, fileUrl };
+    }),
+
+  // ============================================================================
+  // SPECIFICATIONS CRUD
+  // ============================================================================
+
+  /**
+   * Get all active specifications (available to all authenticated users)
+   */
+  getSpecifications: protectedProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+    return await db.select().from(specifications)
+      .where(eq(specifications.isActive, 1))
+      .orderBy(desc(specifications.createdAt));
+  }),
+
+  /**
+   * Upload a new specification document (platform admin only)
+   */
+  uploadSpecification: protectedProcedure
+    .input(
+      z.object({
+        title: z.string().min(1),
+        description: z.string().optional(),
+        category: z.string().optional(),
+        fileName: z.string(),
+        fileData: z.string(), // base64 encoded
+        mimeType: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin" || ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const fileBuffer = Buffer.from(input.fileData, "base64");
+
+      // Upload to S3
+      const { storagePut } = await import("../storage");
+      const timestamp = Date.now();
+      const fileExt = input.fileName.split('.').pop();
+      const s3Key = `specifications/${timestamp}_${input.fileName}`;
+      const { url: fileUrl } = await storagePut(s3Key, fileBuffer, input.mimeType);
+
+      await db.insert(specifications).values({
+        title: input.title,
+        description: input.description || null,
+        category: input.category || null,
+        fileName: input.fileName,
+        fileUrl,
+        s3Key,
+        fileSize: fileBuffer.length,
+        mimeType: input.mimeType,
+        uploadedBy: ctx.user.email || "unknown",
+      });
+
+      return { success: true, fileUrl };
+    }),
+
+  /**
+   * Update specification metadata (platform admin only)
+   */
+  updateSpecification: protectedProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        title: z.string().min(1),
+        description: z.string().optional(),
+        category: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin" || ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      await db.update(specifications)
+        .set({
+          title: input.title,
+          description: input.description || null,
+          category: input.category || null,
+        })
+        .where(eq(specifications.id, input.id));
+
+      return { success: true };
+    }),
+
+  /**
+   * Deactivate (soft-delete) a specification (platform admin only)
+   */
+  deactivateSpecification: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin" || ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      await db.update(specifications)
+        .set({ isActive: 0 })
+        .where(eq(specifications.id, input.id));
+
+      return { success: true };
     }),
 });
