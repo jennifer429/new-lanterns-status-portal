@@ -750,15 +750,9 @@ export default function IntakeNewRedesign() {
             <div className="text-center mb-4">
               <div className="text-5xl font-bold text-purple-300 mb-1">
                 {(() => {
-                  const totalQuestions = questionnaireSections.reduce((sum, s) => sum + (s.questions?.length || 0), 0);
-                  const answeredQuestions = questionnaireSections.reduce((sum, section) => {
-                    return sum + (section.questions?.filter(q => {
-                      const hasResponse = responses[q.id];
-                      const hasUploadedFile = allUploadedFiles.some(f => f.questionId === q.id);
-                      return hasResponse || hasUploadedFile;
-                    }).length || 0);
-                  }, 0);
-                  return Math.round((answeredQuestions / totalQuestions) * 100);
+                  const totalSections = questionnaireSections.length;
+                  const sectionProgressSum = questionnaireSections.reduce((sum, s) => sum + calculateSectionProgress(s), 0);
+                  return Math.round(sectionProgressSum / totalSections);
                 })()}%
               </div>
               <div className="text-sm text-muted-foreground">Complete</div>
@@ -912,74 +906,14 @@ export default function IntakeNewRedesign() {
                 <div className="flex items-center gap-3">
                   <Progress 
                     value={(() => {
-                      // Count total items: questions + workflow sections
-                      const totalItems = questionnaireSections.reduce((sum, s) => {
-                        if (s.type === 'workflow') return sum + 1; // Each workflow counts as 1 item
-                        return sum + (s.questions?.length || 0); // Count questions
-                      }, 0);
-                      
-                      // Count answered items
-                      const answeredItems = questionnaireSections.reduce((sum, section) => {
-                        if (section.type === 'workflow') {
-                          // Check if workflow is configured (has at least one path selected)
-                          const configKey = section.id + '_config';
-                          const savedConfig = responses[configKey];
-                          if (savedConfig) {
-                            try {
-                              const config = typeof savedConfig === 'string' ? JSON.parse(savedConfig) : savedConfig;
-                              const hasSelectedPaths = Object.values(config.paths || {}).some(v => v === true);
-                              return sum + (hasSelectedPaths ? 1 : 0);
-                            } catch {
-                              return sum;
-                            }
-                          }
-                          return sum;
-                        }
-                        // Count answered questions
-                        return sum + (section.questions?.filter(q => {
-                          const hasResponse = responses[q.id];
-                          const hasUploadedFile = allUploadedFiles.some(f => f.questionId === q.id);
-                          return hasResponse || hasUploadedFile;
-                        }).length || 0);
-                      }, 0);
-                      
-                      return Math.round((answeredItems / totalItems) * 100);
+                      const totalSections = questionnaireSections.length;
+                      const sectionProgressSum = questionnaireSections.reduce((sum, s) => sum + calculateSectionProgress(s), 0);
+                      return Math.round(sectionProgressSum / totalSections);
                     })()} 
                     className="w-48 h-2"
                   />
                   <span className="text-lg font-bold">
-                    {(() => {
-                      // Count total items: questions + workflow sections
-                      const totalItems = questionnaireSections.reduce((sum, s) => {
-                        if (s.type === 'workflow') return sum + 1;
-                        return sum + (s.questions?.length || 0);
-                      }, 0);
-                      
-                      // Count answered items
-                      const answeredItems = questionnaireSections.reduce((sum, section) => {
-                        if (section.type === 'workflow') {
-                          const configKey = section.id + '_config';
-                          const savedConfig = responses[configKey];
-                          if (savedConfig) {
-                            try {
-                              const config = typeof savedConfig === 'string' ? JSON.parse(savedConfig) : savedConfig;
-                              const hasSelectedPaths = Object.values(config.paths || {}).some(v => v === true);
-                              return sum + (hasSelectedPaths ? 1 : 0);
-                            } catch {
-                              return sum;
-                            }
-                          }
-                          return sum;
-                        }
-                        return sum + (section.questions?.filter(q => {
-                          const hasResponse = responses[q.id];
-                          const hasUploadedFile = allUploadedFiles.some(f => f.questionId === q.id);
-                          return hasResponse || hasUploadedFile;
-                        }).length || 0);
-                      }, 0);
-                      
-                      return `${answeredItems}/${totalItems}`;
-                    })()} items
+                    {questionnaireSections.filter(s => calculateSectionProgress(s) === 100).length}/{questionnaireSections.length} sections
                   </span>
                 </div>
               </div>
@@ -1034,14 +968,16 @@ export default function IntakeNewRedesign() {
                     configuration={(() => {
                       const configKey = currentSectionData.id + '_config';
                       const savedConfig = responses[configKey];
-                      if (savedConfig && typeof savedConfig === 'string') {
+                      if (!savedConfig) return { paths: {}, systems: {}, notes: {} };
+                      if (typeof savedConfig === 'string') {
                         try {
                           return JSON.parse(savedConfig);
                         } catch {
                           return { paths: {}, systems: {}, notes: {} };
                         }
                       }
-                      return { paths: {}, systems: {}, notes: {} };
+                      // Already an object (parsed during response load)
+                      return savedConfig;
                     })()}
                     onConfigurationChange={(config) => {
                       console.log('[Workflow Debug] Configuration changed:', currentSectionData.id, config);

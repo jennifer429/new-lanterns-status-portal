@@ -52,16 +52,24 @@ export default function Home() {
   
   const filesUploaded = allFiles.length;
 
-  // Flatten all questions from sections (filter out workflow sections)
-  const allQuestions = questionnaireSections
-    .filter(section => section.questions) // Skip workflow sections
-    .flatMap(section =>
-      section.questions!.map(q => ({
-        id: q.id,
+  // Flatten all questions from sections, including workflow sections
+  const allQuestions = questionnaireSections.flatMap(section => {
+    if (section.type === 'workflow') {
+      // Workflow sections have no questions array — represent as a single item
+      // keyed by their config response key (e.g. 'orders-workflow_config')
+      return [{
+        id: section.id + '_config',
         sectionTitle: section.title,
-        conditionalOn: q.conditionalOn || null, // Pass conditional visibility metadata
-      }))
-    );
+        isWorkflow: true,
+        conditionalOn: null,
+      }];
+    }
+    return (section.questions || []).map(q => ({
+      id: q.id,
+      sectionTitle: section.title,
+      conditionalOn: q.conditionalOn || null,
+    }));
+  });
 
   // Use shared progress calculation function
   const progress = calculateProgress(
