@@ -48,16 +48,39 @@ export function registerAuthRoutes(app: Router) {
         return res.status(401).json({ error: "Invalid email or password" });
       }
 
-      // Determine redirect URL based on user's clientId
+      // Determine redirect URL based on user type
       let orgSlug: string;
-      if (user.clientId === 2) {
-        // SRV partner admin
-        orgSlug = "SRV/admin";
-      } else if (user.clientId === 1) {
-        // RadOne partner admin (note: clientId 1 is RadOne, not 3)
-        orgSlug = "RadOne/admin";
-      } else {
-        // Platform admin (New Lantern staff)
+      
+      // If user has organizationId, they're a hospital/org user → go to their org portal
+      if (user.organizationId) {
+        const { organizations } = await import("../../drizzle/schema");
+        const [org] = await db
+          .select()
+          .from(organizations)
+          .where(eq(organizations.id, user.organizationId))
+          .limit(1);
+        if (org) {
+          orgSlug = org.slug;
+        } else {
+          orgSlug = "admin";
+        }
+      }
+      // If user has clientId but no org, they're a partner admin
+      else if (user.clientId) {
+        const { clients } = await import("../../drizzle/schema");
+        const [client] = await db
+          .select()
+          .from(clients)
+          .where(eq(clients.id, user.clientId))
+          .limit(1);
+        if (client) {
+          orgSlug = `${client.slug}/admin`;
+        } else {
+          orgSlug = "admin";
+        }
+      }
+      // Platform admin (New Lantern staff)
+      else {
         orgSlug = "admin";
       }
 
