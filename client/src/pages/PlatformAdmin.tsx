@@ -140,6 +140,16 @@ export default function PlatformAdmin() {
   };
 
   // Export All: exports all organizations, users, and metrics as CSV
+  // Helper to escape CSV field values (handles commas, quotes, newlines)
+  const csvEscape = (value: string | number | null | undefined): string => {
+    const str = String(value ?? '');
+    // If field contains comma, quote, or newline, wrap in quotes and escape internal quotes
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
   const handleExportAll = () => {
     const lines = ['Type,Name,Email,Organization,Partner,Role,Status,Completion %,Last Login'];
 
@@ -147,7 +157,7 @@ export default function PlatformAdmin() {
     orgs?.forEach(org => {
       const orgMetrics = metrics?.find(m => m.organizationId === org.id);
       const partnerName = org.clientId && clients ? clients.find(c => c.id === org.clientId)?.name || 'N/A' : 'N/A';
-      lines.push(`"Organization","${org.name}","","","${partnerName}","","${org.status}","${orgMetrics?.completionPercent || 0}%",""`);
+      lines.push([csvEscape('Organization'), csvEscape(org.name), '', '', csvEscape(partnerName), '', csvEscape(org.status), `${orgMetrics?.completionPercent || 0}%`, ''].join(','));
     });
 
     // Export users
@@ -157,7 +167,7 @@ export default function PlatformAdmin() {
       const orgName = org?.name || 'N/A';
       const status = u.organizationId ? 'Active' : 'Inactive';
       const lastLogin = u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : 'Never';
-      lines.push(`"User","${u.name}","${u.email}","${orgName}","${partnerName}","${u.role}","${status}","","${lastLogin}"`);
+      lines.push([csvEscape('User'), csvEscape(u.name), csvEscape(u.email), csvEscape(orgName), csvEscape(partnerName), csvEscape(u.role), csvEscape(status), '', csvEscape(lastLogin)].join(','));
     });
 
     const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
@@ -186,8 +196,14 @@ export default function PlatformAdmin() {
   });
 
   const handleCreateUser = () => {
-    if (!newUserEmail || !newUserName || !newUserOrgId) {
-      toast.error("Please fill in all required fields");
+    if (!newUserEmail || !newUserName) {
+      toast.error("Please fill in email and name");
+      return;
+    }
+
+    // Regular users must have an organization
+    if (newUserRole === "user" && !newUserOrgId) {
+      toast.error("Organization is required for non-admin users");
       return;
     }
 
@@ -202,7 +218,7 @@ export default function PlatformAdmin() {
     createUserMutation.mutate({
       email: newUserEmail,
       name: newUserName,
-      organizationId: newUserOrgId,
+      organizationId: newUserOrgId || undefined,
       role: newUserRole,
       clientId: clientIdToUse,
     });
@@ -231,6 +247,7 @@ export default function PlatformAdmin() {
     setEditUserEmail(u.email || "");
     setEditUserRole(u.role as "user" | "admin");
     setEditUserOrgId(u.organizationId || null);
+    setEditUserClientId(u.clientId || null);
     setIsEditUserDialogOpen(true);
   };
 
@@ -246,6 +263,7 @@ export default function PlatformAdmin() {
       email: editUserEmail,
       role: editUserRole,
       organizationId: editUserOrgId,
+      clientId: editUserClientId,
     });
   };
 
@@ -290,6 +308,7 @@ export default function PlatformAdmin() {
       setNewOrgName("");
       setNewOrgSlug("");
       setNewOrgClientId(undefined);
+      refetchOrgs();
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to create organization");
@@ -481,6 +500,7 @@ export default function PlatformAdmin() {
       id: editOrgId,
       name: editOrgName,
       slug: editOrgSlug,
+      clientId: editOrgClientId,
     });
   };
 

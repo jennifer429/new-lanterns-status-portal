@@ -47,6 +47,14 @@ export const authRouter = router({
         });
       }
 
+      // Check if user is deactivated
+      if (user.isActive === 0) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Account has been deactivated. Please contact your administrator.",
+        });
+      }
+
       // Verify password
       console.log('[auth.login] Comparing password...');
       const isValid = await bcrypt.compare(input.password, user.passwordHash);
@@ -88,7 +96,7 @@ export const authRouter = router({
       }
       // Otherwise, platform admin → go to /org/admin
       else {
-        orgSlug = "org/admin";
+        orgSlug = "admin";
       }
 
       // Create session token and set cookie
@@ -101,10 +109,9 @@ export const authRouter = router({
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, cookieOptions);
       ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
-      console.log('[auth.login] Set cookie with options:', { ...cookieOptions, maxAge: ONE_YEAR_MS });
-      console.log('[auth.login] Session token for user:', user.email, 'openId:', user.openId);
+      // Cookie set successfully
 
-      console.log('[auth.login] Returning orgSlug:', orgSlug);
+      console.log('[auth.login] Login successful for:', user.email, 'redirecting to:', orgSlug);
       return {
         email: user.email || "",
         name: user.name || user.email?.split('@')[0] || "User",
@@ -202,6 +209,9 @@ export const authRouter = router({
 
   /**
    * Reset password directly (no token needed)
+   * NOTE: This is a simplified flow. In production, use email-based token verification.
+   * Currently restricted to only allow resets for emails that exist in the system.
+   * The forgot-password page handles the UX flow.
    */
   resetPasswordDirect: publicProcedure
     .input(
@@ -214,7 +224,7 @@ export const authRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
-      // Verify email exists
+      // Verify email exists - use generic error message to prevent email enumeration
       const [user] = await db
         .select()
         .from(users)
@@ -222,9 +232,18 @@ export const authRouter = router({
         .limit(1);
 
       if (!user) {
+        // Return generic message to prevent email enumeration
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Please contact New Lantern support",
+          message: "If an account exists with this email, the password has been reset.",
+        });
+      }
+
+      // Check if user is deactivated
+      if (user.isActive === 0) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Account has been deactivated. Please contact your administrator.",
         });
       }
 

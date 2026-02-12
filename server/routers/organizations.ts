@@ -19,6 +19,7 @@ export const organizationsRouter = router({
       z.object({
         name: z.string().min(1),
         slug: z.string().min(1).regex(/^[a-z0-9-]+$/), // URL-safe slug
+        clientId: z.number().optional(),
         contactName: z.string().optional(),
         contactEmail: z.string().email().optional(),
         contactPhone: z.string().optional(),
@@ -389,7 +390,7 @@ export const organizationsRouter = router({
   update: publicProcedure
     .input(
       z.object({
-        id: z.string(),
+        id: z.number(),
         name: z.string().min(1),
       })
     )
@@ -399,7 +400,7 @@ export const organizationsRouter = router({
       await db
         .update(organizations)
         .set({ name: input.name })
-        .where(eq(organizations.id, parseInt(input.id)));
+        .where(eq(organizations.id, input.id));
       return { success: true };
     }),
 
@@ -409,7 +410,7 @@ export const organizationsRouter = router({
   inactivate: publicProcedure
     .input(
       z.object({
-        id: z.string(),
+        id: z.number(),
       })
     )
     .mutation(async ({ input }) => {
@@ -418,7 +419,7 @@ export const organizationsRouter = router({
       await db
         .update(organizations)
         .set({ status: "inactive" })
-        .where(eq(organizations.id, parseInt(input.id)));
+        .where(eq(organizations.id, input.id));
       return { success: true };
     }),
 

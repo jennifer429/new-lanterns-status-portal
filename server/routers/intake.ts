@@ -472,7 +472,6 @@ export const intakeRouter = router({
         const { url: fileUrl } = await storagePut(s3Key, fileBuffer, input.mimeType);
 
         // Store file info in database
-        const { intakeFileAttachments } = await import("../../drizzle/schema");
         await db.insert(intakeFileAttachments).values({
           organizationId: org.id,
           questionId: input.questionId, // String question ID (e.g., "D.13")
@@ -779,7 +778,6 @@ export const intakeRouter = router({
       }
 
       // Get uploaded files for this question
-      const { intakeFileAttachments } = await import("../../drizzle/schema");
       const files = await db
         .select()
         .from(intakeFileAttachments)
@@ -830,7 +828,6 @@ export const intakeRouter = router({
       }
 
       // Get all uploaded files for this organization
-      const { intakeFileAttachments } = await import("../../drizzle/schema");
       const files = await db
         .select()
         .from(intakeFileAttachments)
@@ -927,7 +924,6 @@ export const intakeRouter = router({
       }
 
       // Get file details to verify it belongs to this organization
-      const { intakeFileAttachments } = await import("../../drizzle/schema");
       const [file] = await db
         .select()
         .from(intakeFileAttachments)

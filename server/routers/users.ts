@@ -3,7 +3,7 @@
  */
 
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
 import { users, organizations } from "../../drizzle/schema";
@@ -14,7 +14,11 @@ export const usersRouter = router({
   /**
    * List all users with their organization info
    */
-  list: publicProcedure.query(async () => {
+  list: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user.role !== "admin") {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+    }
+
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
@@ -41,7 +45,7 @@ export const usersRouter = router({
   /**
    * Create a new user
    */
-  create: publicProcedure
+  create: protectedProcedure
     .input(
       z.object({
         email: z.string().email(),
@@ -51,7 +55,11 @@ export const usersRouter = router({
         organizationId: z.number().nullable(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
@@ -91,7 +99,7 @@ export const usersRouter = router({
   /**
    * Update an existing user
    */
-  update: publicProcedure
+  update: protectedProcedure
     .input(
       z.object({
         id: z.number(),
@@ -100,9 +108,14 @@ export const usersRouter = router({
         name: z.string().min(1).optional(),
         role: z.enum(["admin", "user"]).optional(),
         organizationId: z.number().nullable().optional(),
+        clientId: z.number().nullable().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
@@ -142,6 +155,7 @@ export const usersRouter = router({
       if (input.name) updateData.name = input.name;
       if (input.role) updateData.role = input.role;
       if (input.organizationId !== undefined) updateData.organizationId = input.organizationId;
+      if (input.clientId !== undefined) updateData.clientId = input.clientId;
       if (input.password) {
         updateData.passwordHash = await bcrypt.hash(input.password, 10);
       }
@@ -161,13 +175,17 @@ export const usersRouter = router({
   /**
    * Delete a user
    */
-  delete: publicProcedure
+  delete: protectedProcedure
     .input(
       z.object({
         id: z.number(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 

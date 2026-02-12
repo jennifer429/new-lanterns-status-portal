@@ -80,7 +80,7 @@ export function OrganizationManagement() {
       alert("Please enter an organization name");
       return;
     }
-    updateMutation.mutate({ id: selectedOrg.id.toString(), name: editOrgName.trim() });
+    updateMutation.mutate({ id: selectedOrg.id, name: editOrgName.trim() });
   };
 
   const openEditDialog = (org: { id: number; name: string; slug: string }) => {
@@ -96,7 +96,7 @@ export function OrganizationManagement() {
 
   const handleInactivate = () => {
     if (!orgToDelete) return;
-    inactivateMutation.mutate({ id: orgToDelete.id.toString() });
+    inactivateMutation.mutate({ id: orgToDelete.id });
   };
 
   if (isLoading) {

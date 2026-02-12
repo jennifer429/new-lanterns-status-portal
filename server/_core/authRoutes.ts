@@ -39,6 +39,11 @@ export function registerAuthRoutes(app: Router) {
         return res.status(401).json({ error: "Invalid email or password" });
       }
 
+      // Check if user is deactivated
+      if (user.isActive === 0) {
+        return res.status(403).json({ error: "Account has been deactivated. Please contact your administrator." });
+      }
+
       // Verify password
       console.log('[/api/auth/login] Comparing password...');
       const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
@@ -97,9 +102,7 @@ export function registerAuthRoutes(app: Router) {
       // Set new session cookie
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
       
-      console.log('[/api/auth/login] Set cookie with options:', { ...cookieOptions, maxAge: ONE_YEAR_MS });
-      console.log('[/api/auth/login] Session token for user:', user.email, 'openId:', user.openId);
-      console.log('[/api/auth/login] Returning orgSlug:', orgSlug);
+      console.log('[/api/auth/login] Login successful for:', user.email, 'redirecting to:', orgSlug);
 
       // Return success response
       return res.json({

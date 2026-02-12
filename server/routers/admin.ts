@@ -400,6 +400,7 @@ export const adminRouter = router({
         contactEmail: z.string().optional(),
         contactPhone: z.string().optional(),
         status: z.enum(["active", "completed", "paused"]).optional(),
+        clientId: z.number().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -718,7 +719,7 @@ export const adminRouter = router({
           { message: "Invalid email format" }
         ),
         name: z.string(),
-        organizationId: z.number(),
+        organizationId: z.number().optional(), // Optional for partner admins who don't belong to a specific org
         role: z.enum(["user", "admin"]),
         clientId: z.number().nullable(),
       })
@@ -751,13 +752,18 @@ export const adminRouter = router({
       const tempPassword = Math.random().toString(36).slice(-8);
       const passwordHash = await bcrypt.hash(tempPassword, 10);
 
+      // Validate: regular users must have an organizationId
+      if (input.role === "user" && !input.organizationId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Organization is required for non-admin users" });
+      }
+
       // Create user
       const [newUser] = await db
         .insert(users)
         .values({
           email: input.email,
           name: input.name,
-          organizationId: input.organizationId,
+          organizationId: input.organizationId || null,
           role: input.role,
           clientId: input.clientId,
           passwordHash,
@@ -766,7 +772,7 @@ export const adminRouter = router({
         });
 
       // TODO: Send email with temporary password or reset link
-      console.log(`[createUser] Created user ${input.email} with temp password: ${tempPassword}`);
+      console.log(`[createUser] Created user ${input.email} (temp password generated, not logged for security)`);
 
       return { success: true, tempPassword };
     }),
