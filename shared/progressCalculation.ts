@@ -8,6 +8,7 @@ export interface Question {
   sectionTitle: string;
   isWorkflow?: boolean; // True for workflow sections
   type?: string; // Question type: 'text', 'textarea', 'upload', 'dropdown', etc.
+  conditionalOn?: { questionId: string; value: string } | null; // Conditional visibility
 }
 
 export interface Response {
@@ -34,8 +35,26 @@ export interface ProgressResult {
 }
 
 /**
+ * Determine if a conditional question should be visible based on the parent question's response.
+ * A question is visible if:
+ *   1. It has no conditionalOn (always visible), OR
+ *   2. The parent question's response matches the required value
+ */
+function isQuestionVisible(
+  question: Question,
+  responseMap: Map<string | number, Response>
+): boolean {
+  if (!question.conditionalOn) return true;
+
+  const parentResponse = responseMap.get(question.conditionalOn.questionId);
+  if (!parentResponse || !parentResponse.response) return false;
+
+  return parentResponse.response.trim() === question.conditionalOn.value;
+}
+
+/**
  * Calculate progress for an organization's intake questionnaire
- * @param questions - All questions in the questionnaire
+ * @param questions - All questions in the questionnaire (including conditional ones)
  * @param responses - User's responses
  * @param files - Uploaded files
  * @returns Progress statistics including overall percentage and per-section breakdown
@@ -53,10 +72,15 @@ export function calculateProgress(
     files.filter(f => f.questionId !== null).map(f => [f.questionId, true])
   );
 
+  // Filter out conditional questions whose condition is NOT met.
+  // When a parent question is answered with a value that hides the child,
+  // the child should not count toward the total.
+  const visibleQuestions = questions.filter(q => isQuestionVisible(q, responseMap as Map<string | number, Response>));
+
   // Calculate section stats
   const sectionStats: SectionStats = {};
   
-  questions.forEach(q => {
+  visibleQuestions.forEach(q => {
     if (!sectionStats[q.sectionTitle]) {
       sectionStats[q.sectionTitle] = {
         completed: 0,
@@ -102,7 +126,7 @@ export function calculateProgress(
   });
 
   // Calculate overall completion percentage
-  const totalQuestions = questions.length;
+  const totalQuestions = visibleQuestions.length;
   const completedQuestions = Object.values(sectionStats).reduce(
     (sum, section) => sum + section.completed,
     0

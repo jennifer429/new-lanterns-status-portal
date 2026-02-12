@@ -310,7 +310,8 @@ export const organizationsRouter = router({
               sectionTitle: section.title,
               questionText: q.text,
               isWorkflow: false,
-              type: q.type // Pass question type for upload detection
+              type: q.type, // Pass question type for upload detection
+              conditionalOn: q.conditionalOn || null, // Pass conditional visibility metadata
             }));
           } else if (section.type === 'workflow') {
             // Workflow sections - count as 1 item each

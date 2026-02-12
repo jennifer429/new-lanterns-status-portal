@@ -336,10 +336,20 @@ export const intakeRouter = router({
       const questionnaireModule = await import('../../shared/questionnaireData');
       const questionnaireSections = questionnaireModule.questionnaireSections;
       
-      // Count total questions from questionnaireData
-      const totalQuestions = questionnaireSections.reduce((sum: number, section: any) => {
-        return sum + (section.questions?.length || 0);
-      }, 0);
+      // Build a response map for checking conditional visibility
+      const responseMap = new Map<string, string>();
+      responsesData.forEach(r => {
+        if (r.questionId && r.response) {
+          responseMap.set(r.questionId, r.response);
+        }
+      });
+
+      // Helper: determine if a conditional question is visible based on parent answer
+      const isVisible = (q: any): boolean => {
+        if (!q.conditionalOn) return true;
+        const parentAnswer = responseMap.get(q.conditionalOn.questionId);
+        return parentAnswer?.trim() === q.conditionalOn.value;
+      };
 
       // Build a map of questionId -> sectionTitle from questionnaireData
       const questionToSection = new Map<string, string>();
@@ -349,21 +359,32 @@ export const intakeRouter = router({
         });
       });
 
-      // Calculate completion by section
+      // Calculate completion by section, excluding hidden conditional questions
       const sectionProgress: Record<string, { total: number; completed: number }> = {};
+      let totalQuestions = 0;
       
-      // Initialize all sections with totals from questionnaireData
+      // Initialize sections and count only visible questions
       questionnaireSections.forEach((section: any) => {
         if (section.questions && section.questions.length > 0) {
+          const visibleQuestions = section.questions.filter(isVisible);
           sectionProgress[section.title] = {
-            total: section.questions.length,
+            total: visibleQuestions.length,
             completed: 0
           };
+          totalQuestions += visibleQuestions.length;
         }
       });
 
-      // Count completed questions from actual responses
+      // Count completed questions from actual responses (only for visible questions)
+      const visibleQuestionIds = new Set<string>();
+      questionnaireSections.forEach((section: any) => {
+        section.questions?.forEach((q: any) => {
+          if (isVisible(q)) visibleQuestionIds.add(q.id);
+        });
+      });
+
       responsesData.forEach(response => {
+        if (!visibleQuestionIds.has(response.questionId)) return;
         const sectionTitle = questionToSection.get(response.questionId);
         if (sectionTitle && sectionProgress[sectionTitle]) {
           if (response.response && response.response.trim() !== '') {
@@ -374,6 +395,7 @@ export const intakeRouter = router({
 
       // Calculate overall completion
       const completedCount = responsesData.filter(response => 
+        visibleQuestionIds.has(response.questionId) &&
         response.response && response.response.trim() !== ''
       ).length;
 

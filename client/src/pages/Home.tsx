@@ -57,7 +57,8 @@ export default function Home() {
     .flatMap(section =>
       section.questions!.map(q => ({
         id: q.id,
-        sectionTitle: section.title
+        sectionTitle: section.title,
+        conditionalOn: q.conditionalOn || null, // Pass conditional visibility metadata
       }))
     );
 
