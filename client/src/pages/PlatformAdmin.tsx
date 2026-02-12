@@ -730,7 +730,7 @@ export default function PlatformAdmin() {
     : (orgs?.reduce((acc, o) => {
         if (o.clientId && !acc[o.clientId]) {
           // Derive partner name from the user context or org data
-          acc[o.clientId] = user?.clientId === o.clientId ? getPartnerDisplayName(user) : `Partner ${o.clientId}`;
+          acc[o.clientId] = user?.clientId === o.clientId ? getPartnerDisplayName(user, clients) : `Partner ${o.clientId}`;
         }
         return acc;
       }, {} as Record<number, string>) || {});
@@ -774,7 +774,7 @@ export default function PlatformAdmin() {
   const inactiveUsers = allUsers?.filter(u => u.isActive === 0) || [];
 
   // Dynamic header based on user's role
-  const headerTitle = isPlatformAdmin ? "Platform Admin" : `${getPartnerDisplayName(user)} Admin`;
+  const headerTitle = isPlatformAdmin ? "Platform Admin" : `${getPartnerDisplayName(user, clients)} Admin`;
   const headerSubtitle = isPlatformAdmin ? "New Lantern - All Partners" : `Manage your organizations`;
 
   return (
@@ -1480,7 +1480,13 @@ export default function PlatformAdmin() {
                           <SelectValue placeholder="Select organization" />
                         </SelectTrigger>
                         <SelectContent>
-                          {activeOrgs.map(org => (
+                          {activeOrgs
+                            .filter(org => {
+                              const selectedClientId = isPlatformAdmin ? newUserClientId : user?.clientId;
+                              if (!selectedClientId) return true;
+                              return org.clientId === selectedClientId;
+                            })
+                            .map(org => (
                             <SelectItem key={org.id} value={org.id.toString()}>
                               {org.name}
                             </SelectItem>
@@ -1828,7 +1834,7 @@ export default function PlatformAdmin() {
                     {!isPlatformAdmin && (
                       <div className="space-y-2">
                         <Label>Partner</Label>
-                        <Input value={getPartnerDisplayName(user)} disabled />
+                        <Input value={getPartnerDisplayName(user, clients)} disabled />
                       </div>
                     )}
 
@@ -2451,7 +2457,11 @@ export default function PlatformAdmin() {
  * Helper to get a display name for the partner based on user context.
  * Uses the clients data when available, falls back to clientId.
  */
-function getPartnerDisplayName(user: any): string {
+function getPartnerDisplayName(user: any, clients?: any[]): string {
   if (!user?.clientId) return "Platform";
+  if (clients) {
+    const client = clients.find((c: any) => c.id === user.clientId);
+    if (client) return client.name;
+  }
   return `Partner ${user.clientId}`;
 }
