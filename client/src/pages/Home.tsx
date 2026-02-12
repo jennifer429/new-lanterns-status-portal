@@ -1,11 +1,12 @@
 /**
  * Organization Landing Page - Matches Admin Dashboard Card Design
  * Single card layout with progress overview and file list
+ * Dynamic messaging based on completion state
  */
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Activity, Download } from "lucide-react";
+import { ClipboardList, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Download, PartyPopper, ArrowRight, Pencil } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useEffect, useState } from "react";
@@ -72,6 +73,7 @@ export default function Home() {
   const intakeCompletion = progress.completionPercentage;
   
   // Calculate completed sections (100% complete)
+  const totalSections = Object.keys(progress.sectionProgress).length;
   const completedSections = Object.values(progress.sectionProgress).filter(
     section => section.completed === section.total
   ).length;
@@ -82,8 +84,12 @@ export default function Home() {
     progress: stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0
   }));
 
-  // Mock user count (you can add real user count query later)
-  const userCount = 5;
+  // Determine completion state for dynamic messaging
+  const isComplete = intakeCompletion === 100;
+  const isNotStarted = intakeCompletion === 0;
+
+  // Find the first incomplete section for the CTA
+  const firstIncompleteSection = sectionProgress.find(s => s.progress < 100);
 
   if (orgLoading) {
     return (
@@ -102,7 +108,63 @@ export default function Home() {
       <PhiDisclaimer />
       
       <div className="flex items-center justify-center p-6">
-        <div className="w-full max-w-3xl">
+        <div className="w-full max-w-3xl space-y-6">
+
+        {/* Welcome / Status Banner */}
+        {isComplete ? (
+          <Card className="border-2 border-green-500/30 bg-gradient-to-r from-green-500/10 to-emerald-500/10">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="rounded-full bg-green-100 dark:bg-green-900/30 p-3 shrink-0">
+                  <PartyPopper className="w-8 h-8 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-green-700 dark:text-green-300">Intake Complete!</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    All sections have been submitted. The New Lantern team is reviewing your responses and will reach out with next steps. You can still update your answers anytime.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : isNotStarted ? (
+          <Card className="border-2 border-blue-500/30 bg-gradient-to-r from-blue-500/10 to-indigo-500/10">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="rounded-full bg-blue-100 dark:bg-blue-900/30 p-3 shrink-0">
+                  <ClipboardList className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-blue-700 dark:text-blue-300">Welcome to Your Onboarding Portal</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Get started by completing the intake questionnaire below. Your progress is saved automatically as you go.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-2 border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-orange-500/10">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="rounded-full bg-amber-100 dark:bg-amber-900/30 p-3 shrink-0">
+                  <TrendingUp className="w-8 h-8 text-amber-600 dark:text-amber-400" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-amber-700 dark:text-amber-300">Welcome Back!</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    You're <span className="font-semibold">{intakeCompletion}%</span> through the intake questionnaire.
+                    {firstIncompleteSection && (
+                      <> Continue with <span className="font-medium">{firstIncompleteSection.name}</span> to keep going.</>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Main Card */}
         <Card className="border-2 border-primary/30 bg-gradient-to-b from-card to-card/50">
           <CardContent className="p-8">
             {/* Header with Organization Name */}
@@ -111,11 +173,11 @@ export default function Home() {
                 <ClipboardList className="w-8 h-8 text-primary" />
                 <h1 className="text-2xl font-bold">{orgData.name}</h1>
               </div>
-              <CheckCircle2 className="w-6 h-6 text-green-500" />
+              {isComplete && <CheckCircle2 className="w-6 h-6 text-green-500" />}
             </div>
 
             {/* Stats Row */}
-            <div className="grid grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-2 gap-6 mb-8">
               <div className="flex items-center gap-3">
                 <TrendingUp className="w-5 h-5 text-muted-foreground" />
                 <div>
@@ -124,17 +186,10 @@ export default function Home() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <Users className="w-5 h-5 text-muted-foreground" />
-                <div>
-                  <div className="text-2xl font-bold">{userCount}</div>
-                  <div className="text-sm text-muted-foreground">Users</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
                 <FileText className="w-5 h-5 text-muted-foreground" />
                 <div>
                   <div className="text-2xl font-bold">{filesUploaded}</div>
-                  <div className="text-sm text-muted-foreground">Files</div>
+                  <div className="text-sm text-muted-foreground">Files Uploaded</div>
                 </div>
               </div>
             </div>
@@ -144,15 +199,21 @@ export default function Home() {
               <div className="mb-6">
                 <h2 className="text-xl font-semibold mb-2">Overall Progress</h2>
                 <p className="text-sm text-muted-foreground mb-4">
-                  {completedSections} of {questionnaireSections.length} sections complete
+                  {completedSections} of {totalSections} sections complete
                 </p>
 
                 {/* Big Percentage Box */}
-                <div className="text-center p-8 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 border-2 border-primary/30 mb-6">
-                  <div className="text-7xl font-bold text-primary mb-2">
+                <div className={`text-center p-8 rounded-xl border-2 mb-6 ${
+                  isComplete 
+                    ? "bg-gradient-to-br from-green-500/20 to-emerald-500/10 border-green-500/30"
+                    : "bg-gradient-to-br from-primary/20 to-primary/10 border-primary/30"
+                }`}>
+                  <div className={`text-7xl font-bold mb-2 ${isComplete ? "text-green-500" : "text-primary"}`}>
                     {intakeCompletion}%
                   </div>
-                  <div className="text-lg text-muted-foreground">Complete</div>
+                  <div className="text-lg text-muted-foreground">
+                    {isComplete ? "All Done!" : "Complete"}
+                  </div>
                 </div>
 
                 {/* Section List */}
@@ -161,29 +222,24 @@ export default function Home() {
                     <div key={index} className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         {section.progress === 100 ? (
-                          <CheckCircle2 className="w-5 h-5 text-primary" />
+                          <CheckCircle2 className="w-5 h-5 text-green-500" />
                         ) : (
                           <Circle className="w-5 h-5 text-muted-foreground" />
                         )}
                         <span className="text-sm">{section.name}</span>
                       </div>
-                      <span className="text-sm font-bold">{section.progress}%</span>
+                      <span className={`text-sm font-bold ${section.progress === 100 ? "text-green-500" : ""}`}>
+                        {section.progress}%
+                      </span>
                     </div>
                   ))}
-                </div>
-
-                {/* Status */}
-                <div className="text-sm text-muted-foreground mb-6">
-                  In Progress
                 </div>
               </div>
 
               {/* Uploaded Files Section */}
-              <div className="border-t border-border/50 pt-6 mb-6">
-                <h3 className="text-base font-semibold mb-3">Uploaded Files:</h3>
-                {allFiles.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No files uploaded yet</p>
-                ) : (
+              {allFiles.length > 0 && (
+                <div className="border-t border-border/50 pt-6 mb-6">
+                  <h3 className="text-base font-semibold mb-3">Uploaded Files:</h3>
                   <div className="space-y-2 max-h-48 overflow-y-auto">
                     {allFiles.map((file) => (
                       <a
@@ -197,22 +253,39 @@ export default function Home() {
                       </a>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* CTA Buttons */}
+              <div className="space-y-3">
+                {isComplete ? (
+                  <>
+                    <Link href={`/org/${orgSlug}/intake`}>
+                      <Button size="lg" variant="outline" className="w-full text-lg py-6">
+                        <Pencil className="w-5 h-5 mr-2" />
+                        Review & Edit Responses
+                      </Button>
+                    </Link>
+                    <p className="text-xs text-center text-muted-foreground">
+                      Your responses have been submitted. You can still make changes if needed.
+                    </p>
+                  </>
+                ) : isNotStarted ? (
+                  <Link href={`/org/${orgSlug}/intake`}>
+                    <Button size="lg" className="w-full text-lg py-6">
+                      <ArrowRight className="w-5 h-5 mr-2" />
+                      Get Started
+                    </Button>
+                  </Link>
+                ) : (
+                  <Link href={`/org/${orgSlug}/intake`}>
+                    <Button size="lg" className="w-full text-lg py-6">
+                      <ExternalLink className="w-5 h-5 mr-2" />
+                      Continue Questionnaire
+                    </Button>
+                  </Link>
                 )}
               </div>
-
-              {/* Last Login */}
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-                <Activity className="w-4 h-4" />
-                <span>Last login: about 5 hours ago</span>
-              </div>
-
-              {/* Open Portal Button */}
-              <Link href={`/org/${orgSlug}/intake`}>
-                <Button size="lg" className="w-full text-lg py-6">
-                  <ExternalLink className="w-5 h-5 mr-2" />
-                  Open Portal
-                </Button>
-              </Link>
             </div>
           </CardContent>
         </Card>

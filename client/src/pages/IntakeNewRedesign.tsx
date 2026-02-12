@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Download, Upload, CheckCircle2, Circle, LogOut, Home, FileText, Shield, Database, FileUp, Network, ClipboardCheck, Star } from "lucide-react";
+import { Loader2, Download, Upload, CheckCircle2, Circle, LogOut, Home, FileText, Shield, Database, FileUp, Network, ClipboardCheck, Star, PartyPopper, ArrowRight } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -136,6 +136,7 @@ export default function IntakeNewRedesign() {
   const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
   const [unansweredQuestions, setUnansweredQuestions] = useState<Set<string>>(new Set());
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
   const [feedbackRating, setFeedbackRating] = useState(0);
   const [feedbackComments, setFeedbackComments] = useState("");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -246,8 +247,7 @@ export default function IntakeNewRedesign() {
   // Feedback submission mutation
   const submitFeedbackMutation = trpc.intake.submitFeedback.useMutation({
     onSuccess: () => {
-      setShowFeedbackModal(false);
-      setLocation(`/org/${slug}`);
+      setFeedbackSubmitted(true);
     },
     onError: (error) => {
       console.error('Failed to submit feedback:', error);
@@ -1277,75 +1277,148 @@ export default function IntakeNewRedesign() {
       </div>
 
       {/* Feedback Modal */}
-      <Dialog open={showFeedbackModal} onOpenChange={setShowFeedbackModal}>
+      <Dialog open={showFeedbackModal} onOpenChange={(open) => {
+        if (!open && feedbackSubmitted) {
+          // If closing after submission, go to dashboard
+          setShowFeedbackModal(false);
+          setLocation(`/org/${slug}`);
+        } else {
+          setShowFeedbackModal(open);
+        }
+      }}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>✅ Intake Complete!</DialogTitle>
-            <DialogDescription>
-              Thank you for completing the onboarding questionnaire. Please rate your experience.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {/* Star Rating */}
-            <div className="space-y-2">
-              <Label>How would you rate your onboarding experience?</Label>
-              <div className="flex gap-2">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onClick={() => setFeedbackRating(star)}
-                    className="transition-colors hover:scale-110"
+          {!feedbackSubmitted ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>Intake Complete!</DialogTitle>
+                <DialogDescription>
+                  Thank you for completing the onboarding questionnaire. Please rate your experience.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                {/* Star Rating */}
+                <div className="space-y-2">
+                  <Label>How would you rate your onboarding experience?</Label>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setFeedbackRating(star)}
+                        className="transition-colors hover:scale-110"
+                      >
+                        <Star
+                          className={`w-8 h-8 ${
+                            star <= feedbackRating
+                              ? "fill-yellow-400 text-yellow-400"
+                              : "text-gray-300"
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Comments */}
+                <div className="space-y-2">
+                  <Label htmlFor="feedback-comments">Comments (optional)</Label>
+                  <Textarea
+                    id="feedback-comments"
+                    placeholder="Share your thoughts about the onboarding process..."
+                    value={feedbackComments}
+                    onChange={(e) => setFeedbackComments(e.target.value)}
+                    rows={4}
+                  />
+                </div>
+
+                {/* Submit Button */}
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowFeedbackModal(false);
+                      setLocation(`/org/${slug}`);
+                    }}
                   >
-                    <Star
-                      className={`w-8 h-8 ${
-                        star <= feedbackRating
-                          ? "fill-yellow-400 text-yellow-400"
-                          : "text-gray-300"
-                      }`}
-                    />
-                  </button>
-                ))}
+                    Skip
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      submitFeedbackMutation.mutate({
+                        organizationSlug: slug || '',
+                        rating: feedbackRating,
+                        comments: feedbackComments || undefined,
+                      });
+                    }}
+                    disabled={feedbackRating === 0 || submitFeedbackMutation.isPending}
+                  >
+                    {submitFeedbackMutation.isPending ? 'Submitting...' : 'Submit Feedback'}
+                  </Button>
+                </div>
               </div>
-            </div>
+            </>
+          ) : (
+            <>
+              <DialogHeader>
+                <div className="flex justify-center mb-2">
+                  <div className="rounded-full bg-green-100 dark:bg-green-900/30 p-4">
+                    <PartyPopper className="w-10 h-10 text-green-600 dark:text-green-400" />
+                  </div>
+                </div>
+                <DialogTitle className="text-center text-xl">Thank You!</DialogTitle>
+                <DialogDescription className="text-center text-base">
+                  Your feedback has been submitted. We appreciate you taking the time to share your experience.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 pt-2">
+                {/* What Happens Next */}
+                <div className="rounded-lg bg-muted/50 p-4 space-y-3">
+                  <h4 className="font-semibold text-sm">What happens next?</h4>
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <div className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                      <span>Your responses have been saved and shared with the New Lantern team</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                      <span>Our team will review your submission and reach out with next steps</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                      <span>You can return anytime to update your responses or upload additional files</span>
+                    </div>
+                  </div>
+                </div>
 
-            {/* Comments */}
-            <div className="space-y-2">
-              <Label htmlFor="feedback-comments">Comments (optional)</Label>
-              <Textarea
-                id="feedback-comments"
-                placeholder="Share your thoughts about the onboarding process..."
-                value={feedbackComments}
-                onChange={(e) => setFeedbackComments(e.target.value)}
-                rows={4}
-              />
-            </div>
-
-            {/* Submit Button */}
-            <div className="flex gap-2 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowFeedbackModal(false);
-                  setLocation(`/org/${slug}`);
-                }}
-              >
-                Skip
-              </Button>
-              <Button
-                onClick={() => {
-                  submitFeedbackMutation.mutate({
-                    organizationSlug: slug || '',
-                    rating: feedbackRating,
-                    comments: feedbackComments || undefined,
-                  });
-                }}
-                disabled={feedbackRating === 0 || submitFeedbackMutation.isPending}
-              >
-                {submitFeedbackMutation.isPending ? 'Submitting...' : 'Submit Feedback'}
-              </Button>
-            </div>
-          </div>
+                {/* Action Buttons */}
+                <div className="flex flex-col gap-2">
+                  <Button
+                    onClick={() => {
+                      setShowFeedbackModal(false);
+                      setFeedbackSubmitted(false);
+                      setLocation(`/org/${slug}`);
+                    }}
+                    className="w-full"
+                  >
+                    <Home className="w-4 h-4 mr-2" />
+                    Go to Dashboard
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowFeedbackModal(false);
+                      setFeedbackSubmitted(false);
+                      // Stay on intake page so they can review/edit
+                    }}
+                    className="w-full"
+                  >
+                    <ArrowRight className="w-4 h-4 mr-2" />
+                    Review My Responses
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 
