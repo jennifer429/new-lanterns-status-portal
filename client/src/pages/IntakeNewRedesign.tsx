@@ -249,7 +249,7 @@ export default function IntakeNewRedesign() {
       setShowFeedbackModal(false);
       setFeedbackRating(0);
       setFeedbackComments("");
-      toast.success('Thanks for your feedback!');
+      setLocation(`/org/${slug}/complete`);
     },
     onError: () => {
       toast.error('Failed to submit feedback. Please try again.');
@@ -1308,7 +1308,10 @@ export default function IntakeNewRedesign() {
             <div className="flex gap-2 justify-end">
               <Button
                 variant="ghost"
-                onClick={() => setShowFeedbackModal(false)}
+                onClick={() => {
+                  setShowFeedbackModal(false);
+                  setLocation(`/org/${slug}/complete`);
+                }}
               >
                 Skip
               </Button>

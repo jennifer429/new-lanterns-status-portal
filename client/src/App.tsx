@@ -12,6 +12,7 @@ import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Tasks from "./pages/Tasks";
+import IntakeComplete from "./pages/IntakeComplete";
 import CreateOrganization from "./pages/CreateOrganization";
 
 function Router() {
@@ -44,6 +45,7 @@ function Router() {
         {() => <PlatformAdmin />}
       </Route>
       <Route path="/org/:slug/intake" component={IntakeNewRedesign} />
+      <Route path="/org/:slug/complete" component={IntakeComplete} />
       <Route path="/org/:slug/tasks" component={Tasks} />
       <Route path="/org/:slug" component={Home} />
       <Route path={"/"} component={Login} />
