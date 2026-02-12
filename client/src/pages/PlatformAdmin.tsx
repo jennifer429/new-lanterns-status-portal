@@ -52,7 +52,7 @@ import {
 export default function PlatformAdmin() {
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"dashboard" | "users" | "organizations" | "templates">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "users" | "organizations" | "templates" | "partners">("dashboard");
 
   // Template management state
   const [isUploadTemplateDialogOpen, setIsUploadTemplateDialogOpen] = useState(false);
@@ -99,6 +99,17 @@ export default function PlatformAdmin() {
   const [editOrgName, setEditOrgName] = useState("");
   const [editOrgSlug, setEditOrgSlug] = useState("");
   const [editOrgClientId, setEditOrgClientId] = useState<number | null>(null);
+
+  // Partner management state
+  const [isCreatePartnerDialogOpen, setIsCreatePartnerDialogOpen] = useState(false);
+  const [newPartnerName, setNewPartnerName] = useState("");
+  const [newPartnerSlug, setNewPartnerSlug] = useState("");
+  const [newPartnerDescription, setNewPartnerDescription] = useState("");
+  const [isEditPartnerDialogOpen, setIsEditPartnerDialogOpen] = useState(false);
+  const [editPartnerId, setEditPartnerId] = useState<number | null>(null);
+  const [editPartnerName, setEditPartnerName] = useState("");
+  const [editPartnerSlug, setEditPartnerSlug] = useState("");
+  const [editPartnerDescription, setEditPartnerDescription] = useState("");
 
   // Sorting state for organizations
   const [orgSortBy, setOrgSortBy] = useState<"name" | "completion" | "partner">("name");
@@ -463,6 +474,96 @@ export default function PlatformAdmin() {
     },
   });
 
+  // Partner mutations
+  const createClientMutation = trpc.admin.createClient.useMutation({
+    onSuccess: () => {
+      toast.success("Partner created successfully!");
+      setIsCreatePartnerDialogOpen(false);
+      setNewPartnerName("");
+      setNewPartnerSlug("");
+      setNewPartnerDescription("");
+      refetchOrgs();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to create partner");
+    },
+  });
+
+  const updateClientMutation = trpc.admin.updateClient.useMutation({
+    onSuccess: () => {
+      toast.success("Partner updated successfully!");
+      setIsEditPartnerDialogOpen(false);
+      setEditPartnerId(null);
+      refetchOrgs();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to update partner");
+    },
+  });
+
+  const deactivateClientMutation = trpc.admin.deactivateClient.useMutation({
+    onSuccess: () => {
+      toast.success("Partner deactivated");
+      refetchOrgs();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to deactivate partner");
+    },
+  });
+
+  const reactivateClientMutation = trpc.admin.reactivateClient.useMutation({
+    onSuccess: () => {
+      toast.success("Partner reactivated");
+      refetchOrgs();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to reactivate partner");
+    },
+  });
+
+  const handleCreatePartner = () => {
+    if (!newPartnerName || !newPartnerSlug) {
+      toast.error("Please fill in name and slug");
+      return;
+    }
+    createClientMutation.mutate({
+      name: newPartnerName,
+      slug: newPartnerSlug,
+      description: newPartnerDescription || undefined,
+    });
+  };
+
+  const handleEditPartner = (client: NonNullable<typeof clients>[number]) => {
+    setEditPartnerId(client.id);
+    setEditPartnerName(client.name);
+    setEditPartnerSlug(client.slug);
+    setEditPartnerDescription(client.description || "");
+    setIsEditPartnerDialogOpen(true);
+  };
+
+  const handleUpdatePartner = () => {
+    if (!editPartnerId || !editPartnerName || !editPartnerSlug) {
+      toast.error("Please fill in name and slug");
+      return;
+    }
+    updateClientMutation.mutate({
+      id: editPartnerId,
+      name: editPartnerName,
+      slug: editPartnerSlug,
+      description: editPartnerDescription || undefined,
+    });
+  };
+
+  const handleDeactivatePartner = (id: number) => {
+    if (confirm("Are you sure you want to deactivate this partner? This will not affect their organizations.")) {
+      deactivateClientMutation.mutate({ id });
+    }
+  };
+
+  const handleReactivatePartner = (id: number) => {
+    reactivateClientMutation.mutate({ id });
+  };
+
   const handleCreateOrg = () => {
     if (!newOrgName || !newOrgSlug || !newOrgClientId) {
       toast.error("Please fill in all required fields");
@@ -695,6 +796,21 @@ export default function PlatformAdmin() {
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
               )}
             </button>
+            {isPlatformAdmin && (
+              <button
+                onClick={() => setActiveTab("partners")}
+                className={`pb-3 px-1 font-medium transition-colors relative ${
+                  activeTab === "partners"
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Partners
+                {activeTab === "partners" && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                )}
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -1853,6 +1969,187 @@ export default function PlatformAdmin() {
             </Card>
           </>
         )}
+
+        {activeTab === "partners" && isPlatformAdmin && (
+          <>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold">Partners ({clients?.length || 0})</h2>
+              <Dialog open={isCreatePartnerDialogOpen} onOpenChange={setIsCreatePartnerDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="gap-2">
+                    <Plus className="w-4 h-4" />
+                    Add Partner
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create New Partner</DialogTitle>
+                    <DialogDescription>
+                      Add a new partner organization (e.g., RadOne, SRV).
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 mt-4">
+                    <div className="space-y-2">
+                      <Label>Name <span className="text-destructive">*</span></Label>
+                      <Input
+                        placeholder="e.g., RadOne"
+                        value={newPartnerName}
+                        onChange={(e) => {
+                          setNewPartnerName(e.target.value);
+                          setNewPartnerSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''));
+                        }}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Slug <span className="text-destructive">*</span></Label>
+                      <Input
+                        placeholder="e.g., radone"
+                        value={newPartnerSlug}
+                        onChange={(e) => setNewPartnerSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                      />
+                      <p className="text-xs text-muted-foreground">URL-safe identifier. Auto-generated from name.</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Description</Label>
+                      <Input
+                        placeholder="Optional description"
+                        value={newPartnerDescription}
+                        onChange={(e) => setNewPartnerDescription(e.target.value)}
+                      />
+                    </div>
+                    <Button
+                      onClick={handleCreatePartner}
+                      disabled={createClientMutation.isPending || !newPartnerName || !newPartnerSlug}
+                      className="w-full"
+                    >
+                      {createClientMutation.isPending ? "Creating..." : "Create Partner"}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            {/* Edit Partner Dialog */}
+            <Dialog open={isEditPartnerDialogOpen} onOpenChange={setIsEditPartnerDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Edit Partner</DialogTitle>
+                  <DialogDescription>
+                    Update partner details.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <Label>Name <span className="text-destructive">*</span></Label>
+                    <Input
+                      value={editPartnerName}
+                      onChange={(e) => setEditPartnerName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Slug <span className="text-destructive">*</span></Label>
+                    <Input
+                      value={editPartnerSlug}
+                      onChange={(e) => setEditPartnerSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Description</Label>
+                    <Input
+                      value={editPartnerDescription}
+                      onChange={(e) => setEditPartnerDescription(e.target.value)}
+                    />
+                  </div>
+                  <Button
+                    onClick={handleUpdatePartner}
+                    disabled={updateClientMutation.isPending || !editPartnerName || !editPartnerSlug}
+                    className="w-full"
+                  >
+                    {updateClientMutation.isPending ? "Saving..." : "Save Changes"}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Card>
+              <CardContent className="p-6">
+                {!clients || clients.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <p className="text-lg font-medium">No partners yet</p>
+                    <p className="text-sm">Create a partner to start organizing your clients.</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Slug</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Organizations</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {clients.map(c => {
+                        const orgCount = orgs?.filter(o => o.clientId === c.id).length || 0;
+                        return (
+                          <TableRow key={c.id} className={c.status === 'inactive' ? 'opacity-50' : ''}>
+                            <TableCell className="font-mono text-sm">{c.id}</TableCell>
+                            <TableCell className="font-medium">{c.name}</TableCell>
+                            <TableCell className="font-mono text-sm">{c.slug}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{c.description || '—'}</TableCell>
+                            <TableCell>
+                              <Badge variant={c.status === 'active' ? 'default' : 'secondary'}>
+                                {c.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{orgCount}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {new Date(c.createdAt).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleEditPartner(c)}
+                                >
+                                  <Edit className="w-3 h-3 mr-1" />
+                                  Edit
+                                </Button>
+                                {c.status === 'active' ? (
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={() => handleDeactivatePartner(c.id)}
+                                  >
+                                    Deactivate
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleReactivatePartner(c.id)}
+                                  >
+                                    <RotateCcw className="w-3 h-3 mr-1" />
+                                    Reactivate
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
     </div>
   );
@@ -1860,14 +2157,9 @@ export default function PlatformAdmin() {
 
 /**
  * Helper to get a display name for the partner based on user context.
- * Maps known clientIds to display names.
+ * Uses the clients data when available, falls back to clientId.
  */
 function getPartnerDisplayName(user: any): string {
   if (!user?.clientId) return "Platform";
-  // Known partner mappings
-  const partnerNames: Record<number, string> = {
-    1: "RadOne",
-    2: "SRV",
-  };
-  return partnerNames[user.clientId] || `Partner ${user.clientId}`;
+  return `Partner ${user.clientId}`;
 }

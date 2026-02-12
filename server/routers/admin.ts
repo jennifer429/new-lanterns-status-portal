@@ -299,6 +299,134 @@ export const adminRouter = router({
     }
   }),
 
+  /**
+   * Create a new client (partner)
+   * Platform admins only
+   */
+  createClient: protectedProcedure
+    .input(
+      z.object({
+        name: z.string().min(1, "Name is required"),
+        slug: z.string().min(1, "Slug is required"),
+        description: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin" || ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Check if slug already exists
+      const existing = await db.select().from(clients).where(eq(clients.slug, input.slug)).limit(1);
+      if (existing.length > 0) {
+        throw new TRPCError({ code: "CONFLICT", message: "A partner with this slug already exists" });
+      }
+
+      await db.insert(clients).values({
+        name: input.name,
+        slug: input.slug,
+        description: input.description || null,
+        status: "active",
+      });
+
+      return { success: true };
+    }),
+
+  /**
+   * Update an existing client (partner)
+   * Platform admins only
+   */
+  updateClient: protectedProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        name: z.string().min(1, "Name is required"),
+        slug: z.string().min(1, "Slug is required"),
+        description: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin" || ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Check the client exists
+      const [existing] = await db.select().from(clients).where(eq(clients.id, input.id)).limit(1);
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Partner not found" });
+      }
+
+      // Check slug uniqueness (excluding self)
+      const slugConflict = await db.select().from(clients)
+        .where(and(eq(clients.slug, input.slug), sql`${clients.id} != ${input.id}`))
+        .limit(1);
+      if (slugConflict.length > 0) {
+        throw new TRPCError({ code: "CONFLICT", message: "A partner with this slug already exists" });
+      }
+
+      await db.update(clients).set({
+        name: input.name,
+        slug: input.slug,
+        description: input.description || null,
+      }).where(eq(clients.id, input.id));
+
+      return { success: true };
+    }),
+
+  /**
+   * Deactivate a client (partner) - soft delete
+   * Platform admins only
+   */
+  deactivateClient: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin" || ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const [existing] = await db.select().from(clients).where(eq(clients.id, input.id)).limit(1);
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Partner not found" });
+      }
+
+      await db.update(clients).set({ status: "inactive" }).where(eq(clients.id, input.id));
+
+      return { success: true };
+    }),
+
+  /**
+   * Reactivate a client (partner)
+   * Platform admins only
+   */
+  reactivateClient: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin" || ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const [existing] = await db.select().from(clients).where(eq(clients.id, input.id)).limit(1);
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Partner not found" });
+      }
+
+      await db.update(clients).set({ status: "active" }).where(eq(clients.id, input.id));
+
+      return { success: true };
+    }),
+
   // ============================================================================
   // ORGANIZATIONS CRUD
   // ============================================================================
