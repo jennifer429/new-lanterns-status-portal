@@ -1789,3 +1789,10 @@
 - [x] Verify templates are in database (2 templates: RadOne E.1, SRV E.1)
 - [x] Code review: IntakeNewRedesign correctly uses dbTemplateMap for rendering
 - [x] GitHub sync: Removed hardcoded template URLs, single source of truth is DB
+
+## Make Questions Partner-Agnostic (Feb 13, 2026)
+- [x] H.1: Remove "Rad1" → generic wording
+- [x] D.13: Replace "Silverback" → "Router / Integration 3rd Party"
+- [x] Comment line 4: Replace "DataFirst (Silverback)" → "Integration 3rd Party Router"
+- [x] Remove old SRV/RadOne hardcoded URL comments (lines 135-136)
+- [x] Keep all "New Lantern" references as-is

@@ -1,7 +1,7 @@
 /**
  * Radiology One New Site Onboarding Questionnaire
  * 9 sections (5 standard + 4 workflow diagrams), 51 total questions
- * Note: Router = DataFirst (Silverback) for all overlay situations
+ * Note: Router = Integration 3rd Party Router for all overlay situations
  */
 
 export interface Question {
@@ -32,7 +32,7 @@ export const questionnaireSections: Section[] = [
     title: 'Organization Info',
     description: 'Sites, contacts, and testing timelines',
     questions: [
-      { id: 'H.1', text: 'Number of sites/locations (this determines how many VPN tunnels Rad1 needs to build)', type: 'text', placeholder: 'Enter number of sites' },
+      { id: 'H.1', text: 'Number of sites/locations (this determines how many VPN tunnels need to be built)', type: 'text', placeholder: 'Enter number of sites' },
       { id: 'H.2', text: 'Site names and identifiers', type: 'textarea', placeholder: 'List all site names and IDs' },
       { id: 'H.3', text: 'Site-specific user access restrictions', type: 'textarea', placeholder: 'Document any access restrictions by site' },
       { id: 'A.1', text: 'Administrative point(s) of contact', type: 'textarea', placeholder: 'Name, title, email, phone' },
@@ -66,7 +66,7 @@ export const questionnaireSections: Section[] = [
       { id: 'D.10', text: 'What are the HL7 priority values in your orders (OBR:27.1) and what do they mean?', type: 'textarea', placeholder: 'Example: S=Stat, R=Routine' },
       { id: 'D.11', text: 'What patient identifier do you use for matching (e.g. MRN) and is it in PID:3.1?', type: 'textarea', placeholder: 'Document patient identifier field' },
       { id: 'D.12', text: 'Is the patient identifier in your order the same as in prior reports and comparison images?', type: 'textarea', placeholder: 'Yes/No and explain any differences' },
-      { id: 'D.13', text: 'Please document DICOM tag 0008,1040 value and corresponding PV1:11 value for matching (Note: DICOM tagging is handled by Silverback, not client sites)', type: 'textarea', placeholder: 'Document tag values for patient matching' },
+      { id: 'D.13', text: 'Please document DICOM tag 0008,1040 value and corresponding PV1:11 value for matching (Note: DICOM tagging is handled by the Router / Integration 3rd Party, not client sites)', type: 'textarea', placeholder: 'Document tag values for patient matching' },
     ],
   },
   /**
@@ -131,9 +131,6 @@ export const questionnaireSections: Section[] = [
         type: 'upload-download', 
         notes: 'Upload your completed VPN form or download our template. MUST include IP addresses and ports for all DICOM endpoints and HL7 interfaces.',
         // Templates are now managed via the Templates tab in the admin dashboard (partnerTemplates DB table)
-        // Previously hardcoded VPN form URLs:
-        //   RadOne (clientId=1): https://files.manuscdn.com/user_upload_by_module/session_file/310519663326227304/NfNtZiMfXpqdbVqa.xlsx
-        //   SRV (clientId=2): https://files.manuscdn.com/user_upload_by_module/session_file/310519663326227304/MFEsljZLLtNyBZWF.docx
       },
       { 
         id: 'E.2', 
