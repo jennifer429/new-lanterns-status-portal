@@ -1,78 +1,13 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { fileAttachments, organizations } from "../../drizzle/schema";
+import { fileAttachments, organizations, clients } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
-import { nanoid } from "nanoid";
 import { exec } from "child_process";
 import { promisify } from "util";
-import { writeFile, unlink } from "fs/promises";
-import path from "path";
-import os from "os";
+import { uploadToGoogleDrive } from "../utils/googleDrive";
 
 const execAsync = promisify(exec);
-
-/**
- * Upload file to Google Drive and get shareable link
- */
-async function uploadToGoogleDrive(
-  fileName: string,
-  fileBuffer: Buffer,
-  organizationName: string
-): Promise<string> {
-  // Create temp file
-  const tempDir = os.tmpdir();
-  const tempFilePath = path.join(tempDir, `${nanoid()}-${fileName}`);
-  
-  try {
-    await writeFile(tempFilePath, fileBuffer);
-    
-    // Upload to RadOne-Intake folder (ID: 1Awi2cFLAXApN9wWVMgqslyyXy69sHVTX)
-    const folderPath = `manus_google_drive:RadOne-Intake`;
-    
-    // Upload file to Google Drive
-    await execAsync(
-      `rclone copy "${tempFilePath}" "${folderPath}" --config /home/ubuntu/.gdrive-rclone.ini`
-    );
-    
-    // Wait for file to sync (Google Drive needs time to process)
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Get shareable link with retry logic
-    const remotePath = `${folderPath}/${fileName}`;
-    let shareableLink = '';
-    let attempts = 0;
-    const maxAttempts = 3;
-    
-    while (attempts < maxAttempts) {
-      try {
-        const { stdout } = await execAsync(
-          `rclone link "${remotePath}" --config /home/ubuntu/.gdrive-rclone.ini`
-        );
-        shareableLink = stdout.trim();
-        break;
-      } catch (error) {
-        attempts++;
-        if (attempts >= maxAttempts) {
-          throw new Error(`Failed to create shareable link after ${maxAttempts} attempts: ${error}`);
-        }
-        // Wait before retry
-        await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
-      }
-    }
-    
-    // Clean up temp file
-    await unlink(tempFilePath);
-    
-    return shareableLink;
-  } catch (error) {
-    // Clean up temp file on error
-    try {
-      await unlink(tempFilePath);
-    } catch {}
-    throw error;
-  }
-}
 
 /**
  * Attach file link to ClickUp task
@@ -144,14 +79,25 @@ export const filesRouter = router({
 
       if (!org) throw new Error("Organization not found");
 
-      // Upload to S3
-      const { storagePut } = await import("../storage");
-      const fileKey = `intake/${org.slug}/${input.taskId}/${Date.now()}-${input.fileName}`;
-      const { url: fileUrl } = await storagePut(
-        fileKey,
+      // Look up client slug for the org-specific Drive folder
+      let clientSlug = "unknown-partner";
+      if (org.clientId) {
+        const [client] = await db
+          .select({ slug: clients.slug })
+          .from(clients)
+          .where(eq(clients.id, org.clientId))
+          .limit(1);
+        if (client?.slug) clientSlug = client.slug;
+      }
+
+      // Upload to Google Drive: New-Lanterns-Intake/{clientSlug}/{orgSlug}/
+      const fileUrl = await uploadToGoogleDrive(
+        input.fileName,
         fileBuffer,
-        input.mimeType
+        clientSlug,
+        org.slug
       );
+      const fileKey = `${clientSlug}/${org.slug}/${input.fileName}`;
 
       // Save metadata to database
       const [result] = await db.insert(fileAttachments).values({

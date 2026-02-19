@@ -4,6 +4,7 @@ import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { intakeResponses, intakeFileAttachments, organizations, questions, questionOptions, responses, onboardingFeedback, clients, partnerTemplates } from "../../drizzle/schema";
 import { eq, and, sql } from "drizzle-orm";
+import { uploadToGoogleDrive } from "../utils/googleDrive";
 
 export const intakeRouter = router({
   /**
@@ -488,10 +489,20 @@ export const intakeRouter = router({
         const sanitizedOrgName = org.name.replace(/[^a-zA-Z0-9-]/g, '_');
         const fileName = `${sanitizedOrgName}_${sanitizedEmail}_${input.questionId}-${shortTitle}_${timestamp}.${fileExt}`;
         
-        // Upload to S3 using built-in storage helper
-        const { storagePut } = await import("../storage");
-        const s3Key = `intake-files/${org.slug}/${fileName}`;
-        const { url: fileUrl } = await storagePut(s3Key, fileBuffer, input.mimeType);
+        // Look up client slug for the org-specific Drive folder
+        let clientSlug = "unknown-partner";
+        if (org.clientId) {
+          const [client] = await db
+            .select({ slug: clients.slug })
+            .from(clients)
+            .where(eq(clients.id, org.clientId))
+            .limit(1);
+          if (client?.slug) clientSlug = client.slug;
+        }
+
+        // Upload to Google Drive: New-Lanterns-Intake/{clientSlug}/{orgSlug}/
+        const fileUrl = await uploadToGoogleDrive(fileName, fileBuffer, clientSlug, org.slug);
+        const driveKey = `${clientSlug}/${org.slug}/${fileName}`;
 
         // Store file info in database
         await db.insert(intakeFileAttachments).values({
@@ -499,7 +510,7 @@ export const intakeRouter = router({
           questionId: input.questionId, // String question ID (e.g., "D.13")
           fileName: input.fileName,
           fileUrl,
-          driveFileId: s3Key, // Store S3 key for reference
+          driveFileId: driveKey, // Store Drive path for reference
           fileSize: fileBuffer.length,
           mimeType: input.mimeType,
           uploadedBy: input.userEmail,
