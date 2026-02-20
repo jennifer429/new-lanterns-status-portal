@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { questions, questionOptions, organizations, users, clients, intakeFileAttachments, partnerTemplates, specifications } from "../../drizzle/schema";
+import { questions, questionOptions, organizations, users, clients, intakeFileAttachments, partnerTemplates, specifications, partnerQuestionnaires } from "../../drizzle/schema";
 import { eq, and, or, desc, inArray, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
@@ -811,6 +811,92 @@ export const adminRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
       await db.update(specifications).set({ isActive: 0 }).where(eq(specifications.id, input.id));
+      return { success: true };
+    }),
+
+  // ============================================================================
+  // RAD ONBOARDING WORKLIST QUESTIONNAIRE (partner-level)
+  // ============================================================================
+
+  /**
+   * Get all rad onboarding questionnaire responses for a partner.
+   * Partner admins can only access their own clientId.
+   * Platform admins can access any clientId.
+   */
+  getPartnerQuestionnaire: protectedProcedure
+    .input(z.object({ clientId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+      // Partner admins may only read their own partner's data
+      if (ctx.user.clientId && ctx.user.clientId !== input.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this partner's questionnaire" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const rows = await db
+        .select()
+        .from(partnerQuestionnaires)
+        .where(eq(partnerQuestionnaires.clientId, input.clientId));
+
+      // Return as a map: questionId → response
+      return rows.reduce((acc, row) => {
+        acc[row.questionId] = row.response || "";
+        return acc;
+      }, {} as Record<string, string>);
+    }),
+
+  /**
+   * Save (upsert) a single rad onboarding questionnaire response for a partner.
+   */
+  savePartnerQuestionnaireResponse: protectedProcedure
+    .input(z.object({
+      clientId: z.number(),
+      questionId: z.string(),
+      response: z.string(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+      if (ctx.user.clientId && ctx.user.clientId !== input.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this partner's questionnaire" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Check if a row already exists
+      const existing = await db
+        .select({ id: partnerQuestionnaires.id })
+        .from(partnerQuestionnaires)
+        .where(
+          and(
+            eq(partnerQuestionnaires.clientId, input.clientId),
+            eq(partnerQuestionnaires.questionId, input.questionId),
+          )
+        )
+        .limit(1);
+
+      const updatedBy = ctx.user.email || "unknown";
+
+      if (existing.length > 0) {
+        await db
+          .update(partnerQuestionnaires)
+          .set({ response: input.response, updatedBy })
+          .where(eq(partnerQuestionnaires.id, existing[0].id));
+      } else {
+        await db.insert(partnerQuestionnaires).values({
+          clientId: input.clientId,
+          questionId: input.questionId,
+          response: input.response,
+          updatedBy,
+        });
+      }
+
       return { success: true };
     }),
 });

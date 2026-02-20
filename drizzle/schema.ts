@@ -320,3 +320,20 @@ export const specifications = mysqlTable("specifications", {
 
 export type Specification = typeof specifications.$inferSelect;
 export type InsertSpecification = typeof specifications.$inferInsert;
+
+/**
+ * Partner Questionnaires - stores rad onboarding worklist questionnaire responses
+ * Scoped to the partner (client) level — one answer per question per partner, not per site.
+ */
+export const partnerQuestionnaires = mysqlTable("partnerQuestionnaires", {
+  id: int("id").autoincrement().primaryKey(),
+  clientId: int("clientId").notNull(), // FK to clients.id
+  questionId: varchar("questionId", { length: 50 }).notNull(), // e.g., "RW.1", "RW.2"
+  response: text("response"), // Free-text or JSON answer
+  updatedBy: varchar("updatedBy", { length: 320 }), // Email of last editor
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PartnerQuestionnaire = typeof partnerQuestionnaires.$inferSelect;
+export type InsertPartnerQuestionnaire = typeof partnerQuestionnaires.$inferInsert;
