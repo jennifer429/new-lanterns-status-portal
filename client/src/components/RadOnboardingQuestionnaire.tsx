@@ -1,7 +1,8 @@
 /**
  * RadOnboardingQuestionnaire
  * Partner-level rad worklist onboarding questionnaire.
- * Responses auto-save on blur / selection change.
+ * Text/dropdown/multi-select responses auto-save.
+ * Upload questions use file upload + optional description textarea.
  */
 
 import { useState, useCallback, useRef } from "react";
@@ -11,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -20,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { CheckCircle2, Circle, Loader2 } from "lucide-react";
+import { CheckCircle2, Circle, Loader2, Upload, FileText, Download, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { radOnboardingSections, RAD_TOTAL_QUESTIONS, type RadQuestion } from "@shared/radOnboardingQuestions";
 
@@ -30,16 +32,152 @@ interface RadOnboardingQuestionnaireProps {
   readOnly?: boolean;
 }
 
+// ─── File upload field ────────────────────────────────────────────────────────
+
+function PartnerFileUploadField({
+  clientId,
+  questionId,
+  readOnly,
+  onHasFiles,
+}: {
+  clientId: number;
+  questionId: string;
+  readOnly: boolean;
+  onHasFiles: (qId: string, hasFiles: boolean) => void;
+}) {
+  const utils = trpc.useUtils();
+  const [isUploading, setIsUploading] = useState(false);
+
+  const { data: files = [], isLoading } = trpc.admin.getPartnerQuestionnaireFiles.useQuery(
+    { clientId, questionId },
+    {
+      enabled: !!clientId,
+      onSuccess: (data) => onHasFiles(questionId, data.length > 0),
+    }
+  );
+
+  const uploadMutation = trpc.admin.uploadPartnerQuestionnaireFile.useMutation({
+    onSuccess: () => {
+      setIsUploading(false);
+      toast.success("File uploaded");
+      utils.admin.getPartnerQuestionnaireFiles.invalidate({ clientId, questionId });
+    },
+    onError: (err) => {
+      setIsUploading(false);
+      toast.error(`Upload failed: ${err.message}`);
+    },
+  });
+
+  const deleteMutation = trpc.admin.deletePartnerQuestionnaireFile.useMutation({
+    onSuccess: () => {
+      utils.admin.getPartnerQuestionnaireFiles.invalidate({ clientId, questionId });
+    },
+    onError: (err) => toast.error(`Delete failed: ${err.message}`),
+  });
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploading(true);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(",")[1];
+      uploadMutation.mutate({
+        clientId,
+        questionId,
+        fileName: file.name,
+        fileData: base64,
+        mimeType: file.type || "application/octet-stream",
+      });
+    };
+    reader.readAsDataURL(file);
+    // Reset so same file can be re-uploaded
+    e.target.value = "";
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* PHI warning */}
+      <div className="flex items-center gap-2 px-3 py-2 bg-yellow-400/10 border border-yellow-400/40 rounded-md">
+        <span className="text-yellow-400 text-sm">⚠</span>
+        <span className="text-xs text-yellow-400 font-medium">Do not upload files containing PHI or patient data</span>
+      </div>
+
+      {/* Upload button */}
+      {!readOnly && (
+        <label className="flex items-center gap-2 cursor-pointer w-fit">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-md border-2 border-dashed border-primary/50 hover:border-primary bg-primary/5 hover:bg-primary/10 transition-colors text-sm font-medium text-primary">
+            {isUploading
+              ? <><Loader2 className="w-4 h-4 animate-spin" /> Uploading…</>
+              : <><Upload className="w-4 h-4" /> Choose file</>
+            }
+          </div>
+          <input
+            type="file"
+            className="hidden"
+            onChange={handleFileChange}
+            disabled={isUploading || readOnly}
+          />
+        </label>
+      )}
+
+      {/* Uploaded files list */}
+      {isLoading ? (
+        <div className="text-xs text-muted-foreground">Loading files…</div>
+      ) : files.length > 0 ? (
+        <div className="space-y-1.5">
+          {files.map(file => (
+            <div key={file.id} className="flex items-center justify-between p-2 bg-muted/30 rounded border border-border">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <FileText className="w-4 h-4 text-primary flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <a
+                    href={file.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-medium text-primary hover:underline truncate block"
+                  >
+                    {file.fileName}
+                  </a>
+                  <div className="text-xs text-muted-foreground">
+                    {file.fileSize ? `${(file.fileSize / 1024).toFixed(1)} KB · ` : ""}
+                    {new Date(file.createdAt).toLocaleDateString()}
+                    {file.uploadedBy ? ` · ${file.uploadedBy}` : ""}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0"
+                  onClick={() => window.open(file.fileUrl, "_blank")}>
+                  <Download className="w-3.5 h-3.5" />
+                </Button>
+                {!readOnly && (
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                    onClick={() => deleteMutation.mutate({ fileId: file.id, clientId })}>
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground italic">No files uploaded yet</p>
+      )}
+    </div>
+  );
+}
+
+// ─── Main questionnaire ───────────────────────────────────────────────────────
+
 export function RadOnboardingQuestionnaire({
   clientId,
   partnerName,
   readOnly = false,
 }: RadOnboardingQuestionnaireProps) {
-  // Local draft state: questionId → current value (before save)
   const [drafts, setDrafts] = useState<Record<string, string>>({});
-  // Track which questions are currently saving
   const [saving, setSaving] = useState<Record<string, boolean>>({});
-  // Debounce timers for textarea / text fields
+  const [uploadQuestionHasFiles, setUploadQuestionHasFiles] = useState<Record<string, boolean>>({});
   const debounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const { data: responses, isLoading, refetch } = trpc.admin.getPartnerQuestionnaire.useQuery(
@@ -63,27 +201,20 @@ export function RadOnboardingQuestionnaire({
     saveMutation.mutate({ clientId, questionId, response: value });
   }, [clientId, saveMutation]);
 
-  // For text/textarea: update draft immediately, debounce actual save
   const handleTextChange = (questionId: string, value: string) => {
     setDrafts(prev => ({ ...prev, [questionId]: value }));
-    if (debounceTimers.current[questionId]) {
-      clearTimeout(debounceTimers.current[questionId]);
-    }
-    debounceTimers.current[questionId] = setTimeout(() => {
-      saveResponse(questionId, value);
-    }, 800);
+    if (debounceTimers.current[questionId]) clearTimeout(debounceTimers.current[questionId]);
+    debounceTimers.current[questionId] = setTimeout(() => saveResponse(questionId, value), 800);
   };
 
-  // For dropdowns: save immediately on change
   const handleDropdownChange = (questionId: string, value: string) => {
     setDrafts(prev => ({ ...prev, [questionId]: value }));
     saveResponse(questionId, value);
   };
 
-  // For multi-select checkboxes: toggle a value and save
   const handleMultiSelectChange = (questionId: string, option: string, checked: boolean) => {
     const current = getDisplayValue(questionId);
-    const currentValues: string[] = current ? current.split("||") : [];
+    const currentValues = current ? current.split("||") : [];
     const updated = checked
       ? [...currentValues.filter(v => v !== option), option]
       : currentValues.filter(v => v !== option);
@@ -92,20 +223,19 @@ export function RadOnboardingQuestionnaire({
     saveResponse(questionId, newValue);
   };
 
-  // Returns the current display value for a question (draft takes priority over saved)
   const getDisplayValue = (questionId: string): string => {
     if (questionId in drafts) return drafts[questionId];
     return responses?.[questionId] || "";
   };
 
-  const isAnswered = (questionId: string): boolean => {
-    const val = getDisplayValue(questionId);
-    return val.trim().length > 0;
+  const isAnswered = (question: RadQuestion): boolean => {
+    if (question.type === 'upload') return uploadQuestionHasFiles[question.id] === true;
+    return getDisplayValue(question.id).trim().length > 0;
   };
 
   const answeredCount = radOnboardingSections
     .flatMap(s => s.questions)
-    .filter(q => isAnswered(q.id)).length;
+    .filter(q => isAnswered(q)).length;
 
   const completionPct = Math.round((answeredCount / RAD_TOTAL_QUESTIONS) * 100);
 
@@ -121,11 +251,11 @@ export function RadOnboardingQuestionnaire({
   const renderQuestion = (question: RadQuestion) => {
     const value = getDisplayValue(question.id);
     const isSaving = saving[question.id] || false;
-    const answered = isAnswered(question.id);
+    const answered = isAnswered(question);
 
     return (
       <div key={question.id} className="space-y-2">
-        {/* Question header row */}
+        {/* Question header */}
         <div className="flex items-start gap-2">
           <div className="mt-0.5 flex-shrink-0">
             {answered
@@ -147,8 +277,8 @@ export function RadOnboardingQuestionnaire({
           )}
         </div>
 
-        {/* Input */}
-        <div className="ml-6">
+        {/* Input area */}
+        <div className="ml-6 space-y-2">
           {question.type === 'text' && (
             <Input
               value={value}
@@ -213,6 +343,28 @@ export function RadOnboardingQuestionnaire({
               })}
             </div>
           )}
+
+          {question.type === 'upload' && (
+            <>
+              <PartnerFileUploadField
+                clientId={clientId}
+                questionId={question.id}
+                readOnly={readOnly}
+                onHasFiles={(qId, hasFiles) =>
+                  setUploadQuestionHasFiles(prev => ({ ...prev, [qId]: hasFiles }))
+                }
+              />
+              {/* Description textarea below the uploader */}
+              <Textarea
+                value={value}
+                onChange={e => handleTextChange(question.id, e.target.value)}
+                placeholder="Add a description or notes about this file (optional)…"
+                disabled={readOnly}
+                rows={2}
+                className="border-2 focus:border-primary resize-y text-sm"
+              />
+            </>
+          )}
         </div>
       </div>
     );
@@ -240,7 +392,7 @@ export function RadOnboardingQuestionnaire({
 
       {/* Sections */}
       {radOnboardingSections.map(section => {
-        const sectionAnswered = section.questions.filter(q => isAnswered(q.id)).length;
+        const sectionAnswered = section.questions.filter(q => isAnswered(q)).length;
         const sectionComplete = sectionAnswered === section.questions.length;
 
         return (

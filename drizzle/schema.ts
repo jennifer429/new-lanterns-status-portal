@@ -337,3 +337,23 @@ export const partnerQuestionnaires = mysqlTable("partnerQuestionnaires", {
 
 export type PartnerQuestionnaire = typeof partnerQuestionnaires.$inferSelect;
 export type InsertPartnerQuestionnaire = typeof partnerQuestionnaires.$inferInsert;
+
+/**
+ * Partner Questionnaire Files - stores files uploaded in rad onboarding questionnaire sections
+ * Scoped to the partner (client) level, not per organization.
+ */
+export const partnerQuestionnaireFiles = mysqlTable("partnerQuestionnaireFiles", {
+  id: int("id").autoincrement().primaryKey(),
+  clientId: int("clientId").notNull(), // FK to clients.id
+  questionId: varchar("questionId", { length: 50 }).notNull(), // e.g., "RW.39"
+  fileName: varchar("fileName", { length: 255 }).notNull(),
+  fileUrl: text("fileUrl").notNull(), // S3 URL
+  s3Key: varchar("s3Key", { length: 500 }).notNull(),
+  fileSize: int("fileSize"),
+  mimeType: varchar("mimeType", { length: 100 }),
+  uploadedBy: varchar("uploadedBy", { length: 320 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PartnerQuestionnaireFile = typeof partnerQuestionnaireFiles.$inferSelect;
+export type InsertPartnerQuestionnaireFile = typeof partnerQuestionnaireFiles.$inferInsert;

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { questions, questionOptions, organizations, users, clients, intakeFileAttachments, partnerTemplates, specifications, partnerQuestionnaires } from "../../drizzle/schema";
+import { questions, questionOptions, organizations, users, clients, intakeFileAttachments, partnerTemplates, specifications, partnerQuestionnaires, partnerQuestionnaireFiles } from "../../drizzle/schema";
 import { eq, and, or, desc, inArray, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
@@ -896,6 +896,111 @@ export const adminRouter = router({
           updatedBy,
         });
       }
+
+      return { success: true };
+    }),
+
+  // ============================================================================
+  // PARTNER QUESTIONNAIRE FILE UPLOADS
+  // ============================================================================
+
+  /**
+   * Upload a file for a partner rad onboarding questionnaire question.
+   * Files are stored in S3 under partner-questionnaire-files/{clientId}/
+   */
+  uploadPartnerQuestionnaireFile: protectedProcedure
+    .input(z.object({
+      clientId: z.number(),
+      questionId: z.string(),
+      fileName: z.string(),
+      fileData: z.string(), // base64 encoded
+      mimeType: z.string(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+      if (ctx.user.clientId && ctx.user.clientId !== input.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const fileBuffer = Buffer.from(input.fileData, "base64");
+      const timestamp = Date.now();
+      const fileExt = input.fileName.split('.').pop() || 'bin';
+      const safeName = input.fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const s3Key = `partner-questionnaire-files/${input.clientId}/${input.questionId}_${timestamp}_${safeName}`;
+
+      const { storagePut } = await import("../storage");
+      const { url: fileUrl } = await storagePut(s3Key, fileBuffer, input.mimeType);
+
+      await db.insert(partnerQuestionnaireFiles).values({
+        clientId: input.clientId,
+        questionId: input.questionId,
+        fileName: input.fileName,
+        fileUrl,
+        s3Key,
+        fileSize: fileBuffer.length,
+        mimeType: input.mimeType,
+        uploadedBy: ctx.user.email || "unknown",
+      });
+
+      return { success: true, fileUrl };
+    }),
+
+  /**
+   * Get uploaded files for a partner questionnaire question.
+   */
+  getPartnerQuestionnaireFiles: protectedProcedure
+    .input(z.object({ clientId: z.number(), questionId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+      if (ctx.user.clientId && ctx.user.clientId !== input.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      return db
+        .select()
+        .from(partnerQuestionnaireFiles)
+        .where(
+          and(
+            eq(partnerQuestionnaireFiles.clientId, input.clientId),
+            eq(partnerQuestionnaireFiles.questionId, input.questionId),
+          )
+        );
+    }),
+
+  /**
+   * Delete an uploaded partner questionnaire file.
+   */
+  deletePartnerQuestionnaireFile: protectedProcedure
+    .input(z.object({ fileId: z.number(), clientId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+      if (ctx.user.clientId && ctx.user.clientId !== input.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      await db
+        .delete(partnerQuestionnaireFiles)
+        .where(
+          and(
+            eq(partnerQuestionnaireFiles.id, input.fileId),
+            eq(partnerQuestionnaireFiles.clientId, input.clientId),
+          )
+        );
 
       return { success: true };
     }),

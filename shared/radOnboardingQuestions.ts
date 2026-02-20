@@ -7,7 +7,7 @@
 export interface RadQuestion {
   id: string;          // e.g., "RW.1"
   text: string;
-  type: 'text' | 'textarea' | 'dropdown' | 'multi-select';
+  type: 'text' | 'textarea' | 'dropdown' | 'multi-select' | 'upload';
   options?: string[];
   placeholder?: string;
   notes?: string;
@@ -366,6 +366,378 @@ export const radOnboardingSections: RadSection[] = [
     ],
   },
 ];
+
+// ─── Additional sections appended below ─────────────────────────────────────
+
+radOnboardingSections.push(
+  // ── Section 9: Templates ──────────────────────────────────────────────────
+  {
+    id: 'templates',
+    title: 'Report Templates',
+    description: 'Upload your standard report templates and describe how they should be configured',
+    questions: [
+      {
+        id: 'RW.39',
+        text: 'Upload your report template library (Word, PDF, or exported from your dictation system)',
+        type: 'upload',
+        notes: 'Accepted: .docx, .pdf, .txt, .zip. Upload one file or a zip of multiple templates.',
+      },
+      {
+        id: 'RW.40',
+        text: 'Describe the template naming convention and how templates are organized (by modality, subspecialty, body part, etc.)',
+        type: 'textarea',
+        placeholder: 'e.g., Templates named by modality-bodypart: CT-Chest, MR-Brain, XR-Chest. Organized by subspecialty folder in Dragon.',
+      },
+      {
+        id: 'RW.41',
+        text: 'Are there site-specific or radiologist-specific template variants that differ from the master library?',
+        type: 'textarea',
+        placeholder: 'e.g., Yes — Dr. Johnson has custom neuro templates. Site B uses a pediatric chest template not in the master set.',
+      },
+      {
+        id: 'RW.42',
+        text: 'Should templates be locked (read-only) for most rads, editable only by a template admin?',
+        type: 'dropdown',
+        options: [
+          'Yes — central template admin controls the library',
+          'No — each radiologist can create and edit their own',
+          'Mixed — shared templates locked, personal templates editable',
+        ],
+      },
+    ],
+  },
+
+  // ── Section 10: Procedures & RVU ─────────────────────────────────────────
+  {
+    id: 'procedures-rvu',
+    title: 'Procedures & RVU',
+    description: 'Procedure code list and RVU tracking preferences',
+    questions: [
+      {
+        id: 'RW.43',
+        text: 'Upload your procedure code list with associated CPT codes and RVU values',
+        type: 'upload',
+        notes: 'Preferred format: Excel or CSV with columns — Procedure Code, Description, Modality, CPT Code, Work RVU, Total RVU.',
+      },
+      {
+        id: 'RW.44',
+        text: 'How do you want RVU values displayed or tracked in New Lantern?',
+        type: 'dropdown',
+        options: [
+          'Display work RVU per study on the worklist',
+          'Track cumulative RVU per radiologist per day/week/month',
+          'Both display and tracking',
+          'No RVU tracking needed',
+        ],
+      },
+      {
+        id: 'RW.45',
+        text: 'Are there procedures that should be flagged or restricted (e.g., requires fellowship-trained rad, MQSA certification)?',
+        type: 'textarea',
+        placeholder: 'e.g., Mammography: MQSA-certified rads only. Interventional procedures: IR fellowship required. Pediatric MR: pediatric rad preferred.',
+      },
+      {
+        id: 'RW.46',
+        text: 'Do you use add-on CPT codes or modifier tracking for complex cases?',
+        type: 'textarea',
+        placeholder: 'e.g., Yes — we use modifier 26 (professional component only). Add-on codes 75571 and 75572 tracked separately for cardiac CT.',
+      },
+    ],
+  },
+
+  // ── Section 11: Macros ───────────────────────────────────────────────────
+  {
+    id: 'macros',
+    title: 'Macros',
+    description: 'Dictation macros, text shortcuts, and auto-fill content',
+    questions: [
+      {
+        id: 'RW.47',
+        text: 'Upload your current macro library (exported from Dragon, PowerScribe, or other dictation system)',
+        type: 'upload',
+        notes: 'Accepted: Dragon .xml export, PowerScribe macro export, plain text list. One file or zip.',
+      },
+      {
+        id: 'RW.48',
+        text: 'Describe the macro naming convention and how they are triggered (voice command, keyboard shortcut, etc.)',
+        type: 'textarea',
+        placeholder: 'e.g., Macros named "normal chest" → voice command "insert normal chest". Triggered by saying the macro name. ~120 macros in the library.',
+      },
+      {
+        id: 'RW.49',
+        text: 'Are macros shared across all radiologists or maintained individually?',
+        type: 'dropdown',
+        options: [
+          'Shared library only — all rads use the same macros',
+          'Individual only — each rad maintains their own',
+          'Both — shared base library + individual customization allowed',
+        ],
+      },
+      {
+        id: 'RW.50',
+        text: 'Are there normal / baseline macros that auto-populate specific report sections (e.g., "normal abdomen and pelvis")?',
+        type: 'textarea',
+        placeholder: 'e.g., Yes — "normal abdomen pelvis" fills findings and impression sections. "normal CXR" fills a standard normal chest template.',
+      },
+    ],
+  },
+
+  // ── Section 12: Hotkeys ──────────────────────────────────────────────────
+  {
+    id: 'hotkeys',
+    title: 'Hotkeys & Keyboard Preferences',
+    description: 'Keyboard shortcuts, viewer hotkeys, and workstation key bindings',
+    questions: [
+      {
+        id: 'RW.51',
+        text: 'Upload your current hotkey / keyboard shortcut mapping file',
+        type: 'upload',
+        notes: 'Accepted: exported config from your PACS viewer, Excel/CSV mapping, or plain text list. Format: Action → Key.',
+      },
+      {
+        id: 'RW.52',
+        text: 'List the most critical hotkeys your radiologists rely on (window/level presets, scroll speed, series navigation, sign/save)',
+        type: 'textarea',
+        placeholder: 'e.g., F1 = sign report, F2 = next study, F3 = abdomen window preset, F4 = lung window, Ctrl+Z = undo, Space = play cine.',
+      },
+      {
+        id: 'RW.53',
+        text: 'Do radiologists use a foot pedal for dictation control (play/stop/rewind)?',
+        type: 'dropdown',
+        options: ['Yes — Olympus', 'Yes — Philips SpeechMike', 'Yes — other (describe below)', 'No'],
+      },
+      {
+        id: 'RW.53.1',
+        text: 'If other foot pedal / dictation hardware, please describe the model and how it is mapped',
+        type: 'textarea',
+        placeholder: 'e.g., Stenograph foot pedal — left pedal = rewind, center = play/stop, right = fast forward.',
+      },
+    ],
+  },
+
+  // ── Section 13: Billing & Address ─────────────────────────────────────────
+  {
+    id: 'billing',
+    title: 'Billing & Address',
+    description: 'Billing entities, addresses, and report signature requirements for claims',
+    questions: [
+      {
+        id: 'RW.54',
+        text: 'Legal billing entity name (as it should appear on reports and claims)',
+        type: 'text',
+        placeholder: 'e.g., Apex Radiology Associates, LLC',
+      },
+      {
+        id: 'RW.55',
+        text: 'Primary billing address',
+        type: 'textarea',
+        placeholder: 'Street, City, State, ZIP, Country',
+      },
+      {
+        id: 'RW.56',
+        text: 'Tax ID / NPI (Group NPI for the billing entity)',
+        type: 'text',
+        placeholder: 'e.g., Group NPI: 1234567890 / EIN: 12-3456789',
+      },
+      {
+        id: 'RW.57',
+        text: 'Who is the billing contact (name, email, phone)?',
+        type: 'textarea',
+        placeholder: 'e.g., Jane Smith, billing@apexrad.com, (555) 123-4567',
+      },
+      {
+        id: 'RW.58',
+        text: 'What billing system / RCM platform do you use?',
+        type: 'text',
+        placeholder: 'e.g., Kareo, AdvancedMD, Athenahealth, Epic Resolute, in-house',
+      },
+      {
+        id: 'RW.59',
+        text: 'Does the signed report need to include specific billing fields (e.g., rendering provider NPI, place of service code, attending physician)?',
+        type: 'textarea',
+        placeholder: 'e.g., Report footer must include: Rendering NPI, Group NPI, Place of Service 22 (Outpatient Hospital). Attending co-signature required for inpatient.',
+      },
+      {
+        id: 'RW.60',
+        text: 'Are there any insurance-specific report format requirements (e.g., Medicare, Medicaid, specific commercial plans)?',
+        type: 'textarea',
+        placeholder: 'e.g., Medicare requires laterality documented in impression. Medicaid requires procedure description in first line of findings.',
+      },
+    ],
+  },
+
+  // ── Section 14: Report Requirements ──────────────────────────────────────
+  {
+    id: 'report-requirements',
+    title: 'Report Requirements',
+    description: 'Required report fields, formatting standards, and distribution rules',
+    questions: [
+      {
+        id: 'RW.61',
+        text: 'What required fields must every report contain? (e.g., clinical indication, technique, comparison, findings, impression)',
+        type: 'multi-select',
+        options: [
+          'Clinical indication',
+          'Technique / protocol',
+          'Comparison studies',
+          'Findings (by organ/system)',
+          'Impression / conclusion',
+          'Recommendation / follow-up',
+          'Radiation dose (CT)',
+          'Contrast information',
+          'Referring physician',
+          'Interpreting radiologist name + credentials',
+          'Date/time of interpretation',
+          'Electronic signature',
+        ],
+      },
+      {
+        id: 'RW.62',
+        text: 'Are there structured reporting requirements for any modalities or subspecialties (e.g., RADS scoring systems like LI-RADS, PI-RADS, BI-RADS, TI-RADS)?',
+        type: 'textarea',
+        placeholder: 'e.g., Liver MR: LI-RADS required. Prostate MR: PI-RADS required. Breast US: BI-RADS required. Thyroid US: TI-RADS required.',
+      },
+      {
+        id: 'RW.63',
+        text: 'What are the required report distribution destinations (e.g., RIS, EHR, referring physician portal, patient portal)?',
+        type: 'textarea',
+        placeholder: 'e.g., Final reports sent to: Epic EHR (HL7 ORU), referring physician secure email (DrFirst), patient MyChart portal (24hr delay).',
+      },
+      {
+        id: 'RW.64',
+        text: 'What is the report retention policy (how long must reports be stored)?',
+        type: 'text',
+        placeholder: 'e.g., 7 years for adults, 7 years past age of majority for pediatric (21 + 7 = 28 years in most states)',
+      },
+      {
+        id: 'RW.65',
+        text: 'Are there any state-specific or accreditation-required report formatting rules you need to comply with?',
+        type: 'textarea',
+        placeholder: 'e.g., ACR accreditation requires radiation dose index recorded for all CT. State X requires plain-language impression for patient-facing reports.',
+      },
+    ],
+  },
+
+  // ── Section 15: MIPS ─────────────────────────────────────────────────────
+  {
+    id: 'mips',
+    title: 'MIPS & Quality Measures',
+    description: 'Merit-Based Incentive Payment System participation and quality reporting',
+    questions: [
+      {
+        id: 'RW.66',
+        text: 'Does your group participate in MIPS (Merit-Based Incentive Payment System)?',
+        type: 'dropdown',
+        options: [
+          'Yes — we report as a group (TIN-level)',
+          'Yes — individual radiologists report separately',
+          'No — we are exempt (low-volume threshold)',
+          'No — we participate through an APM / ACO instead',
+          'Unsure',
+        ],
+      },
+      {
+        id: 'RW.67',
+        text: 'Which MIPS performance categories apply to your group?',
+        type: 'multi-select',
+        options: [
+          'Quality measures',
+          'Promoting Interoperability (PI)',
+          'Improvement Activities (IA)',
+          'Cost',
+        ],
+      },
+      {
+        id: 'RW.68',
+        text: 'Which radiology-specific quality measures do you report (e.g., ACR QCDR measures, eCQMs)?',
+        type: 'textarea',
+        placeholder: 'e.g., QCDR measure RAD-01 (CT dose), RAD-02 (appropriate imaging), eCQM CMS528 (lung cancer screening follow-up). Submitted via ACR NRDR registry.',
+      },
+      {
+        id: 'RW.69',
+        text: 'What registry or reporting method do you use for MIPS data submission?',
+        type: 'dropdown',
+        options: [
+          'ACR NRDR (National Radiology Data Registry)',
+          'Claims-based submission',
+          'EHR-based submission',
+          'Qualified Clinical Data Registry (QCDR) — other',
+          'Not applicable',
+        ],
+      },
+      {
+        id: 'RW.70',
+        text: 'Are there data elements New Lantern needs to capture in the report to support MIPS measure documentation?',
+        type: 'textarea',
+        placeholder: 'e.g., CT DLP and CTDI must be auto-captured from DICOM header and included in report. Lung-RADS category must be structured for RAD-02 reporting.',
+      },
+    ],
+  },
+
+  // ── Section 16: AI Integration ───────────────────────────────────────────
+  {
+    id: 'ai-integration',
+    title: 'AI Integration',
+    description: 'AI/ML tools in the reading workflow — triage, detection, and automation',
+    questions: [
+      {
+        id: 'RW.71',
+        text: 'Does your group currently use or plan to use AI/ML tools in the radiology workflow?',
+        type: 'dropdown',
+        options: [
+          'Yes — currently using one or more AI tools',
+          'Yes — planning to add AI tools at go-live',
+          'Evaluating / no decision yet',
+          'No',
+        ],
+      },
+      {
+        id: 'RW.72',
+        text: 'Which AI tools or vendors are you using or evaluating?',
+        type: 'textarea',
+        placeholder: 'e.g., Aidoc (triage — ICH, PE, aorta), Viz.ai (stroke triage), Nuance AI (report automation), Gleamer (fracture detection). Evaluating: Sievenius (lung nodule).',
+      },
+      {
+        id: 'RW.73',
+        text: 'What AI use cases are in scope?',
+        type: 'multi-select',
+        options: [
+          'Triage / worklist prioritization (e.g., stat flag ICH, PE)',
+          'Detection / CAD (abnormality flagging)',
+          'Measurements / quantification (e.g., nodule size, EF)',
+          'Report draft / pre-population',
+          'Hanging protocol automation',
+          'Dose optimization',
+          'Prior image retrieval and comparison',
+          'Scheduling / slot optimization',
+        ],
+      },
+      {
+        id: 'RW.74',
+        text: 'How should AI alerts surface in the New Lantern worklist? (e.g., separate alert column, color flag, notification banner)',
+        type: 'textarea',
+        placeholder: 'e.g., Aidoc ICH alert → red banner on study row + push notification to on-call rad. Lung nodule CAD → orange flag in worklist, visible in viewer overlay.',
+      },
+      {
+        id: 'RW.75',
+        text: 'Is the AI vendor integrated via DICOM or HL7, and who manages the integration (partner IT, AI vendor, New Lantern)?',
+        type: 'textarea',
+        placeholder: 'e.g., Aidoc receives DICOM from PACS via DICOMweb. Results returned as DICOM SR. Aidoc handles the integration setup; NL maps SR tags to worklist flags.',
+      },
+      {
+        id: 'RW.76',
+        text: 'Should AI findings be included or referenced in the final radiology report?',
+        type: 'dropdown',
+        options: [
+          'Yes — AI result auto-appended to report technique section',
+          'Yes — rad decides whether to include case-by-case',
+          'No — AI is for triage only, not referenced in report',
+          'TBD / not yet decided',
+        ],
+      },
+    ],
+  },
+);
 
 // Flat list of all questions for easy lookup by ID
 export const allRadQuestions: RadQuestion[] = radOnboardingSections.flatMap(s => s.questions);
