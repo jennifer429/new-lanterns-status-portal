@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useParams, useLocation, Link } from "wouter";
+import { useRoute, useLocation, Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -128,7 +128,8 @@ function FileUploadField({ questionId, isUploading, organizationSlug, onFileUplo
 }
 
 export default function IntakeNewRedesign() {
-  const { slug } = useParams();
+  const [, params] = useRoute("/org/:slug/intake");
+  const slug = params?.slug;
   const [, setLocation] = useLocation();
   const [responses, setResponses] = useState<Record<string, any>>({});
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");

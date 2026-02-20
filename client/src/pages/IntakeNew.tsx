@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useParams, useLocation } from "wouter";
+import { useRoute, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -84,7 +84,8 @@ function FileListForQuestion({ questionId, organizationSlug, onDelete }: { quest
 }
 
 export default function IntakeNew() {
-  const { slug } = useParams();
+  const [, params] = useRoute("/org/:slug/intake");
+  const slug = params?.slug;
   const [, setLocation] = useLocation();
   const [responses, setResponses] = useState<Record<string, any>>({});
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");

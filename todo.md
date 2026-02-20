@@ -1796,3 +1796,10 @@
 - [x] Comment line 4: Replace "DataFirst (Silverback)" → "Integration 3rd Party Router"
 - [x] Remove old SRV/RadOne hardcoded URL comments (lines 135-136)
 - [x] Keep all "New Lantern" references as-is
+
+## Fix: Organization not found error on /org/:slug/intake (Feb 20, 2026)
+- [x] Root cause: useParams() from wouter returns literal ":slug" instead of actual slug value
+- [x] Fix IntakeNewRedesign.tsx: changed useParams() to useRoute("/org/:slug/intake")
+- [x] Fix IntakeNew.tsx: same fix applied
+- [x] Verified no other pages use useParams()
+- [ ] Test admin accessing /org/:slug/intake works correctly
