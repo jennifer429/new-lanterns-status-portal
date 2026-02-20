@@ -47,6 +47,8 @@ interface SwimLaneRowProps {
   id: string;
   label: string;
   sourceSystem: string;
+  sourceValue?: string; // editable value for source box
+  onSourceChange?: (value: string) => void; // handler for editable source box
   middlewareSystem?: string; // Optional middleware (e.g., Silverback)
   destinationSystem: string;
   isActive: boolean;
@@ -60,6 +62,8 @@ const SwimLaneRow: React.FC<SwimLaneRowProps> = ({
   id,
   label,
   sourceSystem,
+  sourceValue,
+  onSourceChange,
   middlewareSystem,
   destinationSystem,
   isActive,
@@ -83,18 +87,34 @@ const SwimLaneRow: React.FC<SwimLaneRowProps> = ({
         className={isActive ? 'data-[state=checked]:bg-primary data-[state=checked]:border-primary' : 'border-white bg-transparent'}
       />
 
-      {/* Source System Box */}
-      <div
-        className={`
-          px-4 py-2 rounded-md font-medium min-w-[140px] text-center
-          ${isActive 
-            ? 'bg-primary text-primary-foreground' 
-            : 'bg-muted text-muted-foreground'
-          }
-        `}
-      >
-        {sourceSystem}
-      </div>
+      {/* Source System Box - editable if onSourceChange provided */}
+      {onSourceChange ? (
+        <Input
+          placeholder={sourceSystem}
+          value={sourceValue || ''}
+          onChange={(e) => onSourceChange(e.target.value)}
+          disabled={!isActive}
+          className={`
+            min-w-[140px] text-center font-medium border-4
+            ${isActive
+              ? 'border-primary bg-background text-foreground'
+              : 'border-muted bg-muted/50 text-muted-foreground'
+            }
+          `}
+        />
+      ) : (
+        <div
+          className={`
+            px-4 py-2 rounded-md font-medium min-w-[140px] text-center border-4
+            ${isActive
+              ? 'border-primary bg-primary text-primary-foreground'
+              : 'border-muted bg-muted text-muted-foreground'
+            }
+          `}
+        >
+          {sourceSystem}
+        </div>
+      )}
 
       {/* Arrow */}
       <ArrowRight
@@ -106,10 +126,10 @@ const SwimLaneRow: React.FC<SwimLaneRowProps> = ({
         <>
           <div
             className={`
-              px-4 py-2 rounded-md font-medium min-w-[140px] text-center
-              ${isActive 
-                ? 'bg-primary/70 text-primary-foreground' 
-                : 'bg-muted text-muted-foreground'
+              px-4 py-2 rounded-md font-medium min-w-[140px] text-center border-4
+              ${isActive
+                ? 'border-primary/70 bg-primary/70 text-primary-foreground'
+                : 'border-muted bg-muted text-muted-foreground'
               }
             `}
           >
@@ -124,10 +144,10 @@ const SwimLaneRow: React.FC<SwimLaneRowProps> = ({
       {/* Destination System Box */}
       <div
         className={`
-          px-4 py-2 rounded-md font-medium min-w-[140px] text-center
-          ${isActive 
-            ? 'bg-primary text-primary-foreground' 
-            : 'bg-muted text-muted-foreground'
+          px-4 py-2 rounded-md font-medium min-w-[140px] text-center border-4
+          ${isActive
+            ? 'border-primary bg-primary text-primary-foreground'
+            : 'border-muted bg-muted text-muted-foreground'
           }
         `}
       >
@@ -142,8 +162,8 @@ const SwimLaneRow: React.FC<SwimLaneRowProps> = ({
         disabled={!isActive}
         className={`
           flex-1
-          ${isActive 
-            ? 'border-primary bg-background' 
+          ${isActive
+            ? 'border-primary bg-background'
             : 'bg-muted/50 text-muted-foreground'
           }
         `}
@@ -199,7 +219,8 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           id="ordersFromRIS"
           label="Orders from RIS (HL7)"
           sourceSystem="RIS"
-          middlewareSystem="Silverback"
+          sourceValue={configuration.systems.ordersFromRIS_source || ''}
+          onSourceChange={(value) => handleSystemChange('ordersFromRIS_source', value)}
           destinationSystem="New Lantern"
           isActive={configuration.paths.ordersFromRIS || false}
           noteValue={configuration.notes.ordersFromRIS_note || ''}
@@ -212,7 +233,8 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           id="ordersFromEHR"
           label="Orders from EHR (HL7)"
           sourceSystem="EHR"
-          middlewareSystem="Silverback"
+          sourceValue={configuration.systems.ordersFromEHR_source || ''}
+          onSourceChange={(value) => handleSystemChange('ordersFromEHR_source', value)}
           destinationSystem="New Lantern"
           isActive={configuration.paths.ordersFromEHR || false}
           noteValue={configuration.notes.ordersFromEHR_note || ''}
@@ -225,7 +247,8 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           id="manualEntry"
           label="Manual Entry in PACS (No HL7)"
           sourceSystem="Manual Entry"
-          middlewareSystem="Silverback"
+          sourceValue={configuration.systems.manualEntry_source || ''}
+          onSourceChange={(value) => handleSystemChange('manualEntry_source', value)}
           destinationSystem="New Lantern"
           isActive={configuration.paths.manualEntry || false}
           noteValue={configuration.notes.manualEntry_note || ''}
@@ -263,10 +286,10 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           <div className="flex items-center gap-2">
             <div
               className={`
-                px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm
-                ${configuration.paths.imagesFromModalities 
-                  ? 'bg-primary text-primary-foreground' 
-                  : 'bg-muted text-muted-foreground'}
+                px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm border-4
+                ${configuration.paths.imagesFromModalities
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-muted bg-muted text-muted-foreground'}
               `}
             >
               Modality
@@ -274,10 +297,10 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
             <ArrowRight className={`w-5 h-5 ${configuration.paths.imagesFromModalities ? 'text-primary' : 'text-muted-foreground'}`} />
             <div
               className={`
-                px-4 py-2 rounded-md font-medium min-w-[120px] text-center text-sm
-                ${configuration.paths.imagesFromModalities 
-                  ? 'bg-primary text-primary-foreground' 
-                  : 'bg-muted text-muted-foreground'}
+                px-4 py-2 rounded-md font-medium min-w-[120px] text-center text-sm border-4
+                ${configuration.paths.imagesFromModalities
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-muted bg-muted text-muted-foreground'}
               `}
             >
               Current PACS
@@ -290,10 +313,10 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           {/* Silverback (Middleware) */}
           <div
             className={`
-              px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm
-              ${configuration.paths.imagesFromModalities 
-                ? 'bg-purple-600 text-white' 
-                : 'bg-muted text-muted-foreground'}
+              px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm border-4
+              ${configuration.paths.imagesFromModalities
+                ? 'border-purple-600 bg-purple-600 text-white'
+                : 'border-muted bg-muted text-muted-foreground'}
             `}
           >
             Silverback
@@ -305,10 +328,10 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           {/* New Lantern (Destination) */}
           <div
             className={`
-              px-4 py-2 rounded-md font-medium min-w-[120px] text-center text-sm
-              ${configuration.paths.imagesFromModalities 
-                ? 'bg-primary text-primary-foreground' 
-                  : 'bg-muted text-muted-foreground'}
+              px-4 py-2 rounded-md font-medium min-w-[120px] text-center text-sm border-4
+              ${configuration.paths.imagesFromModalities
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-muted bg-muted text-muted-foreground'}
             `}
           >
             New Lantern
@@ -344,10 +367,10 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           <div className="flex items-center gap-2">
             <div
               className={`
-                px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm
-                ${configuration.paths.imagesViaVNA 
-                  ? 'bg-primary text-primary-foreground' 
-                  : 'bg-muted text-muted-foreground'}
+                px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm border-4
+                ${configuration.paths.imagesViaVNA
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-muted bg-muted text-muted-foreground'}
               `}
             >
               Modalities
@@ -355,10 +378,10 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
             <ArrowRight className={`w-5 h-5 ${configuration.paths.imagesViaVNA ? 'text-primary' : 'text-muted-foreground'}`} />
             <div
               className={`
-                px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm
-                ${configuration.paths.imagesViaVNA 
-                  ? 'bg-primary text-primary-foreground' 
-                  : 'bg-muted text-muted-foreground'}
+                px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm border-4
+                ${configuration.paths.imagesViaVNA
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-muted bg-muted text-muted-foreground'}
               `}
             >
               VNA
@@ -371,10 +394,10 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           {/* Silverback (Middleware) */}
           <div
             className={`
-              px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm
-              ${configuration.paths.imagesViaVNA 
-                ? 'bg-purple-600 text-white' 
-                : 'bg-muted text-muted-foreground'}
+              px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm border-4
+              ${configuration.paths.imagesViaVNA
+                ? 'border-purple-600 bg-purple-600 text-white'
+                : 'border-muted bg-muted text-muted-foreground'}
             `}
           >
             Silverback
@@ -386,10 +409,10 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           {/* New Lantern (Destination) */}
           <div
             className={`
-              px-4 py-2 rounded-md font-medium min-w-[120px] text-center text-sm
-              ${configuration.paths.imagesViaVNA 
-                ? 'bg-primary text-primary-foreground' 
-                : 'bg-muted text-muted-foreground'}
+              px-4 py-2 rounded-md font-medium min-w-[120px] text-center text-sm border-4
+              ${configuration.paths.imagesViaVNA
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-muted bg-muted text-muted-foreground'}
             `}
           >
             New Lantern
@@ -424,10 +447,10 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           <div className="flex items-center gap-2">
             <div
               className={`
-                px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm
-                ${configuration.paths.imagesViaAI 
-                  ? 'bg-primary text-primary-foreground' 
-                  : 'bg-muted text-muted-foreground'}
+                px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm border-4
+                ${configuration.paths.imagesViaAI
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-muted bg-muted text-muted-foreground'}
               `}
             >
               Modality
@@ -437,10 +460,10 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
             />
             <div
               className={`
-                px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm
-                ${configuration.paths.imagesViaAI 
-                  ? 'bg-primary text-primary-foreground' 
-                  : 'bg-muted text-muted-foreground'}
+                px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm border-4
+                ${configuration.paths.imagesViaAI
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-muted bg-muted text-muted-foreground'}
               `}
             >
               AI
@@ -455,10 +478,10 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           {/* Silverback Box */}
           <div
             className={`
-              px-4 py-2 rounded-md font-medium min-w-[120px] text-center
-              ${configuration.paths.imagesViaVizAI 
-                ? 'bg-primary text-primary-foreground' 
-                : 'bg-muted text-muted-foreground'}
+              px-4 py-2 rounded-md font-medium min-w-[120px] text-center border-4
+              ${configuration.paths.imagesViaAI
+                ? 'border-purple-600 bg-purple-600 text-white'
+                : 'border-muted bg-muted text-muted-foreground'}
             `}
           >
             Silverback
@@ -472,10 +495,10 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           {/* New Lantern Box */}
           <div
             className={`
-              px-4 py-2 rounded-md font-medium min-w-[120px] text-center
-              ${configuration.paths.imagesViaVizAI 
-                ? 'bg-primary text-primary-foreground' 
-                : 'bg-muted text-muted-foreground'}
+              px-4 py-2 rounded-md font-medium min-w-[120px] text-center border-4
+              ${configuration.paths.imagesViaAI
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-muted bg-muted text-muted-foreground'}
             `}
           >
             New Lantern
@@ -527,10 +550,10 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
             value={configuration.systems.priorsPushSource || ''}
             onChange={(e) => handleSystemChange('priorsPushSource', e.target.value)}
             disabled={!configuration.paths.priorsPush}
-            className={`w-[140px] text-center font-medium ${
-              configuration.paths.priorsPush 
-                ? 'bg-primary text-primary-foreground border-primary' 
-                : 'bg-muted text-muted-foreground'
+            className={`w-[140px] text-center font-medium border-4 ${
+              configuration.paths.priorsPush
+                ? 'border-primary bg-background text-foreground'
+                : 'border-muted bg-muted text-muted-foreground'
             }`}
           />
 
@@ -540,10 +563,10 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           {/* Silverback */}
           <div
             className={`
-              px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm
-              ${configuration.paths.priorsPush 
-                ? 'bg-purple-600 text-white' 
-                : 'bg-muted text-muted-foreground'}
+              px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm border-4
+              ${configuration.paths.priorsPush
+                ? 'border-purple-600 bg-purple-600 text-white'
+                : 'border-muted bg-muted text-muted-foreground'}
             `}
           >
             Silverback
@@ -555,10 +578,10 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           {/* New Lantern */}
           <div
             className={`
-              px-4 py-2 rounded-md font-medium min-w-[120px] text-center text-sm
-              ${configuration.paths.priorsPush 
-                ? 'bg-primary text-primary-foreground' 
-                : 'bg-muted text-muted-foreground'}
+              px-4 py-2 rounded-md font-medium min-w-[120px] text-center text-sm border-4
+              ${configuration.paths.priorsPush
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-muted bg-muted text-muted-foreground'}
             `}
           >
             New Lantern
@@ -594,10 +617,10 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
             value={configuration.systems.priorsQuerySource || ''}
             onChange={(e) => handleSystemChange('priorsQuerySource', e.target.value)}
             disabled={!configuration.paths.priorsQuery}
-            className={`w-[140px] text-center font-medium ${
-              configuration.paths.priorsQuery 
-                ? 'bg-primary text-primary-foreground border-primary' 
-                : 'bg-muted text-muted-foreground'
+            className={`w-[140px] text-center font-medium border-4 ${
+              configuration.paths.priorsQuery
+                ? 'border-primary bg-background text-foreground'
+                : 'border-muted bg-muted text-muted-foreground'
             }`}
           />
 
@@ -610,10 +633,10 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           {/* Silverback */}
           <div
             className={`
-              px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm
-              ${configuration.paths.priorsQuery 
-                ? 'bg-purple-600 text-white' 
-                : 'bg-muted text-muted-foreground'}
+              px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm border-4
+              ${configuration.paths.priorsQuery
+                ? 'border-purple-600 bg-purple-600 text-white'
+                : 'border-muted bg-muted text-muted-foreground'}
             `}
           >
             Silverback
@@ -625,10 +648,10 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           {/* New Lantern */}
           <div
             className={`
-              px-4 py-2 rounded-md font-medium min-w-[120px] text-center text-sm
-              ${configuration.paths.priorsQuery 
-                ? 'bg-primary text-primary-foreground' 
-                : 'bg-muted text-muted-foreground'}
+              px-4 py-2 rounded-md font-medium min-w-[120px] text-center text-sm border-4
+              ${configuration.paths.priorsQuery
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-muted bg-muted text-muted-foreground'}
             `}
           >
             New Lantern
@@ -661,9 +684,9 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           {/* Manual Push */}
           <div
             className={`
-              px-4 py-2 rounded-md font-medium min-w-[140px] text-center text-sm border-2
-              ${configuration.paths.priorsManual 
-                ? 'border-primary bg-primary/20 text-primary' 
+              px-4 py-2 rounded-md font-medium min-w-[140px] text-center text-sm border-4
+              ${configuration.paths.priorsManual
+                ? 'border-primary bg-primary/20 text-primary'
                 : 'border-muted bg-muted/30 text-muted-foreground'}
             `}
           >
@@ -676,10 +699,10 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           {/* Silverback */}
           <div
             className={`
-              px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm
-              ${configuration.paths.priorsManual 
-                ? 'bg-purple-600 text-white' 
-                : 'bg-muted text-muted-foreground'}
+              px-4 py-2 rounded-md font-medium min-w-[100px] text-center text-sm border-4
+              ${configuration.paths.priorsManual
+                ? 'border-purple-600 bg-purple-600 text-white'
+                : 'border-muted bg-muted text-muted-foreground'}
             `}
           >
             Silverback
@@ -691,10 +714,10 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           {/* New Lantern */}
           <div
             className={`
-              px-4 py-2 rounded-md font-medium min-w-[120px] text-center text-sm
-              ${configuration.paths.priorsManual 
-                ? 'bg-primary text-primary-foreground' 
-                : 'bg-muted text-muted-foreground'}
+              px-4 py-2 rounded-md font-medium min-w-[120px] text-center text-sm border-4
+              ${configuration.paths.priorsManual
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-muted bg-muted text-muted-foreground'}
             `}
           >
             New Lantern
@@ -764,10 +787,10 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
           {/* New Lantern Source */}
           <div
             className={`
-              px-4 py-2 rounded-md font-medium min-w-[140px] text-center text-sm
-              ${configuration.paths.reportsToPortal 
-                ? 'bg-primary text-primary-foreground' 
-                : 'bg-muted text-muted-foreground'}
+              px-4 py-2 rounded-md font-medium min-w-[140px] text-center text-sm border-4
+              ${configuration.paths.reportsToPortal
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-muted bg-muted text-muted-foreground'}
             `}
           >
             New Lantern
@@ -785,10 +808,10 @@ export const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({
             value={configuration.systems.reportsPortalDestination || ''}
             onChange={(e) => handleSystemChange('reportsPortalDestination', e.target.value)}
             disabled={!configuration.paths.reportsToPortal}
-            className={`w-[160px] text-center font-medium ${
-              configuration.paths.reportsToPortal 
-                ? 'border-primary bg-primary/20 text-primary' 
-                : 'bg-muted text-muted-foreground'
+            className={`w-[160px] text-center font-medium border-4 ${
+              configuration.paths.reportsToPortal
+                ? 'border-primary bg-background text-foreground'
+                : 'border-muted bg-muted text-muted-foreground'
             }`}
           />
 
