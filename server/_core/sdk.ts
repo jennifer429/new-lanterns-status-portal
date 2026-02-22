@@ -160,23 +160,23 @@ class SDKServer {
   }
 
   /**
-   * Create a session token for a Manus user openId
+   * Create a session token for a Render user openId
    * @example
    * const sessionToken = await sdk.createSessionToken(userInfo.openId);
    */
-  async createSessionToken(
-    openId: string,
-    options: { expiresInMs?: number; name?: string } = {}
-  ): Promise<string> {
-    return this.signSession(
-      {
-        openId,
-        appId: ENV.appId,
-        name: options.name || "",
-      },
-      options
-    );
-  }
+async createSessionToken(
+  openId: string,
+  options: { expiresInMs?: number; name?: string } = {}
+): Promise<string> {
+  return this.signSession(
+    {
+      openId,
+      appId: ENV.appId || "render-app",
+      name: options.name || "",
+    },
+    options
+  );
+}
 
   async signSession(
     payload: SessionPayload,
@@ -197,40 +197,36 @@ class SDKServer {
       .sign(secretKey);
   }
 
-  async verifySession(
-    cookieValue: string | undefined | null
-  ): Promise<{ openId: string; appId: string; name: string } | null> {
-    if (!cookieValue) {
-      console.warn("[Auth] Missing session cookie");
-      return null;
-    }
-
-    try {
-      const secretKey = this.getSessionSecret();
-      const { payload } = await jwtVerify(cookieValue, secretKey, {
-        algorithms: ["HS256"],
-      });
-      const { openId, appId, name } = payload as Record<string, unknown>;
-
-      if (
-        !isNonEmptyString(openId) ||
-        !isNonEmptyString(appId) ||
-        !isNonEmptyString(name)
-      ) {
-        console.warn("[Auth] Session payload missing required fields");
-        return null;
-      }
-
-      return {
-        openId,
-        appId,
-        name,
-      };
-    } catch (error) {
-      console.warn("[Auth] Session verification failed", String(error));
-      return null;
-    }
+async verifySession(
+  cookieValue: string | undefined | null
+): Promise<{ openId: string; appId: string; name: string } | null> {
+  if (!cookieValue) {
+    console.warn("[Auth] Missing session cookie");
+    return null;
   }
+  try {
+    const secretKey = this.getSessionSecret();
+    const { payload } = await jwtVerify(cookieValue, secretKey, {
+      algorithms: ["HS256"],
+    });
+    const { openId, appId, name } = payload as Record<string, unknown>;
+    if (
+      !isNonEmptyString(openId) ||
+      !isNonEmptyString(name)
+    ) {
+      console.warn("[Auth] Session payload missing required fields");
+      return null;
+    }
+    return {
+      openId,
+      appId: typeof appId === "string" ? appId : "",
+      name,
+    };
+  } catch (error) {
+    console.warn("[Auth] Session verification failed", String(error));
+    return null;
+  }
+}
 
   async getUserInfoWithJwt(
     jwtToken: string

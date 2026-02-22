@@ -6,148 +6,86 @@ import { questions, questionOptions, organizations, users, clients, intakeFileAt
 import { eq, and, or, desc, inArray, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
-/**
- * Admin router for managing questions, options, organizations, and users
- * All endpoints require authentication and admin role
- */
 export const adminRouter = router({
   // ============================================================================
   // QUESTIONS CRUD
   // ============================================================================
 
-  /**
-   * Get all questions with their options
-   */
   getAllQuestions: protectedProcedure.query(async ({ ctx }) => {
     if (ctx.user.role !== "admin") {
       throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
     }
-
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-    const allQuestions = await db
-      .select()
-      .from(questions)
-      .orderBy(questions.sectionId, questions.questionNumber);
+    const allQuestions = await db.select().from(questions).orderBy(questions.sectionId, questions.questionNumber);
+    const allOptions = await db.select().from(questionOptions).orderBy(questionOptions.displayOrder);
 
-    // Get all options
-    const allOptions = await db
-      .select()
-      .from(questionOptions)
-      .orderBy(questionOptions.displayOrder);
-
-    // Group options by questionId
     const optionsByQuestion = allOptions.reduce((acc, option) => {
-      if (!acc[option.questionId]) {
-        acc[option.questionId] = [];
-      }
+      if (!acc[option.questionId]) acc[option.questionId] = [];
       acc[option.questionId].push(option);
       return acc;
     }, {} as Record<number, typeof allOptions>);
 
-    // Attach options to questions
-    return allQuestions.map(q => ({
-      ...q,
-      options: optionsByQuestion[q.id] || [],
-    }));
+    return allQuestions.map(q => ({ ...q, options: optionsByQuestion[q.id] || [] }));
   }),
 
-  /**
-   * Create a new question
-   */
   createQuestion: protectedProcedure
-    .input(
-      z.object({
-        questionId: z.string(),
-        sectionId: z.string(),
-        sectionTitle: z.string(),
-        questionNumber: z.number(),
-        shortTitle: z.string(),
-        questionText: z.string(),
-        questionType: z.string(),
-        placeholder: z.string().optional(),
-        notes: z.string().optional(),
-        required: z.number().default(0),
-      })
-    )
+    .input(z.object({
+      questionId: z.string(),
+      sectionId: z.string(),
+      sectionTitle: z.string(),
+      questionNumber: z.number(),
+      shortTitle: z.string(),
+      questionText: z.string(),
+      questionType: z.string(),
+      placeholder: z.string().optional(),
+      notes: z.string().optional(),
+      required: z.number().default(0),
+    }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-      // Check if questionId already exists
-      const existing = await db
-        .select()
-        .from(questions)
-        .where(eq(questions.questionId, input.questionId))
-        .limit(1);
-
-      if (existing.length > 0) {
-        throw new TRPCError({ code: "CONFLICT", message: "Question ID already exists" });
-      }
+      const existing = await db.select().from(questions).where(eq(questions.questionId, input.questionId)).limit(1);
+      if (existing.length > 0) throw new TRPCError({ code: "CONFLICT", message: "Question ID already exists" });
 
       const [newQuestion] = await db.insert(questions).values(input);
-
       return { success: true, questionId: newQuestion.insertId };
     }),
 
-  /**
-   * Update a question
-   */
   updateQuestion: protectedProcedure
-    .input(
-      z.object({
-        id: z.number(),
-        questionId: z.string().optional(),
-        sectionId: z.string().optional(),
-        sectionTitle: z.string().optional(),
-        questionNumber: z.number().optional(),
-        shortTitle: z.string().optional(),
-        questionText: z.string().optional(),
-        questionType: z.string().optional(),
-        placeholder: z.string().optional(),
-        notes: z.string().optional(),
-        required: z.number().optional(),
-      })
-    )
+    .input(z.object({
+      id: z.number(),
+      questionId: z.string().optional(),
+      sectionId: z.string().optional(),
+      sectionTitle: z.string().optional(),
+      questionNumber: z.number().optional(),
+      shortTitle: z.string().optional(),
+      questionText: z.string().optional(),
+      questionType: z.string().optional(),
+      placeholder: z.string().optional(),
+      notes: z.string().optional(),
+      required: z.number().optional(),
+    }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
       const { id, ...updates } = input;
-
       await db.update(questions).set(updates).where(eq(questions.id, id));
-
       return { success: true };
     }),
 
-  /**
-   * Delete a question
-   */
   deleteQuestion: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
-      // Delete associated options first
       await db.delete(questionOptions).where(eq(questionOptions.questionId, input.id));
-
-      // Delete the question
       await db.delete(questions).where(eq(questions.id, input.id));
-
       return { success: true };
     }),
 
@@ -155,124 +93,70 @@ export const adminRouter = router({
   // QUESTION OPTIONS CRUD
   // ============================================================================
 
-  /**
-   * Get options for a specific question
-   */
   getQuestionOptions: protectedProcedure
     .input(z.object({ questionId: z.number() }))
     .query(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
-      return await db
-        .select()
-        .from(questionOptions)
-        .where(eq(questionOptions.questionId, input.questionId))
-        .orderBy(questionOptions.displayOrder);
+      return await db.select().from(questionOptions).where(eq(questionOptions.questionId, input.questionId)).orderBy(questionOptions.displayOrder);
     }),
 
-  /**
-   * Create a new question option
-   */
   createQuestionOption: protectedProcedure
-    .input(
-      z.object({
-        questionId: z.number(),
-        optionValue: z.string(),
-        optionLabel: z.string(),
-        displayOrder: z.number().default(0),
-        isActive: z.number().default(1),
-      })
-    )
+    .input(z.object({
+      questionId: z.number(),
+      optionValue: z.string(),
+      optionLabel: z.string(),
+      displayOrder: z.number().default(0),
+      isActive: z.number().default(1),
+    }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
       const [newOption] = await db.insert(questionOptions).values(input);
-
       return { success: true, optionId: newOption.insertId };
     }),
 
-  /**
-   * Update a question option
-   */
   updateQuestionOption: protectedProcedure
-    .input(
-      z.object({
-        id: z.number(),
-        optionValue: z.string().optional(),
-        optionLabel: z.string().optional(),
-        displayOrder: z.number().optional(),
-        isActive: z.number().optional(),
-      })
-    )
+    .input(z.object({
+      id: z.number(),
+      optionValue: z.string().optional(),
+      optionLabel: z.string().optional(),
+      displayOrder: z.number().optional(),
+      isActive: z.number().optional(),
+    }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
       const { id, ...updates } = input;
-
       await db.update(questionOptions).set(updates).where(eq(questionOptions.id, id));
-
       return { success: true };
     }),
 
-  /**
-   * Delete a question option
-   */
   deleteQuestionOption: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
       await db.delete(questionOptions).where(eq(questionOptions.id, input.id));
-
       return { success: true };
     }),
 
-  /**
-   * Reorder question options
-   */
   reorderQuestionOptions: protectedProcedure
-    .input(
-      z.object({
-        questionId: z.number(),
-        optionIds: z.array(z.number()), // Array of option IDs in new order
-      })
-    )
+    .input(z.object({
+      questionId: z.number(),
+      optionIds: z.array(z.number()),
+    }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
-      // Update display order for each option
       for (let i = 0; i < input.optionIds.length; i++) {
-        await db
-          .update(questionOptions)
-          .set({ displayOrder: i + 1 })
-          .where(eq(questionOptions.id, input.optionIds[i]));
+        await db.update(questionOptions).set({ displayOrder: i + 1 }).where(eq(questionOptions.id, input.optionIds[i]));
       }
-
       return { success: true };
     }),
 
@@ -280,150 +164,72 @@ export const adminRouter = router({
   // CLIENTS CRUD
   // ============================================================================
 
-  /**
-   * Get clients (partners) - Platform admins see all, partner admins see only their own
-   */
   getAllClients: protectedProcedure.query(async ({ ctx }) => {
-    if (ctx.user.role !== "admin") {
-      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-    }
-
+    if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
-    // Platform admins see all clients, partner admins see only their own
     if (ctx.user.clientId) {
       return await db.select().from(clients).where(eq(clients.id, ctx.user.clientId));
-    } else {
-      return await db.select().from(clients).orderBy(clients.name);
     }
+    return await db.select().from(clients).orderBy(clients.name);
   }),
 
-  /**
-   * Create a new client (partner)
-   * Platform admins only
-   */
   createClient: protectedProcedure
-    .input(
-      z.object({
-        name: z.string().min(1, "Name is required"),
-        slug: z.string().min(1, "Slug is required"),
-        description: z.string().optional(),
-      })
-    )
+    .input(z.object({
+      name: z.string().min(1, "Name is required"),
+      slug: z.string().min(1, "Slug is required"),
+      description: z.string().optional(),
+    }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin" || ctx.user.clientId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
-      }
-
+      if (ctx.user.role !== "admin" || ctx.user.clientId) throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
-      // Check if slug already exists
       const existing = await db.select().from(clients).where(eq(clients.slug, input.slug)).limit(1);
-      if (existing.length > 0) {
-        throw new TRPCError({ code: "CONFLICT", message: "A partner with this slug already exists" });
-      }
-
-      await db.insert(clients).values({
-        name: input.name,
-        slug: input.slug,
-        description: input.description || null,
-        status: "active",
-      });
-
+      if (existing.length > 0) throw new TRPCError({ code: "CONFLICT", message: "A partner with this slug already exists" });
+      await db.insert(clients).values({ name: input.name, slug: input.slug, description: input.description || null, status: "active" });
       return { success: true };
     }),
 
-  /**
-   * Update an existing client (partner)
-   * Platform admins only
-   */
   updateClient: protectedProcedure
-    .input(
-      z.object({
-        id: z.number(),
-        name: z.string().min(1, "Name is required"),
-        slug: z.string().min(1, "Slug is required"),
-        description: z.string().optional(),
-      })
-    )
+    .input(z.object({
+      id: z.number(),
+      name: z.string().min(1, "Name is required"),
+      slug: z.string().min(1, "Slug is required"),
+      description: z.string().optional(),
+    }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin" || ctx.user.clientId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
-      }
-
+      if (ctx.user.role !== "admin" || ctx.user.clientId) throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
-      // Check the client exists
       const [existing] = await db.select().from(clients).where(eq(clients.id, input.id)).limit(1);
-      if (!existing) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Partner not found" });
-      }
-
-      // Check slug uniqueness (excluding self)
-      const slugConflict = await db.select().from(clients)
-        .where(and(eq(clients.slug, input.slug), sql`${clients.id} != ${input.id}`))
-        .limit(1);
-      if (slugConflict.length > 0) {
-        throw new TRPCError({ code: "CONFLICT", message: "A partner with this slug already exists" });
-      }
-
-      await db.update(clients).set({
-        name: input.name,
-        slug: input.slug,
-        description: input.description || null,
-      }).where(eq(clients.id, input.id));
-
+      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Partner not found" });
+      const slugConflict = await db.select().from(clients).where(and(eq(clients.slug, input.slug), sql`${clients.id} != ${input.id}`)).limit(1);
+      if (slugConflict.length > 0) throw new TRPCError({ code: "CONFLICT", message: "A partner with this slug already exists" });
+      await db.update(clients).set({ name: input.name, slug: input.slug, description: input.description || null }).where(eq(clients.id, input.id));
       return { success: true };
     }),
 
-  /**
-   * Deactivate a client (partner) - soft delete
-   * Platform admins only
-   */
   deactivateClient: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin" || ctx.user.clientId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
-      }
-
+      if (ctx.user.role !== "admin" || ctx.user.clientId) throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
       const [existing] = await db.select().from(clients).where(eq(clients.id, input.id)).limit(1);
-      if (!existing) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Partner not found" });
-      }
-
+      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Partner not found" });
       await db.update(clients).set({ status: "inactive" }).where(eq(clients.id, input.id));
-
       return { success: true };
     }),
 
-  /**
-   * Reactivate a client (partner)
-   * Platform admins only
-   */
   reactivateClient: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin" || ctx.user.clientId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
-      }
-
+      if (ctx.user.role !== "admin" || ctx.user.clientId) throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
       const [existing] = await db.select().from(clients).where(eq(clients.id, input.id)).limit(1);
-      if (!existing) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Partner not found" });
-      }
-
+      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Partner not found" });
       await db.update(clients).set({ status: "active" }).where(eq(clients.id, input.id));
-
       return { success: true };
     }),
 
@@ -431,139 +237,129 @@ export const adminRouter = router({
   // ORGANIZATIONS CRUD
   // ============================================================================
 
-  /**
-   * Get all organizations (filtered by user's clientId)
-   */
-  /**
-   * Debug: Get current user's full data
-   */
   getCurrentUser: protectedProcedure.query(async ({ ctx }) => {
     return ctx.user;
   }),
 
   getAllOrganizations: protectedProcedure.query(async ({ ctx }) => {
-    if (ctx.user.role !== "admin") {
-      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-    }
-
+    if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
-    // Debug logging
     console.log('[getAllOrganizations] User:', ctx.user.email, 'clientId:', ctx.user.clientId, 'role:', ctx.user.role);
-
-    // Filter by user's clientId for access control
     if (ctx.user.clientId) {
       return await db.select().from(organizations).where(eq(organizations.clientId, ctx.user.clientId)).orderBy(desc(organizations.createdAt));
-    } else {
-      // Super admin or no clientId - show all
-      return await db.select().from(organizations).orderBy(desc(organizations.createdAt));
     }
+    return await db.select().from(organizations).orderBy(desc(organizations.createdAt));
   }),
 
-  /**
-   * Create a new organization
-   */
   createOrganization: protectedProcedure
-    .input(
-      z.object({
-        clientId: z.number().optional(), // Optional - will be auto-assigned for partner admins
-        name: z.string(),
-        slug: z.string(),
-        contactName: z.string().optional(),
-        contactEmail: z.string().optional(),
-        contactPhone: z.string().optional(),
-        status: z.enum(["active", "completed", "paused"]).default("active"),
-      })
-    )
+    .input(z.object({
+      clientId: z.number().optional(),
+      name: z.string(),
+      slug: z.string(),
+      contactName: z.string().optional(),
+      contactEmail: z.string().optional(),
+      contactPhone: z.string().optional(),
+      status: z.enum(["active", "completed", "paused"]).default("active"),
+    }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-      // Partner admins can only create orgs for their own partner
-      // Platform admins must specify clientId
       let clientId = input.clientId;
-      
       if (ctx.user.clientId !== null && ctx.user.clientId !== undefined) {
-        // Partner admin - force their clientId, ignore input
         clientId = ctx.user.clientId;
       } else if (!clientId) {
-        // Platform admin without clientId specified
         throw new TRPCError({ code: "BAD_REQUEST", message: "Platform admins must specify clientId when creating organizations" });
       }
 
-      // Check if slug already exists
-      const existing = await db
-        .select()
-        .from(organizations)
-        .where(eq(organizations.slug, input.slug))
-        .limit(1);
+      const existing = await db.select().from(organizations).where(eq(organizations.slug, input.slug)).limit(1);
+      if (existing.length > 0) throw new TRPCError({ code: "CONFLICT", message: "Organization slug already exists" });
 
-      if (existing.length > 0) {
-        throw new TRPCError({ code: "CONFLICT", message: "Organization slug already exists" });
-      }
-
-      const [newOrg] = await db.insert(organizations).values({
-        ...input,
-        clientId, // Use auto-assigned or provided clientId
-      });
-
+      const [newOrg] = await db.insert(organizations).values({ ...input, clientId });
       return { success: true, organizationId: newOrg.insertId };
     }),
 
-  /**
-   * Update an organization
-   */
   updateOrganization: protectedProcedure
-    .input(
-      z.object({
-        id: z.number(),
-        name: z.string().optional(),
-        slug: z.string().optional(),
-        contactName: z.string().optional(),
-        contactEmail: z.string().optional(),
-        contactPhone: z.string().optional(),
-        status: z.enum(["active", "completed", "paused"]).optional(),
-        clientId: z.number().optional(),
-      })
-    )
+    .input(z.object({
+      id: z.number(),
+      name: z.string().optional(),
+      slug: z.string().optional(),
+      contactName: z.string().optional(),
+      contactEmail: z.string().optional(),
+      contactPhone: z.string().optional(),
+      status: z.enum(["active", "completed", "paused"]).optional(),
+      clientId: z.number().optional(),
+    }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
       const { id, ...updates } = input;
-
       await db.update(organizations).set(updates).where(eq(organizations.id, id));
-
       return { success: true };
     }),
 
-  /**
-   * Delete an organization (cascades to users and responses)
-   */
   deleteOrganization: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
-      // Note: In production, you might want to soft-delete or archive instead
-      // This will cascade delete users and responses associated with this org
-
       await db.delete(organizations).where(eq(organizations.id, input.id));
+      return { success: true };
+    }),
 
+  deactivateOrganization: protectedProcedure
+    .input(z.object({ organizationId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const [org] = await db.select().from(organizations).where(eq(organizations.id, input.organizationId));
+      if (!org) throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      if (ctx.user.clientId && org.clientId !== ctx.user.clientId) throw new TRPCError({ code: "FORBIDDEN", message: "Cannot deactivate other partner's organizations" });
+      await db.update(organizations).set({ status: "inactive" }).where(eq(organizations.id, input.organizationId));
+      return { success: true };
+    }),
+
+  reactivateOrganization: protectedProcedure
+    .input(z.object({ organizationId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const [org] = await db.select().from(organizations).where(eq(organizations.id, input.organizationId));
+      if (!org) throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      if (ctx.user.clientId && org.clientId !== ctx.user.clientId) throw new TRPCError({ code: "FORBIDDEN", message: "Cannot reactivate other partner's organizations" });
+      await db.update(organizations).set({ status: "active" }).where(eq(organizations.id, input.organizationId));
+      return { success: true };
+    }),
+
+  markOrganizationComplete: protectedProcedure
+    .input(z.object({ organizationId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const [org] = await db.select().from(organizations).where(eq(organizations.id, input.organizationId));
+      if (!org) throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      if (ctx.user.clientId && org.clientId !== ctx.user.clientId) throw new TRPCError({ code: "FORBIDDEN", message: "Cannot mark other partner's organizations as complete" });
+      await db.update(organizations).set({ status: "completed" }).where(eq(organizations.id, input.organizationId));
+      return { success: true };
+    }),
+
+  reopenOrganization: protectedProcedure
+    .input(z.object({ organizationId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const [org] = await db.select().from(organizations).where(eq(organizations.id, input.organizationId));
+      if (!org) throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      if (ctx.user.clientId && org.clientId !== ctx.user.clientId) throw new TRPCError({ code: "FORBIDDEN", message: "Cannot reopen other partner's organizations" });
+      await db.update(organizations).set({ status: "active" }).where(eq(organizations.id, input.organizationId));
       return { success: true };
     }),
 
@@ -571,18 +367,11 @@ export const adminRouter = router({
   // FILES MANAGEMENT
   // ============================================================================
 
-  /**
-   * Get all uploaded files across all organizations (filtered by user's clientId)
-   */
   getAllFiles: protectedProcedure.query(async ({ ctx }) => {
-    if (ctx.user.role !== "admin") {
-      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-    }
-
+    if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-    // Join files with organizations to filter by clientId
     const files = await db
       .select({
         id: intakeFileAttachments.id,
@@ -599,13 +388,8 @@ export const adminRouter = router({
       .leftJoin(organizations, eq(intakeFileAttachments.organizationId, organizations.id))
       .orderBy(desc(intakeFileAttachments.createdAt));
 
-    // Filter by clientId if user has one
     if (ctx.user.clientId) {
-      const userOrgs = await db
-        .select({ id: organizations.id })
-        .from(organizations)
-        .where(eq(organizations.clientId, ctx.user.clientId));
-      
+      const userOrgs = await db.select({ id: organizations.id }).from(organizations).where(eq(organizations.clientId, ctx.user.clientId));
       const orgIds = userOrgs.map(o => o.id);
       return files.filter(f => f.organizationId && orgIds.includes(f.organizationId));
     }
@@ -613,66 +397,45 @@ export const adminRouter = router({
     return files;
   }),
 
-  /**
-   * Delete a file
-   */
   deleteFile: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-      // Get file details first to check access
       const [file] = await db
-        .select({
-          id: intakeFileAttachments.id,
-          organizationId: intakeFileAttachments.organizationId,
-        })
+        .select({ id: intakeFileAttachments.id, organizationId: intakeFileAttachments.organizationId, driveFileId: intakeFileAttachments.driveFileId })
         .from(intakeFileAttachments)
         .where(eq(intakeFileAttachments.id, input.id))
         .limit(1);
 
-      if (!file) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "File not found" });
+      if (!file) throw new TRPCError({ code: "NOT_FOUND", message: "File not found" });
+
+      if (ctx.user.clientId && file.organizationId) {
+        const [org] = await db.select({ clientId: organizations.clientId }).from(organizations).where(eq(organizations.id, file.organizationId)).limit(1);
+        if (org && org.clientId !== ctx.user.clientId) throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
       }
 
-      // Check clientId access
-      if (ctx.user.clientId && file.organizationId) {
-        const [org] = await db
-          .select({ clientId: organizations.clientId })
-          .from(organizations)
-          .where(eq(organizations.id, file.organizationId))
-          .limit(1);
-
-        if (org && org.clientId !== ctx.user.clientId) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
+      // Rename Drive file to delete_<filename> before removing from database
+      if (file.driveFileId) {
+        try {
+          const { storageRename } = await import("../storage");
+          await storageRename(file.driveFileId);
+        } catch (err) {
+          console.error("[admin] Failed to rename Drive file on delete:", err);
         }
       }
 
-      // Delete from database (S3 file remains for now)
       await db.delete(intakeFileAttachments).where(eq(intakeFileAttachments.id, input.id));
-
       return { success: true };
     }),
 
-  /**
-   * Get admin summary - unified metrics for all admin dashboards
-   * Returns consistent summary data: organizations with user count, completion %, and files
-   * Filters by clientId for partner admins, shows all for platform admins
-   */
   getAdminSummary: protectedProcedure.query(async ({ ctx }) => {
-    if (ctx.user.role !== "admin") {
-      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-    }
-
+    if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-    // Get all organizations (filtered by clientId if applicable)
     let orgs;
     if (ctx.user.clientId) {
       orgs = await db.select().from(organizations).where(eq(organizations.clientId, ctx.user.clientId));
@@ -680,83 +443,49 @@ export const adminRouter = router({
       orgs = await db.select().from(organizations);
     }
 
-    // For each organization, get metrics
     const metrics = await Promise.all(
       orgs.map(async (org) => {
-        // Get user count
         const orgUsers = await db.select().from(users).where(eq(users.organizationId, org.id));
         const userCount = orgUsers.length;
 
-        // Use shared progress calculation function (same as frontend)
         const { calculateProgress } = await import("../../shared/progressCalculation");
         const { questionnaireSections } = await import("../../shared/questionnaireData");
-        
-        // Get responses from intakeResponses table (where saveResponse writes)
         const { intakeResponses } = await import("../../drizzle/schema");
+
         const orgResponses = await db
           .select({
             id: intakeResponses.id,
             organizationId: intakeResponses.organizationId,
-            questionId: intakeResponses.questionId, // Already a string (e.g., "H.1", "A.2")
+            questionId: intakeResponses.questionId,
             response: intakeResponses.response,
             fileUrl: intakeResponses.fileUrl,
             createdAt: intakeResponses.createdAt,
-            updatedAt: intakeResponses.updatedAt
+            updatedAt: intakeResponses.updatedAt,
           })
           .from(intakeResponses)
           .where(eq(intakeResponses.organizationId, org.id));
-        const orgFiles = await db
-          .select()
-          .from(intakeFileAttachments)
-          .where(eq(intakeFileAttachments.organizationId, org.id));
 
-        // Build question list (include workflow sections)
+        const orgFiles = await db.select().from(intakeFileAttachments).where(eq(intakeFileAttachments.organizationId, org.id));
+
         const allQuestions = questionnaireSections.flatMap(section => {
           if (section.questions) {
-            // Regular question sections
-            return section.questions.map(q => ({
-              id: q.id,
-              sectionTitle: section.title,
-              isWorkflow: false,
-              type: q.type // Pass question type for upload detection
-            }));
+            return section.questions.map(q => ({ id: q.id, sectionTitle: section.title, isWorkflow: false, type: q.type }));
           } else if (section.type === 'workflow') {
-            // Workflow sections - count as 1 item each
-            return [{
-              id: `${section.id}_config`,
-              sectionTitle: section.title,
-              isWorkflow: true
-            }];
+            return [{ id: `${section.id}_config`, sectionTitle: section.title, isWorkflow: true }];
           }
           return [];
         });
 
-        // Calculate progress using shared utility
         const progress = calculateProgress(allQuestions, orgResponses, orgFiles);
         const completionPercent = progress.completionPercentage;
 
-        // Convert section progress from shared utility format to percentage format
-        const sectionTitleToId: Record<string, string> = {
-          "Organization Info": "organizationInfo",
-          "Orders Workflow": "ordersWorkflow",
-          "Images Workflow": "imagesWorkflow",
-          "Priors Workflow": "priorsWorkflow",
-          "Reports Out Workflow": "reportsOutWorkflow",
-          "Data & Integration": "dataIntegration",
-          "Configuration Files": "configurationFiles",
-          "VPN & Connectivity": "vpnConnectivity",
-          "HL7 Configuration": "hl7Configuration"
-        };
-        
-        const sectionProgress: Record<string, {completed: number, total: number}> = {};
+        const sectionProgress: Record<string, { completed: number; total: number }> = {};
         Object.entries(progress.sectionProgress).forEach(([title, stats]) => {
-          // Use title as key (not sectionId) to match frontend expectations
           sectionProgress[title] = stats;
         });
-        
+
         const sectionsComplete = Object.values(sectionProgress).filter(stats => stats.completed === stats.total && stats.total > 0).length;
 
-        // Get files
         const files = await db
           .select()
           .from(intakeFileAttachments)
@@ -772,12 +501,7 @@ export const adminRouter = router({
           completionPercent,
           sectionsComplete,
           sectionProgress,
-          files: files.map(f => ({
-            id: f.id,
-            fileName: f.fileName,
-            fileUrl: f.fileUrl,
-            uploadedAt: f.createdAt,
-          })),
+          files: files.map(f => ({ id: f.id, fileName: f.fileName, fileUrl: f.fileUrl, uploadedAt: f.createdAt })),
         };
       })
     );
@@ -785,325 +509,96 @@ export const adminRouter = router({
     return metrics;
   }),
 
-  /**
-   * Get all users - filtered by clientId for partner admins
-   */
-  getAllUsers: protectedProcedure.query(async ({ ctx }) => {
-    if (ctx.user.role !== "admin") {
-      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-    }
+  // ============================================================================
+  // USERS CRUD
+  // ============================================================================
 
+  getAllUsers: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-    // Platform admins see all users, partner admins see only their partner's users
-    let allUsers;
     if (ctx.user.clientId) {
-      // Partner admin: show users from their partner's orgs + other partner admins with same clientId
-      const partnerOrgs = await db
-        .select({ id: organizations.id })
-        .from(organizations)
-        .where(eq(organizations.clientId, ctx.user.clientId));
-      
+      const partnerOrgs = await db.select({ id: organizations.id }).from(organizations).where(eq(organizations.clientId, ctx.user.clientId));
       const orgIds = partnerOrgs.map(org => org.id);
-      
-      allUsers = await db
-        .select()
-        .from(users)
-        .where(
-          or(
-            // Users assigned to partner's organizations
-            orgIds.length > 0 ? inArray(users.organizationId, orgIds) : sql`1=0`,
-            // Partner admin users with same clientId (no org assignment)
-            and(
-              eq(users.clientId, ctx.user.clientId),
-              eq(users.role, 'admin')
-            )
-          )
-        );
-    } else {
-      // Platform admin: see all users
-      allUsers = await db.select().from(users);
+      return await db.select().from(users).where(
+        or(
+          orgIds.length > 0 ? inArray(users.organizationId, orgIds) : sql`1=0`,
+          and(eq(users.clientId, ctx.user.clientId), eq(users.role, 'admin'))
+        )
+      );
     }
-
-    return allUsers;
+    return await db.select().from(users);
   }),
 
-  /**
-   * Create a new user
-   */
   createUser: protectedProcedure
-    .input(
-      z.object({
-        email: z.string().min(1, "Email is required").refine(
-          (email) => {
-            // Only validate @newlantern.ai emails strictly
-            if (email.endsWith('@newlantern.ai')) {
-              return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-            }
-            // For other emails, just check that @ exists
-            return email.includes('@');
-          },
-          { message: "Invalid email format" }
-        ),
-        name: z.string(),
-        organizationId: z.number().optional(), // Optional for partner admins who don't belong to a specific org
-        role: z.enum(["user", "admin"]),
-        clientId: z.number().nullable(),
-      })
-    )
+    .input(z.object({
+      email: z.string().min(1, "Email is required").refine(
+        (email) => {
+          if (email.endsWith('@newlantern.ai')) return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+          return email.includes('@');
+        },
+        { message: "Invalid email format" }
+      ),
+      name: z.string(),
+      organizationId: z.number().optional(),
+      role: z.enum(["user", "admin"]),
+      clientId: z.number().nullable(),
+    }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      // Partner admins can only create users for their own partner
-      if (ctx.user.clientId && input.clientId !== ctx.user.clientId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot create users for other partners" });
-      }
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      if (ctx.user.clientId && input.clientId !== ctx.user.clientId) throw new TRPCError({ code: "FORBIDDEN", message: "Cannot create users for other partners" });
 
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-      // Check if user already exists
-      const existingUser = await db
-        .select()
-        .from(users)
-        .where(eq(users.email, input.email))
-        .limit(1);
+      const existingUser = await db.select().from(users).where(eq(users.email, input.email)).limit(1);
+      if (existingUser.length > 0) throw new TRPCError({ code: "CONFLICT", message: "User with this email already exists" });
 
-      if (existingUser.length > 0) {
-        throw new TRPCError({ code: "CONFLICT", message: "User with this email already exists" });
-      }
+      if (input.role === "user" && !input.organizationId) throw new TRPCError({ code: "BAD_REQUEST", message: "Organization is required for non-admin users" });
 
-      // Generate a temporary password (in production, send email with reset link)
       const tempPassword = Math.random().toString(36).slice(-8);
       const passwordHash = await bcrypt.hash(tempPassword, 10);
 
-      // Validate: regular users must have an organizationId
-      if (input.role === "user" && !input.organizationId) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Organization is required for non-admin users" });
-      }
+      await db.insert(users).values({
+        email: input.email,
+        name: input.name,
+        organizationId: input.organizationId || null,
+        role: input.role,
+        clientId: input.clientId,
+        passwordHash,
+        loginMethod: "email",
+        openId: `user-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      });
 
-      // Create user
-      const [newUser] = await db
-        .insert(users)
-        .values({
-          email: input.email,
-          name: input.name,
-          organizationId: input.organizationId || null,
-          role: input.role,
-          clientId: input.clientId,
-          passwordHash,
-          loginMethod: "email",
-          openId: `user-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        });
-
-      // TODO: Send email with temporary password or reset link
-      console.log(`[createUser] Created user ${input.email} (temp password generated, not logged for security)`);
-
+      console.log(`[createUser] Created user ${input.email}`);
       return { success: true, tempPassword };
     }),
 
-  /**
-   * Deactivate an organization (soft delete)
-   */
-  deactivateOrganization: protectedProcedure
-    .input(z.object({ organizationId: z.number() }))
-    .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
-      // Get the organization to check permissions
-      const [org] = await db.select().from(organizations).where(eq(organizations.id, input.organizationId));
-      if (!org) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
-      }
-
-      // Partner admins can only deactivate their own partner's organizations
-      if (ctx.user.clientId && org.clientId !== ctx.user.clientId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot deactivate other partner's organizations" });
-      }
-
-      // Update status to inactive
-      await db
-        .update(organizations)
-        .set({ status: "inactive" })
-        .where(eq(organizations.id, input.organizationId));
-
-      return { success: true };
-    }),
-
-  /**
-   * Reactivate an organization
-   */
-  reactivateOrganization: protectedProcedure
-    .input(z.object({ organizationId: z.number() }))
-    .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
-      // Get the organization to check permissions
-      const [org] = await db.select().from(organizations).where(eq(organizations.id, input.organizationId));
-      if (!org) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
-      }
-
-      // Partner admins can only reactivate their own partner's organizations
-      if (ctx.user.clientId && org.clientId !== ctx.user.clientId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot reactivate other partner's organizations" });
-      }
-
-      // Update status to active
-      await db
-        .update(organizations)
-        .set({ status: "active" })
-        .where(eq(organizations.id, input.organizationId));
-
-      return { success: true };
-    }),
-
-  /**
-   * Mark an organization as complete
-   */
-  markOrganizationComplete: protectedProcedure
-    .input(z.object({ organizationId: z.number() }))
-    .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
-      // Get the organization to check permissions
-      const [org] = await db.select().from(organizations).where(eq(organizations.id, input.organizationId));
-      if (!org) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
-      }
-
-      // Partner admins can only mark their own partner's organizations as complete
-      if (ctx.user.clientId && org.clientId !== ctx.user.clientId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot mark other partner's organizations as complete" });
-      }
-
-      // Update status to completed
-      await db
-        .update(organizations)
-        .set({ status: "completed" })
-        .where(eq(organizations.id, input.organizationId));
-
-      return { success: true };
-    }),
-
-  /**
-   * Reopen a completed organization (set back to active)
-   */
-  reopenOrganization: protectedProcedure
-    .input(z.object({ organizationId: z.number() }))
-    .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
-      // Get the organization to check permissions
-      const [org] = await db.select().from(organizations).where(eq(organizations.id, input.organizationId));
-      if (!org) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
-      }
-
-      // Partner admins can only reopen their own partner's organizations
-      if (ctx.user.clientId && org.clientId !== ctx.user.clientId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot reopen other partner's organizations" });
-      }
-
-      // Update status to active
-      await db
-        .update(organizations)
-        .set({ status: "active" })
-        .where(eq(organizations.id, input.organizationId));
-
-      return { success: true };
-    }),
-
-  /**
-   * Deactivate a user
-   */
   deactivateUser: protectedProcedure
     .input(z.object({ userId: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
-      // Get the user to check permissions
       const [targetUser] = await db.select().from(users).where(eq(users.id, input.userId));
-      if (!targetUser) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
-      }
-
-      // Partner admins can only deactivate users from their own partner
-      if (ctx.user.clientId && targetUser.clientId !== ctx.user.clientId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot deactivate other partner's users" });
-      }
-
-      // Prevent self-deactivation
-      if (targetUser.id === ctx.user.id) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot deactivate yourself" });
-      }
-
-      // Mark as inactive using isActive field
-      await db
-        .update(users)
-        .set({ isActive: 0 })
-        .where(eq(users.id, input.userId));
-
+      if (!targetUser) throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+      if (ctx.user.clientId && targetUser.clientId !== ctx.user.clientId) throw new TRPCError({ code: "FORBIDDEN", message: "Cannot deactivate other partner's users" });
+      if (targetUser.id === ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "Cannot deactivate yourself" });
+      await db.update(users).set({ isActive: 0 }).where(eq(users.id, input.userId));
       return { success: true };
     }),
 
-  /**
-   * Reactivate a user
-   */
   reactivateUser: protectedProcedure
     .input(z.object({ userId: z.number(), organizationId: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
-      // Get the user to check permissions
       const [targetUser] = await db.select().from(users).where(eq(users.id, input.userId));
-      if (!targetUser) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
-      }
-
-      // Partner admins can only reactivate users from their own partner
-      if (ctx.user.clientId && targetUser.clientId !== ctx.user.clientId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot reactivate other partner's users" });
-      }
-
-       // Restore user by setting isActive to 1 and optionally updating organizationId
-      await db
-        .update(users)
-        .set({ isActive: 1, organizationId: input.organizationId })
-        .where(eq(users.id, input.userId));
+      if (!targetUser) throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+      if (ctx.user.clientId && targetUser.clientId !== ctx.user.clientId) throw new TRPCError({ code: "FORBIDDEN", message: "Cannot reactivate other partner's users" });
+      await db.update(users).set({ isActive: 1, organizationId: input.organizationId }).where(eq(users.id, input.userId));
       return { success: true };
     }),
 
@@ -1111,119 +606,69 @@ export const adminRouter = router({
   // PARTNER TEMPLATES CRUD
   // ============================================================================
 
-  /**
-   * Get all partner templates (filtered by clientId for partner admins)
-   */
   getTemplates: protectedProcedure.query(async ({ ctx }) => {
-    if (ctx.user.role !== "admin") {
-      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-    }
-
+    if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
     if (ctx.user.clientId) {
-      // Partner admin: only see their own active templates
-      return await db.select().from(partnerTemplates)
-        .where(and(eq(partnerTemplates.clientId, ctx.user.clientId), eq(partnerTemplates.isActive, 1)))
-        .orderBy(desc(partnerTemplates.updatedAt));
-    } else {
-      // Platform admin: see all active templates
-      return await db.select().from(partnerTemplates)
-        .where(eq(partnerTemplates.isActive, 1))
-        .orderBy(desc(partnerTemplates.updatedAt));
+      return await db.select().from(partnerTemplates).where(and(eq(partnerTemplates.clientId, ctx.user.clientId), eq(partnerTemplates.isActive, 1))).orderBy(desc(partnerTemplates.updatedAt));
     }
+    return await db.select().from(partnerTemplates).where(eq(partnerTemplates.isActive, 1)).orderBy(desc(partnerTemplates.updatedAt));
   }),
 
-  /**
-   * Get inactive (soft-deleted) partner templates for the history/audit view
-   */
   getInactiveTemplates: protectedProcedure.query(async ({ ctx }) => {
-    if (ctx.user.role !== "admin") {
-      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-    }
-
+    if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
     if (ctx.user.clientId) {
-      return await db.select().from(partnerTemplates)
-        .where(and(eq(partnerTemplates.clientId, ctx.user.clientId), eq(partnerTemplates.isActive, 0)))
-        .orderBy(desc(partnerTemplates.deactivatedAt));
-    } else {
-      return await db.select().from(partnerTemplates)
-        .where(eq(partnerTemplates.isActive, 0))
-        .orderBy(desc(partnerTemplates.deactivatedAt));
+      return await db.select().from(partnerTemplates).where(and(eq(partnerTemplates.clientId, ctx.user.clientId), eq(partnerTemplates.isActive, 0))).orderBy(desc(partnerTemplates.deactivatedAt));
     }
+    return await db.select().from(partnerTemplates).where(eq(partnerTemplates.isActive, 0)).orderBy(desc(partnerTemplates.deactivatedAt));
   }),
 
-  /**
-   * Get templates for a specific client (used by intake page)
-   */
   getTemplatesByClient: protectedProcedure
     .input(z.object({ clientId: z.number() }))
     .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
-      return await db.select().from(partnerTemplates)
-        .where(and(eq(partnerTemplates.clientId, input.clientId), eq(partnerTemplates.isActive, 1)))
-        .orderBy(partnerTemplates.questionId);
+      return await db.select().from(partnerTemplates).where(and(eq(partnerTemplates.clientId, input.clientId), eq(partnerTemplates.isActive, 1))).orderBy(partnerTemplates.questionId);
     }),
 
-  /**
-   * Upload a new partner template
-   */
   uploadTemplate: protectedProcedure
-    .input(
-      z.object({
-        clientId: z.number(),
-        questionId: z.string(),
-        label: z.string(),
-        fileName: z.string(),
-        fileData: z.string(), // base64 encoded
-        mimeType: z.string(),
-      })
-    )
+    .input(z.object({
+      clientId: z.number(),
+      questionId: z.string(),
+      label: z.string(),
+      fileName: z.string(),
+      fileData: z.string(),
+      mimeType: z.string(),
+    }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      // Partner admins can only upload templates for their own partner
-      if (ctx.user.clientId && input.clientId !== ctx.user.clientId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot upload templates for other partners" });
-      }
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      if (ctx.user.clientId && input.clientId !== ctx.user.clientId) throw new TRPCError({ code: "FORBIDDEN", message: "Cannot upload templates for other partners" });
 
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-      // Check if an active template already exists for this question+client
       const [existing] = await db.select().from(partnerTemplates)
-        .where(and(
-          eq(partnerTemplates.clientId, input.clientId),
-          eq(partnerTemplates.questionId, input.questionId),
-          eq(partnerTemplates.isActive, 1)
-        )).limit(1);
+        .where(and(eq(partnerTemplates.clientId, input.clientId), eq(partnerTemplates.questionId, input.questionId), eq(partnerTemplates.isActive, 1)))
+        .limit(1);
+      if (existing) throw new TRPCError({ code: "CONFLICT", message: "A template already exists for this question. Use 'Replace' to update it." });
 
-      if (existing) {
-        throw new TRPCError({ 
-          code: "CONFLICT", 
-          message: `A template already exists for this question. Use 'Replace' to update it.` 
-        });
-      }
-
-      // Decode base64 file data
       const fileBuffer = Buffer.from(input.fileData, "base64");
-
-      // Upload to S3
       const { storagePut } = await import("../storage");
-      const timestamp = Date.now();
-      const fileExt = input.fileName.split('.').pop();
-      const s3Key = `partner-templates/${input.clientId}/${input.questionId}_${timestamp}.${fileExt}`;
+      const now = new Date();
+      const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
+      const uploaderName = ctx.user.email?.split("@")[0] || "unknown";
+      const ext = input.fileName.includes(".") ? `.${input.fileName.split(".").pop()}` : "";
+      const baseName = input.fileName.includes(".") ? input.fileName.slice(0, input.fileName.lastIndexOf(".")) : input.fileName;
+      const formattedName = `${baseName}_${timestamp}_${uploaderName}${ext}`;
+
+      const [client] = await db.select().from(clients).where(eq(clients.id, input.clientId)).limit(1);
+      const partnerName = client?.name || `client-${input.clientId}`;
+      const s3Key = `${partnerName}/templates/${formattedName}`;
       const { url: fileUrl } = await storagePut(s3Key, fileBuffer, input.mimeType);
 
-      // Insert into database
       await db.insert(partnerTemplates).values({
         clientId: input.clientId,
         questionId: input.questionId,
@@ -1239,55 +684,44 @@ export const adminRouter = router({
       return { success: true, fileUrl };
     }),
 
-  /**
-   * Replace a partner template — soft-deletes the old one and creates a new active one
-   */
   replaceTemplate: protectedProcedure
-    .input(
-      z.object({
-        id: z.number(), // ID of the template being replaced
-        label: z.string(),
-        fileName: z.string(),
-        fileData: z.string(), // base64 encoded
-        mimeType: z.string(),
-      })
-    )
+    .input(z.object({
+      id: z.number(),
+      label: z.string(),
+      fileName: z.string(),
+      fileData: z.string(),
+      mimeType: z.string(),
+    }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
 
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-      // Get existing template
-      const [existing] = await db.select().from(partnerTemplates)
-        .where(and(eq(partnerTemplates.id, input.id), eq(partnerTemplates.isActive, 1))).limit(1);
-      if (!existing) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Template not found" });
-      }
+      const [existing] = await db.select().from(partnerTemplates).where(and(eq(partnerTemplates.id, input.id), eq(partnerTemplates.isActive, 1))).limit(1);
+      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Template not found" });
+      if (ctx.user.clientId && existing.clientId !== ctx.user.clientId) throw new TRPCError({ code: "FORBIDDEN", message: "Cannot replace other partner's templates" });
 
-      // Partner admins can only replace their own templates
-      if (ctx.user.clientId && existing.clientId !== ctx.user.clientId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot replace other partner's templates" });
-      }
-
-      // Soft-delete the old template with audit trail
-      await db.update(partnerTemplates).set({ 
-        isActive: 0, 
+      await db.update(partnerTemplates).set({
+        isActive: 0,
         deactivatedBy: ctx.user.email || "unknown",
         deactivatedAt: new Date(),
       }).where(eq(partnerTemplates.id, input.id));
 
-      // Upload new file to S3
       const fileBuffer = Buffer.from(input.fileData, "base64");
       const { storagePut } = await import("../storage");
-      const timestamp = Date.now();
-      const fileExt = input.fileName.split('.').pop();
-      const s3Key = `partner-templates/${existing.clientId}/${existing.questionId}_${timestamp}.${fileExt}`;
+      const now = new Date();
+      const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
+      const uploaderName = ctx.user.email?.split("@")[0] || "unknown";
+      const ext = input.fileName.includes(".") ? `.${input.fileName.split(".").pop()}` : "";
+      const baseName = input.fileName.includes(".") ? input.fileName.slice(0, input.fileName.lastIndexOf(".")) : input.fileName;
+      const formattedName = `${baseName}_${timestamp}_${uploaderName}${ext}`;
+
+      const [client] = await db.select().from(clients).where(eq(clients.id, existing.clientId)).limit(1);
+      const partnerName = client?.name || `client-${existing.clientId}`;
+      const s3Key = `${partnerName}/templates/${formattedName}`;
       const { url: fileUrl } = await storagePut(s3Key, fileBuffer, input.mimeType);
 
-      // Insert new active template
       await db.insert(partnerTemplates).values({
         clientId: existing.clientId,
         questionId: existing.questionId,
@@ -1307,47 +741,37 @@ export const adminRouter = router({
   // SPECIFICATIONS CRUD
   // ============================================================================
 
-  /**
-   * Get all active specifications (available to all authenticated users)
-   */
   getSpecifications: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
-    return await db.select().from(specifications)
-      .where(eq(specifications.isActive, 1))
-      .orderBy(desc(specifications.createdAt));
+    return await db.select().from(specifications).where(eq(specifications.isActive, 1)).orderBy(desc(specifications.createdAt));
   }),
 
-  /**
-   * Upload a new specification document (platform admin only)
-   */
   uploadSpecification: protectedProcedure
-    .input(
-      z.object({
-        title: z.string().min(1),
-        description: z.string().optional(),
-        category: z.string().optional(),
-        fileName: z.string(),
-        fileData: z.string(), // base64 encoded
-        mimeType: z.string(),
-      })
-    )
+    .input(z.object({
+      title: z.string().min(1),
+      description: z.string().optional(),
+      category: z.string().optional(),
+      fileName: z.string(),
+      fileData: z.string(),
+      mimeType: z.string(),
+    }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin" || ctx.user.clientId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
-      }
+      if (ctx.user.role !== "admin" || ctx.user.clientId) throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
 
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       const fileBuffer = Buffer.from(input.fileData, "base64");
-
-      // Upload to S3
       const { storagePut } = await import("../storage");
-      const timestamp = Date.now();
-      const fileExt = input.fileName.split('.').pop();
-      const s3Key = `specifications/${timestamp}_${input.fileName}`;
+      const now = new Date();
+      const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
+      const uploaderName = ctx.user.email?.split("@")[0] || "unknown";
+      const ext = input.fileName.includes(".") ? `.${input.fileName.split(".").pop()}` : "";
+      const baseName = input.fileName.includes(".") ? input.fileName.slice(0, input.fileName.lastIndexOf(".")) : input.fileName;
+      const formattedName = `${baseName}_${timestamp}_${uploaderName}${ext}`;
+
+      const s3Key = `New Lantern/${formattedName}`;
       const { url: fileUrl } = await storagePut(s3Key, fileBuffer, input.mimeType);
 
       await db.insert(specifications).values({
@@ -1365,54 +789,28 @@ export const adminRouter = router({
       return { success: true, fileUrl };
     }),
 
-  /**
-   * Update specification metadata (platform admin only)
-   */
   updateSpecification: protectedProcedure
-    .input(
-      z.object({
-        id: z.number(),
-        title: z.string().min(1),
-        description: z.string().optional(),
-        category: z.string().optional(),
-      })
-    )
+    .input(z.object({
+      id: z.number(),
+      title: z.string().min(1),
+      description: z.string().optional(),
+      category: z.string().optional(),
+    }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin" || ctx.user.clientId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
-      }
-
+      if (ctx.user.role !== "admin" || ctx.user.clientId) throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
-      await db.update(specifications)
-        .set({
-          title: input.title,
-          description: input.description || null,
-          category: input.category || null,
-        })
-        .where(eq(specifications.id, input.id));
-
+      await db.update(specifications).set({ title: input.title, description: input.description || null, category: input.category || null }).where(eq(specifications.id, input.id));
       return { success: true };
     }),
 
-  /**
-   * Deactivate (soft-delete) a specification (platform admin only)
-   */
   deactivateSpecification: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin" || ctx.user.clientId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
-      }
-
+      if (ctx.user.role !== "admin" || ctx.user.clientId) throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
-      await db.update(specifications)
-        .set({ isActive: 0 })
-        .where(eq(specifications.id, input.id));
-
+      await db.update(specifications).set({ isActive: 0 }).where(eq(specifications.id, input.id));
       return { success: true };
     }),
 });

@@ -1,70 +1,38 @@
-// Preconfigured storage helpers for Manus WebDev templates
-// Uses the Biz-provided storage proxy (Authorization: Bearer <token>)
+import { google } from "googleapis";
+import { ENV } from "./_core/env";
 
-import { ENV } from './_core/env';
-
-type StorageConfig = { baseUrl: string; apiKey: string };
-
-function getStorageConfig(): StorageConfig {
-  const baseUrl = ENV.forgeApiUrl;
-  const apiKey = ENV.forgeApiKey;
-
-  if (!baseUrl || !apiKey) {
-    throw new Error(
-      "Storage proxy credentials missing: set BUILT_IN_FORGE_API_URL and BUILT_IN_FORGE_API_KEY"
-    );
-  }
-
-  return { baseUrl: baseUrl.replace(/\/+$/, ""), apiKey };
-}
-
-function buildUploadUrl(baseUrl: string, relKey: string): URL {
-  const url = new URL("v1/storage/upload", ensureTrailingSlash(baseUrl));
-  url.searchParams.set("path", normalizeKey(relKey));
-  return url;
-}
-
-async function buildDownloadUrl(
-  baseUrl: string,
-  relKey: string,
-  apiKey: string
-): Promise<string> {
-  const downloadApiUrl = new URL(
-    "v1/storage/downloadUrl",
-    ensureTrailingSlash(baseUrl)
-  );
-  downloadApiUrl.searchParams.set("path", normalizeKey(relKey));
-  const response = await fetch(downloadApiUrl, {
-    method: "GET",
-    headers: buildAuthHeaders(apiKey),
+function getDriveClient() {
+  const credentials = JSON.parse(ENV.googleServiceAccountKey || "{}");
+  const auth = new google.auth.GoogleAuth({
+    credentials,
+    scopes: ["https://www.googleapis.com/auth/drive"],
   });
-  return (await response.json()).url;
+  return google.drive({ version: "v3", auth });
 }
 
-function ensureTrailingSlash(value: string): string {
-  return value.endsWith("/") ? value : `${value}/`;
+async function findFolder(drive: any, name: string, parentId: string): Promise<string | null> {
+  const res = await drive.files.list({
+    q: `name = '${name}' and '${parentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+    fields: "files(id, name)",
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
+  });
+  return res.data.files?.[0]?.id || null;
 }
 
-function normalizeKey(relKey: string): string {
-  return relKey.replace(/^\/+/, "");
-}
-
-function toFormData(
-  data: Buffer | Uint8Array | string,
-  contentType: string,
-  fileName: string
-): FormData {
-  const blob =
-    typeof data === "string"
-      ? new Blob([data], { type: contentType })
-      : new Blob([data as any], { type: contentType });
-  const form = new FormData();
-  form.append("file", blob, fileName || "file");
-  return form;
-}
-
-function buildAuthHeaders(apiKey: string): HeadersInit {
-  return { Authorization: `Bearer ${apiKey}` };
+async function findOrCreateFolder(drive: any, name: string, parentId: string): Promise<string> {
+  const existing = await findFolder(drive, name, parentId);
+  if (existing) return existing;
+  const res = await drive.files.create({
+    requestBody: {
+      name,
+      mimeType: "application/vnd.google-apps.folder",
+      parents: [parentId],
+    },
+    fields: "id",
+    supportsAllDrives: true,
+  });
+  return res.data.id!;
 }
 
 export async function storagePut(
@@ -72,31 +40,71 @@ export async function storagePut(
   data: Buffer | Uint8Array | string,
   contentType = "application/octet-stream"
 ): Promise<{ key: string; url: string }> {
-  const { baseUrl, apiKey } = getStorageConfig();
-  const key = normalizeKey(relKey);
-  const uploadUrl = buildUploadUrl(baseUrl, key);
-  const formData = toFormData(data, contentType, key.split("/").pop() ?? key);
-  const response = await fetch(uploadUrl, {
-    method: "POST",
-    headers: buildAuthHeaders(apiKey),
-    body: formData,
+  const drive = getDriveClient();
+  const parts = relKey.split("/");
+  const fileName = parts.pop()!;
+  const [partnerName, customerName] = parts;
+
+  const rootFolderId = ENV.googleDriveFolderId;
+  const partnerFolderId = await findOrCreateFolder(drive, partnerName, rootFolderId);
+  const customerFolderId = customerName
+    ? await findOrCreateFolder(drive, customerName, partnerFolderId)
+    : partnerFolderId;
+
+  const buffer = typeof data === "string" ? Buffer.from(data) : Buffer.from(data);
+  const { Readable } = await import("stream");
+  const stream = Readable.from(buffer);
+
+  const res = await drive.files.create({
+    requestBody: {
+      name: fileName,
+      parents: [customerFolderId],
+    },
+    media: { mimeType: contentType, body: stream },
+    fields: "id, webViewLink",
+    supportsAllDrives: true,
   });
 
-  if (!response.ok) {
-    const message = await response.text().catch(() => response.statusText);
-    throw new Error(
-      `Storage upload failed (${response.status} ${response.statusText}): ${message}`
-    );
-  }
-  const url = (await response.json()).url;
-  return { key, url };
+  return { key: relKey, url: res.data.webViewLink! };
 }
 
-export async function storageGet(relKey: string): Promise<{ key: string; url: string; }> {
-  const { baseUrl, apiKey } = getStorageConfig();
-  const key = normalizeKey(relKey);
-  return {
-    key,
-    url: await buildDownloadUrl(baseUrl, key, apiKey),
-  };
+export async function storageGet(relKey: string): Promise<{ key: string; url: string }> {
+  const drive = getDriveClient();
+  const fileName = relKey.split("/").pop()!;
+
+  const res = await drive.files.list({
+    q: `name = '${fileName}' and trashed = false`,
+    fields: "files(id, webViewLink)",
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
+  });
+
+  const file = res.data.files?.[0];
+  if (!file) throw new Error(`File not found: ${relKey}`);
+
+  return { key: relKey, url: file.webViewLink! };
+}
+
+export async function storageRename(relKey: string): Promise<void> {
+  const drive = getDriveClient();
+  const fileName = relKey.split("/").pop()!;
+
+  const res = await drive.files.list({
+    q: `name = '${fileName}' and trashed = false`,
+    fields: "files(id, name)",
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
+  });
+
+  const file = res.data.files?.[0];
+  if (!file) {
+    console.warn(`[storage] storageRename: file not found in Drive for key: ${relKey}`);
+    return;
+  }
+
+  await drive.files.update({
+    fileId: file.id!,
+    requestBody: { name: `delete_${fileName}` },
+    supportsAllDrives: true,
+  });
 }
