@@ -1803,3 +1803,6 @@
 - [x] Fix IntakeNew.tsx: same fix applied
 - [x] Verified no other pages use useParams()
 - [ ] Test admin accessing /org/:slug/intake works correctly
+
+## Publish - Feb 22, 2026
+- [ ] Publish latest checkpoint with all bug fixes
