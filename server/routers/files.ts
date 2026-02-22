@@ -1,15 +1,13 @@
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { fileAttachments, organizations, clients } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 
-/**
- * Determine the Google Drive folder path based on who is uploading
- */
 async function resolveFileKey(
   organizationId: number,
-  fileName: string
+  fileName: string,
+  userEmail: string
 ): Promise<string> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -22,14 +20,24 @@ async function resolveFileKey(
 
   if (!org) throw new Error("Organization not found");
 
-  const timestamp = Date.now();
+  // Build timestamp YYYYMMDD-HHMM
+  const now = new Date();
+  const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
 
-  // NL Admin - no clientId, goes to shared New Lantern folder
+  // Build uploader name from authenticated user email
+  const uploaderName = userEmail.split("@")[0] || "unknown";
+
+  // Build filename: baseName_YYYYMMDD-HHMM_user.ext
+  const ext = fileName.includes(".") ? `.${fileName.split(".").pop()}` : "";
+  const baseName = fileName.includes(".") ? fileName.slice(0, fileName.lastIndexOf(".")) : fileName;
+  const formattedName = `${baseName}_${timestamp}_${uploaderName}${ext}`;
+
+  // NL Admin - no clientId
   if (!org.clientId) {
-    return `New Lantern/${timestamp}-${fileName}`;
+    return `New Lantern/${formattedName}`;
   }
 
-  // Get partner/client name
+  // Get partner name
   const [client] = await db
     .select()
     .from(clients)
@@ -38,48 +46,47 @@ async function resolveFileKey(
 
   const partnerName = client?.name || `client-${org.clientId}`;
 
-  // If org has its own name (customer), nest under partner
+  // Customer upload - nest under partner/customer
   if (org.name && org.name !== client?.name) {
-    return `${partnerName}/${org.name}/${timestamp}-${fileName}`;
+    return `${partnerName}/${org.name}/${formattedName}`;
   }
 
-  // Partner-level upload
-  return `${partnerName}/${timestamp}-${fileName}`;
+  // Partner upload
+  return `${partnerName}/${formattedName}`;
 }
 
 export const filesRouter = router({
-  /**
-   * Upload a file to Google Drive
-   */
-  upload: publicProcedure
+  upload: protectedProcedure
     .input(
       z.object({
         organizationId: z.number(),
         taskId: z.string(),
         taskName: z.string(),
         fileName: z.string(),
-        fileData: z.string(), // base64 encoded
+        fileData: z.string(),
         mimeType: z.string(),
-        uploadedBy: z.string().optional(),
         linearIssueId: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      // Decode base64 file data
       const fileBuffer = Buffer.from(input.fileData, "base64");
       const fileSize = fileBuffer.length;
 
-      // Resolve folder path based on org/role
-      const fileKey = await resolveFileKey(input.organizationId, input.fileName);
+      // Use authenticated user's email
+      const userEmail = ctx.user.email || "unknown";
 
-      // Upload to Google Drive
+      const fileKey = await resolveFileKey(
+        input.organizationId,
+        input.fileName,
+        userEmail
+      );
+
       const { storagePut } = await import("../storage");
       const { url: fileUrl } = await storagePut(fileKey, fileBuffer, input.mimeType);
 
-      // Save metadata to database
       const [result] = await db.insert(fileAttachments).values({
         organizationId: input.organizationId,
         taskId: input.taskId,
@@ -88,13 +95,11 @@ export const filesRouter = router({
         fileKey,
         fileSize,
         mimeType: input.mimeType,
-        uploadedBy: input.uploadedBy,
+        uploadedBy: userEmail,
       });
 
-      // Optionally attach to Linear
       if (input.linearIssueId) {
         console.log(`[Linear] File uploaded for issue ${input.linearIssueId}: ${fileUrl}`);
-        // Wire up Linear API here later if needed
       }
 
       return {
@@ -104,10 +109,7 @@ export const filesRouter = router({
       };
     }),
 
-  /**
-   * Get files for a specific task
-   */
-  getByTask: publicProcedure
+  getByTask: protectedProcedure
     .input(
       z.object({
         organizationId: z.number(),
@@ -118,7 +120,7 @@ export const filesRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      const files = await db
+      return db
         .select()
         .from(fileAttachments)
         .where(
@@ -127,14 +129,9 @@ export const filesRouter = router({
             eq(fileAttachments.taskId, input.taskId)
           )
         );
-
-      return files;
     }),
 
-  /**
-   * Delete a file (removes from DB, keeps in Drive for audit trail)
-   */
-  delete: publicProcedure
+  delete: protectedProcedure
     .input(
       z.object({
         fileId: z.number(),
@@ -156,9 +153,7 @@ export const filesRouter = router({
         )
         .limit(1);
 
-      if (!file) {
-        throw new Error("File not found or access denied");
-      }
+      if (!file) throw new Error("File not found or access denied");
 
       await db.delete(fileAttachments).where(eq(fileAttachments.id, input.fileId));
 
