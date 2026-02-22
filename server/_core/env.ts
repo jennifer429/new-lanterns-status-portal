@@ -1,4 +1,6 @@
 export const ENV = {
+  googleServiceAccountKey: process.env.GOOGLE_SERVICE_ACCOUNT_KEY ?? "",
+  googleDriveFolderId: process.env.GOOGLE_DRIVE_FOLDER_ID ?? "",
   appId: process.env.VITE_APP_ID ?? "",
   cookieSecret: process.env.JWT_SECRET ?? "",
   databaseUrl: process.env.DATABASE_URL ?? "",
