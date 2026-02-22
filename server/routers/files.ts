@@ -155,6 +155,16 @@ export const filesRouter = router({
 
       if (!file) throw new Error("File not found or access denied");
 
+      // Rename Drive file to delete_<filename> before removing from database
+      if (file.fileKey) {
+        try {
+          const { storageRename } = await import("../storage");
+          await storageRename(file.fileKey);
+        } catch (err) {
+          console.error("[files] Failed to rename Drive file on delete:", err);
+        }
+      }
+
       await db.delete(fileAttachments).where(eq(fileAttachments.id, input.fileId));
 
       return { success: true };
