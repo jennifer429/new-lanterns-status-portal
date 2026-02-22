@@ -969,7 +969,16 @@ export const intakeRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this file" });
       }
 
-      // Delete from database (S3 file remains)
+      // Rename Drive file to delete_<filename> before removing from database
+      if (file.driveFileId) {
+        try {
+          const { storageRename } = await import("../storage");
+          await storageRename(file.driveFileId);
+        } catch (err) {
+          console.error("[intake] Failed to rename Drive file on delete:", err);
+        }
+      }
+
       await db.delete(intakeFileAttachments).where(eq(intakeFileAttachments.id, input.fileId));
 
       return { success: true };

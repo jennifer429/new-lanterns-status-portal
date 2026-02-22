@@ -84,3 +84,27 @@ export async function storageGet(relKey: string): Promise<{ key: string; url: st
 
   return { key: relKey, url: file.webViewLink! };
 }
+
+export async function storageRename(relKey: string): Promise<void> {
+  const drive = getDriveClient();
+  const fileName = relKey.split("/").pop()!;
+
+  const res = await drive.files.list({
+    q: `name = '${fileName}' and trashed = false`,
+    fields: "files(id, name)",
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
+  });
+
+  const file = res.data.files?.[0];
+  if (!file) {
+    console.warn(`[storage] storageRename: file not found in Drive for key: ${relKey}`);
+    return;
+  }
+
+  await drive.files.update({
+    fileId: file.id!,
+    requestBody: { name: `delete_${fileName}` },
+    supportsAllDrives: true,
+  });
+}

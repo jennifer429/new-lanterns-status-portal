@@ -405,7 +405,7 @@ export const adminRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       const [file] = await db
-        .select({ id: intakeFileAttachments.id, organizationId: intakeFileAttachments.organizationId })
+        .select({ id: intakeFileAttachments.id, organizationId: intakeFileAttachments.organizationId, driveFileId: intakeFileAttachments.driveFileId })
         .from(intakeFileAttachments)
         .where(eq(intakeFileAttachments.id, input.id))
         .limit(1);
@@ -417,7 +417,16 @@ export const adminRouter = router({
         if (org && org.clientId !== ctx.user.clientId) throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
       }
 
-      // Delete from database (Drive file kept for audit trail)
+      // Rename Drive file to delete_<filename> before removing from database
+      if (file.driveFileId) {
+        try {
+          const { storageRename } = await import("../storage");
+          await storageRename(file.driveFileId);
+        } catch (err) {
+          console.error("[admin] Failed to rename Drive file on delete:", err);
+        }
+      }
+
       await db.delete(intakeFileAttachments).where(eq(intakeFileAttachments.id, input.id));
       return { success: true };
     }),
