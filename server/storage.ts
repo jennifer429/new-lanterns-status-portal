@@ -14,6 +14,8 @@ async function findFolder(drive: any, name: string, parentId: string): Promise<s
   const res = await drive.files.list({
     q: `name = '${name}' and '${parentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
     fields: "files(id, name)",
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
   });
   return res.data.files?.[0]?.id || null;
 }
@@ -28,11 +30,11 @@ async function findOrCreateFolder(drive: any, name: string, parentId: string): P
       parents: [parentId],
     },
     fields: "id",
+    supportsAllDrives: true,
   });
   return res.data.id!;
 }
 
-// relKey format: "partnerName/customerName/filename.pdf"
 export async function storagePut(
   relKey: string,
   data: Buffer | Uint8Array | string,
@@ -60,11 +62,7 @@ export async function storagePut(
     },
     media: { mimeType: contentType, body: stream },
     fields: "id, webViewLink",
-  });
-
-  await drive.permissions.create({
-    fileId: res.data.id!,
-    requestBody: { role: "reader", type: "anyone" },
+    supportsAllDrives: true,
   });
 
   return { key: relKey, url: res.data.webViewLink! };
@@ -77,6 +75,8 @@ export async function storageGet(relKey: string): Promise<{ key: string; url: st
   const res = await drive.files.list({
     q: `name = '${fileName}' and trashed = false`,
     fields: "files(id, webViewLink)",
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
   });
 
   const file = res.data.files?.[0];
