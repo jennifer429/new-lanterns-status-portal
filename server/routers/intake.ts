@@ -406,10 +406,12 @@ export const intakeRouter = router({
       };
     }),
 
-  /**
-   * Upload file for intake question
-   * Uploads to Google Drive for RadOne organizations
-   */
+/**
+ * Upload file for intake question
+ * Uploads to Google Drive under PartnerName/OrgName/
+ * Filename format: {questionId}_{shortTitle}_{baseName}_YYYYMMDD-HHMM_{uploader}.{ext}
+ */
+ 
   uploadFile: publicProcedure
     .input(
       z.object({
@@ -447,59 +449,63 @@ export const intakeRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this organization" });
       }
 
+      // Look up partner name for Drive folder routing
+      let partnerName = "Unknown";
+      if (org.clientId) {
+        const [client] = await db
+          .select()
+          .from(clients)
+          .where(eq(clients.id, org.clientId))
+          .limit(1);
+        if (client?.name) partnerName = client.name;
+      }
+
       // Get question details from questionnaireData.ts (primary source)
-      // This ensures CF.1-CF.5 and other questions work even if not in DB
       const { questionnaireSections } = await import("../../shared/questionnaireData");
-      let questionText = "";
       let shortTitle = "file";
-      
-      // Find question in questionnaireData.ts
+
       for (const section of questionnaireSections) {
-        if (!section.questions) continue; // Skip workflow sections without questions
+        if (!section.questions) continue;
         const foundQuestion = section.questions.find(q => q.id === input.questionId);
         if (foundQuestion) {
-          questionText = foundQuestion.text; // Use 'text' property, not 'question'
-          // Generate short title from question text (first 3-4 words)
-          const words = questionText.split(' ').slice(0, 4).join('_');
+          const words = foundQuestion.text.split(' ').slice(0, 4).join('_');
           shortTitle = words.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase();
           break;
         }
       }
-      
-      // Optionally check DB for curated shortTitle (if question exists there)
+
+      // Check DB for curated shortTitle
       const [dbQuestion] = await db
         .select()
         .from(questions)
         .where(eq(questions.questionId, input.questionId))
         .limit(1);
+      if (dbQuestion?.shortTitle) shortTitle = dbQuestion.shortTitle;
 
-      if (dbQuestion?.shortTitle) {
-        shortTitle = dbQuestion.shortTitle;
-      }
+      // Build filename: {questionId}_{shortTitle}_{baseName}_YYYYMMDD-HHMM_uploader.ext
+      const now = new Date();
+      const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
+      const uploaderName = input.userEmail.split("@")[0] || "unknown";
+      const ext = input.fileName.includes(".") ? input.fileName.split(".").pop() : "";
+      const baseName = input.fileName.includes(".") ? input.fileName.slice(0, input.fileName.lastIndexOf(".")) : input.fileName;
+      const formattedName = `${input.questionId}_${shortTitle}_${baseName}_${timestamp}_${uploaderName}${ext ? "." + ext : ""}`;
+
+      // Drive path: PartnerName/OrgName/formattedName
+      const driveKey = `${partnerName}/${org.name}/${formattedName}`;
 
       // Decode base64 file data
       const fileBuffer = Buffer.from(input.fileData, "base64");
 
       try {
-        // Build filename: {orgName}_{userEmail}_{questionId}-{shortTitle}_{timestamp}.{ext}
-        const timestamp = Date.now();
-        const fileExt = input.fileName.split('.').pop();
-        const sanitizedEmail = input.userEmail.replace(/@/g, '-at-').replace(/[^a-zA-Z0-9.-]/g, '_');
-        const sanitizedOrgName = org.name.replace(/[^a-zA-Z0-9-]/g, '_');
-        const fileName = `${sanitizedOrgName}_${sanitizedEmail}_${input.questionId}-${shortTitle}_${timestamp}.${fileExt}`;
-        
-        // Upload to S3 using built-in storage helper
         const { storagePut } = await import("../storage");
-        const s3Key = `intake-files/${org.slug}/${fileName}`;
-        const { url: fileUrl } = await storagePut(s3Key, fileBuffer, input.mimeType);
+        const { url: fileUrl } = await storagePut(driveKey, fileBuffer, input.mimeType);
 
-        // Store file info in database
         await db.insert(intakeFileAttachments).values({
           organizationId: org.id,
-          questionId: input.questionId, // String question ID (e.g., "D.13")
+          questionId: input.questionId,
           fileName: input.fileName,
           fileUrl,
-          driveFileId: s3Key, // Store S3 key for reference
+          driveFileId: driveKey,
           fileSize: fileBuffer.length,
           mimeType: input.mimeType,
           uploadedBy: input.userEmail,
@@ -518,7 +524,9 @@ export const intakeRouter = router({
         });
       }
     }),
-
+  
+  
+  
   /**
    * Get all questions from database
    */
@@ -961,7 +969,16 @@ export const intakeRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this file" });
       }
 
-      // Delete from database (S3 file remains)
+      // Rename Drive file to delete_<filename> before removing from database
+      if (file.driveFileId) {
+        try {
+          const { storageRename } = await import("../storage");
+          await storageRename(file.driveFileId);
+        } catch (err) {
+          console.error("[intake] Failed to rename Drive file on delete:", err);
+        }
+      }
+
       await db.delete(intakeFileAttachments).where(eq(intakeFileAttachments.id, input.fileId));
 
       return { success: true };

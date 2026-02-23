@@ -320,3 +320,40 @@ export const specifications = mysqlTable("specifications", {
 
 export type Specification = typeof specifications.$inferSelect;
 export type InsertSpecification = typeof specifications.$inferInsert;
+
+/**
+ * Partner Questionnaires - stores rad onboarding worklist questionnaire responses
+ * Scoped to the partner (client) level — one answer per question per partner, not per site.
+ */
+export const partnerQuestionnaires = mysqlTable("partnerQuestionnaires", {
+  id: int("id").autoincrement().primaryKey(),
+  clientId: int("clientId").notNull(), // FK to clients.id
+  questionId: varchar("questionId", { length: 50 }).notNull(), // e.g., "RW.1", "RW.2"
+  response: text("response"), // Free-text or JSON answer
+  updatedBy: varchar("updatedBy", { length: 320 }), // Email of last editor
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PartnerQuestionnaire = typeof partnerQuestionnaires.$inferSelect;
+export type InsertPartnerQuestionnaire = typeof partnerQuestionnaires.$inferInsert;
+
+/**
+ * Partner Questionnaire Files - stores files uploaded in rad onboarding questionnaire sections
+ * Scoped to the partner (client) level, not per organization.
+ */
+export const partnerQuestionnaireFiles = mysqlTable("partnerQuestionnaireFiles", {
+  id: int("id").autoincrement().primaryKey(),
+  clientId: int("clientId").notNull(), // FK to clients.id
+  questionId: varchar("questionId", { length: 50 }).notNull(), // e.g., "RW.39"
+  fileName: varchar("fileName", { length: 255 }).notNull(),
+  fileUrl: text("fileUrl").notNull(), // S3 URL
+  s3Key: varchar("s3Key", { length: 500 }).notNull(),
+  fileSize: int("fileSize"),
+  mimeType: varchar("mimeType", { length: 100 }),
+  uploadedBy: varchar("uploadedBy", { length: 320 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PartnerQuestionnaireFile = typeof partnerQuestionnaireFiles.$inferSelect;
+export type InsertPartnerQuestionnaireFile = typeof partnerQuestionnaireFiles.$inferInsert;

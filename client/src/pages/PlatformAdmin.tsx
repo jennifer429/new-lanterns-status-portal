@@ -31,8 +31,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Activity, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp } from "lucide-react";
+import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Activity, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp, Stethoscope } from "lucide-react";
 import { questionnaireSections } from "@shared/questionnaireData";
+import { RadOnboardingQuestionnaire } from "@/components/RadOnboardingQuestionnaire";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -52,7 +53,9 @@ import {
 export default function PlatformAdmin() {
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"dashboard" | "users" | "organizations" | "templates" | "partners" | "specs">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "users" | "organizations" | "templates" | "partners" | "specs" | "worklist">("dashboard");
+  // For platform admins on the worklist tab: which partner are we viewing?
+  const [worklistClientId, setWorklistClientId] = useState<number | null>(null);
 
   // Template management state
   const [isUploadTemplateDialogOpen, setIsUploadTemplateDialogOpen] = useState(false);
@@ -105,6 +108,7 @@ export default function PlatformAdmin() {
   const [newPartnerName, setNewPartnerName] = useState("");
   const [newPartnerSlug, setNewPartnerSlug] = useState("");
   const [newPartnerDescription, setNewPartnerDescription] = useState("");
+  const [newPartnerAdminEmail, setNewPartnerAdminEmail] = useState("");
   const [isEditPartnerDialogOpen, setIsEditPartnerDialogOpen] = useState(false);
   const [editPartnerId, setEditPartnerId] = useState<number | null>(null);
   const [editPartnerName, setEditPartnerName] = useState("");
@@ -139,7 +143,7 @@ export default function PlatformAdmin() {
 
   const { data: orgs, isLoading, refetch: refetchOrgs } = trpc.admin.getAllOrganizations.useQuery();
   // Platform admins need the full clients list; partner admins see their own client name from the query
-  const { data: clients } = trpc.admin.getAllClients.useQuery();
+  const { data: clients, refetch: refetchClients } = trpc.admin.getAllClients.useQuery();
   const { data: metrics } = trpc.admin.getAdminSummary.useQuery();
   const { data: allUsers, refetch: refetchUsers } = trpc.admin.getAllUsers.useQuery();
   const { data: templates, refetch: refetchTemplates } = trpc.admin.getTemplates.useQuery();
@@ -489,13 +493,19 @@ export default function PlatformAdmin() {
 
   // Partner mutations
   const createClientMutation = trpc.admin.createClient.useMutation({
-    onSuccess: () => {
-      toast.success("Partner created successfully!");
+    onSuccess: (data) => {
+      if (data.tempPassword) {
+        toast.success(`Partner created! Admin login: ${newPartnerAdminEmail} / Temp password: ${data.tempPassword}`, { duration: 15000 });
+      } else {
+        toast.success("Partner created successfully!");
+      }
       setIsCreatePartnerDialogOpen(false);
       setNewPartnerName("");
       setNewPartnerSlug("");
       setNewPartnerDescription("");
+      setNewPartnerAdminEmail("");
       refetchOrgs();
+      refetchClients();
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to create partner");
@@ -543,6 +553,7 @@ export default function PlatformAdmin() {
       name: newPartnerName,
       slug: newPartnerSlug,
       description: newPartnerDescription || undefined,
+      adminEmail: newPartnerAdminEmail || undefined,
     });
   };
 
@@ -891,6 +902,19 @@ export default function PlatformAdmin() {
             >
               Templates
               {activeTab === "templates" && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab("worklist")}
+              className={`pb-3 px-1 font-medium transition-colors relative ${
+                activeTab === "worklist"
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Rad Worklist
+              {activeTab === "worklist" && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
               )}
             </button>
@@ -2136,6 +2160,16 @@ export default function PlatformAdmin() {
                         onChange={(e) => setNewPartnerDescription(e.target.value)}
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label>Admin Email <span className="text-muted-foreground text-xs">(optional)</span></Label>
+                      <Input
+                        type="email"
+                        placeholder="e.g., admin@radsinc.com"
+                        value={newPartnerAdminEmail}
+                        onChange={(e) => setNewPartnerAdminEmail(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">If provided, a partner admin account will be created and a temp password shown on success.</p>
+                    </div>
                     <Button
                       onClick={handleCreatePartner}
                       disabled={createClientMutation.isPending || !newPartnerName || !newPartnerSlug}
@@ -2446,6 +2480,72 @@ export default function PlatformAdmin() {
                 )}
               </CardContent>
             </Card>
+          </>
+        )}
+        {activeTab === "worklist" && (
+          <>
+            <div className="flex items-center gap-3 mb-6">
+              <Stethoscope className="w-6 h-6 text-primary" />
+              <h2 className="text-2xl font-bold">Rad Onboarding Worklist</h2>
+            </div>
+
+            {/* Platform admins must choose a partner; partner admins see their own */}
+            {isPlatformAdmin ? (
+              <>
+                {!worklistClientId ? (
+                  <Card>
+                    <CardContent className="py-10 text-center space-y-4">
+                      <Stethoscope className="w-10 h-10 text-muted-foreground mx-auto" />
+                      <p className="text-muted-foreground">Select a partner to view or fill out their Rad Onboarding Worklist questionnaire.</p>
+                      <div className="max-w-xs mx-auto">
+                        <Select onValueChange={val => setWorklistClientId(Number(val))}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose a partner…" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {clients?.map(c => (
+                              <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setWorklistClientId(null)}
+                        className="text-sm text-muted-foreground hover:text-foreground underline"
+                      >
+                        ← Change partner
+                      </button>
+                      <span className="text-sm text-muted-foreground">
+                        Viewing: <strong>{clients?.find(c => c.id === worklistClientId)?.name ?? `Partner ${worklistClientId}`}</strong>
+                      </span>
+                    </div>
+                    <RadOnboardingQuestionnaire
+                      clientId={worklistClientId}
+                      partnerName={clients?.find(c => c.id === worklistClientId)?.name ?? `Partner ${worklistClientId}`}
+                    />
+                  </div>
+                )}
+              </>
+            ) : (
+              /* Partner admin — always shows their own questionnaire */
+              user?.clientId ? (
+                <RadOnboardingQuestionnaire
+                  clientId={user.clientId}
+                  partnerName={getPartnerDisplayName(user, clients)}
+                />
+              ) : (
+                <Card>
+                  <CardContent className="py-10 text-center">
+                    <p className="text-muted-foreground">No partner associated with your account.</p>
+                  </CardContent>
+                </Card>
+              )
+            )}
           </>
         )}
       </div>
