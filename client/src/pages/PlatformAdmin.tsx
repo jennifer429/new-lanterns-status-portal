@@ -108,6 +108,7 @@ export default function PlatformAdmin() {
   const [newPartnerName, setNewPartnerName] = useState("");
   const [newPartnerSlug, setNewPartnerSlug] = useState("");
   const [newPartnerDescription, setNewPartnerDescription] = useState("");
+  const [newPartnerAdminEmail, setNewPartnerAdminEmail] = useState("");
   const [isEditPartnerDialogOpen, setIsEditPartnerDialogOpen] = useState(false);
   const [editPartnerId, setEditPartnerId] = useState<number | null>(null);
   const [editPartnerName, setEditPartnerName] = useState("");
@@ -142,7 +143,7 @@ export default function PlatformAdmin() {
 
   const { data: orgs, isLoading, refetch: refetchOrgs } = trpc.admin.getAllOrganizations.useQuery();
   // Platform admins need the full clients list; partner admins see their own client name from the query
-  const { data: clients } = trpc.admin.getAllClients.useQuery();
+  const { data: clients, refetch: refetchClients } = trpc.admin.getAllClients.useQuery();
   const { data: metrics } = trpc.admin.getAdminSummary.useQuery();
   const { data: allUsers, refetch: refetchUsers } = trpc.admin.getAllUsers.useQuery();
   const { data: templates, refetch: refetchTemplates } = trpc.admin.getTemplates.useQuery();
@@ -492,13 +493,19 @@ export default function PlatformAdmin() {
 
   // Partner mutations
   const createClientMutation = trpc.admin.createClient.useMutation({
-    onSuccess: () => {
-      toast.success("Partner created successfully!");
+    onSuccess: (data) => {
+      if (data.tempPassword) {
+        toast.success(`Partner created! Admin login: ${newPartnerAdminEmail} / Temp password: ${data.tempPassword}`, { duration: 15000 });
+      } else {
+        toast.success("Partner created successfully!");
+      }
       setIsCreatePartnerDialogOpen(false);
       setNewPartnerName("");
       setNewPartnerSlug("");
       setNewPartnerDescription("");
+      setNewPartnerAdminEmail("");
       refetchOrgs();
+      refetchClients();
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to create partner");
@@ -546,6 +553,7 @@ export default function PlatformAdmin() {
       name: newPartnerName,
       slug: newPartnerSlug,
       description: newPartnerDescription || undefined,
+      adminEmail: newPartnerAdminEmail || undefined,
     });
   };
 
@@ -2151,6 +2159,16 @@ export default function PlatformAdmin() {
                         value={newPartnerDescription}
                         onChange={(e) => setNewPartnerDescription(e.target.value)}
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Admin Email <span className="text-muted-foreground text-xs">(optional)</span></Label>
+                      <Input
+                        type="email"
+                        placeholder="e.g., admin@radsinc.com"
+                        value={newPartnerAdminEmail}
+                        onChange={(e) => setNewPartnerAdminEmail(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">If provided, a partner admin account will be created and a temp password shown on success.</p>
                     </div>
                     <Button
                       onClick={handleCreatePartner}

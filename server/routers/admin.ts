@@ -175,19 +175,52 @@ export const adminRouter = router({
   }),
 
   createClient: protectedProcedure
-    .input(z.object({
-      name: z.string().min(1, "Name is required"),
-      slug: z.string().min(1, "Slug is required"),
-      description: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        name: z.string().min(1, "Name is required"),
+        slug: z.string().min(1, "Slug is required"),
+        description: z.string().optional(),
+        adminEmail: z.string().email().optional(), // Optional: auto-create partner admin user
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin" || ctx.user.clientId) throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
       const existing = await db.select().from(clients).where(eq(clients.slug, input.slug)).limit(1);
       if (existing.length > 0) throw new TRPCError({ code: "CONFLICT", message: "A partner with this slug already exists" });
+
+      // If admin email provided, make sure it's not already taken
+      if (input.adminEmail) {
+        const existingUser = await db.select().from(users).where(eq(users.email, input.adminEmail.toLowerCase())).limit(1);
+        if (existingUser.length > 0) {
+          throw new TRPCError({ code: "CONFLICT", message: "A user with this admin email already exists" });
+        }
+      }
+
       await db.insert(clients).values({ name: input.name, slug: input.slug, description: input.description || null, status: "active" });
-      return { success: true };
+
+      // Fetch the newly created client to get its id
+      const [newClient] = await db.select().from(clients).where(eq(clients.slug, input.slug)).limit(1);
+
+      let tempPassword: string | undefined;
+
+      // If adminEmail provided, create the partner admin user linked to this client
+      if (input.adminEmail && newClient) {
+        tempPassword = Math.random().toString(36).slice(-10);
+        const passwordHash = await bcrypt.hash(tempPassword, 10);
+        await db.insert(users).values({
+          email: input.adminEmail.toLowerCase(),
+          name: input.adminEmail.split('@')[0],
+          role: 'admin',
+          clientId: newClient.id,
+          passwordHash,
+          loginMethod: 'email',
+          openId: `user-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        });
+      }
+
+      return { success: true, tempPassword };
     }),
 
   updateClient: protectedProcedure
