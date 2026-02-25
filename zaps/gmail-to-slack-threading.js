@@ -30,10 +30,14 @@ const CHANNEL_ID   = 'C0AEH3TDY74';           // #rads-inc channel
 // Map every @newlanterns.org team member's email → their Slack User ID.
 // Only people listed here will be @mentioned when they appear in TO/CC.
 const TEAM_EMAIL_TO_SLACK_ID = {
+  'jennifer@newlanterns.org': 'U09LC42M11Q',
   'jonathan@newlanterns.org': 'U08P1VA5LGK',
   'ryan@newlanterns.org':     'U0292N736D6',
-  // 'jennifer@newlanterns.org': 'U_JENNIFER_SLACK_ID',  // ← fill in real IDs
 };
+
+// Always @mention these people on every post, regardless of TO/CC.
+// Useful when the sender's own address won't appear in the recipient fields.
+const ALWAYS_MENTION = ['U09LC42M11Q']; // Jennifer — sending account
 
 const NEWLANTERNS_DOMAIN = '@newlanterns.org'; // adjust if your domain differs
 
@@ -72,9 +76,12 @@ const unknownTeamMembers = (toField + ' ' + ccField)
   .filter(email => !Object.keys(TEAM_EMAIL_TO_SLACK_ID)
     .some(mapped => email.toLowerCase().includes(mapped.toLowerCase())));
 
-const teamMentionText = mentionedSlackIds.length > 0
-  ? mentionedSlackIds.join(' ') + ' '
-  : '';
+// Combine TO/CC-detected mentions with always-on mentions (deduplicated)
+const allMentionIds = [...new Set([
+  ...ALWAYS_MENTION,
+  ...mentionedSlackIds,
+])];
+const teamMentionText = allMentionIds.map(id => '<@' + id + '>').join(' ') + ' ';
 
 // ── Helper: search Slack channel history for an existing thread marker ────────
 // Searches up to 5 pages of 100 messages (500 messages back) with cursor pagination.
