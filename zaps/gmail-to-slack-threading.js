@@ -33,6 +33,7 @@ const TEAM_EMAIL_TO_SLACK_ID = {
   'jennifer@newlanterns.org': 'U09LC42M11Q',
   'jonathan@newlanterns.org': 'U08P1VA5LGK',
   'ryan@newlanterns.org':     'U0292N736D6',
+  'shiva@newlanterns.org':    'U01S7HA5AUX',
 };
 
 // Always @mention these people on every post, regardless of TO/CC.
