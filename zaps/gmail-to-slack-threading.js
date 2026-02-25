@@ -30,9 +30,9 @@ const CHANNEL_ID   = 'C0AEH3TDY74';           // #rads-inc channel
 // Map every @newlanterns.org team member's email → their Slack User ID.
 // Only people listed here will be @mentioned when they appear in TO/CC.
 const TEAM_EMAIL_TO_SLACK_ID = {
+  'jonathan@newlanterns.org': 'U08P1VA5LGK',
   // 'jennifer@newlanterns.org': 'U_JENNIFER_SLACK_ID',  // ← fill in real IDs
   // 'ryan@newlanterns.org':     'U_RYAN_SLACK_ID',
-  // 'add@newlanterns.org':      'U_ADD_SLACK_ID',
 };
 
 const NEWLANTERNS_DOMAIN = '@newlanterns.org'; // adjust if your domain differs
