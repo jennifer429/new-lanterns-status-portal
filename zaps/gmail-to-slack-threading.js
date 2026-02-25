@@ -124,76 +124,79 @@ async function findExistingThreadTs() {
 }
 
 // ── Main: post to Slack ───────────────────────────────────────────────────────
-const existingThreadTs = await findExistingThreadTs();
+// Wrapped in an async IIFE and uses `output =` as required by Zapier's Code step.
+output = await (async () => {
+  const existingThreadTs = await findExistingThreadTs();
 
-let slackResult;
+  let slackResult;
 
-if (existingThreadTs) {
-  // ── Reply to the existing Slack thread ─────────────────────────────────────
-  const replyText =
-    teamMentionText +
-    '*From:* ' + from + '\n' +
-    '*Subject:* ' + subject + '\n\n' +
-    snippet;
+  if (existingThreadTs) {
+    // ── Reply to the existing Slack thread ───────────────────────────────────
+    const replyText =
+      teamMentionText +
+      '*From:* ' + from + '\n' +
+      '*Subject:* ' + subject + '\n\n' +
+      snippet;
 
-  const resp = await fetch('https://slack.com/api/chat.postMessage', {
-    method: 'POST',
-    headers: {
-      'Authorization': 'Bearer ' + SLACK_TOKEN,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      channel:   CHANNEL_ID,
-      thread_ts: existingThreadTs,
-      text:      replyText,
-      mrkdwn:    true,
-    }),
-  });
-  slackResult = await resp.json();
-  if (!slackResult.ok) throw new Error('Slack reply error: ' + slackResult.error);
+    const resp = await fetch('https://slack.com/api/chat.postMessage', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + SLACK_TOKEN,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        channel:   CHANNEL_ID,
+        thread_ts: existingThreadTs,
+        text:      replyText,
+        mrkdwn:    true,
+      }),
+    });
+    slackResult = await resp.json();
+    if (!slackResult.ok) throw new Error('Slack reply error: ' + slackResult.error);
 
-  return {
-    action:           'replied_to_thread',
-    thread_ts:        existingThreadTs,
-    new_message_ts:   slackResult.ts,
-    subject,
-    team_mentions:    mentionedSlackIds,
-    unknown_team:     unknownTeamMembers, // add these emails to TEAM_EMAIL_TO_SLACK_ID!
-  };
+    return {
+      action:           'replied_to_thread',
+      thread_ts:        existingThreadTs,
+      new_message_ts:   slackResult.ts,
+      subject,
+      team_mentions:    mentionedSlackIds.join(','),
+      unknown_team:     unknownTeamMembers.join(','), // add these emails to TEAM_EMAIL_TO_SLACK_ID!
+    };
 
-} else {
-  // ── Start a new Slack thread ────────────────────────────────────────────────
-  // The threadMarker is embedded invisibly at the top so future runs can find it.
-  const newMessageText =
-    threadMarker + '\n' +          // hidden anchor — DO NOT remove
-    teamMentionText +
-    ':email: *New Email — Rads Inc.*\n' +
-    '*From:* ' + from + '\n' +
-    '*To:* '   + toField + '\n' +
-    (ccField ? '*CC:* ' + ccField + '\n' : '') +
-    '*Subject:* ' + subject + '\n\n' +
-    snippet;
+  } else {
+    // ── Start a new Slack thread ──────────────────────────────────────────────
+    // The threadMarker is embedded at the top so future runs can find it.
+    const newMessageText =
+      threadMarker + '\n' +          // hidden anchor — DO NOT remove
+      teamMentionText +
+      ':email: *New Email — Rads Inc.*\n' +
+      '*From:* ' + from + '\n' +
+      '*To:* '   + toField + '\n' +
+      (ccField ? '*CC:* ' + ccField + '\n' : '') +
+      '*Subject:* ' + subject + '\n\n' +
+      snippet;
 
-  const resp = await fetch('https://slack.com/api/chat.postMessage', {
-    method: 'POST',
-    headers: {
-      'Authorization': 'Bearer ' + SLACK_TOKEN,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      channel: CHANNEL_ID,
-      text:    newMessageText,
-      mrkdwn:  true,
-    }),
-  });
-  slackResult = await resp.json();
-  if (!slackResult.ok) throw new Error('Slack post error: ' + slackResult.error);
+    const resp = await fetch('https://slack.com/api/chat.postMessage', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + SLACK_TOKEN,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        channel: CHANNEL_ID,
+        text:    newMessageText,
+        mrkdwn:  true,
+      }),
+    });
+    slackResult = await resp.json();
+    if (!slackResult.ok) throw new Error('Slack post error: ' + slackResult.error);
 
-  return {
-    action:         'posted_new_thread',
-    thread_ts:      slackResult.ts,
-    subject,
-    team_mentions:  mentionedSlackIds,
-    unknown_team:   unknownTeamMembers, // add these emails to TEAM_EMAIL_TO_SLACK_ID!
-  };
-}
+    return {
+      action:         'posted_new_thread',
+      thread_ts:      slackResult.ts,
+      subject,
+      team_mentions:  mentionedSlackIds.join(','),
+      unknown_team:   unknownTeamMembers.join(','), // add these emails to TEAM_EMAIL_TO_SLACK_ID!
+    };
+  }
+})();
