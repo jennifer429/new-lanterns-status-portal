@@ -1806,3 +1806,10 @@
 
 ## Publish - Feb 22, 2026
 - [ ] Publish latest checkpoint with all bug fixes
+
+## File Upload UI Redesign
+- [x] Replace native browser file input with modern drag-and-drop upload zone
+- [x] Move PHI warning to section header (show once, not per question)
+- [x] Add cleaner file card display with icons for uploaded files
+- [x] Improve visual hierarchy - less clutter, better spacing
+- [x] Style upload area to match dark purple theme

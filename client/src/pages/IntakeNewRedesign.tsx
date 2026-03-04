@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Download, Upload, CheckCircle2, Circle, LogOut, FileText, Shield, Database, FileUp, Network, ClipboardCheck, Star } from "lucide-react";
+import { Loader2, Download, Upload, CheckCircle2, Circle, LogOut, FileText, Shield, Database, FileUp, Network, ClipboardCheck, Star, X, File, CloudUpload, Trash2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,7 +40,28 @@ const sectionIcons: Record<string, any> = {
   "dicom-validation": ClipboardCheck,
 };
 
-// File upload field component with file list display
+// Helper to get file extension icon color
+function getFileIconColor(fileName: string): string {
+  const ext = fileName.split('.').pop()?.toLowerCase() || '';
+  if (['xlsx', 'xls', 'csv'].includes(ext)) return 'text-green-400';
+  if (['pdf'].includes(ext)) return 'text-red-400';
+  if (['doc', 'docx'].includes(ext)) return 'text-blue-400';
+  if (['png', 'jpg', 'jpeg', 'gif'].includes(ext)) return 'text-yellow-400';
+  return 'text-purple-400';
+}
+
+function getFileExtLabel(fileName: string): string {
+  return (fileName.split('.').pop()?.toUpperCase() || 'FILE');
+}
+
+function formatFileSize(bytes: number | null | undefined): string {
+  if (!bytes) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// Modern file upload field component with drag-and-drop
 function FileUploadField({ questionId, isUploading, organizationSlug, onFileUpload, onFileDelete }: {
   questionId: string;
   isUploading: boolean;
@@ -48,75 +69,138 @@ function FileUploadField({ questionId, isUploading, organizationSlug, onFileUplo
   onFileUpload: (questionId: string, file: File) => void;
   onFileDelete: (fileId: number) => void;
 }) {
+  const [isDragging, setIsDragging] = useState(false);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
   const { data: files = [], isLoading } = trpc.intake.getUploadedFiles.useQuery(
     { organizationSlug, questionId },
     { enabled: !!organizationSlug }
   );
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) onFileUpload(questionId, file);
+  };
+
   return (
     <div className="space-y-3">
-      {/* PHI Warning Banner */}
-      <div className="flex items-center gap-2 px-4 py-2 bg-yellow-400/20 border border-yellow-400/50 rounded-md">
-        <span className="text-yellow-400 text-lg">⚠</span>
-        <span className="text-sm font-semibold text-yellow-400">PHI Warning: Do not share Protected Health Information (PHI) or patient data in this portal</span>
-      </div>
-      
-      <Input
-        type="file"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) onFileUpload(questionId, file);
-        }}
-        disabled={isUploading}
-        className="!bg-white !text-black"
-      />
-      {isUploading && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          Uploading...
+      {/* Drop Zone */}
+      <div
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onClick={() => uploadInputRef.current?.click()}
+        className={`relative cursor-pointer rounded-lg border-2 border-dashed transition-all duration-200 ${
+          isDragging
+            ? 'border-purple-400 bg-purple-500/10'
+            : isUploading
+            ? 'border-purple-500/30 bg-purple-500/5 pointer-events-none opacity-60'
+            : 'border-purple-500/30 bg-purple-900/10 hover:border-purple-400/60 hover:bg-purple-500/10'
+        }`}
+      >
+        <div className="flex flex-col items-center justify-center py-6 px-4">
+          {isUploading ? (
+            <>
+              <Loader2 className="w-8 h-8 text-purple-400 animate-spin mb-2" />
+              <p className="text-sm font-medium text-purple-300">Uploading...</p>
+            </>
+          ) : (
+            <>
+              <CloudUpload className={`w-8 h-8 mb-2 transition-colors ${
+                isDragging ? 'text-purple-300' : 'text-purple-500/60'
+              }`} />
+              <p className="text-sm font-medium text-purple-300/80">
+                <span className="text-purple-300 underline underline-offset-2">Click to browse</span>{' '}
+                or drag and drop
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">PDF, Excel, CSV, Word, or image files</p>
+            </>
+          )}
         </div>
-      )}
-      
-      {/* Display uploaded files */}
+        <input
+          ref={uploadInputRef}
+          type="file"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) onFileUpload(questionId, file);
+            // Reset input so same file can be re-uploaded
+            e.target.value = '';
+          }}
+          disabled={isUploading}
+        />
+      </div>
+
+      {/* Uploaded Files */}
       {isLoading ? (
-        <div className="text-sm text-muted-foreground">Loading files...</div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="w-3 h-3 animate-spin" />
+          Loading files...
+        </div>
       ) : files.length > 0 ? (
         <div className="space-y-2">
-          <div className="text-sm font-medium text-muted-foreground">Uploaded Files:</div>
           {files.map((file) => (
-            <div key={file.id} className="flex items-center justify-between p-2 bg-muted/30 rounded border border-border">
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <FileText className="w-4 h-4 text-primary flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <a
-                    href={file.fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm font-medium text-primary hover:underline truncate block"
-                  >
-                    {file.fileName}
-                  </a>
-                  <div className="text-xs text-muted-foreground">
-                    {file.fileSize ? `${(file.fileSize / 1024).toFixed(1)} KB • ` : ''}{new Date(file.createdAt).toLocaleDateString()}
-                  </div>
+            <div key={file.id} className="group flex items-center gap-3 p-3 rounded-lg bg-purple-900/20 border border-purple-500/20 hover:border-purple-500/40 transition-colors">
+              {/* File type icon */}
+              <div className={`flex items-center justify-center w-10 h-10 rounded-lg bg-purple-900/40 border border-purple-500/20 flex-shrink-0`}>
+                <File className={`w-5 h-5 ${getFileIconColor(file.fileName)}`} />
+              </div>
+              {/* File info */}
+              <div className="flex-1 min-w-0">
+                <a
+                  href={file.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium text-purple-200 hover:text-purple-100 truncate block"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {file.fileName}
+                </a>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                  <span className="uppercase font-medium text-purple-400/70">{getFileExtLabel(file.fileName)}</span>
+                  {file.fileSize ? (
+                    <>
+                      <span className="text-purple-500/40">·</span>
+                      <span>{formatFileSize(file.fileSize)}</span>
+                    </>
+                  ) : null}
+                  <span className="text-purple-500/40">·</span>
+                  <span>{new Date(file.createdAt).toLocaleDateString()}</span>
                 </div>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
+              {/* Actions */}
+              <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => window.open(file.fileUrl, '_blank')}
-                  className="h-8 px-2"
+                  onClick={(e) => { e.stopPropagation(); window.open(file.fileUrl, '_blank'); }}
+                  className="h-8 w-8 p-0 text-purple-400 hover:text-purple-300 hover:bg-purple-500/20"
+                  title="Download"
                 >
                   <Download className="w-4 h-4" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => onFileDelete(file.id)}
-                  className="h-8 px-2 text-destructive hover:text-destructive"
+                  onClick={(e) => { e.stopPropagation(); onFileDelete(file.id); }}
+                  className="h-8 w-8 p-0 text-red-400/70 hover:text-red-400 hover:bg-red-500/10"
+                  title="Delete"
                 >
-                  ×
+                  <Trash2 className="w-4 h-4" />
                 </Button>
               </div>
             </div>
@@ -939,14 +1023,7 @@ export default function IntakeNewRedesign() {
               <div className="mb-6">
                 <h2 className="text-2xl font-bold mb-2">{currentSectionData?.title}</h2>
                 {currentSectionData?.description && (
-                  <p className={`text-sm mb-2 flex items-center gap-2 ${
-                    currentSectionData.id === 'config-files' 
-                      ? 'text-yellow-400 font-semibold' 
-                      : 'text-muted-foreground'
-                  }`}>
-                    {currentSectionData.id === 'config-files' && (
-                      <span className="text-yellow-400">★</span>
-                    )}
+                  <p className="text-sm mb-2 text-muted-foreground">
                     {currentSectionData.description}
                   </p>
                 )}
@@ -960,6 +1037,16 @@ export default function IntakeNewRedesign() {
                     </div>
                     <Progress value={calculateSectionProgress(currentSectionData)} className="mt-3 h-2" />
                   </>
+                )}
+
+                {/* PHI Warning - shown once at section level for file upload sections */}
+                {(currentSectionData?.id === 'config-files' || currentSectionData?.id === 'vpn-connectivity') && (
+                  <div className="mt-4 flex items-center gap-3 px-4 py-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                    <Shield className="w-5 h-5 text-yellow-400 flex-shrink-0" />
+                    <p className="text-sm text-yellow-300/90">
+                      <span className="font-semibold">PHI Warning:</span> Do not share Protected Health Information (PHI) or patient data in this portal. Please de-identify all files before uploading.
+                    </p>
+                  </div>
                 )}
               </div>
 
@@ -1012,7 +1099,7 @@ export default function IntakeNewRedesign() {
                   />
                 </div>
               ) : (
-                <div className={`grid ${currentSection === 'data-integration' ? 'grid-cols-1' : 'grid-cols-2'} gap-x-8 gap-y-6`}>
+                <div className={`grid ${(currentSection === 'data-integration' || currentSection === 'config-files') ? 'grid-cols-1' : 'grid-cols-2'} gap-x-8 gap-y-6`}>
                   {currentSectionData?.questions?.filter((question) => {
                     // Filter out hidden conditional questions for numbering
                     if (question.conditionalOn) {
@@ -1027,21 +1114,28 @@ export default function IntakeNewRedesign() {
                     const hasTemplate = (question.type === 'upload' || question.type === 'upload-download') && 
                       (dbTemplateMap.get(question.id) || []).length > 0;
                     
+                    const isUploadType = question.type === 'upload' || question.type === 'upload-download';
+                    
                     return (
                       <div 
                         key={question.id} 
                         data-question-id={question.id}
                         className={`${
-                          currentSection === 'data-integration' ? 'col-span-1' : (question.type === 'textarea' || question.type === 'upload' || question.type === 'upload-download' ? 'col-span-2' : 'col-span-1')
+                          (currentSection === 'data-integration' || currentSection === 'config-files') ? 'col-span-1' : (question.type === 'textarea' || isUploadType ? 'col-span-2' : 'col-span-1')
                         } ${
                           isUnanswered ? 'p-4 border-2 border-red-500 rounded-lg bg-red-500/5' : ''
+                        } ${
+                          isUploadType ? 'p-5 rounded-xl bg-purple-900/10 border border-purple-500/15' : ''
                         }`}
                       >
-                        <Label className="mb-2 block text-base">
+                        <Label className={`mb-3 block ${isUploadType ? 'text-base' : 'text-base'}`}>
                           <span className="text-purple-400 font-bold mr-2">[{question.id}]</span>
                           {question.text}
                           {isUnanswered && <span className="text-red-500 ml-2 font-semibold">* Required</span>}
                         </Label>
+                        {question.notes && isUploadType && (
+                          <p className="text-xs text-muted-foreground mb-3">{question.notes}</p>
+                        )}
                         {/* Show download-fill-upload instructions for file questions with templates */}
                         {hasTemplate && (
                           <div className="flex items-center gap-3 mb-3 px-4 py-2 bg-purple-500/10 border border-purple-500/30 rounded-md">
@@ -1053,7 +1147,7 @@ export default function IntakeNewRedesign() {
                           </div>
                         )}
                         {renderQuestion(question)}
-                        {question.notes && (
+                        {question.notes && !isUploadType && (
                           <p className="text-xs text-muted-foreground mt-1">{question.notes}</p>
                         )}
                       </div>
