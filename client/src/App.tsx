@@ -44,6 +44,13 @@ function Router() {
       <Route path="/org/RadOne/admin">
         {() => <PlatformAdmin />}
       </Route>
+      {/* Generic partner admin routes - supports any partner slug (e.g. /org/rads-inc/admin) */}
+      <Route path="/org/:slug/admin/users">
+        {() => <PlatformAdmin />}
+      </Route>
+      <Route path="/org/:slug/admin">
+        {() => <PlatformAdmin />}
+      </Route>
       <Route path="/org/:slug/intake" component={IntakeNewRedesign} />
       <Route path="/org/:slug/complete" component={IntakeComplete} />
       <Route path="/org/:slug/tasks" component={Tasks} />

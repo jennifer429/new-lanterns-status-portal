@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { fileAttachments, organizations } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
@@ -113,7 +113,7 @@ export const filesRouter = router({
   /**
    * Upload a file to Google Drive and attach links to ClickUp and Linear
    */
-  upload: publicProcedure
+  upload: protectedProcedure
     .input(
       z.object({
         organizationId: z.number(),
@@ -122,12 +122,11 @@ export const filesRouter = router({
         fileName: z.string(),
         fileData: z.string(), // base64 encoded file data
         mimeType: z.string(),
-        uploadedBy: z.string().optional(),
         clickupTaskId: z.string().optional(),
         linearIssueId: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
@@ -162,7 +161,7 @@ export const filesRouter = router({
         fileKey,
         fileSize,
         mimeType: input.mimeType,
-        uploadedBy: input.uploadedBy,
+        uploadedBy: ctx.user.email || "unknown",
       });
 
       // Attach to ClickUp and Linear asynchronously
@@ -188,7 +187,7 @@ export const filesRouter = router({
   /**
    * Get files for a specific task
    */
-  getByTask: publicProcedure
+  getByTask: protectedProcedure
     .input(
       z.object({
         organizationId: z.number(),
@@ -215,7 +214,7 @@ export const filesRouter = router({
   /**
    * Delete a file
    */
-  delete: publicProcedure
+  delete: protectedProcedure
     .input(
       z.object({
         fileId: z.number(),
