@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Download, Upload, CheckCircle2, Circle, LogOut, FileText, Shield, Database, FileUp, Network, ClipboardCheck, Star, X, File, CloudUpload, Trash2 } from "lucide-react";
+import { Loader2, Download, Upload, CheckCircle2, Circle, LogOut, FileText, Shield, Database, FileUp, Network, ClipboardCheck, Star, X, File, CloudUpload, Trash2, Paperclip, FileIcon } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,13 +61,16 @@ function formatFileSize(bytes: number | null | undefined): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-// Modern file upload field component with drag-and-drop
-function FileUploadField({ questionId, isUploading, organizationSlug, onFileUpload, onFileDelete }: {
+// Compact file upload row component - matches user's approved mockup
+function CompactFileUploadRow({ questionId, questionText, questionNotes, isUploading, organizationSlug, onFileUpload, onFileDelete, templates }: {
   questionId: string;
+  questionText: string;
+  questionNotes?: string;
   isUploading: boolean;
   organizationSlug: string;
   onFileUpload: (questionId: string, file: File) => void;
   onFileDelete: (fileId: number) => void;
+  templates?: Array<{ fileName: string; fileUrl: string; label: string }>;
 }) {
   const [isDragging, setIsDragging] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement>(null);
@@ -76,137 +79,128 @@ function FileUploadField({ questionId, isUploading, organizationSlug, onFileUplo
     { enabled: !!organizationSlug }
   );
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  };
+  const hasFiles = files.length > 0;
 
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) onFileUpload(questionId, file);
-  };
+  // Shorten the question text: take the part after the colon if present
+  const shortTitle = questionText.includes(':') 
+    ? questionText.split(':')[0].trim()
+    : questionText;
+  const description = questionText.includes(':')
+    ? questionText.split(':').slice(1).join(':').trim()
+    : questionNotes || '';
 
   return (
-    <div className="space-y-3">
-      {/* Drop Zone */}
-      <div
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={() => uploadInputRef.current?.click()}
-        className={`relative cursor-pointer rounded-lg border-2 border-dashed transition-all duration-200 ${
-          isDragging
-            ? 'border-purple-400 bg-purple-500/10'
-            : isUploading
-            ? 'border-purple-500/30 bg-purple-500/5 pointer-events-none opacity-60'
-            : 'border-purple-500/30 bg-purple-900/10 hover:border-purple-400/60 hover:bg-purple-500/10'
-        }`}
-      >
-        <div className="flex flex-col items-center justify-center py-6 px-4">
-          {isUploading ? (
-            <>
-              <Loader2 className="w-8 h-8 text-purple-400 animate-spin mb-2" />
-              <p className="text-sm font-medium text-purple-300">Uploading...</p>
-            </>
+    <div
+      onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
+      onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); }}
+      onDrop={(e) => {
+        e.preventDefault(); e.stopPropagation(); setIsDragging(false);
+        const file = e.dataTransfer.files?.[0];
+        if (file) onFileUpload(questionId, file);
+      }}
+      className={`flex items-center gap-4 px-4 py-2 rounded-lg border transition-all ${
+        isDragging
+          ? 'border-purple-400 bg-purple-500/10'
+          : 'border-purple-500/20 bg-purple-900/10 hover:border-purple-500/30'
+      }`}
+    >
+      {/* Left: Title + description + file status */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-purple-400 font-bold text-xs">[{questionId}]</span>
+          <span className="text-sm font-semibold text-foreground">{shortTitle}</span>
+        </div>
+        {description && (
+          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{description}</p>
+        )}
+        {/* File status line */}
+        <div className="mt-1">
+          {isLoading ? (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              <span>Loading...</span>
+            </div>
+          ) : hasFiles ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {files.map((file) => (
+                <div key={file.id} className="flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/20 border border-green-500/30 text-xs font-medium text-green-400">
+                    <CheckCircle2 className="w-3 h-3" />
+                    Uploaded
+                  </span>
+                  <a
+                    href={file.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-purple-300 hover:text-purple-200 truncate max-w-[180px]"
+                  >
+                    {file.fileName}
+                  </a>
+                  <Paperclip className="w-3 h-3 text-muted-foreground" />
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onFileDelete(file.id); }}
+                    className="text-xs text-muted-foreground hover:text-red-400 transition-colors"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
           ) : (
-            <>
-              <CloudUpload className={`w-8 h-8 mb-2 transition-colors ${
-                isDragging ? 'text-purple-300' : 'text-purple-500/60'
-              }`} />
-              <p className="text-sm font-medium text-purple-300/80">
-                <span className="text-purple-300 underline underline-offset-2">Click to browse</span>{' '}
-                or drag and drop
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">PDF, Excel, CSV, Word, or image files</p>
-            </>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <FileIcon className="w-3 h-3" />
+              <span>No file uploaded</span>
+            </div>
           )}
         </div>
-        <input
-          ref={uploadInputRef}
-          type="file"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) onFileUpload(questionId, file);
-            // Reset input so same file can be re-uploaded
-            e.target.value = '';
-          }}
-          disabled={isUploading}
-        />
       </div>
 
-      {/* Uploaded Files */}
-      {isLoading ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="w-3 h-3 animate-spin" />
-          Loading files...
-        </div>
-      ) : files.length > 0 ? (
-        <div className="space-y-2">
-          {files.map((file) => (
-            <div key={file.id} className="group flex items-center gap-3 p-3 rounded-lg bg-purple-900/20 border border-purple-500/20 hover:border-purple-500/40 transition-colors">
-              {/* File type icon */}
-              <div className={`flex items-center justify-center w-10 h-10 rounded-lg bg-purple-900/40 border border-purple-500/20 flex-shrink-0`}>
-                <File className={`w-5 h-5 ${getFileIconColor(file.fileName)}`} />
-              </div>
-              {/* File info */}
-              <div className="flex-1 min-w-0">
-                <a
-                  href={file.fileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm font-medium text-purple-200 hover:text-purple-100 truncate block"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {file.fileName}
-                </a>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                  <span className="uppercase font-medium text-purple-400/70">{getFileExtLabel(file.fileName)}</span>
-                  {file.fileSize ? (
-                    <>
-                      <span className="text-purple-500/40">·</span>
-                      <span>{formatFileSize(file.fileSize)}</span>
-                    </>
-                  ) : null}
-                  <span className="text-purple-500/40">·</span>
-                  <span>{new Date(file.createdAt).toLocaleDateString()}</span>
-                </div>
-              </div>
-              {/* Actions */}
-              <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => { e.stopPropagation(); window.open(file.fileUrl, '_blank'); }}
-                  className="h-8 w-8 p-0 text-purple-400 hover:text-purple-300 hover:bg-purple-500/20"
-                  title="Download"
-                >
-                  <Download className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => { e.stopPropagation(); onFileDelete(file.id); }}
-                  className="h-8 w-8 p-0 text-red-400/70 hover:text-red-400 hover:bg-red-500/10"
-                  title="Delete"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : null}
+      {/* Right: Template download + Upload button */}
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {templates && templates.length > 0 && templates.map((tmpl, idx) => (
+          <Button
+            key={idx}
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const link = document.createElement('a');
+              link.href = tmpl.fileUrl;
+              link.download = tmpl.fileName;
+              link.click();
+            }}
+            className="h-8 text-xs bg-transparent border-purple-500/30 text-purple-300 hover:bg-purple-500/10 hover:text-purple-200"
+          >
+            <Download className="w-3 h-3 mr-1" />
+            Template
+          </Button>
+        ))}
+        <Button
+          onClick={() => uploadInputRef.current?.click()}
+          disabled={isUploading}
+          className="h-8 px-4 bg-purple-600 hover:bg-purple-700 text-white font-medium text-sm"
+        >
+          {isUploading ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <>
+              <Upload className="w-4 h-4 mr-1.5" />
+              Upload
+            </>
+          )}
+        </Button>
+      </div>
+
+      <input
+        ref={uploadInputRef}
+        type="file"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) onFileUpload(questionId, file);
+          e.target.value = '';
+        }}
+        disabled={isUploading}
+      />
     </div>
   );
 }
@@ -710,56 +704,15 @@ export default function IntakeNewRedesign() {
         );
 
       case 'upload':
-        const uploadTemplates = dbTemplateMap.get(question.id) || [];
-        return (
-          <div className="space-y-4">
-            {/* Show DB templates if any exist for this upload question */}
-            {uploadTemplates.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {uploadTemplates.map((tmpl, idx) => (
-                  <Button
-                    key={idx}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const link = document.createElement('a');
-                      link.href = tmpl.fileUrl;
-                      link.download = tmpl.fileName;
-                      link.click();
-                    }}
-                    className="bg-purple-600 hover:bg-purple-700 text-white border-purple-500"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download {tmpl.label} ({tmpl.fileName})
-                  </Button>
-                ))}
-              </div>
-            )}
-            <FileUploadField
-              questionId={question.id}
-              isUploading={isUploading}
-              organizationSlug={slug || ''}
-              onFileUpload={handleFileUpload}
-              onFileDelete={(fileId) => {
-                deleteMutation.mutate({
-                  organizationSlug: slug || '',
-                  fileId,
-                });
-              }}
-            />
-          </div>
-        );
-
       case 'upload-download':
-        // Templates are managed via the Templates tab in the admin dashboard
-        const templatesToShow = dbTemplateMap.get(question.id) || [];
-        
+        // For config-files section, rendering is handled by the compact layout below.
+        // For other sections (e.g., vpn-connectivity), render inline upload.
+        const inlineTemplates = dbTemplateMap.get(question.id) || [];
         return (
-          <div className="space-y-4">
-            {/* Download Template Button(s) */}
-            {templatesToShow.length > 0 && (
+          <div className="space-y-3">
+            {inlineTemplates.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                {templatesToShow.map((tmpl, idx) => (
+                {inlineTemplates.map((tmpl, idx) => (
                   <Button
                     key={idx}
                     variant="outline"
@@ -778,14 +731,14 @@ export default function IntakeNewRedesign() {
                 ))}
               </div>
             )}
-            
-            {/* File Upload Field */}
-            <FileUploadField
+            <CompactFileUploadRow
               questionId={question.id}
+              questionText={question.text}
+              questionNotes={question.notes}
               isUploading={isUploading}
               organizationSlug={slug || ''}
               onFileUpload={handleFileUpload}
-              onFileDelete={(fileId) => {
+              onFileDelete={(fileId: number) => {
                 deleteMutation.mutate({
                   organizationSlug: slug || '',
                   fileId,
@@ -1016,19 +969,29 @@ export default function IntakeNewRedesign() {
         </div>
 
         {/* Section Content */}
-        <div className="flex-1 overflow-y-auto p-8">
+        <div className={`flex-1 overflow-y-auto ${currentSection === 'config-files' ? 'p-3' : 'p-8'}`}>
           <Card className="max-w-6xl mx-auto bg-black/40 backdrop-blur-sm border-purple-500/20">
-            <div className="p-8">
+            <div className={currentSection === 'config-files' ? 'p-4' : 'p-8'}>
               {/* Section Header */}
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold mb-2">{currentSectionData?.title}</h2>
-                {currentSectionData?.description && (
+              <div className={currentSection === 'config-files' ? 'mb-3' : 'mb-6'}>
+                <div className={currentSection === 'config-files' ? 'flex items-center justify-between' : ''}>
+                  <h2 className={currentSection === 'config-files' ? 'text-xl font-bold' : 'text-2xl font-bold mb-2'}>{currentSectionData?.title}</h2>
+                  {currentSection === 'config-files' && currentSectionData?.questions && (
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-muted-foreground">
+                        {currentSectionData.questions.filter(q => responses[q.id]).length || 0}/{currentSectionData.questions.length} uploaded
+                      </span>
+                      <Progress value={calculateSectionProgress(currentSectionData)} className="h-1.5 w-24" />
+                    </div>
+                  )}
+                </div>
+                {currentSection !== 'config-files' && currentSectionData?.description && (
                   <p className="text-sm mb-2 text-muted-foreground">
                     {currentSectionData.description}
                   </p>
                 )}
-                {/* Only show progress for standard sections with questions */}
-                {currentSectionData?.questions && (
+                {/* Only show progress for standard sections with questions (not config-files, handled inline above) */}
+                {currentSection !== 'config-files' && currentSectionData?.questions && (
                   <>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span>
@@ -1039,8 +1002,14 @@ export default function IntakeNewRedesign() {
                   </>
                 )}
 
-                {/* PHI Warning - shown once at section level for file upload sections */}
-                {(currentSectionData?.id === 'config-files' || currentSectionData?.id === 'vpn-connectivity') && (
+                {/* PHI Warning - compact inline for config-files, full for others */}
+                {(currentSectionData?.id === 'config-files') && (
+                  <p className="text-xs text-yellow-400/80 mt-1.5 flex items-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span>De-identify all files before uploading. Do not share PHI or patient data.</span>
+                  </p>
+                )}
+                {(currentSectionData?.id === 'vpn-connectivity') && (
                   <div className="mt-4 flex items-center gap-3 px-4 py-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
                     <Shield className="w-5 h-5 text-yellow-400 flex-shrink-0" />
                     <p className="text-sm text-yellow-300/90">
@@ -1098,8 +1067,30 @@ export default function IntakeNewRedesign() {
                     }}
                   />
                 </div>
+              ) : currentSection === 'config-files' ? (
+                /* Compact single-screen layout for Configuration Files */
+                <div className="space-y-1">
+                  {currentSectionData?.questions?.map((question) => (
+                    <CompactFileUploadRow
+                      key={question.id}
+                      questionId={question.id}
+                      questionText={question.text}
+                      questionNotes={question.notes}
+                      isUploading={uploadingFiles.has(question.id)}
+                      organizationSlug={slug || ''}
+                      onFileUpload={handleFileUpload}
+                      onFileDelete={(fileId: number) => {
+                        deleteMutation.mutate({
+                          organizationSlug: slug || '',
+                          fileId,
+                        });
+                      }}
+                      templates={dbTemplateMap.get(question.id) || undefined}
+                    />
+                  ))}
+                </div>
               ) : (
-                <div className={`grid ${(currentSection === 'data-integration' || currentSection === 'config-files') ? 'grid-cols-1' : 'grid-cols-2'} gap-x-8 gap-y-6`}>
+                <div className={`grid ${currentSection === 'data-integration' ? 'grid-cols-1' : 'grid-cols-2'} gap-x-8 gap-y-6`}>
                   {currentSectionData?.questions?.filter((question) => {
                     // Filter out hidden conditional questions for numbering
                     if (question.conditionalOn) {
@@ -1121,14 +1112,14 @@ export default function IntakeNewRedesign() {
                         key={question.id} 
                         data-question-id={question.id}
                         className={`${
-                          (currentSection === 'data-integration' || currentSection === 'config-files') ? 'col-span-1' : (question.type === 'textarea' || isUploadType ? 'col-span-2' : 'col-span-1')
+                          currentSection === 'data-integration' ? 'col-span-1' : (question.type === 'textarea' || isUploadType ? 'col-span-2' : 'col-span-1')
                         } ${
                           isUnanswered ? 'p-4 border-2 border-red-500 rounded-lg bg-red-500/5' : ''
                         } ${
-                          isUploadType ? 'p-5 rounded-xl bg-purple-900/10 border border-purple-500/15' : ''
+                          isUploadType ? 'p-4 rounded-lg bg-purple-900/10 border border-purple-500/15' : ''
                         }`}
                       >
-                        <Label className={`mb-3 block ${isUploadType ? 'text-base' : 'text-base'}`}>
+                        <Label className="mb-3 block text-base">
                           <span className="text-purple-400 font-bold mr-2">[{question.id}]</span>
                           {question.text}
                           {isUnanswered && <span className="text-red-500 ml-2 font-semibold">* Required</span>}
@@ -1136,7 +1127,6 @@ export default function IntakeNewRedesign() {
                         {question.notes && isUploadType && (
                           <p className="text-xs text-muted-foreground mb-3">{question.notes}</p>
                         )}
-                        {/* Show download-fill-upload instructions for file questions with templates */}
                         {hasTemplate && (
                           <div className="flex items-center gap-3 mb-3 px-4 py-2 bg-purple-500/10 border border-purple-500/30 rounded-md">
                             <span className="text-sm text-purple-300">
@@ -1157,7 +1147,7 @@ export default function IntakeNewRedesign() {
               )}
 
               {/* Bottom Buttons */}
-              <div className="flex items-center justify-between mt-8 pt-6 border-t">
+              <div className={`flex items-center justify-between border-t ${currentSection === 'config-files' ? 'mt-2 pt-2' : 'mt-8 pt-6'}`}>
                 <Button
                   variant="outline"
                   onClick={() => setLocation(`/org/${slug}`)}

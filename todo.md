@@ -1827,11 +1827,19 @@
 - [ ] Show "Not uploaded" / "Uploaded" status badges per row
 
 ## File Upload UI Redesign v3 - User's Preferred Compact Card Pattern
-- [ ] Rewrite FileUploadField as compact card row: title+description left, Upload button right
-- [ ] Uploaded state: green "Uploaded" badge + filename + paperclip icon + "Replace" link
-- [ ] Empty state: subtle "No file uploaded" with file icon
-- [ ] Remove dashed dropzone per question, use Upload button to trigger file picker
-- [ ] Single helper line at section top instead of repeated instructions
-- [ ] Remove repeated PHI warnings per question (keep single one at section level)
-- [ ] Flatten card styling: subtle border, no gradients/glows, dark theme consistent
-- [ ] Support drag-and-drop on each card row (not a separate dropzone)
+- [x] Rewrite FileUploadField as compact card row: title+description left, Upload button right
+- [x] Uploaded state: green "Uploaded" badge + filename + paperclip icon + "Replace" link
+- [x] Empty state: subtle "No file uploaded" with file icon
+- [x] Remove dashed dropzone per question, use Upload button to trigger file picker
+- [x] Single helper line at section top instead of repeated instructions
+- [x] Remove repeated PHI warnings per question (keep single one at section level)
+- [x] Flatten card styling: subtle border, no gradients/glows, dark theme consistent
+- [x] Support drag-and-drop on each card row (not a separate dropzone)
+
+## File Upload - One Screen Layout
+- [x] Redesign Configuration Files to fit on one screen without scrolling
+- [x] Use compact row pattern: title + description left, Upload button right
+- [x] Uploaded state: green badge + filename + Replace link
+- [x] Empty state: subtle "No file uploaded" text
+- [x] Remove large dropzones, use tight rows
+- [x] Single section header with PHI warning, no per-question warnings
