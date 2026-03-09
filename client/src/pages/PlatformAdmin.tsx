@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
@@ -31,7 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Activity, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp } from "lucide-react";
+import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Activity, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp, Headphones, AlertTriangle, AlertCircle, Info, Image, CheckSquare, BarChart3 } from "lucide-react";
 import { questionnaireSections } from "@shared/questionnaireData";
 import { toast } from "sonner";
 import {
@@ -52,7 +52,82 @@ import {
 export default function PlatformAdmin() {
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"dashboard" | "users" | "organizations" | "templates" | "partners" | "specs">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "users" | "organizations" | "templates" | "partners" | "specs" | "support-hub">("dashboard");
+
+  // Support Hub state
+  const [hubNotes, setHubNotes] = useState<Record<number, string>>({});
+  const [hubIssues, setHubIssues] = useState<Record<number, { text: string; severity: "low" | "medium" | "high"; resolved: boolean }[]>>({});
+  const [hubDiagrams, setHubDiagrams] = useState<Record<number, { name: string; url: string; isImage: boolean }[]>>({});
+  const [newIssueText, setNewIssueText] = useState<Record<number, string>>({});
+  const [newIssueSeverity, setNewIssueSeverity] = useState<Record<number, "low" | "medium" | "high">>({});
+  const [hubDiagramRefs] = useState<Record<number, React.RefObject<HTMLInputElement>>>({});
+
+  const getHubDiagramRef = (orgId: number): React.RefObject<HTMLInputElement> => {
+    if (!hubDiagramRefs[orgId]) {
+      (hubDiagramRefs as any)[orgId] = { current: null };
+    }
+    return hubDiagramRefs[orgId];
+  };
+
+  const handleHubDiagramUpload = (orgId: number, files: FileList | null) => {
+    if (!files) return;
+    const newFiles = Array.from(files).map(file => ({
+      name: file.name,
+      url: URL.createObjectURL(file),
+      isImage: file.type.startsWith("image/"),
+    }));
+    setHubDiagrams(prev => ({ ...prev, [orgId]: [...(prev[orgId] || []), ...newFiles] }));
+  };
+
+  const addHubIssue = (orgId: number) => {
+    const text = newIssueText[orgId]?.trim();
+    if (!text) return;
+    const severity = newIssueSeverity[orgId] || "medium";
+    setHubIssues(prev => ({
+      ...prev,
+      [orgId]: [...(prev[orgId] || []), { text, severity, resolved: false }],
+    }));
+    setNewIssueText(prev => ({ ...prev, [orgId]: "" }));
+  };
+
+  const toggleIssueResolved = (orgId: number, idx: number) => {
+    setHubIssues(prev => ({
+      ...prev,
+      [orgId]: (prev[orgId] || []).map((issue, i) =>
+        i === idx ? { ...issue, resolved: !issue.resolved } : issue
+      ),
+    }));
+  };
+
+  const exportSupportHubCSV = () => {
+    if (!orgs || !metrics) return;
+    const rows = [
+      ["Organization", "Partner", "Status", "Completion %", "Sections Complete", "Files", "Open Issues", "Notes"],
+    ];
+    orgs.forEach(org => {
+      const m = metricsMap[org.id];
+      const partner = org.clientId ? clientMap[org.clientId] || "" : "";
+      const openIssues = (hubIssues[org.id] || []).filter(i => !i.resolved).length;
+      rows.push([
+        org.name,
+        partner,
+        org.status || "",
+        String(m?.completionPercent || 0),
+        String(m?.sectionsComplete || 0),
+        String(m?.files.length || 0),
+        String(openIssues),
+        hubNotes[org.id] || "",
+      ]);
+    });
+    const csv = rows.map(r => r.map(v => `"${v.replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "support-hub-export.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   // Template management state
   const [isUploadTemplateDialogOpen, setIsUploadTemplateDialogOpen] = useState(false);
@@ -924,6 +999,20 @@ export default function PlatformAdmin() {
                 )}
               </button>
             )}
+            <button
+              onClick={() => setActiveTab("support-hub")}
+              className={`pb-3 px-1 font-medium transition-colors relative flex items-center gap-1.5 ${
+                activeTab === "support-hub"
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Headphones className="w-4 h-4" />
+              Support Hub
+              {activeTab === "support-hub" && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+              )}
+            </button>
           </div>
         </div>
       </header>
@@ -2446,6 +2535,273 @@ export default function PlatformAdmin() {
                 )}
               </CardContent>
             </Card>
+          </>
+        )}
+
+        {/* ── SUPPORT HUB TAB ── */}
+        {activeTab === "support-hub" && (
+          <>
+            {/* Header row */}
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  <Headphones className="w-6 h-6 text-primary" />
+                  Prod Support Hub
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Quick-reference for all clients — status, issues, diagrams, and notes in one place.
+                </p>
+              </div>
+              <Button onClick={exportSupportHubCSV} variant="outline">
+                <Download className="w-4 h-4 mr-2" />
+                Export CSV
+              </Button>
+            </div>
+
+            {/* Summary strip */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              {[
+                { label: "Total Orgs", value: orgs?.length || 0, icon: <ClipboardList className="w-5 h-5 text-primary" /> },
+                { label: "Active", value: orgs?.filter(o => o.status === "active").length || 0, icon: <CheckCircle2 className="w-5 h-5 text-green-500" /> },
+                { label: "Open Issues", value: Object.values(hubIssues).flat().filter(i => !i.resolved).length, icon: <AlertCircle className="w-5 h-5 text-red-500" /> },
+                { label: "Avg Completion", value: `${orgs?.length ? Math.round((orgs.reduce((s, o) => s + (metricsMap[o.id]?.completionPercent || 0), 0)) / orgs.length) : 0}%`, icon: <BarChart3 className="w-5 h-5 text-blue-500" /> },
+              ].map((stat, i) => (
+                <Card key={i} className="border border-border/50">
+                  <CardContent className="p-4 flex items-center gap-3">
+                    {stat.icon}
+                    <div>
+                      <div className="text-xl font-bold">{stat.value}</div>
+                      <div className="text-xs text-muted-foreground">{stat.label}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Per-org reference cards */}
+            <div className="space-y-6">
+              {(orgs || []).map(org => {
+                const m = metricsMap[org.id];
+                const partner = org.clientId ? (clientMap[org.clientId] || `Partner ${org.clientId}`) : "Platform";
+                const openIssues = (hubIssues[org.id] || []).filter(i => !i.resolved);
+                const resolvedIssues = (hubIssues[org.id] || []).filter(i => i.resolved);
+                const diagrams = hubDiagrams[org.id] || [];
+
+                return (
+                  <Card key={org.id} className="border border-border/50">
+                    <CardContent className="p-0">
+                      {/* Card header */}
+                      <div className="flex items-center justify-between p-4 border-b border-border/50 bg-muted/20">
+                        <div className="flex items-center gap-3">
+                          <ClipboardList className="w-5 h-5 text-primary" />
+                          <div>
+                            <div className="font-semibold">{org.name}</div>
+                            <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
+                              <Badge variant="outline" className="text-xs">{partner}</Badge>
+                              <Badge
+                                variant="outline"
+                                className={`text-xs ${
+                                  org.status === "active" ? "border-green-500/50 text-green-600" :
+                                  org.status === "completed" ? "border-blue-500/50 text-blue-600" :
+                                  "border-muted-foreground/50"
+                                }`}
+                              >
+                                {org.status || "active"}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-6 text-sm">
+                          <div className="text-center">
+                            <div className={`text-xl font-bold ${m?.completionPercent === 100 ? "text-green-500" : "text-primary"}`}>
+                              {m?.completionPercent || 0}%
+                            </div>
+                            <div className="text-xs text-muted-foreground">Intake</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-xl font-bold">{m?.files.length || 0}</div>
+                            <div className="text-xs text-muted-foreground">Files</div>
+                          </div>
+                          <div className="text-center">
+                            <div className={`text-xl font-bold ${openIssues.length > 0 ? "text-red-500" : "text-muted-foreground"}`}>
+                              {openIssues.length}
+                            </div>
+                            <div className="text-xs text-muted-foreground">Open Issues</div>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => window.open(`/org/${org.slug}`, "_blank")}
+                          >
+                            <ExternalLink className="w-3 h-3 mr-1" />
+                            Portal
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Card body — 3-column layout */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border/50">
+
+                        {/* Column 1: Issues */}
+                        <div className="p-4">
+                          <h4 className="text-sm font-semibold mb-3 flex items-center gap-1.5">
+                            <AlertCircle className="w-4 h-4 text-red-500" />
+                            Issues
+                          </h4>
+
+                          {/* Add issue */}
+                          <div className="flex gap-2 mb-3">
+                            <input
+                              type="text"
+                              placeholder="Add an issue..."
+                              value={newIssueText[org.id] || ""}
+                              onChange={e => setNewIssueText(prev => ({ ...prev, [org.id]: e.target.value }))}
+                              onKeyDown={e => e.key === "Enter" && addHubIssue(org.id)}
+                              className="flex-1 text-xs border border-border/50 rounded px-2 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                            />
+                            <select
+                              value={newIssueSeverity[org.id] || "medium"}
+                              onChange={e => setNewIssueSeverity(prev => ({ ...prev, [org.id]: e.target.value as any }))}
+                              className="text-xs border border-border/50 rounded px-1.5 py-1.5 bg-background"
+                            >
+                              <option value="low">Low</option>
+                              <option value="medium">Med</option>
+                              <option value="high">High</option>
+                            </select>
+                            <Button size="sm" variant="outline" className="px-2" onClick={() => addHubIssue(org.id)}>
+                              <Plus className="w-3 h-3" />
+                            </Button>
+                          </div>
+
+                          {openIssues.length === 0 && resolvedIssues.length === 0 ? (
+                            <p className="text-xs text-muted-foreground">No issues logged</p>
+                          ) : (
+                            <div className="space-y-1.5">
+                              {openIssues.map((issue, idx) => {
+                                const realIdx = (hubIssues[org.id] || []).indexOf(issue);
+                                return (
+                                  <div key={idx} className="flex items-start gap-2">
+                                    <button onClick={() => toggleIssueResolved(org.id, realIdx)} className="mt-0.5 shrink-0">
+                                      <Circle className="w-3.5 h-3.5 text-muted-foreground hover:text-green-500" />
+                                    </button>
+                                    <span className={`text-xs flex-1 ${
+                                      issue.severity === "high" ? "text-red-500" :
+                                      issue.severity === "medium" ? "text-amber-500" : "text-foreground"
+                                    }`}>{issue.text}</span>
+                                    <Badge variant="outline" className={`text-[10px] shrink-0 ${
+                                      issue.severity === "high" ? "border-red-500/50 text-red-500" :
+                                      issue.severity === "medium" ? "border-amber-500/50 text-amber-500" :
+                                      "border-border/50"
+                                    }`}>{issue.severity}</Badge>
+                                  </div>
+                                );
+                              })}
+                              {resolvedIssues.length > 0 && (
+                                <div className="pt-1 border-t border-border/30 space-y-1">
+                                  {resolvedIssues.map((issue, idx) => {
+                                    const realIdx = (hubIssues[org.id] || []).indexOf(issue);
+                                    return (
+                                      <div key={idx} className="flex items-start gap-2 opacity-50">
+                                        <button onClick={() => toggleIssueResolved(org.id, realIdx)} className="mt-0.5 shrink-0">
+                                          <CheckSquare className="w-3.5 h-3.5 text-green-500" />
+                                        </button>
+                                        <span className="text-xs line-through flex-1">{issue.text}</span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Column 2: Notes */}
+                        <div className="p-4">
+                          <h4 className="text-sm font-semibold mb-3 flex items-center gap-1.5">
+                            <Info className="w-4 h-4 text-blue-500" />
+                            Notes
+                          </h4>
+                          <textarea
+                            value={hubNotes[org.id] || ""}
+                            onChange={e => setHubNotes(prev => ({ ...prev, [org.id]: e.target.value }))}
+                            placeholder="Support notes, escalation contacts, known configs..."
+                            rows={5}
+                            className="w-full text-xs border border-border/50 rounded px-2 py-1.5 bg-background resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+                          />
+                        </div>
+
+                        {/* Column 3: Diagrams */}
+                        <div className="p-4">
+                          <h4 className="text-sm font-semibold mb-3 flex items-center justify-between">
+                            <span className="flex items-center gap-1.5">
+                              <Image className="w-4 h-4 text-purple-500" />
+                              Diagrams
+                            </span>
+                            <label className="cursor-pointer">
+                              <input
+                                type="file"
+                                accept="image/*,.pdf,.svg"
+                                multiple
+                                className="hidden"
+                                onChange={e => handleHubDiagramUpload(org.id, e.target.files)}
+                              />
+                              <span className="text-xs text-primary hover:underline flex items-center gap-1">
+                                <Upload className="w-3 h-3" />
+                                Upload
+                              </span>
+                            </label>
+                          </h4>
+                          {diagrams.length === 0 ? (
+                            <label className="cursor-pointer">
+                              <input
+                                type="file"
+                                accept="image/*,.pdf,.svg"
+                                multiple
+                                className="hidden"
+                                onChange={e => handleHubDiagramUpload(org.id, e.target.files)}
+                              />
+                              <div className="border-2 border-dashed border-border/50 rounded-lg p-4 text-center hover:border-primary/50 hover:bg-muted/20 transition-colors">
+                                <Image className="w-6 h-6 text-muted-foreground mx-auto mb-1" />
+                                <p className="text-xs text-muted-foreground">Upload network or architecture diagrams</p>
+                              </div>
+                            </label>
+                          ) : (
+                            <div className="space-y-2">
+                              {diagrams.map((d, i) => (
+                                <div key={i} className="border border-border/50 rounded overflow-hidden">
+                                  {d.isImage && (
+                                    <img src={d.url} alt={d.name} className="w-full max-h-32 object-contain bg-muted/20" />
+                                  )}
+                                  <div className="flex items-center gap-1.5 p-2 bg-muted/20">
+                                    <FileText className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                                    <span className="text-xs flex-1 truncate">{d.name}</span>
+                                    <a href={d.url} download={d.name}>
+                                      <Button size="sm" variant="ghost" className="h-6 w-6 p-0">
+                                        <Download className="w-3 h-3" />
+                                      </Button>
+                                    </a>
+                                  </div>
+                                </div>
+                              ))}
+                              <label className="cursor-pointer block">
+                                <input
+                                  type="file"
+                                  accept="image/*,.pdf,.svg"
+                                  multiple
+                                  className="hidden"
+                                  onChange={e => handleHubDiagramUpload(org.id, e.target.files)}
+                                />
+                                <div className="text-xs text-center text-primary hover:underline cursor-pointer">+ Add more</div>
+                              </label>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
           </>
         )}
       </div>
