@@ -492,6 +492,9 @@ export const adminRouter = router({
       organizationId: intakeResponses.organizationId,
       questionId: intakeResponses.questionId,
       response: intakeResponses.response,
+      updatedBy: intakeResponses.updatedBy,
+      updatedAt: intakeResponses.updatedAt,
+      createdAt: intakeResponses.createdAt,
     })
       .from(intakeResponses)
       .where(inArray(intakeResponses.organizationId, orgIds));
@@ -539,12 +542,76 @@ export const adminRouter = router({
           questionId: input.questionId,
           response: input.response,
           section: "admin",
-          createdBy: ctx.user.email ?? "admin",
           updatedBy: ctx.user.email ?? "admin",
         });
       }
 
       return { success: true };
+    }),
+
+  /**
+   * Bulk-upsert responses from a CSV import.
+   * Same access control as saveOrgResponse.
+   */
+  bulkSaveOrgResponses: protectedProcedure
+    .input(z.object({
+      rows: z.array(z.object({
+        organizationId: z.number(),
+        questionId: z.string(),
+        response: z.string(),
+      })),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Verify all org IDs are accessible
+      const uniqueOrgIds = [...new Set(input.rows.map(r => r.organizationId))];
+      const accessibleOrgs = ctx.user.clientId
+        ? await db.select({ id: organizations.id }).from(organizations)
+            .where(and(inArray(organizations.id, uniqueOrgIds), eq(organizations.clientId, ctx.user.clientId)))
+        : await db.select({ id: organizations.id }).from(organizations)
+            .where(inArray(organizations.id, uniqueOrgIds));
+
+      const allowedIds = new Set(accessibleOrgs.map(o => o.id));
+      const denied = uniqueOrgIds.filter(id => !allowedIds.has(id));
+      if (denied.length > 0) {
+        throw new TRPCError({ code: "FORBIDDEN", message: `Access denied to org IDs: ${denied.join(", ")}` });
+      }
+
+      const editor = ctx.user.email ?? "admin";
+      let saved = 0;
+
+      for (const row of input.rows) {
+        if (!row.response.trim()) continue; // skip blank cells
+        const [existing] = await db.select({ id: intakeResponses.id })
+          .from(intakeResponses)
+          .where(and(
+            eq(intakeResponses.organizationId, row.organizationId),
+            eq(intakeResponses.questionId, row.questionId),
+          )).limit(1);
+
+        if (existing) {
+          await db.update(intakeResponses)
+            .set({ response: row.response, updatedBy: editor })
+            .where(eq(intakeResponses.id, existing.id));
+        } else {
+          await db.insert(intakeResponses).values({
+            organizationId: row.organizationId,
+            questionId: row.questionId,
+            response: row.response,
+            section: "admin",
+            updatedBy: editor,
+          });
+        }
+        saved++;
+      }
+
+      return { saved };
     }),
 
   /**

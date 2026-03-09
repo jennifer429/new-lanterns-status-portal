@@ -23,6 +23,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -31,7 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Activity, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp, Headphones, AlertTriangle, AlertCircle, Info, Image, CheckSquare, BarChart3 } from "lucide-react";
+import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Activity, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp, Headphones, AlertTriangle, AlertCircle, Info, Image, CheckSquare, BarChart3, Copy, Check, Clock } from "lucide-react";
 import { questionnaireSections } from "@shared/questionnaireData";
 import { toast } from "sonner";
 import {
@@ -125,26 +126,6 @@ export default function PlatformAdmin() {
     const a = document.createElement("a");
     a.href = url;
     a.download = "support-hub-export.csv";
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const exportConnectivityCSV = () => {
-    const cols = orgs || [];
-    const csvRows: string[][] = [["Section", "Detail", ...cols.map(o => o.name)]];
-    // We can't access the trpc cache here directly; export is a best-effort snapshot
-    // The user can re-export after data loads in the matrix view
-    MATRIX_SECTIONS.forEach(section => {
-      section.rows.forEach(row => {
-        csvRows.push([section.title, row.label, ...cols.map(() => "")]);
-      });
-    });
-    const csv = csvRows.map(r => r.map(v => `"${v.replace(/"/g, '""')}"`).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "connectivity-matrix.csv";
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -1056,7 +1037,7 @@ export default function PlatformAdmin() {
 
         {/* ── CONNECTIVITY MATRIX TAB ── */}
         {activeTab === "connectivity" && (
-          <ConnectivityMatrix orgs={orgs || []} onExportCSV={exportConnectivityCSV} />
+          <ConnectivityMatrix orgs={orgs || []} />
         )}
 
         {activeTab === "dashboard" && (
@@ -2930,39 +2911,58 @@ const MATRIX_SECTIONS: { title: string; rows: { label: string; questionId: strin
 
 /** Status dot for the prod_status field */
 function StatusDot({ value }: { value: string }) {
-  const lower = value.toLowerCase();
-  if (lower === "active")      return <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" />Active</span>;
-  if (lower === "monitoring")  return <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block" />Monitoring</span>;
-  if (lower === "pending")     return <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-muted-foreground/50 inline-block" />Pending</span>;
-  if (lower === "inactive")    return <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" />Inactive</span>;
+  const lower = (value ?? "").toLowerCase();
+  if (lower === "active")     return <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" />Active</span>;
+  if (lower === "monitoring") return <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block" />Monitoring</span>;
+  if (lower === "pending")    return <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-muted-foreground/50 inline-block" />Pending</span>;
+  if (lower === "inactive")   return <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" />Inactive</span>;
   return <span className="text-muted-foreground">{value || "—"}</span>;
 }
 
-/** Single editable cell — click to edit, Enter/blur to save */
+type AuditMeta = { updatedBy?: string | null; updatedAt?: Date | string | null; createdAt?: Date | string | null };
+
+function fmtDate(d?: Date | string | null) {
+  if (!d) return null;
+  return new Date(d).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+}
+
+/** Single editable cell — click to edit, hover shows copy + audit tooltip */
 function MatrixCell({
-  orgId, orgSlug, questionId, initialValue, isEmail, isPhone, isStatus, isGotcha,
+  orgId, questionId, initialValue, audit, isEmail, isPhone, isStatus, isGotcha,
+  onSaved,
 }: {
-  orgId: number; orgSlug: string; questionId: string; initialValue: string;
+  orgId: number; questionId: string; initialValue: string; audit?: AuditMeta;
   isEmail?: boolean; isPhone?: boolean; isStatus?: boolean; isGotcha?: boolean;
+  onSaved?: (questionId: string, value: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(initialValue);
-  const [saved, setSaved] = useState(initialValue);
+  const [draft, setDraft]     = useState(initialValue);
+  const [saved, setSaved]     = useState(initialValue);
+  const [copied, setCopied]   = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const saveMutation = trpc.admin.saveOrgResponse.useMutation({
-    onSuccess: () => setSaved(draft),
-    onError: () => setDraft(saved), // revert on error
+    onSuccess: () => { setSaved(draft); onSaved?.(questionId, draft); },
+    onError:   () => { setDraft(saved); toast.error("Failed to save — change reverted"); },
   });
 
   const commit = () => {
     setEditing(false);
-    if (draft !== saved) {
-      saveMutation.mutate({ organizationId: orgId, questionId, response: draft });
-    }
+    if (draft !== saved) saveMutation.mutate({ organizationId: orgId, questionId, response: draft });
+  };
+
+  const copyValue = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const text = saved || "";
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
   };
 
   useEffect(() => { if (editing) inputRef.current?.focus(); }, [editing]);
+  // Keep in sync when parent data refreshes (e.g. after import)
+  useEffect(() => { setDraft(initialValue); setSaved(initialValue); }, [initialValue]);
 
   if (editing) {
     return (
@@ -2971,52 +2971,219 @@ function MatrixCell({
         value={draft}
         onChange={e => setDraft(e.target.value)}
         onBlur={commit}
-        onKeyDown={e => { if (e.key === "Enter") commit(); if (e.key === "Escape") { setDraft(saved); setEditing(false); } }}
+        onKeyDown={e => {
+          if (e.key === "Enter")  commit();
+          if (e.key === "Escape") { setDraft(saved); setEditing(false); }
+        }}
         className="w-full bg-muted/30 border border-primary/40 rounded px-2 py-0.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary"
       />
     );
   }
 
-  const display = saved || "—";
+  const hasAudit = audit && (audit.updatedBy || audit.updatedAt);
 
   return (
-    <span
-      onClick={() => setEditing(true)}
-      title="Click to edit"
-      className={`cursor-pointer rounded px-1 py-0.5 -mx-1 hover:bg-muted/40 transition-colors group inline-flex items-center gap-1 min-w-[4rem] ${
-        isGotcha ? "text-amber-500 dark:text-amber-400" : ""
-      }`}
-    >
-      {isStatus ? (
-        <StatusDot value={saved} />
-      ) : isEmail && saved ? (
-        <a href={`mailto:${saved}`} onClick={e => e.stopPropagation()} className="text-primary hover:underline inline-flex items-center gap-1">
-          {saved}<ExternalLink className="w-3 h-3" />
-        </a>
-      ) : isPhone && saved ? (
-        <a href={`tel:${saved}`} onClick={e => e.stopPropagation()} className="hover:underline">{saved}</a>
-      ) : (
-        <span className="font-mono text-sm">{display}</span>
+    <span className="group inline-flex items-center gap-1 min-w-[4rem]">
+      {/* Clickable value area */}
+      <span
+        onClick={() => setEditing(true)}
+        className={`cursor-pointer rounded px-1 py-0.5 -mx-1 hover:bg-muted/40 transition-colors inline-flex items-center gap-1 ${
+          isGotcha ? "text-amber-500 dark:text-amber-400" : ""
+        }`}
+      >
+        {isStatus ? (
+          <StatusDot value={saved} />
+        ) : isEmail && saved ? (
+          <a href={`mailto:${saved}`} onClick={e => e.stopPropagation()} className="text-primary hover:underline inline-flex items-center gap-1">
+            {saved}<ExternalLink className="w-3 h-3" />
+          </a>
+        ) : isPhone && saved ? (
+          <a href={`tel:${saved}`} onClick={e => e.stopPropagation()} className="hover:underline">{saved}</a>
+        ) : (
+          <span className="font-mono text-sm">{saved || "—"}</span>
+        )}
+        <Edit className="w-2.5 h-2.5 text-muted-foreground/30 opacity-0 group-hover:opacity-100 shrink-0" />
+      </span>
+
+      {/* Copy button — visible on hover */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={copyValue}
+            className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-muted/60 shrink-0"
+            tabIndex={-1}
+          >
+            {copied
+              ? <Check className="w-3 h-3 text-green-500" />
+              : <Copy className="w-3 h-3 text-muted-foreground/60" />
+            }
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>{copied ? "Copied!" : "Copy value"}</TooltipContent>
+      </Tooltip>
+
+      {/* Audit badge — only shown when audit data exists */}
+      {hasAudit && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 cursor-default">
+              <Clock className="w-3 h-3 text-muted-foreground/40" />
+            </span>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-[220px] text-left space-y-0.5 leading-snug">
+            {audit?.updatedBy && <div><span className="text-muted-foreground">By:</span> {audit.updatedBy}</div>}
+            {audit?.updatedAt && <div><span className="text-muted-foreground">Updated:</span> {fmtDate(audit.updatedAt)}</div>}
+            {audit?.createdAt && <div><span className="text-muted-foreground">Created:</span> {fmtDate(audit.createdAt)}</div>}
+          </TooltipContent>
+        </Tooltip>
       )}
-      <Edit className="w-2.5 h-2.5 text-muted-foreground/40 opacity-0 group-hover:opacity-100 shrink-0" />
     </span>
   );
 }
 
-type ConnectivityMatrixProps = {
-  orgs: { id: number; name: string; slug: string }[];
-  onExportCSV: () => void;
-};
+// ── CSV helpers ────────────────────────────────────────────────────────────────
+function buildCSV(orgs: { id: number; name: string }[], lookup: Record<number, Record<string, string>>) {
+  const header = ["Section", "Detail (questionId)", ...orgs.map(o => o.name)];
+  const dataRows: string[][] = [];
+  MATRIX_SECTIONS.forEach(section => {
+    section.rows.forEach(row => {
+      dataRows.push([section.title, `${row.label} (${row.questionId})`, ...orgs.map(o => lookup[o.id]?.[row.questionId] ?? "")]);
+    });
+  });
+  return [header, ...dataRows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+}
 
-function ConnectivityMatrix({ orgs, onExportCSV }: ConnectivityMatrixProps) {
+function downloadCSV(csv: string) {
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `connectivity-matrix-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/** Parse an imported CSV back into {orgId, questionId, response}[] rows.
+ *  Expects the same format as the export: col 0 = Section, col 1 = "Label (questionId)", col 2+ = org values.
+ *  Returns parsed rows + any validation errors. */
+function parseImportCSV(csvText: string, orgs: { id: number; name: string }[]) {
+  const lines = csvText.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) return { rows: [], errors: ["CSV has no data rows"] };
+
+  const parseRow = (line: string) => {
+    const cols: string[] = [];
+    let cur = "", inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"' && !inQ) { inQ = true; continue; }
+      if (ch === '"' && inQ && line[i + 1] === '"') { cur += '"'; i++; continue; }
+      if (ch === '"' && inQ) { inQ = false; continue; }
+      if (ch === ',' && !inQ) { cols.push(cur); cur = ""; continue; }
+      cur += ch;
+    }
+    cols.push(cur);
+    return cols;
+  };
+
+  const headers = parseRow(lines[0]);
+  // Map header org names to org IDs
+  const orgCols: { colIdx: number; orgId: number }[] = [];
+  const errors: string[] = [];
+
+  for (let i = 2; i < headers.length; i++) {
+    const name = headers[i].trim();
+    const org = orgs.find(o => o.name.trim().toLowerCase() === name.toLowerCase());
+    if (org) orgCols.push({ colIdx: i, orgId: org.id });
+    else errors.push(`Column "${name}" does not match any accessible organization — skipped`);
+  }
+
+  // Build a flat questionId lookup from MATRIX_SECTIONS for validation
+  const qidByLabel: Record<string, string> = {};
+  MATRIX_SECTIONS.forEach(s => s.rows.forEach(r => {
+    qidByLabel[`${r.label} (${r.questionId})`.toLowerCase()] = r.questionId;
+    qidByLabel[r.questionId.toLowerCase()] = r.questionId; // also accept bare qid
+  }));
+
+  const rows: { organizationId: number; questionId: string; response: string }[] = [];
+
+  for (let li = 1; li < lines.length; li++) {
+    const cols = parseRow(lines[li]);
+    const rawDetail = (cols[1] ?? "").trim().toLowerCase();
+    const questionId = qidByLabel[rawDetail];
+    if (!questionId) {
+      if (rawDetail) errors.push(`Row ${li + 1}: unrecognized detail "${cols[1]}" — skipped`);
+      continue;
+    }
+    for (const { colIdx, orgId } of orgCols) {
+      const response = (cols[colIdx] ?? "").trim();
+      if (response) rows.push({ organizationId: orgId, questionId, response });
+    }
+  }
+
+  return { rows, errors };
+}
+
+// ── ConnectivityMatrix ─────────────────────────────────────────────────────────
+function ConnectivityMatrix({ orgs }: { orgs: { id: number; name: string; slug: string }[] }) {
+  const utils = trpc.useUtils();
   const { data: allResponses = [], isLoading } = trpc.admin.getAllOrgResponses.useQuery();
 
-  // Build a lookup: orgId → questionId → response
-  const lookup = allResponses.reduce<Record<number, Record<string, string>>>((acc, r) => {
+  // Import dialog state
+  const [importOpen, setImportOpen]         = useState(false);
+  const [importPreview, setImportPreview]   = useState<{ rows: { organizationId: number; questionId: string; response: string }[]; errors: string[] } | null>(null);
+  const [importFileName, setImportFileName] = useState("");
+  const importFileRef = useRef<HTMLInputElement>(null);
+
+  const bulkSave = trpc.admin.bulkSaveOrgResponses.useMutation({
+    onSuccess: (result) => {
+      toast.success(`Imported ${result.saved} cell${result.saved !== 1 ? "s" : ""}`);
+      setImportOpen(false);
+      setImportPreview(null);
+      setImportFileName("");
+      utils.admin.getAllOrgResponses.invalidate();
+    },
+    onError: (e) => toast.error(`Import failed: ${e.message}`),
+  });
+
+  // Build a lookup: orgId → questionId → { response, audit }
+  type LookupEntry = { response: string; updatedBy?: string | null; updatedAt?: Date | string | null; createdAt?: Date | string | null };
+  const lookup = allResponses.reduce<Record<number, Record<string, LookupEntry>>>((acc, r) => {
+    if (!acc[r.organizationId]) acc[r.organizationId] = {};
+    acc[r.organizationId][r.questionId] = {
+      response: r.response ?? "",
+      updatedBy: r.updatedBy,
+      updatedAt: r.updatedAt,
+      createdAt: r.createdAt,
+    };
+    return acc;
+  }, {});
+
+  // For export, build a plain string lookup
+  const strLookup = allResponses.reduce<Record<number, Record<string, string>>>((acc, r) => {
     if (!acc[r.organizationId]) acc[r.organizationId] = {};
     acc[r.organizationId][r.questionId] = r.response ?? "";
     return acc;
   }, {});
+
+  const handleExport = () => downloadCSV(buildCSV(orgs, strLookup));
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      const parsed = parseImportCSV(text, orgs);
+      setImportPreview(parsed);
+    };
+    reader.readAsText(file);
+  };
+
+  const confirmImport = () => {
+    if (!importPreview || importPreview.rows.length === 0) return;
+    bulkSave.mutate({ rows: importPreview.rows });
+  };
 
   if (isLoading) {
     return <div className="flex items-center justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
@@ -3024,17 +3191,77 @@ function ConnectivityMatrix({ orgs, onExportCSV }: ConnectivityMatrixProps) {
 
   return (
     <div>
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold">Production Connectivity Matrix</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Live data from questionnaire responses. Click any cell to edit.
+            Live data — click any cell to edit, hover to copy or view audit history.
           </p>
         </div>
-        <Button variant="outline" onClick={onExportCSV}>
-          <Download className="w-4 h-4 mr-2" />
-          Export CSV
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Import */}
+          <Dialog open={importOpen} onOpenChange={setImportOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Upload className="w-4 h-4 mr-2" />
+                Import CSV
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Import Connectivity Matrix</DialogTitle>
+                <DialogDescription>
+                  Upload a CSV exported from this matrix. Only non-empty cells will be written.
+                  Column headers must match org names exactly.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 pt-2">
+                <div
+                  onClick={() => importFileRef.current?.click()}
+                  className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                >
+                  <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                  {importFileName
+                    ? <p className="text-sm font-medium">{importFileName}</p>
+                    : <p className="text-sm text-muted-foreground">Click to select a .csv file</p>
+                  }
+                  <input ref={importFileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleFileChange} />
+                </div>
+
+                {importPreview && (
+                  <div className="space-y-2 text-sm">
+                    {importPreview.errors.length > 0 && (
+                      <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded p-3 space-y-1">
+                        {importPreview.errors.map((e, i) => (
+                          <p key={i} className="text-amber-700 dark:text-amber-400 text-xs">{e}</p>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-muted-foreground">
+                      Ready to write <strong className="text-foreground">{importPreview.rows.length}</strong> cell{importPreview.rows.length !== 1 ? "s" : ""} across{" "}
+                      <strong className="text-foreground">{[...new Set(importPreview.rows.map(r => r.organizationId))].length}</strong> org{[...new Set(importPreview.rows.map(r => r.organizationId))].length !== 1 ? "s" : ""}.
+                    </p>
+                    <Button
+                      className="w-full"
+                      disabled={importPreview.rows.length === 0 || bulkSave.isPending}
+                      onClick={confirmImport}
+                    >
+                      {bulkSave.isPending ? "Importing…" : `Import ${importPreview.rows.length} cells`}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Export */}
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="w-4 h-4 mr-2" />
+            Export CSV
+          </Button>
+        </div>
       </div>
 
       {orgs.length === 0 ? (
@@ -3053,7 +3280,6 @@ function ConnectivityMatrix({ orgs, onExportCSV }: ConnectivityMatrixProps) {
             <tbody>
               {MATRIX_SECTIONS.map((section, si) => (
                 <>
-                  {/* Section header */}
                   <tr key={`sh-${si}`} className="bg-muted/20">
                     <td colSpan={orgs.length + 1} className="py-2 px-4 font-bold text-sm border-t border-border">
                       {section.title}
@@ -3062,20 +3288,23 @@ function ConnectivityMatrix({ orgs, onExportCSV }: ConnectivityMatrixProps) {
                   {section.rows.map((row, ri) => (
                     <tr key={`r-${si}-${ri}`} className="border-t border-border/40 hover:bg-muted/10 transition-colors">
                       <td className="py-2.5 px-4 text-foreground/70 border-r border-border/40 w-44">{row.label}</td>
-                      {orgs.map(org => (
-                        <td key={org.id} className="py-2 px-4 border-r border-border/40 last:border-r-0">
-                          <MatrixCell
-                            orgId={org.id}
-                            orgSlug={org.slug}
-                            questionId={row.questionId}
-                            initialValue={lookup[org.id]?.[row.questionId] ?? ""}
-                            isEmail={row.isEmail}
-                            isPhone={row.isPhone}
-                            isStatus={row.questionId === "meta.prod_status"}
-                            isGotcha={section.title === "Known Gotchas / Exceptions"}
-                          />
-                        </td>
-                      ))}
+                      {orgs.map(org => {
+                        const entry = lookup[org.id]?.[row.questionId];
+                        return (
+                          <td key={org.id} className="py-2 px-3 border-r border-border/40 last:border-r-0">
+                            <MatrixCell
+                              orgId={org.id}
+                              questionId={row.questionId}
+                              initialValue={entry?.response ?? ""}
+                              audit={entry}
+                              isEmail={row.isEmail}
+                              isPhone={row.isPhone}
+                              isStatus={row.questionId === "meta.prod_status"}
+                              isGotcha={section.title === "Known Gotchas / Exceptions"}
+                            />
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
                 </>
