@@ -52,7 +52,7 @@ import {
 export default function PlatformAdmin() {
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"connectivity" | "dashboard" | "users" | "organizations" | "templates" | "partners" | "specs" | "support-hub">("connectivity");
+  const [activeTab, setActiveTab] = useState<"prod-dashboard" | "impl-dashboard" | "orgs" | "users" | "templates" | "partners" | "specs" | "support-hub">("prod-dashboard");
 
   // Support Hub state
   const [hubNotes, setHubNotes] = useState<Record<number, string>>({});
