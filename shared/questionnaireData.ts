@@ -15,6 +15,7 @@ export interface Question {
   templateFileName?: string; // Display name for template download
   partnerTemplates?: { [clientId: number]: { url: string; fileName: string } }; // Partner-specific templates
   conditionalOn?: { questionId: string; value: string }; // Show this question only if another question has specific value
+  inactive?: boolean; // If true, question is hidden from the UI
 }
 
 export interface Section {
@@ -109,15 +110,15 @@ export const questionnaireSections: Section[] = [
     title: 'Configuration Files',
     description: 'Required file uploads for configuration (IMPORTANT: Please de-identify all files before uploading)',
     questions: [
-      { id: 'CF.1', text: 'Procedure code list: Please upload your list of all procedure codes with modality that you will be sending in the order message.', type: 'upload', notes: 'Required: Procedure code, Description, Modality. Optional: CPT, Body part, Subspecialty' },
-      { id: 'CF.2', text: 'User list: Please upload a file of all users and their roles.', type: 'upload', notes: 'Required: User email, User name, Role (Admin/PACS Admin/Tech)' },
+      { id: 'CF.1', text: 'Procedure code list: Please upload your list of all procedure codes with modality that you will be sending in the order message.', type: 'upload-download', notes: 'Required: Procedure code, Description, Modality. Optional: CPT, Body part, Subspecialty', templateFileName: 'Procedure Code List Template' },
+      { id: 'CF.2', text: 'User list: Please upload a file of all users and their roles.', type: 'upload-download', notes: 'Required: User email, User name, Role (Admin/PACS Admin/Tech)', templateFileName: 'User List Template' },
       { id: 'CF.3', text: 'Sample ORU report: Please upload a sample ORU report showing the expected format we will send to you', type: 'upload' },
       { id: 'CF.4', text: 'ORM/ORU specifications: Please upload your ORM specification and ORU specification if sending to New Lantern', type: 'upload' },
       { id: 'CF.5', text: 'Sample ORM report: Please upload a sample ORM report showing the expected format you will be sending', type: 'upload' },
       { id: 'CF.6', text: 'Provider Directory: Please upload your provider directory listing all referring and reading physicians', type: 'upload-download', notes: 'Required: Provider name, NPI, Specialty. Download the template below, complete it, and upload.', templateFileName: 'Provider Directory Template' },
-      { id: 'CF.7', text: 'NewLantern Technologists: Please upload the list of technologists who will use the NewLantern platform', type: 'upload', notes: 'Required: Technologist name, Email, Site/Location, Modality access' },
-      { id: 'CF.8', text: 'PACS Admins: Please upload the list of PACS administrators', type: 'upload', notes: 'Required: Admin name, Email, Site/Location, Access level' },
-      { id: 'CF.9', text: 'Radiologist Provider list for Radiology Portal: Please upload the user list for the Radiology Portal including all radiologists who will need access', type: 'upload', notes: 'Required: Radiologist name, Email, NPI, Subspecialty, Site/Location' },
+      { id: 'CF.7', text: 'NewLantern Technologists: Please upload the list of technologists who will use the NewLantern platform', type: 'upload', notes: 'Required: Technologist name, Email, Site/Location, Modality access', inactive: true },
+      { id: 'CF.8', text: 'PACS Admins: Please upload the list of PACS administrators', type: 'upload', notes: 'Required: Admin name, Email, Site/Location, Access level', inactive: true },
+      { id: 'CF.9', text: 'Radiologist Provider list for Radiology Portal: Please upload the user list for the Radiology Portal including all radiologists who will need access', type: 'upload', notes: 'Required: Radiologist name, Email, NPI, Subspecialty, Site/Location', inactive: true },
     ],
   },
   {
@@ -127,10 +128,10 @@ export const questionnaireSections: Section[] = [
     questions: [
        { 
         id: 'E.1', 
-        text: 'VPN form exchange', 
+        text: 'VPN form exchange: Download the VPN form template, complete it with your network details, and upload.', 
         type: 'upload-download', 
-        notes: 'Upload your completed VPN form or download our template. MUST include IP addresses and ports for all DICOM endpoints and HL7 interfaces.',
-        // Templates are now managed via the Templates tab in the admin dashboard (partnerTemplates DB table)
+        notes: 'Required: Site-to-site VPN details, IP ranges, firewall rules, contact info. Rad One clients use the standard template. SRV clients require a separate form.',
+        templateFileName: 'VPN Form Template',
       },
       { 
         id: 'E.2', 

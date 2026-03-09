@@ -1813,3 +1813,40 @@
 - [x] Add cleaner file card display with icons for uploaded files
 - [x] Improve visual hierarchy - less clutter, better spacing
 - [x] Style upload area to match dark purple theme
+
+## File Upload UI Redesign v2 - Compact Row Pattern
+- [ ] Replace big card+dropzone per question with compact row pattern
+- [ ] Each row: title + short description on left, Upload button on right
+- [ ] Upload button expands inline dropzone only when clicked
+- [ ] State-driven UI: empty → uploading → uploaded (filename chip + replace/remove)
+- [ ] Single section-level drag-and-drop hint (not repeated per question)
+- [ ] Flatten styling: remove dashed borders, gradients, glows; use soft 1px borders
+- [ ] Reduce vertical height of each upload control by 50-70%
+- [ ] Shorten copy: concise titles + one-line descriptions
+- [ ] Clear hierarchy: big section title, small descriptions, one primary CTA
+- [ ] Show "Not uploaded" / "Uploaded" status badges per row
+
+## File Upload UI Redesign v3 - User's Preferred Compact Card Pattern
+- [x] Rewrite FileUploadField as compact card row: title+description left, Upload button right
+- [x] Uploaded state: green "Uploaded" badge + filename + paperclip icon + "Replace" link
+- [x] Empty state: subtle "No file uploaded" with file icon
+- [x] Remove dashed dropzone per question, use Upload button to trigger file picker
+- [x] Single helper line at section top instead of repeated instructions
+- [x] Remove repeated PHI warnings per question (keep single one at section level)
+- [x] Flatten card styling: subtle border, no gradients/glows, dark theme consistent
+- [x] Support drag-and-drop on each card row (not a separate dropzone)
+
+## File Upload - One Screen Layout
+- [x] Redesign Configuration Files to fit on one screen without scrolling
+- [x] Use compact row pattern: title + description left, Upload button right
+- [x] Uploaded state: green badge + filename + Replace link
+- [x] Empty state: subtle "No file uploaded" text
+- [x] Remove large dropzones, use tight rows
+- [x] Single section header with PHI warning, no per-question warnings
+
+## Question Cleanup - Config Files & VPN
+- [x] Hide/inactivate CF.7 (NewLantern Technologists), CF.8 (PACS Admins), CF.9 (Radiologist Provider list)
+- [x] Add downloadable format spec for CF.1 (Procedure code list) showing required columns
+- [x] Add downloadable format spec for CF.2 (User list) showing required columns
+- [x] Clean up VPN downloadable form (Rad One vs SRV client types)
+- [x] Update progress counter to reflect only active questions (6 instead of 9)
