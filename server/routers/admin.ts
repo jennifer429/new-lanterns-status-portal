@@ -570,7 +570,7 @@ export const adminRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       // Verify all org IDs are accessible
-      const uniqueOrgIds = [...new Set(input.rows.map(r => r.organizationId))];
+      const uniqueOrgIds = Array.from(new Set(input.rows.map(r => r.organizationId)));
       const accessibleOrgs = ctx.user.clientId
         ? await db.select({ id: organizations.id }).from(organizations)
             .where(and(inArray(organizations.id, uniqueOrgIds), eq(organizations.clientId, ctx.user.clientId)))
