@@ -52,7 +52,7 @@ import {
 export default function PlatformAdmin() {
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"dashboard" | "users" | "organizations" | "templates" | "partners" | "specs" | "support-hub">("dashboard");
+  const [activeTab, setActiveTab] = useState<"connectivity" | "dashboard" | "users" | "organizations" | "templates" | "partners" | "specs" | "support-hub">("connectivity");
 
   // Support Hub state
   const [hubNotes, setHubNotes] = useState<Record<number, string>>({});
@@ -125,6 +125,25 @@ export default function PlatformAdmin() {
     const a = document.createElement("a");
     a.href = url;
     a.download = "support-hub-export.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportConnectivityCSV = () => {
+    const matrix = buildConnectivityMatrix();
+    const clients = matrix.clients;
+    const rows: string[][] = [["Section", "Detail", ...clients.map(c => c.name)]];
+    matrix.sections.forEach(section => {
+      section.rows.forEach(row => {
+        rows.push([section.title, row.label, ...clients.map(c => row.values[c.id] || "")]);
+      });
+    });
+    const csv = rows.map(r => r.map(v => `"${v.replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "connectivity-matrix.csv";
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -916,7 +935,21 @@ export default function PlatformAdmin() {
           </div>
 
           {/* Tab Navigation */}
-          <div className="flex gap-6 mt-6 border-b border-border">
+          <div className="flex gap-6 mt-6 border-b border-border overflow-x-auto">
+            <button
+              onClick={() => setActiveTab("connectivity")}
+              className={`pb-3 px-1 font-medium transition-colors relative whitespace-nowrap flex items-center gap-1.5 ${
+                activeTab === "connectivity"
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Activity className="w-4 h-4" />
+              Connectivity Matrix
+              {activeTab === "connectivity" && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+              )}
+            </button>
             <button
               onClick={() => setActiveTab("dashboard")}
               className={`pb-3 px-1 font-medium transition-colors relative ${
@@ -1019,6 +1052,12 @@ export default function PlatformAdmin() {
 
       {/* Main Content */}
       <div className="container py-8">
+
+        {/* ── CONNECTIVITY MATRIX TAB ── */}
+        {activeTab === "connectivity" && (
+          <ConnectivityMatrix onExportCSV={exportConnectivityCSV} />
+        )}
+
         {activeTab === "dashboard" && (
           <>
             <h2 className="text-2xl font-bold mb-6">Active Organizations ({activeOrgs.length})</h2>
@@ -2804,6 +2843,199 @@ export default function PlatformAdmin() {
             </div>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Connectivity Matrix ──────────────────────────────────────────────────────
+
+type MatrixClient = { id: string; name: string };
+type MatrixRow = { label: string; values: Record<string, string>; isEmail?: boolean; isPhone?: boolean };
+type MatrixSection = { title: string; color: string; rows: MatrixRow[] };
+type MatrixData = { clients: MatrixClient[]; sections: MatrixSection[] };
+
+function buildConnectivityMatrix(): MatrixData {
+  const clients: MatrixClient[] = [
+    { id: "valley", name: "Valley" },
+    { id: "radone", name: "RadOne" },
+    { id: "srv",    name: "SRV" },
+    { id: "nvra",   name: "NVRA" },
+  ];
+
+  const sections: MatrixSection[] = [
+    {
+      title: "Organization",
+      color: "blue",
+      rows: [
+        { label: "Go-Live Date",   values: { valley: "Jan 2026", radone: "Feb 2026", srv: "Mar 2026", nvra: "Apr 2026" } },
+        { label: "Studies / Day",  values: { valley: "320",      radone: "180",      srv: "250",      nvra: "140" } },
+        { label: "Reading Group",  values: { valley: "Valley Radiology", radone: "RadOne", srv: "Southern Radiology", nvra: "NVRA" } },
+      ],
+    },
+    {
+      title: "Contacts",
+      color: "indigo",
+      rows: [
+        { label: "IT Contact", values: { valley: "John Smith",          radone: "Laura Perez",        srv: "Mike Turner",         nvra: "David Kim" } },
+        { label: "Email",      values: { valley: "jsmith@valley.org",   radone: "lperez@radone.com",  srv: "mturner@srv.com",     nvra: "dkim@nvra.com" }, isEmail: true },
+        { label: "Phone",      values: { valley: "555-2121",            radone: "555-3011",           srv: "555-7782",            nvra: "555-9910" }, isPhone: true },
+      ],
+    },
+    {
+      title: "Systems",
+      color: "purple",
+      rows: [
+        { label: "PACS",               values: { valley: "Intelerad",   radone: "Merge",      srv: "Fuji",      nvra: "Sectra" } },
+        { label: "RIS",                values: { valley: "Epic Radiant", radone: "Medhost",   srv: "Cerner",    nvra: "Epic" } },
+        { label: "EMR",                values: { valley: "Epic",        radone: "Athena",     srv: "Cerner",    nvra: "Epic" } },
+        { label: "Interface Engine",   values: { valley: "Cloverleaf",  radone: "Iguana",     srv: "Mirth",     nvra: "Rhapsody" } },
+      ],
+    },
+    {
+      title: "DICOM Routing",
+      color: "cyan",
+      rows: [
+        { label: "Image Source",     values: { valley: "PACS",             radone: "Router",          srv: "PACS",              nvra: "PACS" } },
+        { label: "Org AE Title",     values: { valley: "VALLEY_PACS",      radone: "RADONE_ROUTER",   srv: "SRV_PACS",          nvra: "NVRA_PACS" } },
+        { label: "Org IP",           values: { valley: "10.12.5.21",       radone: "10.22.4.11",      srv: "10.31.8.14",        nvra: "10.40.9.2" } },
+        { label: "Org Port",         values: { valley: "104",              radone: "1112",            srv: "104",               nvra: "104" } },
+        { label: "Silverback IP",    values: { valley: "52.10.21.4",       radone: "52.10.21.4",      srv: "52.10.21.4",        nvra: "52.10.21.4" } },
+        { label: "Silverback Port",  values: { valley: "104",              radone: "104",             srv: "104",               nvra: "104" } },
+        { label: "NL IP",            values: { valley: "172.20.1.40",      radone: "172.20.1.40",     srv: "172.20.1.40",       nvra: "172.20.1.40" } },
+        { label: "NL Port",          values: { valley: "104",              radone: "104",             srv: "104",               nvra: "104" } },
+      ],
+    },
+    {
+      title: "HL7 Orders",
+      color: "teal",
+      rows: [
+        { label: "Org HL7 IP",       values: { valley: "10.12.7.4",        radone: "10.22.6.8",       srv: "10.31.2.5",         nvra: "10.40.2.6" } },
+        { label: "Org HL7 Port",     values: { valley: "2116",             radone: "2116",            srv: "2116",              nvra: "2116" } },
+        { label: "Silverback IP",    values: { valley: "52.10.22.9",       radone: "52.10.22.9",      srv: "52.10.22.9",        nvra: "52.10.22.9" } },
+        { label: "Silverback Port",  values: { valley: "2116",             radone: "2116",            srv: "2116",              nvra: "2116" } },
+        { label: "NL IP",            values: { valley: "172.20.1.50",      radone: "172.20.1.50",     srv: "172.20.1.50",       nvra: "172.20.1.50" } },
+        { label: "NL Port",          values: { valley: "2116",             radone: "2116",            srv: "2116",              nvra: "2116" } },
+      ],
+    },
+    {
+      title: "HL7 Results",
+      color: "green",
+      rows: [
+        { label: "NL IP",            values: { valley: "172.20.1.51",      radone: "172.20.1.51",     srv: "172.20.1.51",       nvra: "172.20.1.51" } },
+        { label: "NL Port",          values: { valley: "2117",             radone: "2117",            srv: "2117",              nvra: "2117" } },
+        { label: "Silverback IP",    values: { valley: "52.10.22.10",      radone: "52.10.22.10",     srv: "52.10.22.10",       nvra: "52.10.22.10" } },
+        { label: "Silverback Port",  values: { valley: "2117",             radone: "2117",            srv: "2117",              nvra: "2117" } },
+        { label: "Org IP",           values: { valley: "10.12.7.4",        radone: "10.22.6.8",       srv: "10.31.2.5",         nvra: "10.40.2.6" } },
+        { label: "Org Port",         values: { valley: "2200",             radone: "2300",            srv: "2117",              nvra: "2117" } },
+      ],
+    },
+    {
+      title: "Known Gotchas / Exceptions",
+      color: "amber",
+      rows: [
+        { label: "Accession Format",  values: { valley: 'Prefix "V-"',          radone: "Numeric only",   srv: 'Prefix "SRV-"',       nvra: "Numeric" } },
+        { label: "Priors Available",  values: { valley: "5 yrs",                radone: "3 yrs",          srv: "2 PACS systems",      nvra: "5 yrs" } },
+        { label: "Downtime Behavior", values: { valley: "Sends DICOM w/o HL7",  radone: "Stops sending",  srv: "Sends backlog later", nvra: "Normal" } },
+        { label: "Other Notes",       values: { valley: "Strip accession prefix", radone: "Uses router AE", srv: "Two PACS archives",  nvra: "Requires provider in ORU" } },
+      ],
+    },
+  ];
+
+  return { clients, sections };
+}
+
+const SECTION_COLORS: Record<string, string> = {
+  blue:   "bg-blue-500/10 text-blue-700 dark:text-blue-300",
+  indigo: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300",
+  purple: "bg-purple-500/10 text-purple-700 dark:text-purple-300",
+  cyan:   "bg-cyan-500/10 text-cyan-700 dark:text-cyan-300",
+  teal:   "bg-teal-500/10 text-teal-700 dark:text-teal-300",
+  green:  "bg-green-500/10 text-green-700 dark:text-green-300",
+  amber:  "bg-amber-500/10 text-amber-700 dark:text-amber-300",
+};
+
+function ConnectivityMatrix({ onExportCSV }: { onExportCSV: () => void }) {
+  const { clients, sections } = buildConnectivityMatrix();
+
+  return (
+    <div>
+      {/* Page header */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h2 className="text-2xl font-bold">Production Connectivity Matrix</h2>
+          <p className="text-sm text-muted-foreground mt-1">Quick-reference for all client connectivity, systems, and known exceptions.</p>
+        </div>
+        <Button variant="outline" onClick={onExportCSV}>
+          <Download className="w-4 h-4 mr-2" />
+          Export CSV
+        </Button>
+      </div>
+
+      {/* Global sticky-header row — client names */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm border-collapse">
+          <thead>
+            <tr className="border-b-2 border-border">
+              <th className="text-left py-3 pr-6 font-semibold text-muted-foreground w-48 min-w-[11rem]">Detail</th>
+              {clients.map(c => (
+                <th key={c.id} className="text-left py-3 px-4 font-bold text-lg min-w-[10rem]">{c.name}</th>
+              ))}
+            </tr>
+          </thead>
+
+          <tbody>
+            {sections.map((section, si) => (
+              <>
+                {/* Section header row */}
+                <tr key={`section-${si}`}>
+                  <td colSpan={clients.length + 1} className="pt-8 pb-2">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-xl font-bold">{section.title}</h3>
+                    </div>
+                  </td>
+                </tr>
+
+                {/* Column sub-header */}
+                <tr className="border-b border-border">
+                  <th className="text-left py-2 pr-6 text-sm font-semibold text-muted-foreground">Detail</th>
+                  {clients.map(c => (
+                    <th key={c.id} className="text-left py-2 px-4 text-sm font-semibold text-muted-foreground">{c.name}</th>
+                  ))}
+                </tr>
+
+                {/* Data rows */}
+                {section.rows.map((row, ri) => (
+                  <tr key={`row-${si}-${ri}`} className="border-b border-border/30 hover:bg-muted/20 transition-colors">
+                    <td className="py-3 pr-6 font-medium text-foreground/80 w-48">{row.label}</td>
+                    {clients.map(c => {
+                      const val = row.values[c.id] || "—";
+                      return (
+                        <td key={c.id} className="py-3 px-4 font-mono text-sm">
+                          {row.isEmail ? (
+                            <a href={`mailto:${val}`} className="text-primary hover:underline inline-flex items-center gap-1">
+                              {val}
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          ) : row.isPhone ? (
+                            <a href={`tel:${val}`} className="hover:underline">{val}</a>
+                          ) : (
+                            <span className={
+                              // highlight values that differ across clients
+                              section.title === "Known Gotchas / Exceptions"
+                                ? "text-amber-600 dark:text-amber-400"
+                                : ""
+                            }>{val}</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
