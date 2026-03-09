@@ -1,6 +1,6 @@
 /**
  * Radiology One New Site Onboarding Questionnaire
- * 9 sections (5 standard + 4 workflow diagrams), 51 total questions
+ * 6 sections (5 standard + 1 integration workflows), 51 total questions
  * Note: Router = Integration 3rd Party Router for all overlay situations
  */
 
@@ -23,7 +23,7 @@ export interface Section {
   title: string;
   description?: string;
   questions?: Question[]; // Optional for workflow sections
-  type?: 'standard' | 'workflow'; // New: workflow sections use WorkflowDiagram component
+  type?: 'standard' | 'workflow' | 'integration-workflows'; // New: workflow sections use WorkflowDiagram component
   workflowType?: 'orders' | 'images' | 'priors' | 'reports'; // New: which workflow to render
 }
 
@@ -70,40 +70,11 @@ export const questionnaireSections: Section[] = [
       { id: 'D.13', text: 'Please document DICOM tag 0008,1040 value and corresponding PV1:11 value for matching (Note: DICOM tagging is handled by the Router / Integration 3rd Party, not client sites)', type: 'textarea', placeholder: 'Document tag values for patient matching' },
     ],
   },
-  /**
-   * MAJOR CHANGE: Replaced text-based "Overview & Architecture" section
-   * with 4 interactive visual workflow diagrams
-   * 
-   * Old section had 16 text questions about systems
-   * New sections use WorkflowDiagram component for visual configuration
-   */
   {
-    id: 'orders-workflow',
-    type: 'workflow',
-    workflowType: 'orders',
-    title: 'Orders Workflow',
-    description: 'Configure how imaging orders reach New Lantern',
-  },
-  {
-    id: 'images-workflow',
-    type: 'workflow',
-    workflowType: 'images',
-    title: 'Images Workflow',
-    description: 'Configure how new images flow to New Lantern',
-  },
-  {
-    id: 'priors-workflow',
-    type: 'workflow',
-    workflowType: 'priors',
-    title: 'Priors Workflow',
-    description: 'Configure how prior images and reports reach New Lantern',
-  },
-  {
-    id: 'reports-out-workflow',
-    type: 'workflow',
-    workflowType: 'reports',
-    title: 'Reports Out Workflow',
-    description: 'Configure where finalized reports are sent',
+    id: 'integration-workflows',
+    type: 'integration-workflows',
+    title: 'Integration Workflows',
+    description: 'Architecture diagram, systems inventory, and workflow descriptions',
   },
   {
     id: 'config-files',

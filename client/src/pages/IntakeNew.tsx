@@ -30,6 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { FilePreviewItem } from "@/components/FilePreviewItem";
+import { IntegrationWorkflows } from "@/components/IntegrationWorkflows";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { questionnaireData, type Question, type Section } from "@shared/questionnaireData";
 
@@ -226,7 +227,15 @@ export default function IntakeNew() {
 
   // Calculate progress per section
   const calculateSectionProgress = (section: Section) => {
-    if (!section.questions) return 0; // Workflow sections have no questions
+    if (section.type === 'integration-workflows') {
+      const keys = ['IW.orders_description', 'IW.images_description', 'IW.priors_description', 'IW.reports_description'];
+      const filled = keys.filter(k => {
+        const v = responses[k];
+        return v && String(v).trim().length > 0;
+      }).length;
+      return Math.round((filled / 4) * 100);
+    }
+    if (!section.questions) return 0; // Other non-question sections
     const totalQuestions = section.questions.length;
     if (totalQuestions === 0) return 100;
 
@@ -620,12 +629,24 @@ export default function IntakeNew() {
                 {questionnaireData.map((section, idx) => {
                   const progress = calculateSectionProgress(section);
                   const status = getSectionStatus(section);
-                  const answeredCount = section.questions?.filter(q => {
-                    const value = responses[q.id];
-                    if (Array.isArray(value)) return value.length > 0;
-                    if (typeof value === 'string') return value.trim().length > 0;
-                    return value !== undefined && value !== null && value !== '';
-                  }).length;
+
+                  let progressLabel: string;
+                  if (section.type === 'integration-workflows') {
+                    const keys = ['IW.orders_description', 'IW.images_description', 'IW.priors_description', 'IW.reports_description'];
+                    const filled = keys.filter(k => {
+                      const v = responses[k];
+                      return v && String(v).trim().length > 0;
+                    }).length;
+                    progressLabel = `${filled} of 4 workflows described`;
+                  } else {
+                    const answeredCount = section.questions?.filter(q => {
+                      const value = responses[q.id];
+                      if (Array.isArray(value)) return value.length > 0;
+                      if (typeof value === 'string') return value.trim().length > 0;
+                      return value !== undefined && value !== null && value !== '';
+                    }).length || 0;
+                    progressLabel = `${answeredCount} of ${section.questions?.length || 0} questions answered`;
+                  }
 
                   return (
                     <Card
@@ -650,9 +671,7 @@ export default function IntakeNew() {
                       <CardContent>
                         <div className="space-y-2">
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">
-                              {answeredCount} of {section.questions?.length || 0} questions answered
-                            </span>
+                            <span className="text-muted-foreground">{progressLabel}</span>
                             <span className="font-semibold text-primary">{progress}%</span>
                           </div>
                           <Progress value={progress} className="h-2" />
@@ -746,12 +765,16 @@ export default function IntakeNew() {
               <div>
                 <h1 className="text-xl font-bold">{currentSectionData?.title}</h1>
                 <p className="text-sm text-muted-foreground">
-                  {currentSectionData?.questions?.filter(q => {
+                  {currentSectionData?.type === 'integration-workflows' ? (() => {
+                    const keys = ['IW.orders_description', 'IW.images_description', 'IW.priors_description', 'IW.reports_description'];
+                    const filled = keys.filter(k => { const v = responses[k]; return v && String(v).trim().length > 0; }).length;
+                    return `${filled} of 4 workflows described`;
+                  })() : `${currentSectionData?.questions?.filter(q => {
                     const value = responses[q.id];
                     if (Array.isArray(value)) return value.length > 0;
                     if (typeof value === 'string') return value.trim().length > 0;
                     return value !== undefined && value !== null && value !== '';
-                  }).length || 0} of {currentSectionData?.questions?.length || 0} questions answered
+                  }).length || 0} of ${currentSectionData?.questions?.length || 0} questions answered`}
                 </p>
               </div>
             </div>
@@ -787,7 +810,13 @@ export default function IntakeNew() {
             )}
           </CardHeader>
           <CardContent className="space-y-6">
-            {currentSectionData?.questions?.map((question) => (
+            {currentSectionData?.type === 'integration-workflows' ? (
+              <IntegrationWorkflows
+                values={responses}
+                onChange={(key, value) => setResponses(prev => ({ ...prev, [key]: value }))}
+                organizationId={org?.id || 0}
+              />
+            ) : currentSectionData?.questions?.map((question) => (
               <div key={question.id} className="space-y-2">
                 <Label htmlFor={question.id} className="text-base font-medium">
                   {question.text}

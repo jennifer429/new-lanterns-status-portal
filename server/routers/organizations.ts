@@ -321,6 +321,15 @@ export const organizationsRouter = router({
               questionText: `${section.title} Configuration`,
               isWorkflow: true
             }];
+          } else if (section.type === 'integration-workflows') {
+            return ['orders', 'images', 'priors', 'reports'].map(wf => ({
+              id: `IW.${wf}_description`,
+              sectionTitle: section.title,
+              questionText: `${wf.charAt(0).toUpperCase() + wf.slice(1)} Workflow Description`,
+              isWorkflow: false,
+              type: 'textarea',
+              conditionalOn: null,
+            }));
           }
           return [];
         });

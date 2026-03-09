@@ -342,6 +342,15 @@ export const intakeRouter = router({
         if (section.type === 'workflow') {
           return [{ id: `${section.id}_config`, sectionTitle: section.title, isWorkflow: true, conditionalOn: null }];
         }
+        if (section.type === 'integration-workflows') {
+          return ['orders', 'images', 'priors', 'reports'].map(wf => ({
+            id: `IW.${wf}_description`,
+            sectionTitle: section.title,
+            isWorkflow: false,
+            type: 'textarea',
+            conditionalOn: null,
+          }));
+        }
         return (section.questions || []).map((q: any) => ({
           id: q.id,
           sectionTitle: section.title,
