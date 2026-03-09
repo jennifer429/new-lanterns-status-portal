@@ -459,8 +459,9 @@ export default function IntakeNewRedesign() {
     // Standard sections with questions
     if (!section.questions) return 0;
     
-    // Filter out hidden conditional questions first
+    // Filter out inactive and hidden conditional questions first
     const visibleQuestions = section.questions.filter(q => {
+      if (q.inactive) return false;
       if (q.conditionalOn) {
         const parentResponse = responses[q.conditionalOn.questionId];
         return parentResponse === q.conditionalOn.value;
@@ -704,12 +705,16 @@ export default function IntakeNewRedesign() {
         );
 
       case 'upload':
-      case 'upload-download':
+      case 'upload-download': {
         // For config-files section, rendering is handled by the compact layout below.
         // For other sections (e.g., vpn-connectivity), render inline upload.
         const inlineTemplates = dbTemplateMap.get(question.id) || [];
+        const questionFiles = allUploadedFiles.filter(f => f.questionId === question.id);
+        const uploadInputRef = { current: null as HTMLInputElement | null };
+        
         return (
           <div className="space-y-3">
+            {/* Template download buttons */}
             {inlineTemplates.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {inlineTemplates.map((tmpl, idx) => (
@@ -723,30 +728,72 @@ export default function IntakeNewRedesign() {
                       link.download = tmpl.fileName;
                       link.click();
                     }}
-                    className="bg-purple-600 hover:bg-purple-700 text-white border-purple-500"
+                    className="bg-purple-600/80 hover:bg-purple-700 text-white border-purple-500/50 text-xs"
                   >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download {tmpl.label} ({tmpl.fileName})
+                    <Download className="w-3.5 h-3.5 mr-1.5" />
+                    {tmpl.label} ({tmpl.fileName})
                   </Button>
                 ))}
               </div>
             )}
-            <CompactFileUploadRow
-              questionId={question.id}
-              questionText={question.text}
-              questionNotes={question.notes}
-              isUploading={isUploading}
-              organizationSlug={slug || ''}
-              onFileUpload={handleFileUpload}
-              onFileDelete={(fileId: number) => {
-                deleteMutation.mutate({
-                  organizationSlug: slug || '',
-                  fileId,
-                });
-              }}
-            />
+            
+            {/* File status + upload button */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                {questionFiles.length > 0 ? (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 text-xs font-medium">
+                      <CheckCircle2 className="w-3 h-3" /> Uploaded
+                    </span>
+                    {questionFiles.map((file) => (
+                      <span key={file.id} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <Paperclip className="w-3.5 h-3.5" />
+                        <a href={file.fileUrl} target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition-colors truncate max-w-[200px]">
+                          {file.fileName}
+                        </a>
+                        <button
+                          onClick={() => deleteMutation.mutate({ organizationSlug: slug || '', fileId: file.id })}
+                          className="text-muted-foreground hover:text-red-400 transition-colors text-xs"
+                        >
+                          Remove
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <FileIcon className="w-3.5 h-3.5" /> No file uploaded
+                  </span>
+                )}
+              </div>
+              <div>
+                <input
+                  ref={uploadInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload(question.id, file);
+                    e.target.value = '';
+                  }}
+                />
+                <Button
+                  size="sm"
+                  onClick={() => uploadInputRef.current?.click()}
+                  disabled={isUploading}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  {isUploading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <><Upload className="w-4 h-4 mr-1.5" /> Upload</>
+                  )}
+                </Button>
+              </div>
+            </div>
           </div>
         );
+      }
 
       default:
         return null;
@@ -979,7 +1026,7 @@ export default function IntakeNewRedesign() {
                   {currentSection === 'config-files' && currentSectionData?.questions && (
                     <div className="flex items-center gap-3">
                       <span className="text-xs text-muted-foreground">
-                        {currentSectionData.questions.filter(q => responses[q.id]).length || 0}/{currentSectionData.questions.length} uploaded
+                        {currentSectionData.questions.filter(q => !q.inactive && responses[q.id]).length || 0}/{currentSectionData.questions.filter(q => !q.inactive).length} uploaded
                       </span>
                       <Progress value={calculateSectionProgress(currentSectionData)} className="h-1.5 w-24" />
                     </div>
@@ -1010,12 +1057,10 @@ export default function IntakeNewRedesign() {
                   </p>
                 )}
                 {(currentSectionData?.id === 'vpn-connectivity') && (
-                  <div className="mt-4 flex items-center gap-3 px-4 py-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                    <Shield className="w-5 h-5 text-yellow-400 flex-shrink-0" />
-                    <p className="text-sm text-yellow-300/90">
-                      <span className="font-semibold">PHI Warning:</span> Do not share Protected Health Information (PHI) or patient data in this portal. Please de-identify all files before uploading.
-                    </p>
-                  </div>
+                  <p className="text-xs text-yellow-400/80 mt-1.5 flex items-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span>De-identify all files before uploading. Do not share PHI or patient data.</span>
+                  </p>
                 )}
               </div>
 
@@ -1070,7 +1115,7 @@ export default function IntakeNewRedesign() {
               ) : currentSection === 'config-files' ? (
                 /* Compact single-screen layout for Configuration Files */
                 <div className="space-y-1">
-                  {currentSectionData?.questions?.map((question) => (
+                  {currentSectionData?.questions?.filter((q) => !q.inactive).map((question) => (
                     <CompactFileUploadRow
                       key={question.id}
                       questionId={question.id}
@@ -1092,7 +1137,8 @@ export default function IntakeNewRedesign() {
               ) : (
                 <div className={`grid ${currentSection === 'data-integration' ? 'grid-cols-1' : 'grid-cols-2'} gap-x-8 gap-y-6`}>
                   {currentSectionData?.questions?.filter((question) => {
-                    // Filter out hidden conditional questions for numbering
+                    // Filter out inactive and hidden conditional questions
+                    if (question.inactive) return false;
                     if (question.conditionalOn) {
                       const parentResponse = responses[question.conditionalOn.questionId];
                       if (parentResponse !== question.conditionalOn.value) {
@@ -1127,15 +1173,7 @@ export default function IntakeNewRedesign() {
                         {question.notes && isUploadType && (
                           <p className="text-xs text-muted-foreground mb-3">{question.notes}</p>
                         )}
-                        {hasTemplate && (
-                          <div className="flex items-center gap-3 mb-3 px-4 py-2 bg-purple-500/10 border border-purple-500/30 rounded-md">
-                            <span className="text-sm text-purple-300">
-                              <span className="font-semibold">① Download</span> the template below → 
-                              <span className="font-semibold"> ② Fill it out</span> → 
-                              <span className="font-semibold"> ③ Upload</span> your completed file
-                            </span>
-                          </div>
-                        )}
+
                         {renderQuestion(question)}
                         {question.notes && !isUploadType && (
                           <p className="text-xs text-muted-foreground mt-1">{question.notes}</p>

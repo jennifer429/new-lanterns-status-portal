@@ -1843,3 +1843,10 @@
 - [x] Empty state: subtle "No file uploaded" text
 - [x] Remove large dropzones, use tight rows
 - [x] Single section header with PHI warning, no per-question warnings
+
+## Question Cleanup - Config Files & VPN
+- [x] Hide/inactivate CF.7 (NewLantern Technologists), CF.8 (PACS Admins), CF.9 (Radiologist Provider list)
+- [x] Add downloadable format spec for CF.1 (Procedure code list) showing required columns
+- [x] Add downloadable format spec for CF.2 (User list) showing required columns
+- [x] Clean up VPN downloadable form (Rad One vs SRV client types)
+- [x] Update progress counter to reflect only active questions (6 instead of 9)
