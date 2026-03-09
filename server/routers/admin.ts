@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { questions, questionOptions, organizations, users, clients, intakeFileAttachments, partnerTemplates, specifications } from "../../drizzle/schema";
+import { questions, questionOptions, organizations, users, clients, intakeFileAttachments, partnerTemplates, specifications, intakeResponses } from "../../drizzle/schema";
 import { eq, and, or, desc, inArray, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
@@ -462,6 +462,159 @@ export const adminRouter = router({
   }),
 
   /**
+   * Get all intake responses for all orgs the caller can access.
+   * Used by the Production Connectivity Matrix.
+   * Access control mirrors getAllOrganizations:
+   *   - Platform admin (no clientId) → all orgs
+   *   - Partner admin (clientId set) → only their partner's orgs
+   */
+  getAllOrgResponses: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user.role !== "admin") {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+    }
+
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+    let accessibleOrgs;
+    if (ctx.user.clientId) {
+      accessibleOrgs = await db.select({ id: organizations.id })
+        .from(organizations)
+        .where(eq(organizations.clientId, ctx.user.clientId));
+    } else {
+      accessibleOrgs = await db.select({ id: organizations.id }).from(organizations);
+    }
+
+    const orgIds = accessibleOrgs.map(o => o.id);
+    if (orgIds.length === 0) return [];
+
+    return await db.select({
+      organizationId: intakeResponses.organizationId,
+      questionId: intakeResponses.questionId,
+      response: intakeResponses.response,
+      updatedBy: intakeResponses.updatedBy,
+      updatedAt: intakeResponses.updatedAt,
+      createdAt: intakeResponses.createdAt,
+    })
+      .from(intakeResponses)
+      .where(inArray(intakeResponses.organizationId, orgIds));
+  }),
+
+  /**
+   * Save a single response for any accessible org (admin use — powers matrix inline editing).
+   * Access control: partner admin can only write to orgs they own.
+   */
+  saveOrgResponse: protectedProcedure
+    .input(z.object({
+      organizationId: z.number(),
+      questionId: z.string(),
+      response: z.string(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Verify caller can access this org
+      const [org] = await db.select().from(organizations).where(eq(organizations.id, input.organizationId)).limit(1);
+      if (!org) throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      if (ctx.user.clientId && org.clientId !== ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this organization" });
+      }
+
+      const [existing] = await db.select().from(intakeResponses).where(
+        and(
+          eq(intakeResponses.organizationId, input.organizationId),
+          eq(intakeResponses.questionId, input.questionId)
+        )
+      ).limit(1);
+
+      if (existing) {
+        await db.update(intakeResponses)
+          .set({ response: input.response, updatedBy: ctx.user.email ?? "admin" })
+          .where(eq(intakeResponses.id, existing.id));
+      } else {
+        await db.insert(intakeResponses).values({
+          organizationId: input.organizationId,
+          questionId: input.questionId,
+          response: input.response,
+          section: "admin",
+          updatedBy: ctx.user.email ?? "admin",
+        });
+      }
+
+      return { success: true };
+    }),
+
+  /**
+   * Bulk-upsert responses from a CSV import.
+   * Same access control as saveOrgResponse.
+   */
+  bulkSaveOrgResponses: protectedProcedure
+    .input(z.object({
+      rows: z.array(z.object({
+        organizationId: z.number(),
+        questionId: z.string(),
+        response: z.string(),
+      })),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Verify all org IDs are accessible
+      const uniqueOrgIds = [...new Set(input.rows.map(r => r.organizationId))];
+      const accessibleOrgs = ctx.user.clientId
+        ? await db.select({ id: organizations.id }).from(organizations)
+            .where(and(inArray(organizations.id, uniqueOrgIds), eq(organizations.clientId, ctx.user.clientId)))
+        : await db.select({ id: organizations.id }).from(organizations)
+            .where(inArray(organizations.id, uniqueOrgIds));
+
+      const allowedIds = new Set(accessibleOrgs.map(o => o.id));
+      const denied = uniqueOrgIds.filter(id => !allowedIds.has(id));
+      if (denied.length > 0) {
+        throw new TRPCError({ code: "FORBIDDEN", message: `Access denied to org IDs: ${denied.join(", ")}` });
+      }
+
+      const editor = ctx.user.email ?? "admin";
+      let saved = 0;
+
+      for (const row of input.rows) {
+        if (!row.response.trim()) continue; // skip blank cells
+        const [existing] = await db.select({ id: intakeResponses.id })
+          .from(intakeResponses)
+          .where(and(
+            eq(intakeResponses.organizationId, row.organizationId),
+            eq(intakeResponses.questionId, row.questionId),
+          )).limit(1);
+
+        if (existing) {
+          await db.update(intakeResponses)
+            .set({ response: row.response, updatedBy: editor })
+            .where(eq(intakeResponses.id, existing.id));
+        } else {
+          await db.insert(intakeResponses).values({
+            organizationId: row.organizationId,
+            questionId: row.questionId,
+            response: row.response,
+            section: "admin",
+            updatedBy: editor,
+          });
+        }
+        saved++;
+      }
+
+      return { saved };
+    }),
+
+  /**
    * Create a new organization
    */
   createOrganization: protectedProcedure
@@ -713,19 +866,21 @@ export const adminRouter = router({
         // Build question list (include workflow sections)
         const allQuestions = questionnaireSections.flatMap(section => {
           if (section.questions) {
-            // Regular question sections
+            // Regular question sections — must pass conditionalOn so the shared
+            // utility excludes hidden conditional questions from the denominator,
+            // matching exactly what the org-facing portal calculates.
             return section.questions.map(q => ({
               id: q.id,
               sectionTitle: section.title,
               isWorkflow: false,
-              type: q.type // Pass question type for upload detection
+              type: q.type,
+              conditionalOn: q.conditionalOn || null,
             }));
           } else if (section.type === 'workflow') {
-            // Workflow sections - count as 1 item each
             return [{
               id: `${section.id}_config`,
               sectionTitle: section.title,
-              isWorkflow: true
+              isWorkflow: true,
             }];
           }
           return [];

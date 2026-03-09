@@ -326,83 +326,42 @@ export const intakeRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this organization" });
       }
 
-      // Get all responses for this organization from intakeResponses table
-      const responsesData = await db
-        .select()
-        .from(intakeResponses)
-        .where(eq(intakeResponses.organizationId, org.id));
+      // Use the same shared utility as the admin dashboard and Home.tsx so
+      // all three always show the same number.
+      const [{ calculateProgress }, { questionnaireSections }] = await Promise.all([
+        import('../../shared/progressCalculation'),
+        import('../../shared/questionnaireData'),
+      ]);
 
-      // Use questionnaireData as source of truth for total questions and sections
-      const questionnaireModule = await import('../../shared/questionnaireData');
-      const questionnaireSections = questionnaireModule.questionnaireSections;
-      
-      // Build a response map for checking conditional visibility
-      const responseMap = new Map<string, string>();
-      responsesData.forEach(r => {
-        if (r.questionId && r.response) {
-          responseMap.set(r.questionId, r.response);
+      const [responsesData, orgFiles] = await Promise.all([
+        db.select().from(intakeResponses).where(eq(intakeResponses.organizationId, org.id)),
+        db.select().from(intakeFileAttachments).where(eq(intakeFileAttachments.organizationId, org.id)),
+      ]);
+
+      const allQuestions = questionnaireSections.flatMap((section: any) => {
+        if (section.type === 'workflow') {
+          return [{ id: `${section.id}_config`, sectionTitle: section.title, isWorkflow: true, conditionalOn: null }];
         }
+        return (section.questions || []).map((q: any) => ({
+          id: q.id,
+          sectionTitle: section.title,
+          conditionalOn: q.conditionalOn || null,
+          type: q.type,
+        }));
       });
 
-      // Helper: determine if a conditional question is visible based on parent answer
-      const isVisible = (q: any): boolean => {
-        if (!q.conditionalOn) return true;
-        const parentAnswer = responseMap.get(q.conditionalOn.questionId);
-        return parentAnswer?.trim() === q.conditionalOn.value;
-      };
-
-      // Build a map of questionId -> sectionTitle from questionnaireData
-      const questionToSection = new Map<string, string>();
-      questionnaireSections.forEach((section: any) => {
-        section.questions?.forEach((q: any) => {
-          questionToSection.set(q.id, section.title);
-        });
-      });
-
-      // Calculate completion by section, excluding hidden conditional questions
-      const sectionProgress: Record<string, { total: number; completed: number }> = {};
-      let totalQuestions = 0;
-      
-      // Initialize sections and count only visible questions
-      questionnaireSections.forEach((section: any) => {
-        if (section.questions && section.questions.length > 0) {
-          const visibleQuestions = section.questions.filter(isVisible);
-          sectionProgress[section.title] = {
-            total: visibleQuestions.length,
-            completed: 0
-          };
-          totalQuestions += visibleQuestions.length;
-        }
-      });
-
-      // Count completed questions from actual responses (only for visible questions)
-      const visibleQuestionIds = new Set<string>();
-      questionnaireSections.forEach((section: any) => {
-        section.questions?.forEach((q: any) => {
-          if (isVisible(q)) visibleQuestionIds.add(q.id);
-        });
-      });
-
-      responsesData.forEach(response => {
-        if (!visibleQuestionIds.has(response.questionId)) return;
-        const sectionTitle = questionToSection.get(response.questionId);
-        if (sectionTitle && sectionProgress[sectionTitle]) {
-          if (response.response && response.response.trim() !== '') {
-            sectionProgress[sectionTitle].completed++;
-          }
-        }
-      });
-
-      // Calculate overall completion
-      const completedCount = responsesData.filter(response => 
-        visibleQuestionIds.has(response.questionId) &&
-        response.response && response.response.trim() !== ''
-      ).length;
+      const progress = calculateProgress(allQuestions, responsesData, orgFiles);
 
       return {
-        totalQuestions,
-        completedQuestions: completedCount,
-        sectionProgress,
+        totalQuestions: progress.totalQuestions,
+        completedQuestions: progress.completedQuestions,
+        completionPercent: progress.completionPercentage,
+        sectionProgress: Object.fromEntries(
+          Object.entries(progress.sectionStats).map(([title, s]: [string, any]) => [
+            title,
+            { total: s.total, completed: s.completed },
+          ])
+        ),
       };
     }),
 

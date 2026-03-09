@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
@@ -23,6 +23,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -31,7 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Activity, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp } from "lucide-react";
+import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Activity, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp, Headphones, AlertTriangle, AlertCircle, Info, Image, CheckSquare, BarChart3, Copy, Check, Clock } from "lucide-react";
 import { questionnaireSections } from "@shared/questionnaireData";
 import { toast } from "sonner";
 import {
@@ -52,7 +53,82 @@ import {
 export default function PlatformAdmin() {
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"dashboard" | "users" | "organizations" | "templates" | "partners" | "specs">("dashboard");
+  const [activeTab, setActiveTab] = useState<"prod-dashboard" | "impl-dashboard" | "orgs" | "users" | "templates" | "partners" | "specs" | "support-hub">("prod-dashboard");
+
+  // Support Hub state
+  const [hubNotes, setHubNotes] = useState<Record<number, string>>({});
+  const [hubIssues, setHubIssues] = useState<Record<number, { text: string; severity: "low" | "medium" | "high"; resolved: boolean }[]>>({});
+  const [hubDiagrams, setHubDiagrams] = useState<Record<number, { name: string; url: string; isImage: boolean }[]>>({});
+  const [newIssueText, setNewIssueText] = useState<Record<number, string>>({});
+  const [newIssueSeverity, setNewIssueSeverity] = useState<Record<number, "low" | "medium" | "high">>({});
+  const [hubDiagramRefs] = useState<Record<number, React.RefObject<HTMLInputElement>>>({});
+
+  const getHubDiagramRef = (orgId: number): React.RefObject<HTMLInputElement> => {
+    if (!hubDiagramRefs[orgId]) {
+      (hubDiagramRefs as any)[orgId] = { current: null };
+    }
+    return hubDiagramRefs[orgId];
+  };
+
+  const handleHubDiagramUpload = (orgId: number, files: FileList | null) => {
+    if (!files) return;
+    const newFiles = Array.from(files).map(file => ({
+      name: file.name,
+      url: URL.createObjectURL(file),
+      isImage: file.type.startsWith("image/"),
+    }));
+    setHubDiagrams(prev => ({ ...prev, [orgId]: [...(prev[orgId] || []), ...newFiles] }));
+  };
+
+  const addHubIssue = (orgId: number) => {
+    const text = newIssueText[orgId]?.trim();
+    if (!text) return;
+    const severity = newIssueSeverity[orgId] || "medium";
+    setHubIssues(prev => ({
+      ...prev,
+      [orgId]: [...(prev[orgId] || []), { text, severity, resolved: false }],
+    }));
+    setNewIssueText(prev => ({ ...prev, [orgId]: "" }));
+  };
+
+  const toggleIssueResolved = (orgId: number, idx: number) => {
+    setHubIssues(prev => ({
+      ...prev,
+      [orgId]: (prev[orgId] || []).map((issue, i) =>
+        i === idx ? { ...issue, resolved: !issue.resolved } : issue
+      ),
+    }));
+  };
+
+  const exportSupportHubCSV = () => {
+    if (!orgs || !metrics) return;
+    const rows = [
+      ["Organization", "Partner", "Status", "Completion %", "Sections Complete", "Files", "Open Issues", "Notes"],
+    ];
+    orgs.forEach(org => {
+      const m = metricsMap[org.id];
+      const partner = org.clientId ? clientMap[org.clientId] || "" : "";
+      const openIssues = (hubIssues[org.id] || []).filter(i => !i.resolved).length;
+      rows.push([
+        org.name,
+        partner,
+        org.status || "",
+        String(m?.completionPercent || 0),
+        String(m?.sectionsComplete || 0),
+        String(m?.files.length || 0),
+        String(openIssues),
+        hubNotes[org.id] || "",
+      ]);
+    });
+    const csv = rows.map(r => r.map(v => `"${v.replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "support-hub-export.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   // Template management state
   const [isUploadTemplateDialogOpen, setIsUploadTemplateDialogOpen] = useState(false);
@@ -841,7 +917,21 @@ export default function PlatformAdmin() {
           </div>
 
           {/* Tab Navigation */}
-          <div className="flex gap-6 mt-6 border-b border-border">
+          <div className="flex gap-6 mt-6 border-b border-border overflow-x-auto">
+            <button
+              onClick={() => setActiveTab("connectivity")}
+              className={`pb-3 px-1 font-medium transition-colors relative whitespace-nowrap flex items-center gap-1.5 ${
+                activeTab === "connectivity"
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Activity className="w-4 h-4" />
+              Connectivity Matrix
+              {activeTab === "connectivity" && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+              )}
+            </button>
             <button
               onClick={() => setActiveTab("dashboard")}
               className={`pb-3 px-1 font-medium transition-colors relative ${
@@ -924,12 +1014,32 @@ export default function PlatformAdmin() {
                 )}
               </button>
             )}
+            <button
+              onClick={() => setActiveTab("support-hub")}
+              className={`pb-3 px-1 font-medium transition-colors relative flex items-center gap-1.5 ${
+                activeTab === "support-hub"
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Headphones className="w-4 h-4" />
+              Support Hub
+              {activeTab === "support-hub" && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+              )}
+            </button>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
       <div className="container py-8">
+
+        {/* ── CONNECTIVITY MATRIX TAB ── */}
+        {activeTab === "connectivity" && (
+          <ConnectivityMatrix orgs={orgs || []} />
+        )}
+
         {activeTab === "dashboard" && (
           <>
             <h2 className="text-2xl font-bold mb-6">Active Organizations ({activeOrgs.length})</h2>
@@ -2448,7 +2558,761 @@ export default function PlatformAdmin() {
             </Card>
           </>
         )}
+
+        {/* ── SUPPORT HUB TAB ── */}
+        {activeTab === "support-hub" && (
+          <>
+            {/* Header row */}
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  <Headphones className="w-6 h-6 text-primary" />
+                  Prod Support Hub
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Quick-reference for all clients — status, issues, diagrams, and notes in one place.
+                </p>
+              </div>
+              <Button onClick={exportSupportHubCSV} variant="outline">
+                <Download className="w-4 h-4 mr-2" />
+                Export CSV
+              </Button>
+            </div>
+
+            {/* Summary strip */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              {[
+                { label: "Total Orgs", value: orgs?.length || 0, icon: <ClipboardList className="w-5 h-5 text-primary" /> },
+                { label: "Active", value: orgs?.filter(o => o.status === "active").length || 0, icon: <CheckCircle2 className="w-5 h-5 text-green-500" /> },
+                { label: "Open Issues", value: Object.values(hubIssues).flat().filter(i => !i.resolved).length, icon: <AlertCircle className="w-5 h-5 text-red-500" /> },
+                { label: "Avg Completion", value: `${orgs?.length ? Math.round((orgs.reduce((s, o) => s + (metricsMap[o.id]?.completionPercent || 0), 0)) / orgs.length) : 0}%`, icon: <BarChart3 className="w-5 h-5 text-blue-500" /> },
+              ].map((stat, i) => (
+                <Card key={i} className="border border-border/50">
+                  <CardContent className="p-4 flex items-center gap-3">
+                    {stat.icon}
+                    <div>
+                      <div className="text-xl font-bold">{stat.value}</div>
+                      <div className="text-xs text-muted-foreground">{stat.label}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Per-org reference cards */}
+            <div className="space-y-6">
+              {(orgs || []).map(org => {
+                const m = metricsMap[org.id];
+                const partner = org.clientId ? (clientMap[org.clientId] || `Partner ${org.clientId}`) : "Platform";
+                const openIssues = (hubIssues[org.id] || []).filter(i => !i.resolved);
+                const resolvedIssues = (hubIssues[org.id] || []).filter(i => i.resolved);
+                const diagrams = hubDiagrams[org.id] || [];
+
+                return (
+                  <Card key={org.id} className="border border-border/50">
+                    <CardContent className="p-0">
+                      {/* Card header */}
+                      <div className="flex items-center justify-between p-4 border-b border-border/50 bg-muted/20">
+                        <div className="flex items-center gap-3">
+                          <ClipboardList className="w-5 h-5 text-primary" />
+                          <div>
+                            <div className="font-semibold">{org.name}</div>
+                            <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
+                              <Badge variant="outline" className="text-xs">{partner}</Badge>
+                              <Badge
+                                variant="outline"
+                                className={`text-xs ${
+                                  org.status === "active" ? "border-green-500/50 text-green-600" :
+                                  org.status === "completed" ? "border-blue-500/50 text-blue-600" :
+                                  "border-muted-foreground/50"
+                                }`}
+                              >
+                                {org.status || "active"}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-6 text-sm">
+                          <div className="text-center">
+                            <div className={`text-xl font-bold ${m?.completionPercent === 100 ? "text-green-500" : "text-primary"}`}>
+                              {m?.completionPercent || 0}%
+                            </div>
+                            <div className="text-xs text-muted-foreground">Intake</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-xl font-bold">{m?.files.length || 0}</div>
+                            <div className="text-xs text-muted-foreground">Files</div>
+                          </div>
+                          <div className="text-center">
+                            <div className={`text-xl font-bold ${openIssues.length > 0 ? "text-red-500" : "text-muted-foreground"}`}>
+                              {openIssues.length}
+                            </div>
+                            <div className="text-xs text-muted-foreground">Open Issues</div>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => window.open(`/org/${org.slug}`, "_blank")}
+                          >
+                            <ExternalLink className="w-3 h-3 mr-1" />
+                            Portal
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Card body — 3-column layout */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border/50">
+
+                        {/* Column 1: Issues */}
+                        <div className="p-4">
+                          <h4 className="text-sm font-semibold mb-3 flex items-center gap-1.5">
+                            <AlertCircle className="w-4 h-4 text-red-500" />
+                            Issues
+                          </h4>
+
+                          {/* Add issue */}
+                          <div className="flex gap-2 mb-3">
+                            <input
+                              type="text"
+                              placeholder="Add an issue..."
+                              value={newIssueText[org.id] || ""}
+                              onChange={e => setNewIssueText(prev => ({ ...prev, [org.id]: e.target.value }))}
+                              onKeyDown={e => e.key === "Enter" && addHubIssue(org.id)}
+                              className="flex-1 text-xs border border-border/50 rounded px-2 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                            />
+                            <select
+                              value={newIssueSeverity[org.id] || "medium"}
+                              onChange={e => setNewIssueSeverity(prev => ({ ...prev, [org.id]: e.target.value as any }))}
+                              className="text-xs border border-border/50 rounded px-1.5 py-1.5 bg-background"
+                            >
+                              <option value="low">Low</option>
+                              <option value="medium">Med</option>
+                              <option value="high">High</option>
+                            </select>
+                            <Button size="sm" variant="outline" className="px-2" onClick={() => addHubIssue(org.id)}>
+                              <Plus className="w-3 h-3" />
+                            </Button>
+                          </div>
+
+                          {openIssues.length === 0 && resolvedIssues.length === 0 ? (
+                            <p className="text-xs text-muted-foreground">No issues logged</p>
+                          ) : (
+                            <div className="space-y-1.5">
+                              {openIssues.map((issue, idx) => {
+                                const realIdx = (hubIssues[org.id] || []).indexOf(issue);
+                                return (
+                                  <div key={idx} className="flex items-start gap-2">
+                                    <button onClick={() => toggleIssueResolved(org.id, realIdx)} className="mt-0.5 shrink-0">
+                                      <Circle className="w-3.5 h-3.5 text-muted-foreground hover:text-green-500" />
+                                    </button>
+                                    <span className={`text-xs flex-1 ${
+                                      issue.severity === "high" ? "text-red-500" :
+                                      issue.severity === "medium" ? "text-amber-500" : "text-foreground"
+                                    }`}>{issue.text}</span>
+                                    <Badge variant="outline" className={`text-[10px] shrink-0 ${
+                                      issue.severity === "high" ? "border-red-500/50 text-red-500" :
+                                      issue.severity === "medium" ? "border-amber-500/50 text-amber-500" :
+                                      "border-border/50"
+                                    }`}>{issue.severity}</Badge>
+                                  </div>
+                                );
+                              })}
+                              {resolvedIssues.length > 0 && (
+                                <div className="pt-1 border-t border-border/30 space-y-1">
+                                  {resolvedIssues.map((issue, idx) => {
+                                    const realIdx = (hubIssues[org.id] || []).indexOf(issue);
+                                    return (
+                                      <div key={idx} className="flex items-start gap-2 opacity-50">
+                                        <button onClick={() => toggleIssueResolved(org.id, realIdx)} className="mt-0.5 shrink-0">
+                                          <CheckSquare className="w-3.5 h-3.5 text-green-500" />
+                                        </button>
+                                        <span className="text-xs line-through flex-1">{issue.text}</span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Column 2: Notes */}
+                        <div className="p-4">
+                          <h4 className="text-sm font-semibold mb-3 flex items-center gap-1.5">
+                            <Info className="w-4 h-4 text-blue-500" />
+                            Notes
+                          </h4>
+                          <textarea
+                            value={hubNotes[org.id] || ""}
+                            onChange={e => setHubNotes(prev => ({ ...prev, [org.id]: e.target.value }))}
+                            placeholder="Support notes, escalation contacts, known configs..."
+                            rows={5}
+                            className="w-full text-xs border border-border/50 rounded px-2 py-1.5 bg-background resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+                          />
+                        </div>
+
+                        {/* Column 3: Diagrams */}
+                        <div className="p-4">
+                          <h4 className="text-sm font-semibold mb-3 flex items-center justify-between">
+                            <span className="flex items-center gap-1.5">
+                              <Image className="w-4 h-4 text-purple-500" />
+                              Diagrams
+                            </span>
+                            <label className="cursor-pointer">
+                              <input
+                                type="file"
+                                accept="image/*,.pdf,.svg"
+                                multiple
+                                className="hidden"
+                                onChange={e => handleHubDiagramUpload(org.id, e.target.files)}
+                              />
+                              <span className="text-xs text-primary hover:underline flex items-center gap-1">
+                                <Upload className="w-3 h-3" />
+                                Upload
+                              </span>
+                            </label>
+                          </h4>
+                          {diagrams.length === 0 ? (
+                            <label className="cursor-pointer">
+                              <input
+                                type="file"
+                                accept="image/*,.pdf,.svg"
+                                multiple
+                                className="hidden"
+                                onChange={e => handleHubDiagramUpload(org.id, e.target.files)}
+                              />
+                              <div className="border-2 border-dashed border-border/50 rounded-lg p-4 text-center hover:border-primary/50 hover:bg-muted/20 transition-colors">
+                                <Image className="w-6 h-6 text-muted-foreground mx-auto mb-1" />
+                                <p className="text-xs text-muted-foreground">Upload network or architecture diagrams</p>
+                              </div>
+                            </label>
+                          ) : (
+                            <div className="space-y-2">
+                              {diagrams.map((d, i) => (
+                                <div key={i} className="border border-border/50 rounded overflow-hidden">
+                                  {d.isImage && (
+                                    <img src={d.url} alt={d.name} className="w-full max-h-32 object-contain bg-muted/20" />
+                                  )}
+                                  <div className="flex items-center gap-1.5 p-2 bg-muted/20">
+                                    <FileText className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                                    <span className="text-xs flex-1 truncate">{d.name}</span>
+                                    <a href={d.url} download={d.name}>
+                                      <Button size="sm" variant="ghost" className="h-6 w-6 p-0">
+                                        <Download className="w-3 h-3" />
+                                      </Button>
+                                    </a>
+                                  </div>
+                                </div>
+                              ))}
+                              <label className="cursor-pointer block">
+                                <input
+                                  type="file"
+                                  accept="image/*,.pdf,.svg"
+                                  multiple
+                                  className="hidden"
+                                  onChange={e => handleHubDiagramUpload(org.id, e.target.files)}
+                                />
+                                <div className="text-xs text-center text-primary hover:underline cursor-pointer">+ Add more</div>
+                              </label>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </>
+        )}
       </div>
+    </div>
+  );
+}
+
+// ─── Connectivity Matrix ──────────────────────────────────────────────────────
+
+/** Rows the matrix always shows, keyed by questionId stored in intakeResponses.
+ *  `meta.*` IDs are admin-only fields that don't exist in the client questionnaire
+ *  but are stored the same way so they're fully editable and persistent. */
+const MATRIX_SECTIONS: { title: string; rows: { label: string; questionId: string; isEmail?: boolean; isPhone?: boolean }[] }[] = [
+  {
+    title: "Organization",
+    rows: [
+      { label: "Go-Live Date",   questionId: "D.2" },
+      { label: "Studies / Day",  questionId: "meta.studies_per_day" },
+      { label: "Reading Group",  questionId: "meta.reading_group" },
+      { label: "Status",         questionId: "meta.prod_status" },
+    ],
+  },
+  {
+    title: "Contacts",
+    rows: [
+      { label: "IT Contact",  questionId: "meta.it_contact_name" },
+      { label: "Email",       questionId: "meta.it_contact_email", isEmail: true },
+      { label: "Phone",       questionId: "meta.it_contact_phone", isPhone: true },
+    ],
+  },
+  {
+    title: "Systems",
+    rows: [
+      { label: "PACS",              questionId: "meta.pacs_system" },
+      { label: "RIS",               questionId: "meta.ris_system" },
+      { label: "EMR",               questionId: "meta.emr_system" },
+      { label: "Interface Engine",  questionId: "meta.interface_engine" },
+    ],
+  },
+  {
+    title: "DICOM Routing",
+    rows: [
+      { label: "Image Source",    questionId: "meta.dicom_image_source" },
+      { label: "Org AE Title",    questionId: "meta.dicom_org_ae_title" },
+      { label: "Org IP",          questionId: "meta.dicom_org_ip" },
+      { label: "Org Port",        questionId: "meta.dicom_org_port" },
+      { label: "Silverback IP",   questionId: "meta.dicom_sb_ip" },
+      { label: "Silverback Port", questionId: "meta.dicom_sb_port" },
+      { label: "NL IP",           questionId: "meta.dicom_nl_ip" },
+      { label: "NL Port",         questionId: "meta.dicom_nl_port" },
+    ],
+  },
+  {
+    title: "HL7 Orders",
+    rows: [
+      { label: "Org HL7 IP",      questionId: "meta.hl7_ord_org_ip" },
+      { label: "Org HL7 Port",    questionId: "meta.hl7_ord_org_port" },
+      { label: "Silverback IP",   questionId: "meta.hl7_ord_sb_ip" },
+      { label: "Silverback Port", questionId: "meta.hl7_ord_sb_port" },
+      { label: "NL IP",           questionId: "meta.hl7_ord_nl_ip" },
+      { label: "NL Port",         questionId: "meta.hl7_ord_nl_port" },
+    ],
+  },
+  {
+    title: "HL7 Results",
+    rows: [
+      { label: "NL IP",           questionId: "meta.hl7_res_nl_ip" },
+      { label: "NL Port",         questionId: "meta.hl7_res_nl_port" },
+      { label: "Silverback IP",   questionId: "meta.hl7_res_sb_ip" },
+      { label: "Silverback Port", questionId: "meta.hl7_res_sb_port" },
+      { label: "Org IP",          questionId: "meta.hl7_res_org_ip" },
+      { label: "Org Port",        questionId: "meta.hl7_res_org_port" },
+    ],
+  },
+  {
+    title: "Known Gotchas / Exceptions",
+    rows: [
+      { label: "Accession Format",  questionId: "meta.accession_format" },
+      { label: "Priors Available",  questionId: "meta.priors_available" },
+      { label: "Downtime Behavior", questionId: "L.11" },
+      { label: "Other Notes",       questionId: "meta.other_notes" },
+    ],
+  },
+];
+
+
+/** Status dot for the prod_status field */
+function StatusDot({ value }: { value: string }) {
+  const lower = (value ?? "").toLowerCase();
+  if (lower === "active")     return <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" />Active</span>;
+  if (lower === "monitoring") return <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block" />Monitoring</span>;
+  if (lower === "pending")    return <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-muted-foreground/50 inline-block" />Pending</span>;
+  if (lower === "inactive")   return <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" />Inactive</span>;
+  return <span className="text-muted-foreground">{value || "—"}</span>;
+}
+
+type AuditMeta = { updatedBy?: string | null; updatedAt?: Date | string | null; createdAt?: Date | string | null };
+
+function fmtDate(d?: Date | string | null) {
+  if (!d) return null;
+  return new Date(d).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+}
+
+/** Single editable cell — click to edit, hover shows copy + audit tooltip */
+function MatrixCell({
+  orgId, questionId, initialValue, audit, isEmail, isPhone, isStatus, isGotcha,
+  onSaved,
+}: {
+  orgId: number; questionId: string; initialValue: string; audit?: AuditMeta;
+  isEmail?: boolean; isPhone?: boolean; isStatus?: boolean; isGotcha?: boolean;
+  onSaved?: (questionId: string, value: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft]     = useState(initialValue);
+  const [saved, setSaved]     = useState(initialValue);
+  const [copied, setCopied]   = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const saveMutation = trpc.admin.saveOrgResponse.useMutation({
+    onSuccess: () => { setSaved(draft); onSaved?.(questionId, draft); },
+    onError:   () => { setDraft(saved); toast.error("Failed to save — change reverted"); },
+  });
+
+  const commit = () => {
+    setEditing(false);
+    if (draft !== saved) saveMutation.mutate({ organizationId: orgId, questionId, response: draft });
+  };
+
+  const copyValue = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const text = saved || "";
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
+
+  useEffect(() => { if (editing) inputRef.current?.focus(); }, [editing]);
+  // Keep in sync when parent data refreshes (e.g. after import)
+  useEffect(() => { setDraft(initialValue); setSaved(initialValue); }, [initialValue]);
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={e => {
+          if (e.key === "Enter")  commit();
+          if (e.key === "Escape") { setDraft(saved); setEditing(false); }
+        }}
+        className="w-full bg-muted/30 border border-primary/40 rounded px-2 py-0.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary"
+      />
+    );
+  }
+
+  const hasAudit = audit && (audit.updatedBy || audit.updatedAt);
+
+  return (
+    <span className="group inline-flex items-center gap-1 min-w-[4rem]">
+      {/* Clickable value area */}
+      <span
+        onClick={() => setEditing(true)}
+        className={`cursor-pointer rounded px-1 py-0.5 -mx-1 hover:bg-muted/40 transition-colors inline-flex items-center gap-1 ${
+          isGotcha ? "text-amber-500 dark:text-amber-400" : ""
+        }`}
+      >
+        {isStatus ? (
+          <StatusDot value={saved} />
+        ) : isEmail && saved ? (
+          <a href={`mailto:${saved}`} onClick={e => e.stopPropagation()} className="text-primary hover:underline inline-flex items-center gap-1">
+            {saved}<ExternalLink className="w-3 h-3" />
+          </a>
+        ) : isPhone && saved ? (
+          <a href={`tel:${saved}`} onClick={e => e.stopPropagation()} className="hover:underline">{saved}</a>
+        ) : (
+          <span className="font-mono text-sm">{saved || "—"}</span>
+        )}
+        <Edit className="w-2.5 h-2.5 text-muted-foreground/30 opacity-0 group-hover:opacity-100 shrink-0" />
+      </span>
+
+      {/* Copy button — visible on hover */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={copyValue}
+            className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-muted/60 shrink-0"
+            tabIndex={-1}
+          >
+            {copied
+              ? <Check className="w-3 h-3 text-green-500" />
+              : <Copy className="w-3 h-3 text-muted-foreground/60" />
+            }
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>{copied ? "Copied!" : "Copy value"}</TooltipContent>
+      </Tooltip>
+
+      {/* Audit badge — only shown when audit data exists */}
+      {hasAudit && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 cursor-default">
+              <Clock className="w-3 h-3 text-muted-foreground/40" />
+            </span>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-[220px] text-left space-y-0.5 leading-snug">
+            {audit?.updatedBy && <div><span className="text-muted-foreground">By:</span> {audit.updatedBy}</div>}
+            {audit?.updatedAt && <div><span className="text-muted-foreground">Updated:</span> {fmtDate(audit.updatedAt)}</div>}
+            {audit?.createdAt && <div><span className="text-muted-foreground">Created:</span> {fmtDate(audit.createdAt)}</div>}
+          </TooltipContent>
+        </Tooltip>
+      )}
+    </span>
+  );
+}
+
+// ── CSV helpers ────────────────────────────────────────────────────────────────
+function buildCSV(orgs: { id: number; name: string }[], lookup: Record<number, Record<string, string>>) {
+  const header = ["Section", "Detail (questionId)", ...orgs.map(o => o.name)];
+  const dataRows: string[][] = [];
+  MATRIX_SECTIONS.forEach(section => {
+    section.rows.forEach(row => {
+      dataRows.push([section.title, `${row.label} (${row.questionId})`, ...orgs.map(o => lookup[o.id]?.[row.questionId] ?? "")]);
+    });
+  });
+  return [header, ...dataRows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+}
+
+function downloadCSV(csv: string) {
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `connectivity-matrix-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/** Parse an imported CSV back into {orgId, questionId, response}[] rows.
+ *  Expects the same format as the export: col 0 = Section, col 1 = "Label (questionId)", col 2+ = org values.
+ *  Returns parsed rows + any validation errors. */
+function parseImportCSV(csvText: string, orgs: { id: number; name: string }[]) {
+  const lines = csvText.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) return { rows: [], errors: ["CSV has no data rows"] };
+
+  const parseRow = (line: string) => {
+    const cols: string[] = [];
+    let cur = "", inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"' && !inQ) { inQ = true; continue; }
+      if (ch === '"' && inQ && line[i + 1] === '"') { cur += '"'; i++; continue; }
+      if (ch === '"' && inQ) { inQ = false; continue; }
+      if (ch === ',' && !inQ) { cols.push(cur); cur = ""; continue; }
+      cur += ch;
+    }
+    cols.push(cur);
+    return cols;
+  };
+
+  const headers = parseRow(lines[0]);
+  // Map header org names to org IDs
+  const orgCols: { colIdx: number; orgId: number }[] = [];
+  const errors: string[] = [];
+
+  for (let i = 2; i < headers.length; i++) {
+    const name = headers[i].trim();
+    const org = orgs.find(o => o.name.trim().toLowerCase() === name.toLowerCase());
+    if (org) orgCols.push({ colIdx: i, orgId: org.id });
+    else errors.push(`Column "${name}" does not match any accessible organization — skipped`);
+  }
+
+  // Build a flat questionId lookup from MATRIX_SECTIONS for validation
+  const qidByLabel: Record<string, string> = {};
+  MATRIX_SECTIONS.forEach(s => s.rows.forEach(r => {
+    qidByLabel[`${r.label} (${r.questionId})`.toLowerCase()] = r.questionId;
+    qidByLabel[r.questionId.toLowerCase()] = r.questionId; // also accept bare qid
+  }));
+
+  const rows: { organizationId: number; questionId: string; response: string }[] = [];
+
+  for (let li = 1; li < lines.length; li++) {
+    const cols = parseRow(lines[li]);
+    const rawDetail = (cols[1] ?? "").trim().toLowerCase();
+    const questionId = qidByLabel[rawDetail];
+    if (!questionId) {
+      if (rawDetail) errors.push(`Row ${li + 1}: unrecognized detail "${cols[1]}" — skipped`);
+      continue;
+    }
+    for (const { colIdx, orgId } of orgCols) {
+      const response = (cols[colIdx] ?? "").trim();
+      if (response) rows.push({ organizationId: orgId, questionId, response });
+    }
+  }
+
+  return { rows, errors };
+}
+
+// ── ConnectivityMatrix ─────────────────────────────────────────────────────────
+function ConnectivityMatrix({ orgs }: { orgs: { id: number; name: string; slug: string }[] }) {
+  const utils = trpc.useUtils();
+  const { data: allResponses = [], isLoading } = trpc.admin.getAllOrgResponses.useQuery();
+
+  // Import dialog state
+  const [importOpen, setImportOpen]         = useState(false);
+  const [importPreview, setImportPreview]   = useState<{ rows: { organizationId: number; questionId: string; response: string }[]; errors: string[] } | null>(null);
+  const [importFileName, setImportFileName] = useState("");
+  const importFileRef = useRef<HTMLInputElement>(null);
+
+  const bulkSave = trpc.admin.bulkSaveOrgResponses.useMutation({
+    onSuccess: (result) => {
+      toast.success(`Imported ${result.saved} cell${result.saved !== 1 ? "s" : ""}`);
+      setImportOpen(false);
+      setImportPreview(null);
+      setImportFileName("");
+      utils.admin.getAllOrgResponses.invalidate();
+    },
+    onError: (e) => toast.error(`Import failed: ${e.message}`),
+  });
+
+  // Build a lookup: orgId → questionId → { response, audit }
+  type LookupEntry = { response: string; updatedBy?: string | null; updatedAt?: Date | string | null; createdAt?: Date | string | null };
+  const lookup = allResponses.reduce<Record<number, Record<string, LookupEntry>>>((acc, r) => {
+    if (!acc[r.organizationId]) acc[r.organizationId] = {};
+    acc[r.organizationId][r.questionId] = {
+      response: r.response ?? "",
+      updatedBy: r.updatedBy,
+      updatedAt: r.updatedAt,
+      createdAt: r.createdAt,
+    };
+    return acc;
+  }, {});
+
+  // For export, build a plain string lookup
+  const strLookup = allResponses.reduce<Record<number, Record<string, string>>>((acc, r) => {
+    if (!acc[r.organizationId]) acc[r.organizationId] = {};
+    acc[r.organizationId][r.questionId] = r.response ?? "";
+    return acc;
+  }, {});
+
+  const handleExport = () => downloadCSV(buildCSV(orgs, strLookup));
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      const parsed = parseImportCSV(text, orgs);
+      setImportPreview(parsed);
+    };
+    reader.readAsText(file);
+  };
+
+  const confirmImport = () => {
+    if (!importPreview || importPreview.rows.length === 0) return;
+    bulkSave.mutate({ rows: importPreview.rows });
+  };
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
+  }
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-2xl font-bold">Production Connectivity Matrix</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Live data — click any cell to edit, hover to copy or view audit history.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Import */}
+          <Dialog open={importOpen} onOpenChange={setImportOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Upload className="w-4 h-4 mr-2" />
+                Import CSV
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Import Connectivity Matrix</DialogTitle>
+                <DialogDescription>
+                  Upload a CSV exported from this matrix. Only non-empty cells will be written.
+                  Column headers must match org names exactly.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 pt-2">
+                <div
+                  onClick={() => importFileRef.current?.click()}
+                  className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                >
+                  <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                  {importFileName
+                    ? <p className="text-sm font-medium">{importFileName}</p>
+                    : <p className="text-sm text-muted-foreground">Click to select a .csv file</p>
+                  }
+                  <input ref={importFileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleFileChange} />
+                </div>
+
+                {importPreview && (
+                  <div className="space-y-2 text-sm">
+                    {importPreview.errors.length > 0 && (
+                      <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded p-3 space-y-1">
+                        {importPreview.errors.map((e, i) => (
+                          <p key={i} className="text-amber-700 dark:text-amber-400 text-xs">{e}</p>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-muted-foreground">
+                      Ready to write <strong className="text-foreground">{importPreview.rows.length}</strong> cell{importPreview.rows.length !== 1 ? "s" : ""} across{" "}
+                      <strong className="text-foreground">{[...new Set(importPreview.rows.map(r => r.organizationId))].length}</strong> org{[...new Set(importPreview.rows.map(r => r.organizationId))].length !== 1 ? "s" : ""}.
+                    </p>
+                    <Button
+                      className="w-full"
+                      disabled={importPreview.rows.length === 0 || bulkSave.isPending}
+                      onClick={confirmImport}
+                    >
+                      {bulkSave.isPending ? "Importing…" : `Import ${importPreview.rows.length} cells`}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Export */}
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="w-4 h-4 mr-2" />
+            Export CSV
+          </Button>
+        </div>
+      </div>
+
+      {orgs.length === 0 ? (
+        <p className="text-muted-foreground py-12 text-center">No organizations accessible.</p>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border border-border">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="border-b border-border bg-muted/30">
+                <th className="text-left py-3 px-4 font-semibold text-muted-foreground w-44 min-w-[11rem] border-r border-border">Detail</th>
+                {orgs.map(org => (
+                  <th key={org.id} className="text-left py-3 px-4 font-bold min-w-[10rem] border-r border-border last:border-r-0">{org.name}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {MATRIX_SECTIONS.map((section, si) => (
+                <>
+                  <tr key={`sh-${si}`} className="bg-muted/20">
+                    <td colSpan={orgs.length + 1} className="py-2 px-4 font-bold text-sm border-t border-border">
+                      {section.title}
+                    </td>
+                  </tr>
+                  {section.rows.map((row, ri) => (
+                    <tr key={`r-${si}-${ri}`} className="border-t border-border/40 hover:bg-muted/10 transition-colors">
+                      <td className="py-2.5 px-4 text-foreground/70 border-r border-border/40 w-44">{row.label}</td>
+                      {orgs.map(org => {
+                        const entry = lookup[org.id]?.[row.questionId];
+                        return (
+                          <td key={org.id} className="py-2 px-3 border-r border-border/40 last:border-r-0">
+                            <MatrixCell
+                              orgId={org.id}
+                              questionId={row.questionId}
+                              initialValue={entry?.response ?? ""}
+                              audit={entry}
+                              isEmail={row.isEmail}
+                              isPhone={row.isPhone}
+                              isStatus={row.questionId === "meta.prod_status"}
+                              isGotcha={section.title === "Known Gotchas / Exceptions"}
+                            />
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
