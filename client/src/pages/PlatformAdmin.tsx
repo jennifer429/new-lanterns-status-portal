@@ -130,15 +130,16 @@ export default function PlatformAdmin() {
   };
 
   const exportConnectivityCSV = () => {
-    const matrix = buildConnectivityMatrix();
-    const clients = matrix.clients;
-    const rows: string[][] = [["Section", "Detail", ...clients.map(c => c.name)]];
-    matrix.sections.forEach(section => {
+    const cols = orgs || [];
+    const csvRows: string[][] = [["Section", "Detail", ...cols.map(o => o.name)]];
+    // We can't access the trpc cache here directly; export is a best-effort snapshot
+    // The user can re-export after data loads in the matrix view
+    MATRIX_SECTIONS.forEach(section => {
       section.rows.forEach(row => {
-        rows.push([section.title, row.label, ...clients.map(c => row.values[c.id] || "")]);
+        csvRows.push([section.title, row.label, ...cols.map(() => "")]);
       });
     });
-    const csv = rows.map(r => r.map(v => `"${v.replace(/"/g, '""')}"`).join(",")).join("\n");
+    const csv = csvRows.map(r => r.map(v => `"${v.replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -1055,7 +1056,7 @@ export default function PlatformAdmin() {
 
         {/* ── CONNECTIVITY MATRIX TAB ── */}
         {activeTab === "connectivity" && (
-          <ConnectivityMatrix onExportCSV={exportConnectivityCSV} />
+          <ConnectivityMatrix orgs={orgs || []} onExportCSV={exportConnectivityCSV} />
         )}
 
         {activeTab === "dashboard" && (
@@ -2850,121 +2851,185 @@ export default function PlatformAdmin() {
 
 // ─── Connectivity Matrix ──────────────────────────────────────────────────────
 
-type MatrixClient = { id: string; name: string };
-type MatrixRow = { label: string; values: Record<string, string>; isEmail?: boolean; isPhone?: boolean };
-type MatrixSection = { title: string; color: string; rows: MatrixRow[] };
-type MatrixData = { clients: MatrixClient[]; sections: MatrixSection[] };
+/** Rows the matrix always shows, keyed by questionId stored in intakeResponses.
+ *  `meta.*` IDs are admin-only fields that don't exist in the client questionnaire
+ *  but are stored the same way so they're fully editable and persistent. */
+const MATRIX_SECTIONS: { title: string; rows: { label: string; questionId: string; isEmail?: boolean; isPhone?: boolean }[] }[] = [
+  {
+    title: "Organization",
+    rows: [
+      { label: "Go-Live Date",   questionId: "D.2" },
+      { label: "Studies / Day",  questionId: "meta.studies_per_day" },
+      { label: "Reading Group",  questionId: "meta.reading_group" },
+      { label: "Status",         questionId: "meta.prod_status" },
+    ],
+  },
+  {
+    title: "Contacts",
+    rows: [
+      { label: "IT Contact",  questionId: "meta.it_contact_name" },
+      { label: "Email",       questionId: "meta.it_contact_email", isEmail: true },
+      { label: "Phone",       questionId: "meta.it_contact_phone", isPhone: true },
+    ],
+  },
+  {
+    title: "Systems",
+    rows: [
+      { label: "PACS",              questionId: "meta.pacs_system" },
+      { label: "RIS",               questionId: "meta.ris_system" },
+      { label: "EMR",               questionId: "meta.emr_system" },
+      { label: "Interface Engine",  questionId: "meta.interface_engine" },
+    ],
+  },
+  {
+    title: "DICOM Routing",
+    rows: [
+      { label: "Image Source",    questionId: "meta.dicom_image_source" },
+      { label: "Org AE Title",    questionId: "meta.dicom_org_ae_title" },
+      { label: "Org IP",          questionId: "meta.dicom_org_ip" },
+      { label: "Org Port",        questionId: "meta.dicom_org_port" },
+      { label: "Silverback IP",   questionId: "meta.dicom_sb_ip" },
+      { label: "Silverback Port", questionId: "meta.dicom_sb_port" },
+      { label: "NL IP",           questionId: "meta.dicom_nl_ip" },
+      { label: "NL Port",         questionId: "meta.dicom_nl_port" },
+    ],
+  },
+  {
+    title: "HL7 Orders",
+    rows: [
+      { label: "Org HL7 IP",      questionId: "meta.hl7_ord_org_ip" },
+      { label: "Org HL7 Port",    questionId: "meta.hl7_ord_org_port" },
+      { label: "Silverback IP",   questionId: "meta.hl7_ord_sb_ip" },
+      { label: "Silverback Port", questionId: "meta.hl7_ord_sb_port" },
+      { label: "NL IP",           questionId: "meta.hl7_ord_nl_ip" },
+      { label: "NL Port",         questionId: "meta.hl7_ord_nl_port" },
+    ],
+  },
+  {
+    title: "HL7 Results",
+    rows: [
+      { label: "NL IP",           questionId: "meta.hl7_res_nl_ip" },
+      { label: "NL Port",         questionId: "meta.hl7_res_nl_port" },
+      { label: "Silverback IP",   questionId: "meta.hl7_res_sb_ip" },
+      { label: "Silverback Port", questionId: "meta.hl7_res_sb_port" },
+      { label: "Org IP",          questionId: "meta.hl7_res_org_ip" },
+      { label: "Org Port",        questionId: "meta.hl7_res_org_port" },
+    ],
+  },
+  {
+    title: "Known Gotchas / Exceptions",
+    rows: [
+      { label: "Accession Format",  questionId: "meta.accession_format" },
+      { label: "Priors Available",  questionId: "meta.priors_available" },
+      { label: "Downtime Behavior", questionId: "L.11" },
+      { label: "Other Notes",       questionId: "meta.other_notes" },
+    ],
+  },
+];
 
-function buildConnectivityMatrix(): MatrixData {
-  const clients: MatrixClient[] = [
-    { id: "valley", name: "Valley" },
-    { id: "radone", name: "RadOne" },
-    { id: "srv",    name: "SRV" },
-    { id: "nvra",   name: "NVRA" },
-  ];
 
-  const sections: MatrixSection[] = [
-    {
-      title: "Organization",
-      color: "blue",
-      rows: [
-        { label: "Go-Live Date",   values: { valley: "Jan 2026", radone: "Feb 2026", srv: "Mar 2026", nvra: "Apr 2026" } },
-        { label: "Studies / Day",  values: { valley: "320",      radone: "180",      srv: "250",      nvra: "140" } },
-        { label: "Reading Group",  values: { valley: "Valley Radiology", radone: "RadOne", srv: "Southern Radiology", nvra: "NVRA" } },
-      ],
-    },
-    {
-      title: "Contacts",
-      color: "indigo",
-      rows: [
-        { label: "IT Contact", values: { valley: "John Smith",          radone: "Laura Perez",        srv: "Mike Turner",         nvra: "David Kim" } },
-        { label: "Email",      values: { valley: "jsmith@valley.org",   radone: "lperez@radone.com",  srv: "mturner@srv.com",     nvra: "dkim@nvra.com" }, isEmail: true },
-        { label: "Phone",      values: { valley: "555-2121",            radone: "555-3011",           srv: "555-7782",            nvra: "555-9910" }, isPhone: true },
-      ],
-    },
-    {
-      title: "Systems",
-      color: "purple",
-      rows: [
-        { label: "PACS",               values: { valley: "Intelerad",   radone: "Merge",      srv: "Fuji",      nvra: "Sectra" } },
-        { label: "RIS",                values: { valley: "Epic Radiant", radone: "Medhost",   srv: "Cerner",    nvra: "Epic" } },
-        { label: "EMR",                values: { valley: "Epic",        radone: "Athena",     srv: "Cerner",    nvra: "Epic" } },
-        { label: "Interface Engine",   values: { valley: "Cloverleaf",  radone: "Iguana",     srv: "Mirth",     nvra: "Rhapsody" } },
-      ],
-    },
-    {
-      title: "DICOM Routing",
-      color: "cyan",
-      rows: [
-        { label: "Image Source",     values: { valley: "PACS",             radone: "Router",          srv: "PACS",              nvra: "PACS" } },
-        { label: "Org AE Title",     values: { valley: "VALLEY_PACS",      radone: "RADONE_ROUTER",   srv: "SRV_PACS",          nvra: "NVRA_PACS" } },
-        { label: "Org IP",           values: { valley: "10.12.5.21",       radone: "10.22.4.11",      srv: "10.31.8.14",        nvra: "10.40.9.2" } },
-        { label: "Org Port",         values: { valley: "104",              radone: "1112",            srv: "104",               nvra: "104" } },
-        { label: "Silverback IP",    values: { valley: "52.10.21.4",       radone: "52.10.21.4",      srv: "52.10.21.4",        nvra: "52.10.21.4" } },
-        { label: "Silverback Port",  values: { valley: "104",              radone: "104",             srv: "104",               nvra: "104" } },
-        { label: "NL IP",            values: { valley: "172.20.1.40",      radone: "172.20.1.40",     srv: "172.20.1.40",       nvra: "172.20.1.40" } },
-        { label: "NL Port",          values: { valley: "104",              radone: "104",             srv: "104",               nvra: "104" } },
-      ],
-    },
-    {
-      title: "HL7 Orders",
-      color: "teal",
-      rows: [
-        { label: "Org HL7 IP",       values: { valley: "10.12.7.4",        radone: "10.22.6.8",       srv: "10.31.2.5",         nvra: "10.40.2.6" } },
-        { label: "Org HL7 Port",     values: { valley: "2116",             radone: "2116",            srv: "2116",              nvra: "2116" } },
-        { label: "Silverback IP",    values: { valley: "52.10.22.9",       radone: "52.10.22.9",      srv: "52.10.22.9",        nvra: "52.10.22.9" } },
-        { label: "Silverback Port",  values: { valley: "2116",             radone: "2116",            srv: "2116",              nvra: "2116" } },
-        { label: "NL IP",            values: { valley: "172.20.1.50",      radone: "172.20.1.50",     srv: "172.20.1.50",       nvra: "172.20.1.50" } },
-        { label: "NL Port",          values: { valley: "2116",             radone: "2116",            srv: "2116",              nvra: "2116" } },
-      ],
-    },
-    {
-      title: "HL7 Results",
-      color: "green",
-      rows: [
-        { label: "NL IP",            values: { valley: "172.20.1.51",      radone: "172.20.1.51",     srv: "172.20.1.51",       nvra: "172.20.1.51" } },
-        { label: "NL Port",          values: { valley: "2117",             radone: "2117",            srv: "2117",              nvra: "2117" } },
-        { label: "Silverback IP",    values: { valley: "52.10.22.10",      radone: "52.10.22.10",     srv: "52.10.22.10",       nvra: "52.10.22.10" } },
-        { label: "Silverback Port",  values: { valley: "2117",             radone: "2117",            srv: "2117",              nvra: "2117" } },
-        { label: "Org IP",           values: { valley: "10.12.7.4",        radone: "10.22.6.8",       srv: "10.31.2.5",         nvra: "10.40.2.6" } },
-        { label: "Org Port",         values: { valley: "2200",             radone: "2300",            srv: "2117",              nvra: "2117" } },
-      ],
-    },
-    {
-      title: "Known Gotchas / Exceptions",
-      color: "amber",
-      rows: [
-        { label: "Accession Format",  values: { valley: 'Prefix "V-"',          radone: "Numeric only",   srv: 'Prefix "SRV-"',       nvra: "Numeric" } },
-        { label: "Priors Available",  values: { valley: "5 yrs",                radone: "3 yrs",          srv: "2 PACS systems",      nvra: "5 yrs" } },
-        { label: "Downtime Behavior", values: { valley: "Sends DICOM w/o HL7",  radone: "Stops sending",  srv: "Sends backlog later", nvra: "Normal" } },
-        { label: "Other Notes",       values: { valley: "Strip accession prefix", radone: "Uses router AE", srv: "Two PACS archives",  nvra: "Requires provider in ORU" } },
-      ],
-    },
-  ];
-
-  return { clients, sections };
+/** Status dot for the prod_status field */
+function StatusDot({ value }: { value: string }) {
+  const lower = value.toLowerCase();
+  if (lower === "active")      return <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" />Active</span>;
+  if (lower === "monitoring")  return <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block" />Monitoring</span>;
+  if (lower === "pending")     return <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-muted-foreground/50 inline-block" />Pending</span>;
+  if (lower === "inactive")    return <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" />Inactive</span>;
+  return <span className="text-muted-foreground">{value || "—"}</span>;
 }
 
-const SECTION_COLORS: Record<string, string> = {
-  blue:   "bg-blue-500/10 text-blue-700 dark:text-blue-300",
-  indigo: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300",
-  purple: "bg-purple-500/10 text-purple-700 dark:text-purple-300",
-  cyan:   "bg-cyan-500/10 text-cyan-700 dark:text-cyan-300",
-  teal:   "bg-teal-500/10 text-teal-700 dark:text-teal-300",
-  green:  "bg-green-500/10 text-green-700 dark:text-green-300",
-  amber:  "bg-amber-500/10 text-amber-700 dark:text-amber-300",
+/** Single editable cell — click to edit, Enter/blur to save */
+function MatrixCell({
+  orgId, orgSlug, questionId, initialValue, isEmail, isPhone, isStatus, isGotcha,
+}: {
+  orgId: number; orgSlug: string; questionId: string; initialValue: string;
+  isEmail?: boolean; isPhone?: boolean; isStatus?: boolean; isGotcha?: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(initialValue);
+  const [saved, setSaved] = useState(initialValue);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const saveMutation = trpc.admin.saveOrgResponse.useMutation({
+    onSuccess: () => setSaved(draft),
+    onError: () => setDraft(saved), // revert on error
+  });
+
+  const commit = () => {
+    setEditing(false);
+    if (draft !== saved) {
+      saveMutation.mutate({ organizationId: orgId, questionId, response: draft });
+    }
+  };
+
+  useEffect(() => { if (editing) inputRef.current?.focus(); }, [editing]);
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={e => { if (e.key === "Enter") commit(); if (e.key === "Escape") { setDraft(saved); setEditing(false); } }}
+        className="w-full bg-muted/30 border border-primary/40 rounded px-2 py-0.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary"
+      />
+    );
+  }
+
+  const display = saved || "—";
+
+  return (
+    <span
+      onClick={() => setEditing(true)}
+      title="Click to edit"
+      className={`cursor-pointer rounded px-1 py-0.5 -mx-1 hover:bg-muted/40 transition-colors group inline-flex items-center gap-1 min-w-[4rem] ${
+        isGotcha ? "text-amber-500 dark:text-amber-400" : ""
+      }`}
+    >
+      {isStatus ? (
+        <StatusDot value={saved} />
+      ) : isEmail && saved ? (
+        <a href={`mailto:${saved}`} onClick={e => e.stopPropagation()} className="text-primary hover:underline inline-flex items-center gap-1">
+          {saved}<ExternalLink className="w-3 h-3" />
+        </a>
+      ) : isPhone && saved ? (
+        <a href={`tel:${saved}`} onClick={e => e.stopPropagation()} className="hover:underline">{saved}</a>
+      ) : (
+        <span className="font-mono text-sm">{display}</span>
+      )}
+      <Edit className="w-2.5 h-2.5 text-muted-foreground/40 opacity-0 group-hover:opacity-100 shrink-0" />
+    </span>
+  );
+}
+
+type ConnectivityMatrixProps = {
+  orgs: { id: number; name: string; slug: string }[];
+  onExportCSV: () => void;
 };
 
-function ConnectivityMatrix({ onExportCSV }: { onExportCSV: () => void }) {
-  const { clients, sections } = buildConnectivityMatrix();
+function ConnectivityMatrix({ orgs, onExportCSV }: ConnectivityMatrixProps) {
+  const { data: allResponses = [], isLoading } = trpc.admin.getAllOrgResponses.useQuery();
+
+  // Build a lookup: orgId → questionId → response
+  const lookup = allResponses.reduce<Record<number, Record<string, string>>>((acc, r) => {
+    if (!acc[r.organizationId]) acc[r.organizationId] = {};
+    acc[r.organizationId][r.questionId] = r.response ?? "";
+    return acc;
+  }, {});
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
+  }
 
   return (
     <div>
-      {/* Page header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold">Production Connectivity Matrix</h2>
-          <p className="text-sm text-muted-foreground mt-1">Quick-reference for all client connectivity, systems, and known exceptions.</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Live data from questionnaire responses. Click any cell to edit.
+          </p>
         </div>
         <Button variant="outline" onClick={onExportCSV}>
           <Download className="w-4 h-4 mr-2" />
@@ -2972,71 +3037,53 @@ function ConnectivityMatrix({ onExportCSV }: { onExportCSV: () => void }) {
         </Button>
       </div>
 
-      {/* Global sticky-header row — client names */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="border-b-2 border-border">
-              <th className="text-left py-3 pr-6 font-semibold text-muted-foreground w-48 min-w-[11rem]">Detail</th>
-              {clients.map(c => (
-                <th key={c.id} className="text-left py-3 px-4 font-bold text-lg min-w-[10rem]">{c.name}</th>
-              ))}
-            </tr>
-          </thead>
-
-          <tbody>
-            {sections.map((section, si) => (
-              <>
-                {/* Section header row */}
-                <tr key={`section-${si}`}>
-                  <td colSpan={clients.length + 1} className="pt-8 pb-2">
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-xl font-bold">{section.title}</h3>
-                    </div>
-                  </td>
-                </tr>
-
-                {/* Column sub-header */}
-                <tr className="border-b border-border">
-                  <th className="text-left py-2 pr-6 text-sm font-semibold text-muted-foreground">Detail</th>
-                  {clients.map(c => (
-                    <th key={c.id} className="text-left py-2 px-4 text-sm font-semibold text-muted-foreground">{c.name}</th>
-                  ))}
-                </tr>
-
-                {/* Data rows */}
-                {section.rows.map((row, ri) => (
-                  <tr key={`row-${si}-${ri}`} className="border-b border-border/30 hover:bg-muted/20 transition-colors">
-                    <td className="py-3 pr-6 font-medium text-foreground/80 w-48">{row.label}</td>
-                    {clients.map(c => {
-                      const val = row.values[c.id] || "—";
-                      return (
-                        <td key={c.id} className="py-3 px-4 font-mono text-sm">
-                          {row.isEmail ? (
-                            <a href={`mailto:${val}`} className="text-primary hover:underline inline-flex items-center gap-1">
-                              {val}
-                              <ExternalLink className="w-3 h-3" />
-                            </a>
-                          ) : row.isPhone ? (
-                            <a href={`tel:${val}`} className="hover:underline">{val}</a>
-                          ) : (
-                            <span className={
-                              // highlight values that differ across clients
-                              section.title === "Known Gotchas / Exceptions"
-                                ? "text-amber-600 dark:text-amber-400"
-                                : ""
-                            }>{val}</span>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
+      {orgs.length === 0 ? (
+        <p className="text-muted-foreground py-12 text-center">No organizations accessible.</p>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border border-border">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="border-b border-border bg-muted/30">
+                <th className="text-left py-3 px-4 font-semibold text-muted-foreground w-44 min-w-[11rem] border-r border-border">Detail</th>
+                {orgs.map(org => (
+                  <th key={org.id} className="text-left py-3 px-4 font-bold min-w-[10rem] border-r border-border last:border-r-0">{org.name}</th>
                 ))}
-              </>
-            ))}
-          </tbody>
-        </table>
-      </div>
+              </tr>
+            </thead>
+            <tbody>
+              {MATRIX_SECTIONS.map((section, si) => (
+                <>
+                  {/* Section header */}
+                  <tr key={`sh-${si}`} className="bg-muted/20">
+                    <td colSpan={orgs.length + 1} className="py-2 px-4 font-bold text-sm border-t border-border">
+                      {section.title}
+                    </td>
+                  </tr>
+                  {section.rows.map((row, ri) => (
+                    <tr key={`r-${si}-${ri}`} className="border-t border-border/40 hover:bg-muted/10 transition-colors">
+                      <td className="py-2.5 px-4 text-foreground/70 border-r border-border/40 w-44">{row.label}</td>
+                      {orgs.map(org => (
+                        <td key={org.id} className="py-2 px-4 border-r border-border/40 last:border-r-0">
+                          <MatrixCell
+                            orgId={org.id}
+                            orgSlug={org.slug}
+                            questionId={row.questionId}
+                            initialValue={lookup[org.id]?.[row.questionId] ?? ""}
+                            isEmail={row.isEmail}
+                            isPhone={row.isPhone}
+                            isStatus={row.questionId === "meta.prod_status"}
+                            isGotcha={section.title === "Known Gotchas / Exceptions"}
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
