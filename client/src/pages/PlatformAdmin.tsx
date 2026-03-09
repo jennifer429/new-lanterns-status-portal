@@ -852,7 +852,7 @@ export default function PlatformAdmin() {
               }`}
             >
               <Activity className="w-4 h-4" />
-              Connectivity Matrix
+              Connectivity Dashboard
               {activeTab === "connectivity" && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
               )}
@@ -879,7 +879,7 @@ export default function PlatformAdmin() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Dashboard
+              Implementation Dashboard
               {activeTab === "dashboard" && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
               )}
