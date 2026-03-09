@@ -3,58 +3,124 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Trash2, Plus, Upload, FileText, Loader2 } from 'lucide-react';
+import { Trash2, Plus, Upload, FileText, Loader2, CheckCircle2, ArrowLeft, ChevronRight, X, CloudUpload } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
+import { cn } from '@/lib/utils';
 
-const SYSTEM_TYPES = ['RIS', 'PACS', 'VNA', 'Interface Engine', 'AI', 'EHR', 'Router', 'Other'];
+export const SYSTEM_TYPES = ['RIS', 'PACS', 'VNA', 'Interface Engine', 'AI', 'EHR', 'Router', 'Other'] as const;
 
-interface System {
+export const TYPE_COLORS: Record<string, string> = {
+  'EHR':               'bg-violet-500/20 text-violet-300 border border-violet-500/40',
+  'RIS':               'bg-teal-500/20 text-teal-300 border border-teal-500/40',
+  'PACS':              'bg-blue-500/20 text-blue-300 border border-blue-500/40',
+  'Interface Engine':  'bg-green-500/20 text-green-300 border border-green-500/40',
+  'AI':                'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40',
+  'VNA':               'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40',
+  'Router':            'bg-orange-500/20 text-orange-300 border border-orange-500/40',
+  'Other':             'bg-gray-500/20 text-gray-300 border border-gray-500/40',
+};
+
+export interface IntegrationSystem {
   id: string;
   name: string;
   type: string;
   notes: string;
 }
 
+interface SystemsMultiSelectProps {
+  selectedNames: string[];
+  allSystems: IntegrationSystem[];
+  onChange: (names: string[]) => void;
+}
+
+function SystemsMultiSelect({ selectedNames, allSystems, onChange }: SystemsMultiSelectProps) {
+  const [open, setOpen] = useState(false);
+  const available = allSystems.filter(s => s.name && !selectedNames.includes(s.name));
+  const selected = selectedNames
+    .map(n => allSystems.find(s => s.name === n))
+    .filter((s): s is IntegrationSystem => !!s);
+
+  return (
+    <div className="relative">
+      <div
+        className="min-h-9 flex flex-wrap gap-1.5 items-center px-3 py-1.5 rounded-md border border-input bg-background cursor-pointer"
+        onClick={() => available.length > 0 && setOpen(o => !o)}
+      >
+        {selected.map(sys => (
+          <span
+            key={sys.name}
+            className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium', TYPE_COLORS[sys.type] || TYPE_COLORS['Other'])}
+          >
+            {sys.name}
+            <button
+              onClick={(e) => { e.stopPropagation(); onChange(selectedNames.filter(n => n !== sys.name)); }}
+              className="hover:opacity-70"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </span>
+        ))}
+        {selected.length === 0 && (
+          <span className="text-sm text-muted-foreground">
+            {allSystems.filter(s => s.name).length > 0 ? 'Select systems...' : 'Add systems above first'}
+          </span>
+        )}
+        {available.length > 0 && selected.length > 0 && (
+          <span className="text-xs text-muted-foreground">Add system...</span>
+        )}
+      </div>
+      {open && available.length > 0 && (
+        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-card border rounded-md shadow-lg py-1">
+          {available.map(sys => (
+            <button
+              key={sys.name}
+              className="w-full text-left text-sm px-3 py-2 hover:bg-muted transition-colors flex items-center gap-2"
+              onClick={() => { onChange([...selectedNames, sys.name]); setOpen(false); }}
+            >
+              <span className={cn('text-xs px-1.5 py-0.5 rounded-full font-medium', TYPE_COLORS[sys.type] || TYPE_COLORS['Other'])}>
+                {sys.type || '?'}
+              </span>
+              {sys.name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface IntegrationWorkflowsProps {
   values: Record<string, any>;
   onChange: (key: string, value: any) => void;
   organizationId: number;
+  onBack?: () => void;
+  onContinue?: () => void;
 }
 
-export function IntegrationWorkflows({ values, onChange, organizationId }: IntegrationWorkflowsProps) {
+export function IntegrationWorkflows({ values, onChange, organizationId, onBack, onContinue }: IntegrationWorkflowsProps) {
   const [isUploadingDiagram, setIsUploadingDiagram] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const diagramInputRef = useRef<HTMLInputElement>(null);
   const uploadFileMutation = trpc.files.upload.useMutation();
 
-  const systems: System[] = (() => {
+  // ── Systems ──────────────────────────────────────────────────────────────────
+  const systems: IntegrationSystem[] = (() => {
     try {
       const s = values['IW.systems'];
       if (!s) return [];
       return typeof s === 'string' ? JSON.parse(s) : s;
-    } catch {
-      return [];
-    }
+    } catch { return []; }
   })();
 
-  const updateSystems = (newSystems: System[]) => {
-    onChange('IW.systems', newSystems);
-  };
+  const updateSystems = (next: IntegrationSystem[]) => onChange('IW.systems', next);
+  const addSystem = () => updateSystems([...systems, { id: crypto.randomUUID(), name: '', type: '', notes: '' }]);
+  const updateSystem = (id: string, field: keyof IntegrationSystem, val: string) =>
+    updateSystems(systems.map(s => s.id === id ? { ...s, [field]: val } : s));
+  const deleteSystem = (id: string) => updateSystems(systems.filter(s => s.id !== id));
 
-  const addSystem = () => {
-    updateSystems([...systems, { id: crypto.randomUUID(), name: '', type: '', notes: '' }]);
-  };
-
-  const updateSystem = (id: string, field: keyof System, value: string) => {
-    updateSystems(systems.map(s => s.id === id ? { ...s, [field]: value } : s));
-  };
-
-  const deleteSystem = (id: string) => {
-    updateSystems(systems.filter(s => s.id !== id));
-  };
-
-  const handleDiagramUpload = useCallback(async (file: File) => {
-    const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+  // ── Diagram upload ────────────────────────────────────────────────────────────
+  const handleDiagramFile = useCallback(async (file: File) => {
+    const ext = '.' + (file.name.split('.').pop() ?? '').toLowerCase();
     if (!['.png', '.jpg', '.jpeg', '.pdf'].includes(ext)) {
       alert('Only PNG, JPG, JPEG, and PDF files are allowed.');
       return;
@@ -74,7 +140,7 @@ export function IntegrationWorkflows({ values, onChange, organizationId }: Integ
         });
         onChange('IW.diagram', result.fileUrl);
         onChange('IW.diagram_filename', file.name);
-        onChange('IW.diagram_uploaded_at', new Date().toISOString().split('T')[0]);
+        onChange('IW.diagram_uploaded_at', new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
       } catch {
         alert('Diagram upload failed. Please try again.');
       } finally {
@@ -84,208 +150,278 @@ export function IntegrationWorkflows({ values, onChange, organizationId }: Integ
     reader.readAsDataURL(file);
   }, [organizationId, uploadFileMutation, onChange]);
 
-  const diagramUrl = values['IW.diagram'];
-  const diagramFilename = values['IW.diagram_filename'];
-  const diagramUploadedAt = values['IW.diagram_uploaded_at'];
-  const isImage = diagramFilename && /\.(png|jpg|jpeg)$/i.test(diagramFilename);
+  const diagramUrl: string | undefined = values['IW.diagram'];
+  const diagramFilename: string | undefined = values['IW.diagram_filename'];
+  const diagramUploadedAt: string | undefined = values['IW.diagram_uploaded_at'];
+  const isImageDiagram = diagramFilename && /\.(png|jpg|jpeg)$/i.test(diagramFilename);
 
+  // ── Completion ───────────────────────────────────────────────────────────────
   const systemNames = systems.map(s => s.name).filter(Boolean);
+  const wfKeys = ['orders', 'images', 'priors', 'reports'] as const;
+  const completedWorkflows = wfKeys.filter(wf => {
+    const v = values[`IW.${wf}_description`];
+    return v && String(v).trim().length > 0;
+  }).length;
+  const diagramDone = !!diagramUrl;
+  const systemsDone = systems.length > 0;
+  const totalComplete = (diagramDone ? 1 : 0) + (systemsDone ? 1 : 0) + completedWorkflows;
+  const allComplete = totalComplete === 6;
 
-  const WorkflowBlock = ({ id, label, description }: { id: string; label: string; description: string }) => {
+  // ── Workflow block ────────────────────────────────────────────────────────────
+  const WorkflowBlock = ({
+    id, label, description, placeholder,
+  }: { id: string; label: string; description: string; placeholder: string }) => {
     const descKey = `IW.${id}_description`;
-    const systemsKey = `IW.${id}_systems`;
-    const selectedSystems: string[] = (() => {
+    const sysKey  = `IW.${id}_systems`;
+    const selectedNames: string[] = (() => {
       try {
-        const v = values[systemsKey];
+        const v = values[sysKey];
         if (!v) return [];
         return Array.isArray(v) ? v : JSON.parse(v);
       } catch { return []; }
     })();
+    const isFilled = !!(values[descKey] && String(values[descKey]).trim().length > 0);
 
     return (
-      <div className="space-y-3 p-4 rounded-lg border bg-muted/20">
-        <h3 className="font-semibold text-base">{label}</h3>
+      <div className={cn('space-y-3 p-5 rounded-xl border bg-card transition-colors', isFilled && 'border-primary/50')}>
+        <div className="flex items-center gap-2">
+          {isFilled
+            ? <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+            : <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 flex-shrink-0" />
+          }
+          <h3 className="font-semibold text-base">{label}</h3>
+        </div>
         <p className="text-sm text-muted-foreground">{description}</p>
         <Textarea
           value={values[descKey] || ''}
           onChange={(e) => onChange(descKey, e.target.value)}
-          placeholder="Describe the workflow..."
-          rows={4}
+          placeholder={placeholder}
+          rows={5}
+          className="resize-y"
         />
-        {systemNames.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Systems involved:</p>
-            <div className="flex flex-wrap gap-3">
-              {systemNames.map(name => (
-                <div key={name} className="flex items-center gap-1.5">
-                  <Checkbox
-                    id={`${id}-${name}`}
-                    checked={selectedSystems.includes(name)}
-                    onCheckedChange={(checked) => {
-                      const updated = checked
-                        ? [...selectedSystems, name]
-                        : selectedSystems.filter(s => s !== name);
-                      onChange(systemsKey, updated);
-                    }}
-                  />
-                  <label htmlFor={`${id}-${name}`} className="text-sm cursor-pointer">{name}</label>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <div className="space-y-1.5">
+          <p className="text-sm text-muted-foreground">Systems involved:</p>
+          <SystemsMultiSelect
+            selectedNames={selectedNames}
+            allSystems={systems}
+            onChange={(v) => onChange(sysKey, v)}
+          />
+        </div>
       </div>
     );
   };
 
   return (
-    <div className="space-y-10">
-      {/* 1. Architecture Diagram Upload */}
-      <div className="space-y-3">
+    <div className="space-y-8">
+      {/* Page header */}
+      <div className="flex items-start justify-between">
         <div>
-          <h3 className="font-semibold text-base">Architecture Diagram</h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            Upload a network or workflow diagram showing how orders, images, priors, and reports move through your systems.
-          </p>
+          <h2 className="text-2xl font-bold">Integration Workflows</h2>
+          <p className="text-muted-foreground mt-1">Define your systems and how data flows between them</p>
         </div>
-        <input
-          ref={diagramInputRef}
-          type="file"
-          accept=".png,.jpg,.jpeg,.pdf"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) handleDiagramUpload(file);
-            e.target.value = '';
-          }}
-        />
-        {!diagramUrl ? (
-          <div className="space-y-1">
-            <Button
-              variant="outline"
-              onClick={() => diagramInputRef.current?.click()}
-              disabled={isUploadingDiagram}
-              className="gap-2"
-            >
-              {isUploadingDiagram ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-              Upload Diagram
-            </Button>
-            <p className="text-xs text-muted-foreground">Accepted file types: png, jpg, jpeg, pdf</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="border rounded-lg overflow-hidden">
-              <div className="px-3 py-2 bg-muted/30 border-b">
-                <p className="text-xs font-medium text-muted-foreground">Diagram Preview</p>
-              </div>
-              <div className="p-4">
-                {isImage ? (
-                  <img src={diagramUrl} alt="Architecture diagram" className="max-w-full rounded" />
-                ) : (
-                  <div className="flex items-center gap-2 text-sm">
-                    <FileText className="w-5 h-5 text-muted-foreground" />
-                    <a href={diagramUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline">
-                      View PDF
-                    </a>
-                  </div>
-                )}
-              </div>
-              <div className="px-4 pb-3 text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">File:</span> {diagramFilename}
-                {diagramUploadedAt && (
-                  <span className="ml-4">
-                    <span className="font-medium text-foreground">Uploaded:</span> {diagramUploadedAt}
-                  </span>
-                )}
-              </div>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => diagramInputRef.current?.click()}
-              disabled={isUploadingDiagram}
-              className="gap-2"
-            >
-              {isUploadingDiagram ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-              Replace Diagram
-            </Button>
-          </div>
-        )}
+        <div className={cn(
+          'flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium border',
+          allComplete
+            ? 'bg-green-500/10 text-green-500 border-green-500/30'
+            : 'bg-muted text-muted-foreground border-border',
+        )}>
+          {allComplete && <CheckCircle2 className="w-4 h-4" />}
+          {totalComplete}/6 Complete
+        </div>
       </div>
 
-      {/* 2. Systems Table */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-base">Systems in Your Environment</h3>
-          <Button variant="outline" size="sm" onClick={addSystem} className="gap-1.5">
+      <hr className="border-border" />
+
+      {/* Top two-column: diagram | systems */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        {/* Architecture Diagram */}
+        <div className="rounded-xl border bg-card p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-base">Architecture Diagram</h3>
+            {diagramUrl && (
+              <span className="text-xs font-semibold text-green-500 uppercase tracking-wider">Uploaded</span>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Upload a network or workflow diagram showing how orders, images, priors, and reports move through your systems.
+          </p>
+          <input
+            ref={diagramInputRef}
+            type="file"
+            accept=".png,.jpg,.jpeg,.pdf"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleDiagramFile(f); e.target.value = ''; }}
+          />
+          {!diagramUrl ? (
+            <div
+              className={cn(
+                'border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors',
+                isDragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40 hover:bg-muted/20',
+              )}
+              onClick={() => diagramInputRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={(e) => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f) handleDiagramFile(f); }}
+            >
+              {isUploadingDiagram
+                ? <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                : <CloudUpload className="w-8 h-8 text-muted-foreground" />
+              }
+              <div className="text-center">
+                <p className="text-sm font-medium">Drop file here or click to upload</p>
+                <p className="text-xs text-muted-foreground">PNG, JPG, PDF accepted</p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {isImageDiagram ? (
+                <div className="rounded-lg overflow-hidden border">
+                  <img src={diagramUrl} alt="Architecture diagram" className="w-full object-cover max-h-52" />
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 p-4 rounded-lg border bg-muted/20">
+                  <FileText className="w-8 h-8 text-muted-foreground flex-shrink-0" />
+                  <a href={diagramUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline text-sm">View PDF</a>
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">{diagramFilename}</p>
+                  {diagramUploadedAt && <p className="text-xs text-muted-foreground">Uploaded: {diagramUploadedAt}</p>}
+                </div>
+                <Button variant="outline" size="sm" onClick={() => diagramInputRef.current?.click()} disabled={isUploadingDiagram} className="gap-1.5 flex-shrink-0">
+                  {isUploadingDiagram ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                  Replace
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Systems Table */}
+        <div className="rounded-xl border bg-card p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-base">Systems in Your Environment</h3>
+            {systems.length > 0 && (
+              <span className="text-xs font-semibold text-green-500 uppercase tracking-wider">Populated</span>
+            )}
+          </div>
+          {systems.length > 0 && (
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/30">
+                  <tr>
+                    <th className="text-left px-3 py-2 font-medium">System Name</th>
+                    <th className="text-left px-3 py-2 font-medium w-36">Type</th>
+                    <th className="text-left px-3 py-2 font-medium">Notes</th>
+                    <th className="w-8 px-2 py-2"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {systems.map((sys, idx) => (
+                    <tr key={sys.id} className={cn('border-t border-border/40', idx % 2 === 1 && 'bg-muted/10')}>
+                      <td className="px-2 py-1">
+                        <Input
+                          value={sys.name}
+                          onChange={(e) => updateSystem(sys.id, 'name', e.target.value)}
+                          placeholder="e.g. Epic"
+                          className="h-7 text-sm border-0 bg-transparent px-1 focus-visible:ring-1 focus-visible:ring-primary/50"
+                        />
+                      </td>
+                      <td className="px-2 py-1">
+                        <Select value={sys.type} onValueChange={(v) => updateSystem(sys.id, 'type', v)}>
+                          <SelectTrigger
+                            className={cn(
+                              'h-7 text-xs rounded-full px-2.5 font-medium w-full',
+                              sys.type ? TYPE_COLORS[sys.type] : 'border-dashed',
+                            )}
+                          >
+                            <SelectValue placeholder="Type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {SYSTEM_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </td>
+                      <td className="px-2 py-1">
+                        <Input
+                          value={sys.notes}
+                          onChange={(e) => updateSystem(sys.id, 'notes', e.target.value)}
+                          placeholder="Notes"
+                          className="h-7 text-sm border-0 bg-transparent px-1 focus-visible:ring-1 focus-visible:ring-primary/50"
+                        />
+                      </td>
+                      <td className="px-2 py-1 text-center">
+                        <button
+                          onClick={() => deleteSystem(sys.id)}
+                          className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {systems.length === 0 && (
+            <p className="text-sm text-muted-foreground italic text-center py-4">No systems added yet</p>
+          )}
+          <Button variant="outline" size="sm" onClick={addSystem} className="gap-1.5 w-full">
             <Plus className="w-4 h-4" />
             Add System
           </Button>
         </div>
-        {systems.length === 0 ? (
-          <p className="text-sm text-muted-foreground italic">No systems added yet. Click "Add System" to define the systems in your environment.</p>
-        ) : (
-          <div className="border rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/30">
-                <tr>
-                  <th className="text-left px-3 py-2 font-medium">System Name</th>
-                  <th className="text-left px-3 py-2 font-medium w-40">Type</th>
-                  <th className="text-left px-3 py-2 font-medium">Notes</th>
-                  <th className="px-2 py-2 w-8"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {systems.map((system, idx) => (
-                  <tr key={system.id} className={idx % 2 === 1 ? 'bg-muted/10' : ''}>
-                    <td className="px-2 py-1.5">
-                      <Input
-                        value={system.name}
-                        onChange={(e) => updateSystem(system.id, 'name', e.target.value)}
-                        placeholder="e.g. Epic"
-                        className="h-8 text-sm"
-                      />
-                    </td>
-                    <td className="px-2 py-1.5">
-                      <Select value={system.type} onValueChange={(v) => updateSystem(system.id, 'type', v)}>
-                        <SelectTrigger className="h-8 text-sm">
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {SYSTEM_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </td>
-                    <td className="px-2 py-1.5">
-                      <Input
-                        value={system.notes}
-                        onChange={(e) => updateSystem(system.id, 'notes', e.target.value)}
-                        placeholder="Optional notes"
-                        className="h-8 text-sm"
-                      />
-                    </td>
-                    <td className="px-2 py-1.5 text-center">
-                      <button
-                        onClick={() => deleteSystem(system.id)}
-                        className="p-1.5 hover:bg-destructive/10 rounded text-destructive"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
       </div>
 
-      {/* 3. Workflow Description Blocks */}
-      <div className="space-y-4">
-        <WorkflowBlock id="orders" label="Orders Workflow" description="Describe how imaging orders reach the platform." />
-        <WorkflowBlock id="images" label="Images Workflow" description="Describe how imaging studies are routed." />
-        <WorkflowBlock id="priors" label="Priors Workflow" description="Describe how prior studies are retrieved." />
-        <WorkflowBlock id="reports" label="Reports Workflow" description="Describe how reports are delivered back." />
+      {/* Workflow blocks — 2×2 grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <WorkflowBlock
+          id="orders"
+          label="Orders Workflow"
+          description="Describe how imaging orders reach the platform."
+          placeholder="e.g., Orders originate in Epic, sent via HL7 ORM through Mirth Connect to New Lantern..."
+        />
+        <WorkflowBlock
+          id="images"
+          label="Images Workflow"
+          description="Describe how imaging studies are routed."
+          placeholder="e.g., Studies acquired on modalities (CT, MR, XR) and sent via DICOM C-STORE to PACS, then forwarded to New Lantern..."
+        />
+        <WorkflowBlock
+          id="priors"
+          label="Priors Workflow"
+          description="Describe how prior studies are retrieved."
+          placeholder="e.g., New Lantern queries prior PACS via C-FIND/C-MOVE for relevant prior studies when a new order arrives..."
+        />
+        <WorkflowBlock
+          id="reports"
+          label="Reports Workflow"
+          description="Describe how reports are delivered back."
+          placeholder="e.g., Finalized reports sent via HL7 ORU through Mirth Connect back to Epic Radiant..."
+        />
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between pt-2 pb-6">
+        <Button variant="ghost" onClick={onBack} className="gap-2 text-primary hover:text-primary">
+          <ArrowLeft className="w-4 h-4" />
+          Back to Overview
+        </Button>
+        <div className="flex items-center gap-3">
+          {allComplete && (
+            <div className="flex items-center gap-1.5 text-sm text-green-500">
+              <CheckCircle2 className="w-4 h-4" />
+              Section Complete
+            </div>
+          )}
+          <Button onClick={onContinue} className="gap-2">
+            Save &amp; Continue
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
     </div>
   );

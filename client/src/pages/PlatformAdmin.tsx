@@ -34,6 +34,8 @@ import {
 } from "@/components/ui/table";
 import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Activity, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp, AlertTriangle, AlertCircle, Info, Image, CheckSquare, BarChart3, Copy, Check, Clock } from "lucide-react";
 import { questionnaireSections } from "@shared/questionnaireData";
+import { TYPE_COLORS, type IntegrationSystem } from "@/components/IntegrationWorkflows";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -2978,6 +2980,15 @@ function ConnectivityMatrix({ orgs }: { orgs: { id: number; name: string; slug: 
   const utils = trpc.useUtils();
   const { data: allResponses = [], isLoading } = trpc.admin.getAllOrgResponses.useQuery();
 
+  // Org visibility filter
+  const [visibleOrgIds, setVisibleOrgIds] = useState<Set<number>>(() => new Set(orgs.map(o => o.id)));
+  const toggleOrg = (id: number) => setVisibleOrgIds(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) { next.delete(id); } else { next.add(id); }
+    return next;
+  });
+  const filteredOrgs = orgs.filter(o => visibleOrgIds.has(o.id));
+
   // Import dialog state
   const [importOpen, setImportOpen]         = useState(false);
   const [importPreview, setImportPreview]   = useState<{ rows: { organizationId: number; questionId: string; response: string }[]; errors: string[] } | null>(null);
@@ -3114,15 +3125,99 @@ function ConnectivityMatrix({ orgs }: { orgs: { id: number; name: string; slug: 
         </div>
       </div>
 
+      {/* Client filter toggles */}
+      {orgs.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted-foreground font-medium">Show:</span>
+          {orgs.map(org => (
+            <button
+              key={org.id}
+              onClick={() => toggleOrg(org.id)}
+              className={cn(
+                'px-3 py-1 rounded-full text-xs font-medium border transition-colors',
+                visibleOrgIds.has(org.id)
+                  ? 'bg-primary/10 text-primary border-primary/30'
+                  : 'bg-muted text-muted-foreground border-border opacity-50',
+              )}
+            >
+              {org.name}
+            </button>
+          ))}
+          {visibleOrgIds.size < orgs.length && (
+            <button
+              onClick={() => setVisibleOrgIds(new Set(orgs.map(o => o.id)))}
+              className="px-3 py-1 rounded-full text-xs text-muted-foreground hover:text-foreground border border-dashed border-border"
+            >
+              Show all
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Integration Workflows thumbnails */}
+      {filteredOrgs.length > 0 && (
+        <div className="mb-6">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Integration Workflows Snapshots</p>
+          <div className="flex gap-4 overflow-x-auto pb-2">
+            {filteredOrgs.map(org => {
+              const orgData = lookup[org.id] ?? {};
+              const diagramUrl: string = orgData['IW.diagram']?.response ?? '';
+              const diagramFilename: string = orgData['IW.diagram_filename']?.response ?? '';
+              const systemsRaw: string = orgData['IW.systems']?.response ?? '';
+              let systems: IntegrationSystem[] = [];
+              try { if (systemsRaw) systems = JSON.parse(systemsRaw); } catch {}
+              const wfCount = ['orders', 'images', 'priors', 'reports'].filter(wf =>
+                (orgData[`IW.${wf}_description`]?.response ?? '').trim().length > 0
+              ).length;
+              const isImage = diagramFilename && /\.(png|jpg|jpeg)$/i.test(diagramFilename);
+
+              return (
+                <div key={org.id} className="flex-shrink-0 w-52 rounded-xl border bg-card p-3 space-y-2">
+                  <p className="font-semibold text-sm truncate">{org.name}</p>
+                  {diagramUrl && isImage ? (
+                    <img src={diagramUrl} className="w-full h-24 object-cover rounded-lg border" alt="" />
+                  ) : diagramUrl ? (
+                    <div className="w-full h-24 rounded-lg bg-muted/20 border flex items-center justify-center gap-2">
+                      <FileText className="w-6 h-6 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">PDF</span>
+                    </div>
+                  ) : (
+                    <div className="w-full h-24 rounded-lg bg-muted/10 border-2 border-dashed border-border flex items-center justify-center">
+                      <p className="text-xs text-muted-foreground">No diagram</p>
+                    </div>
+                  )}
+                  <div className="flex flex-wrap gap-1">
+                    {systems.slice(0, 4).map(s => (
+                      <span key={s.id} className={cn('text-xs px-1.5 py-0.5 rounded-full font-medium', TYPE_COLORS[s.type] ?? TYPE_COLORS['Other'])}>
+                        {s.type || s.name}
+                      </span>
+                    ))}
+                    {systems.length > 4 && (
+                      <span className="text-xs text-muted-foreground">+{systems.length - 4}</span>
+                    )}
+                    {systems.length === 0 && (
+                      <span className="text-xs text-muted-foreground italic">No systems</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">{wfCount}/4 workflows described</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {orgs.length === 0 ? (
         <p className="text-muted-foreground py-12 text-center">No organizations accessible.</p>
+      ) : filteredOrgs.length === 0 ? (
+        <p className="text-muted-foreground py-12 text-center">No organizations selected. Use the filters above to show orgs.</p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="border-b border-border bg-muted/30">
                 <th className="text-left py-3 px-4 font-semibold text-muted-foreground w-44 min-w-[11rem] border-r border-border">Detail</th>
-                {orgs.map(org => (
+                {filteredOrgs.map(org => (
                   <th key={org.id} className="text-left py-3 px-4 font-bold min-w-[10rem] border-r border-border last:border-r-0">{org.name}</th>
                 ))}
               </tr>
@@ -3131,14 +3226,14 @@ function ConnectivityMatrix({ orgs }: { orgs: { id: number; name: string; slug: 
               {MATRIX_SECTIONS.map((section, si) => (
                 <>
                   <tr key={`sh-${si}`} className="bg-muted/20">
-                    <td colSpan={orgs.length + 1} className="py-2 px-4 font-bold text-sm border-t border-border">
+                    <td colSpan={filteredOrgs.length + 1} className="py-2 px-4 font-bold text-sm border-t border-border">
                       {section.title}
                     </td>
                   </tr>
                   {section.rows.map((row, ri) => (
                     <tr key={`r-${si}-${ri}`} className="border-t border-border/40 hover:bg-muted/10 transition-colors">
                       <td className="py-2.5 px-4 text-foreground/70 border-r border-border/40 w-44">{row.label}</td>
-                      {orgs.map(org => {
+                      {filteredOrgs.map(org => {
                         const entry = lookup[org.id]?.[row.questionId];
                         return (
                           <td key={org.id} className="py-2 px-3 border-r border-border/40 last:border-r-0">

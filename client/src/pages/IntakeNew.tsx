@@ -801,46 +801,14 @@ export default function IntakeNew() {
       </header>
 
       {/* Section Content */}
-      <div className="container py-8 max-w-4xl">
-        <Card>
-          <CardHeader>
-            <CardTitle>{currentSectionData?.title}</CardTitle>
-            {currentSectionData?.description && (
-              <CardDescription>{currentSectionData.description}</CardDescription>
-            )}
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {currentSectionData?.type === 'integration-workflows' ? (
-              <IntegrationWorkflows
-                values={responses}
-                onChange={(key, value) => setResponses(prev => ({ ...prev, [key]: value }))}
-                organizationId={org?.id || 0}
-              />
-            ) : currentSectionData?.questions?.map((question) => (
-              <div key={question.id} className="space-y-2">
-                <Label htmlFor={question.id} className="text-base font-medium">
-                  {question.text}
-                  <span className="text-red-500 ml-1">*</span>
-                </Label>
-                {question.notes && (
-                  <p className="text-sm text-muted-foreground">{question.notes}</p>
-                )}
-                {renderQuestion(question)}
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <div className="flex justify-between mt-6">
-          <Button
-            variant="outline"
-            onClick={() => setCurrentSection(null)}
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
-          </Button>
-          <Button
-            onClick={() => {
+      {currentSectionData?.type === 'integration-workflows' ? (
+        <div className="container py-8 max-w-6xl">
+          <IntegrationWorkflows
+            values={responses}
+            onChange={(key, value) => setResponses(prev => ({ ...prev, [key]: value }))}
+            organizationId={org?.id || 0}
+            onBack={() => setCurrentSection(null)}
+            onContinue={() => {
               const currentIdx = questionnaireData.findIndex(s => s.id === currentSection);
               if (currentIdx < questionnaireData.length - 1) {
                 setCurrentSection(questionnaireData[currentIdx + 1].id);
@@ -848,16 +816,61 @@ export default function IntakeNew() {
                 setCurrentSection(null);
               }
             }}
-          >
-            {questionnaireData.findIndex(s => s.id === currentSection) === questionnaireData.length - 1
-              ? "Back to Dashboard"
-              : "Save & Continue"}
-            {questionnaireData.findIndex(s => s.id === currentSection) < questionnaireData.length - 1 && (
-              <ChevronRight className="w-4 h-4 ml-2" />
-            )}
-          </Button>
+          />
         </div>
-      </div>
+      ) : (
+        <div className="container py-8 max-w-4xl">
+          <Card>
+            <CardHeader>
+              <CardTitle>{currentSectionData?.title}</CardTitle>
+              {currentSectionData?.description && (
+                <CardDescription>{currentSectionData.description}</CardDescription>
+              )}
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {currentSectionData?.questions?.map((question) => (
+                <div key={question.id} className="space-y-2">
+                  <Label htmlFor={question.id} className="text-base font-medium">
+                    {question.text}
+                    <span className="text-red-500 ml-1">*</span>
+                  </Label>
+                  {question.notes && (
+                    <p className="text-sm text-muted-foreground">{question.notes}</p>
+                  )}
+                  {renderQuestion(question)}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <div className="flex justify-between mt-6">
+            <Button
+              variant="outline"
+              onClick={() => setCurrentSection(null)}
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Dashboard
+            </Button>
+            <Button
+              onClick={() => {
+                const currentIdx = questionnaireData.findIndex(s => s.id === currentSection);
+                if (currentIdx < questionnaireData.length - 1) {
+                  setCurrentSection(questionnaireData[currentIdx + 1].id);
+                } else {
+                  setCurrentSection(null);
+                }
+              }}
+            >
+              {questionnaireData.findIndex(s => s.id === currentSection) === questionnaireData.length - 1
+                ? "Back to Dashboard"
+                : "Save & Continue"}
+              {questionnaireData.findIndex(s => s.id === currentSection) < questionnaireData.length - 1 && (
+                <ChevronRight className="w-4 h-4 ml-2" />
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteFileId !== null} onOpenChange={(open) => {
