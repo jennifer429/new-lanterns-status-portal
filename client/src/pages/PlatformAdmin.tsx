@@ -53,7 +53,7 @@ import {
 export default function PlatformAdmin() {
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"prod-dashboard" | "impl-dashboard" | "orgs" | "users" | "templates" | "partners" | "specs" | "support-hub">("prod-dashboard");
+  const [activeTab, setActiveTab] = useState<"connectivity" | "impl-dashboard" | "dashboard" | "organizations" | "users" | "templates" | "partners" | "specs" | "support-hub">("connectivity");
 
   // Support Hub state
   const [hubNotes, setHubNotes] = useState<Record<number, string>>({});
@@ -933,6 +933,20 @@ export default function PlatformAdmin() {
               )}
             </button>
             <button
+              onClick={() => setActiveTab("impl-dashboard")}
+              className={`pb-3 px-1 font-medium transition-colors relative whitespace-nowrap flex items-center gap-1.5 ${
+                activeTab === "impl-dashboard"
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <BarChart3 className="w-4 h-4" />
+              HL7 Layout
+              {activeTab === "impl-dashboard" && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+              )}
+            </button>
+            <button
               onClick={() => setActiveTab("dashboard")}
               className={`pb-3 px-1 font-medium transition-colors relative ${
                 activeTab === "dashboard"
@@ -1038,6 +1052,11 @@ export default function PlatformAdmin() {
         {/* ── CONNECTIVITY MATRIX TAB ── */}
         {activeTab === "connectivity" && (
           <ConnectivityMatrix orgs={orgs || []} />
+        )}
+
+        {/* ── HL7 LAYOUT TAB ── */}
+        {activeTab === "impl-dashboard" && (
+          <HL7Layout orgs={orgs || []} />
         )}
 
         {activeTab === "dashboard" && (
@@ -2826,6 +2845,193 @@ export default function PlatformAdmin() {
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── HL7 Layout ───────────────────────────────────────────────────────────────
+
+/** HL7 connectivity fields shown per-org in the card layout. */
+const HL7_ORDERS_FIELDS = [
+  { label: "Org IP",          questionId: "meta.hl7_ord_org_ip" },
+  { label: "Org Port",        questionId: "meta.hl7_ord_org_port" },
+  { label: "Silverback IP",   questionId: "meta.hl7_ord_sb_ip" },
+  { label: "Silverback Port", questionId: "meta.hl7_ord_sb_port" },
+  { label: "NL IP",           questionId: "meta.hl7_ord_nl_ip" },
+  { label: "NL Port",         questionId: "meta.hl7_ord_nl_port" },
+] as const;
+
+const HL7_RESULTS_FIELDS = [
+  { label: "NL IP",           questionId: "meta.hl7_res_nl_ip" },
+  { label: "NL Port",         questionId: "meta.hl7_res_nl_port" },
+  { label: "Silverback IP",   questionId: "meta.hl7_res_sb_ip" },
+  { label: "Silverback Port", questionId: "meta.hl7_res_sb_port" },
+  { label: "Org IP",          questionId: "meta.hl7_res_org_ip" },
+  { label: "Org Port",        questionId: "meta.hl7_res_org_port" },
+] as const;
+
+/** A 3-node flow block: [left label + IP/port] → [mid label + IP/port] → [right label + IP/port] */
+function HL7FlowRow({
+  direction,
+  leftLabel, leftIp, leftPort,
+  midLabel,  midIp,  midPort,
+  rightLabel, rightIp, rightPort,
+}: {
+  direction: "→" | "←";
+  leftLabel: string;  leftIp: string;  leftPort: string;
+  midLabel: string;   midIp: string;   midPort: string;
+  rightLabel: string; rightIp: string; rightPort: string;
+}) {
+  const Node = ({ label, ip, port }: { label: string; ip: string; port: string }) => (
+    <div className="flex flex-col items-center gap-1 min-w-0 flex-1">
+      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="w-full border border-border rounded-md bg-muted/20 px-2 py-1.5 text-center">
+        {ip || port ? (
+          <>
+            {ip && <div className="font-mono text-xs text-foreground leading-tight truncate">{ip}</div>}
+            {port && <div className="font-mono text-xs text-primary leading-tight">:{port}</div>}
+          </>
+        ) : (
+          <div className="font-mono text-xs text-muted-foreground/50">—</div>
+        )}
+      </div>
+    </div>
+  );
+
+  const Arrow = () => (
+    <div className="flex items-center justify-center text-muted-foreground/50 text-lg font-light shrink-0 px-1 mt-5">
+      {direction}
+    </div>
+  );
+
+  return (
+    <div className="flex items-start gap-1">
+      <Node label={leftLabel}  ip={leftIp}   port={leftPort} />
+      <Arrow />
+      <Node label={midLabel}   ip={midIp}    port={midPort} />
+      <Arrow />
+      <Node label={rightLabel} ip={rightIp}  port={rightPort} />
+    </div>
+  );
+}
+
+/** Card for a single organization showing its HL7 Orders + Results flows. */
+function HL7OrgCard({
+  org,
+  responses,
+}: {
+  org: { id: number; name: string; slug: string };
+  responses: Record<string, string>;
+}) {
+  const get = (qid: string) => responses[qid] ?? "";
+
+  const ordersComplete =
+    get("meta.hl7_ord_org_ip") || get("meta.hl7_ord_org_port") ||
+    get("meta.hl7_ord_sb_ip")  || get("meta.hl7_ord_nl_ip");
+
+  const resultsComplete =
+    get("meta.hl7_res_nl_ip") || get("meta.hl7_res_nl_port") ||
+    get("meta.hl7_res_sb_ip") || get("meta.hl7_res_org_ip");
+
+  return (
+    <Card className="border-border bg-card">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base font-semibold">{org.name}</CardTitle>
+          <div className="flex gap-1.5">
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${ordersComplete ? "bg-green-500/15 text-green-400" : "bg-muted text-muted-foreground"}`}>
+              Orders {ordersComplete ? "✓" : "—"}
+            </span>
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${resultsComplete ? "bg-blue-500/15 text-blue-400" : "bg-muted text-muted-foreground"}`}>
+              Results {resultsComplete ? "✓" : "—"}
+            </span>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4 pt-0">
+        {/* HL7 Orders: Site → Silverback → New Lantern */}
+        <div>
+          <div className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
+            HL7 Orders
+          </div>
+          <HL7FlowRow
+            direction="→"
+            leftLabel="Client Site"
+            leftIp={get("meta.hl7_ord_org_ip")}
+            leftPort={get("meta.hl7_ord_org_port")}
+            midLabel="Silverback"
+            midIp={get("meta.hl7_ord_sb_ip")}
+            midPort={get("meta.hl7_ord_sb_port")}
+            rightLabel="New Lantern"
+            rightIp={get("meta.hl7_ord_nl_ip")}
+            rightPort={get("meta.hl7_ord_nl_port")}
+          />
+        </div>
+
+        <div className="border-t border-border/40" />
+
+        {/* HL7 Results: New Lantern → Silverback → Site */}
+        <div>
+          <div className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />
+            HL7 Results
+          </div>
+          <HL7FlowRow
+            direction="→"
+            leftLabel="New Lantern"
+            leftIp={get("meta.hl7_res_nl_ip")}
+            leftPort={get("meta.hl7_res_nl_port")}
+            midLabel="Silverback"
+            midIp={get("meta.hl7_res_sb_ip")}
+            midPort={get("meta.hl7_res_sb_port")}
+            rightLabel="Client Site"
+            rightIp={get("meta.hl7_res_org_ip")}
+            rightPort={get("meta.hl7_res_org_port")}
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** HL7 Layout view — card per org showing Orders + Results flows. */
+function HL7Layout({ orgs }: { orgs: { id: number; name: string; slug: string }[] }) {
+  const { data: allResponses = [], isLoading } = trpc.admin.getAllOrgResponses.useQuery();
+
+  // Build per-org response lookup
+  const lookup = allResponses.reduce<Record<number, Record<string, string>>>((acc, r) => {
+    if (!acc[r.organizationId]) acc[r.organizationId] = {};
+    acc[r.organizationId][r.questionId] = r.response ?? "";
+    return acc;
+  }, {});
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
+  }
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold">HL7 Connectivity</h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Per-organization HL7 Orders and Results endpoint overview. Edit values in the Connectivity Matrix tab.
+        </p>
+      </div>
+
+      {orgs.length === 0 ? (
+        <p className="text-muted-foreground py-12 text-center">No organizations accessible.</p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {orgs.map(org => (
+            <HL7OrgCard
+              key={org.id}
+              org={org}
+              responses={lookup[org.id] ?? {}}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
