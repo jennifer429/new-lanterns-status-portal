@@ -2989,6 +2989,14 @@ function ConnectivityMatrix({ orgs }: { orgs: { id: number; name: string; slug: 
   });
   const filteredOrgs = orgs.filter(o => visibleOrgIds.has(o.id));
 
+  // Collapsed sections state
+  const [collapsedSections, setCollapsedSections] = useState<Set<number>>(new Set());
+  const toggleSection = (si: number) => setCollapsedSections(prev => {
+    const next = new Set(prev);
+    if (next.has(si)) { next.delete(si); } else { next.add(si); }
+    return next;
+  });
+
   // Import dialog state
   const [importOpen, setImportOpen]         = useState(false);
   const [importPreview, setImportPreview]   = useState<{ rows: { organizationId: number; questionId: string; response: string }[]; errors: string[] } | null>(null);
@@ -3212,48 +3220,64 @@ function ConnectivityMatrix({ orgs }: { orgs: { id: number; name: string; slug: 
       ) : filteredOrgs.length === 0 ? (
         <p className="text-muted-foreground py-12 text-center">No organizations selected. Use the filters above to show orgs.</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border">
+        <div className="overflow-auto rounded-lg border border-border" style={{ maxHeight: 'calc(100vh - 260px)' }}>
           <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="border-b border-border bg-muted/30">
-                <th className="text-left py-3 px-4 font-semibold text-muted-foreground w-44 min-w-[11rem] border-r border-border">Detail</th>
+            <thead className="sticky top-0 z-20">
+              <tr className="border-b border-border bg-card">
+                <th className="text-left py-3 px-4 font-semibold text-muted-foreground w-44 min-w-[11rem] border-r border-border bg-card">Detail</th>
                 {filteredOrgs.map(org => (
-                  <th key={org.id} className="text-left py-3 px-4 font-bold min-w-[10rem] border-r border-border last:border-r-0">{org.name}</th>
+                  <th key={org.id} className="text-left py-3 px-4 font-bold min-w-[10rem] border-r border-border last:border-r-0 bg-card">{org.name}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {MATRIX_SECTIONS.map((section, si) => (
-                <>
-                  <tr key={`sh-${si}`} className="bg-muted/20">
-                    <td colSpan={filteredOrgs.length + 1} className="py-2 px-4 font-bold text-sm border-t border-border">
-                      {section.title}
-                    </td>
-                  </tr>
-                  {section.rows.map((row, ri) => (
-                    <tr key={`r-${si}-${ri}`} className="border-t border-border/40 hover:bg-muted/10 transition-colors">
-                      <td className="py-2.5 px-4 text-foreground/70 border-r border-border/40 w-44">{row.label}</td>
-                      {filteredOrgs.map(org => {
-                        const entry = lookup[org.id]?.[row.questionId];
-                        return (
-                          <td key={org.id} className="py-2 px-3 border-r border-border/40 last:border-r-0">
-                            <MatrixCell
-                              orgId={org.id}
-                              questionId={row.questionId}
-                              initialValue={entry?.response ?? ""}
-                              audit={entry}
-                              isEmail={row.isEmail}
-                              isPhone={row.isPhone}
-                              isStatus={row.questionId === "meta.prod_status"}
-                              isGotcha={section.title === "Known Gotchas / Exceptions"}
-                            />
-                          </td>
-                        );
-                      })}
+              {MATRIX_SECTIONS.map((section, si) => {
+                const isCollapsed = collapsedSections.has(si);
+                return (
+                  <>
+                    <tr
+                      key={`sh-${si}`}
+                      className="bg-muted/30 hover:bg-muted/50 cursor-pointer select-none"
+                      onClick={() => toggleSection(si)}
+                    >
+                      <td colSpan={filteredOrgs.length + 1} className="py-2 px-4 font-bold text-sm border-t border-border">
+                        <div className="flex items-center gap-2">
+                          <svg
+                            className={cn('w-3.5 h-3.5 text-muted-foreground transition-transform flex-shrink-0', isCollapsed ? '-rotate-90' : '')}
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                          </svg>
+                          {section.title}
+                          <span className="text-xs font-normal text-muted-foreground ml-1">({section.rows.length})</span>
+                        </div>
+                      </td>
                     </tr>
-                  ))}
-                </>
-              ))}
+                    {!isCollapsed && section.rows.map((row, ri) => (
+                      <tr key={`r-${si}-${ri}`} className="border-t border-border/40 hover:bg-muted/10 transition-colors">
+                        <td className="py-2.5 px-4 text-foreground/70 border-r border-border/40 w-44">{row.label}</td>
+                        {filteredOrgs.map(org => {
+                          const entry = lookup[org.id]?.[row.questionId];
+                          return (
+                            <td key={org.id} className="py-2 px-3 border-r border-border/40 last:border-r-0">
+                              <MatrixCell
+                                orgId={org.id}
+                                questionId={row.questionId}
+                                initialValue={entry?.response ?? ""}
+                                audit={entry}
+                                isEmail={row.isEmail}
+                                isPhone={row.isPhone}
+                                isStatus={row.questionId === "meta.prod_status"}
+                                isGotcha={section.title === "Known Gotchas / Exceptions"}
+                              />
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </>
+                );
+              })}
             </tbody>
           </table>
         </div>
