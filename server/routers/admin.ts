@@ -882,6 +882,14 @@ export const adminRouter = router({
               sectionTitle: section.title,
               isWorkflow: true,
             }];
+          } else if (section.type === 'integration-workflows') {
+            return ['orders', 'images', 'priors', 'reports'].map(wf => ({
+              id: `IW.${wf}_description`,
+              sectionTitle: section.title,
+              isWorkflow: false,
+              type: 'textarea',
+              conditionalOn: null,
+            }));
           }
           return [];
         });

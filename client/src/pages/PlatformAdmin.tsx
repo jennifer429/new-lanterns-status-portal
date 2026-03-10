@@ -32,8 +32,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Activity, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp, Headphones, AlertTriangle, AlertCircle, Info, Image, CheckSquare, BarChart3, Copy, Check, Clock } from "lucide-react";
+import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Activity, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp, AlertTriangle, AlertCircle, Info, Image, CheckSquare, BarChart3, Copy, Check, Clock } from "lucide-react";
 import { questionnaireSections } from "@shared/questionnaireData";
+import { TYPE_COLORS, type IntegrationSystem } from "@/components/IntegrationWorkflows";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -53,82 +55,7 @@ import {
 export default function PlatformAdmin() {
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"prod-dashboard" | "impl-dashboard" | "orgs" | "users" | "templates" | "partners" | "specs" | "support-hub">("prod-dashboard");
-
-  // Support Hub state
-  const [hubNotes, setHubNotes] = useState<Record<number, string>>({});
-  const [hubIssues, setHubIssues] = useState<Record<number, { text: string; severity: "low" | "medium" | "high"; resolved: boolean }[]>>({});
-  const [hubDiagrams, setHubDiagrams] = useState<Record<number, { name: string; url: string; isImage: boolean }[]>>({});
-  const [newIssueText, setNewIssueText] = useState<Record<number, string>>({});
-  const [newIssueSeverity, setNewIssueSeverity] = useState<Record<number, "low" | "medium" | "high">>({});
-  const [hubDiagramRefs] = useState<Record<number, React.RefObject<HTMLInputElement>>>({});
-
-  const getHubDiagramRef = (orgId: number): React.RefObject<HTMLInputElement> => {
-    if (!hubDiagramRefs[orgId]) {
-      (hubDiagramRefs as any)[orgId] = { current: null };
-    }
-    return hubDiagramRefs[orgId];
-  };
-
-  const handleHubDiagramUpload = (orgId: number, files: FileList | null) => {
-    if (!files) return;
-    const newFiles = Array.from(files).map(file => ({
-      name: file.name,
-      url: URL.createObjectURL(file),
-      isImage: file.type.startsWith("image/"),
-    }));
-    setHubDiagrams(prev => ({ ...prev, [orgId]: [...(prev[orgId] || []), ...newFiles] }));
-  };
-
-  const addHubIssue = (orgId: number) => {
-    const text = newIssueText[orgId]?.trim();
-    if (!text) return;
-    const severity = newIssueSeverity[orgId] || "medium";
-    setHubIssues(prev => ({
-      ...prev,
-      [orgId]: [...(prev[orgId] || []), { text, severity, resolved: false }],
-    }));
-    setNewIssueText(prev => ({ ...prev, [orgId]: "" }));
-  };
-
-  const toggleIssueResolved = (orgId: number, idx: number) => {
-    setHubIssues(prev => ({
-      ...prev,
-      [orgId]: (prev[orgId] || []).map((issue, i) =>
-        i === idx ? { ...issue, resolved: !issue.resolved } : issue
-      ),
-    }));
-  };
-
-  const exportSupportHubCSV = () => {
-    if (!orgs || !metrics) return;
-    const rows = [
-      ["Organization", "Partner", "Status", "Completion %", "Sections Complete", "Files", "Open Issues", "Notes"],
-    ];
-    orgs.forEach(org => {
-      const m = metricsMap[org.id];
-      const partner = org.clientId ? clientMap[org.clientId] || "" : "";
-      const openIssues = (hubIssues[org.id] || []).filter(i => !i.resolved).length;
-      rows.push([
-        org.name,
-        partner,
-        org.status || "",
-        String(m?.completionPercent || 0),
-        String(m?.sectionsComplete || 0),
-        String(m?.files.length || 0),
-        String(openIssues),
-        hubNotes[org.id] || "",
-      ]);
-    });
-    const csv = rows.map(r => r.map(v => `"${v.replace(/"/g, '""')}"`).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "support-hub-export.csv";
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  const [activeTab, setActiveTab] = useState<"prod-dashboard" | "impl-dashboard" | "organizations" | "users" | "templates" | "partners" | "specs">("prod-dashboard");
 
   // Template management state
   const [isUploadTemplateDialogOpen, setIsUploadTemplateDialogOpen] = useState(false);
@@ -927,7 +854,7 @@ export default function PlatformAdmin() {
               }`}
             >
               <Activity className="w-4 h-4" />
-              Connectivity Matrix
+              Connectivity Dashboard
               {activeTab === "prod-dashboard" && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
               )}
@@ -940,7 +867,7 @@ export default function PlatformAdmin() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Dashboard
+              Implementation Dashboard
               {activeTab === "impl-dashboard" && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
               )}
@@ -1014,20 +941,6 @@ export default function PlatformAdmin() {
                 )}
               </button>
             )}
-            <button
-              onClick={() => setActiveTab("support-hub")}
-              className={`pb-3 px-1 font-medium transition-colors relative flex items-center gap-1.5 ${
-                activeTab === "support-hub"
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Headphones className="w-4 h-4" />
-              Support Hub
-              {activeTab === "support-hub" && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-              )}
-            </button>
           </div>
         </div>
       </header>
@@ -2558,274 +2471,194 @@ export default function PlatformAdmin() {
             </Card>
           </>
         )}
+      </div>
+    </div>
+  );
+}
 
-        {/* ── SUPPORT HUB TAB ── */}
-        {activeTab === "support-hub" && (
+// ─── HL7 Layout ───────────────────────────────────────────────────────────────
+
+/** HL7 connectivity fields shown per-org in the card layout. */
+const HL7_ORDERS_FIELDS = [
+  { label: "Org IP",          questionId: "meta.hl7_ord_org_ip" },
+  { label: "Org Port",        questionId: "meta.hl7_ord_org_port" },
+  { label: "Silverback IP",   questionId: "meta.hl7_ord_sb_ip" },
+  { label: "Silverback Port", questionId: "meta.hl7_ord_sb_port" },
+  { label: "NL IP",           questionId: "meta.hl7_ord_nl_ip" },
+  { label: "NL Port",         questionId: "meta.hl7_ord_nl_port" },
+] as const;
+
+const HL7_RESULTS_FIELDS = [
+  { label: "NL IP",           questionId: "meta.hl7_res_nl_ip" },
+  { label: "NL Port",         questionId: "meta.hl7_res_nl_port" },
+  { label: "Silverback IP",   questionId: "meta.hl7_res_sb_ip" },
+  { label: "Silverback Port", questionId: "meta.hl7_res_sb_port" },
+  { label: "Org IP",          questionId: "meta.hl7_res_org_ip" },
+  { label: "Org Port",        questionId: "meta.hl7_res_org_port" },
+] as const;
+
+/** A 3-node flow block: [left label + IP/port] → [mid label + IP/port] → [right label + IP/port] */
+function HL7FlowRow({
+  direction,
+  leftLabel, leftIp, leftPort,
+  midLabel,  midIp,  midPort,
+  rightLabel, rightIp, rightPort,
+}: {
+  direction: "→" | "←";
+  leftLabel: string;  leftIp: string;  leftPort: string;
+  midLabel: string;   midIp: string;   midPort: string;
+  rightLabel: string; rightIp: string; rightPort: string;
+}) {
+  const Node = ({ label, ip, port }: { label: string; ip: string; port: string }) => (
+    <div className="flex flex-col items-center gap-1 min-w-0 flex-1">
+      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="w-full border border-border rounded-md bg-muted/20 px-2 py-1.5 text-center">
+        {ip || port ? (
           <>
-            {/* Header row */}
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-2xl font-bold flex items-center gap-2">
-                  <Headphones className="w-6 h-6 text-primary" />
-                  Prod Support Hub
-                </h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Quick-reference for all clients — status, issues, diagrams, and notes in one place.
-                </p>
-              </div>
-              <Button onClick={exportSupportHubCSV} variant="outline">
-                <Download className="w-4 h-4 mr-2" />
-                Export CSV
-              </Button>
-            </div>
-
-            {/* Summary strip */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              {[
-                { label: "Total Orgs", value: orgs?.length || 0, icon: <ClipboardList className="w-5 h-5 text-primary" /> },
-                { label: "Active", value: orgs?.filter(o => o.status === "active").length || 0, icon: <CheckCircle2 className="w-5 h-5 text-green-500" /> },
-                { label: "Open Issues", value: Object.values(hubIssues).flat().filter(i => !i.resolved).length, icon: <AlertCircle className="w-5 h-5 text-red-500" /> },
-                { label: "Avg Completion", value: `${orgs?.length ? Math.round((orgs.reduce((s, o) => s + (metricsMap[o.id]?.completionPercent || 0), 0)) / orgs.length) : 0}%`, icon: <BarChart3 className="w-5 h-5 text-blue-500" /> },
-              ].map((stat, i) => (
-                <Card key={i} className="border border-border/50">
-                  <CardContent className="p-4 flex items-center gap-3">
-                    {stat.icon}
-                    <div>
-                      <div className="text-xl font-bold">{stat.value}</div>
-                      <div className="text-xs text-muted-foreground">{stat.label}</div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            {/* Per-org reference cards */}
-            <div className="space-y-6">
-              {(orgs || []).map(org => {
-                const m = metricsMap[org.id];
-                const partner = org.clientId ? (clientMap[org.clientId] || `Partner ${org.clientId}`) : "Platform";
-                const openIssues = (hubIssues[org.id] || []).filter(i => !i.resolved);
-                const resolvedIssues = (hubIssues[org.id] || []).filter(i => i.resolved);
-                const diagrams = hubDiagrams[org.id] || [];
-
-                return (
-                  <Card key={org.id} className="border border-border/50">
-                    <CardContent className="p-0">
-                      {/* Card header */}
-                      <div className="flex items-center justify-between p-4 border-b border-border/50 bg-muted/20">
-                        <div className="flex items-center gap-3">
-                          <ClipboardList className="w-5 h-5 text-primary" />
-                          <div>
-                            <div className="font-semibold">{org.name}</div>
-                            <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
-                              <Badge variant="outline" className="text-xs">{partner}</Badge>
-                              <Badge
-                                variant="outline"
-                                className={`text-xs ${
-                                  org.status === "active" ? "border-green-500/50 text-green-600" :
-                                  org.status === "completed" ? "border-blue-500/50 text-blue-600" :
-                                  "border-muted-foreground/50"
-                                }`}
-                              >
-                                {org.status || "active"}
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-6 text-sm">
-                          <div className="text-center">
-                            <div className={`text-xl font-bold ${m?.completionPercent === 100 ? "text-green-500" : "text-primary"}`}>
-                              {m?.completionPercent || 0}%
-                            </div>
-                            <div className="text-xs text-muted-foreground">Intake</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-xl font-bold">{m?.files.length || 0}</div>
-                            <div className="text-xs text-muted-foreground">Files</div>
-                          </div>
-                          <div className="text-center">
-                            <div className={`text-xl font-bold ${openIssues.length > 0 ? "text-red-500" : "text-muted-foreground"}`}>
-                              {openIssues.length}
-                            </div>
-                            <div className="text-xs text-muted-foreground">Open Issues</div>
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => window.open(`/org/${org.slug}`, "_blank")}
-                          >
-                            <ExternalLink className="w-3 h-3 mr-1" />
-                            Portal
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* Card body — 3-column layout */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border/50">
-
-                        {/* Column 1: Issues */}
-                        <div className="p-4">
-                          <h4 className="text-sm font-semibold mb-3 flex items-center gap-1.5">
-                            <AlertCircle className="w-4 h-4 text-red-500" />
-                            Issues
-                          </h4>
-
-                          {/* Add issue */}
-                          <div className="flex gap-2 mb-3">
-                            <input
-                              type="text"
-                              placeholder="Add an issue..."
-                              value={newIssueText[org.id] || ""}
-                              onChange={e => setNewIssueText(prev => ({ ...prev, [org.id]: e.target.value }))}
-                              onKeyDown={e => e.key === "Enter" && addHubIssue(org.id)}
-                              className="flex-1 text-xs border border-border/50 rounded px-2 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-                            />
-                            <select
-                              value={newIssueSeverity[org.id] || "medium"}
-                              onChange={e => setNewIssueSeverity(prev => ({ ...prev, [org.id]: e.target.value as any }))}
-                              className="text-xs border border-border/50 rounded px-1.5 py-1.5 bg-background"
-                            >
-                              <option value="low">Low</option>
-                              <option value="medium">Med</option>
-                              <option value="high">High</option>
-                            </select>
-                            <Button size="sm" variant="outline" className="px-2" onClick={() => addHubIssue(org.id)}>
-                              <Plus className="w-3 h-3" />
-                            </Button>
-                          </div>
-
-                          {openIssues.length === 0 && resolvedIssues.length === 0 ? (
-                            <p className="text-xs text-muted-foreground">No issues logged</p>
-                          ) : (
-                            <div className="space-y-1.5">
-                              {openIssues.map((issue, idx) => {
-                                const realIdx = (hubIssues[org.id] || []).indexOf(issue);
-                                return (
-                                  <div key={idx} className="flex items-start gap-2">
-                                    <button onClick={() => toggleIssueResolved(org.id, realIdx)} className="mt-0.5 shrink-0">
-                                      <Circle className="w-3.5 h-3.5 text-muted-foreground hover:text-green-500" />
-                                    </button>
-                                    <span className={`text-xs flex-1 ${
-                                      issue.severity === "high" ? "text-red-500" :
-                                      issue.severity === "medium" ? "text-amber-500" : "text-foreground"
-                                    }`}>{issue.text}</span>
-                                    <Badge variant="outline" className={`text-[10px] shrink-0 ${
-                                      issue.severity === "high" ? "border-red-500/50 text-red-500" :
-                                      issue.severity === "medium" ? "border-amber-500/50 text-amber-500" :
-                                      "border-border/50"
-                                    }`}>{issue.severity}</Badge>
-                                  </div>
-                                );
-                              })}
-                              {resolvedIssues.length > 0 && (
-                                <div className="pt-1 border-t border-border/30 space-y-1">
-                                  {resolvedIssues.map((issue, idx) => {
-                                    const realIdx = (hubIssues[org.id] || []).indexOf(issue);
-                                    return (
-                                      <div key={idx} className="flex items-start gap-2 opacity-50">
-                                        <button onClick={() => toggleIssueResolved(org.id, realIdx)} className="mt-0.5 shrink-0">
-                                          <CheckSquare className="w-3.5 h-3.5 text-green-500" />
-                                        </button>
-                                        <span className="text-xs line-through flex-1">{issue.text}</span>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Column 2: Notes */}
-                        <div className="p-4">
-                          <h4 className="text-sm font-semibold mb-3 flex items-center gap-1.5">
-                            <Info className="w-4 h-4 text-blue-500" />
-                            Notes
-                          </h4>
-                          <textarea
-                            value={hubNotes[org.id] || ""}
-                            onChange={e => setHubNotes(prev => ({ ...prev, [org.id]: e.target.value }))}
-                            placeholder="Support notes, escalation contacts, known configs..."
-                            rows={5}
-                            className="w-full text-xs border border-border/50 rounded px-2 py-1.5 bg-background resize-none focus:outline-none focus:ring-1 focus:ring-primary"
-                          />
-                        </div>
-
-                        {/* Column 3: Diagrams */}
-                        <div className="p-4">
-                          <h4 className="text-sm font-semibold mb-3 flex items-center justify-between">
-                            <span className="flex items-center gap-1.5">
-                              <Image className="w-4 h-4 text-purple-500" />
-                              Diagrams
-                            </span>
-                            <label className="cursor-pointer">
-                              <input
-                                type="file"
-                                accept="image/*,.pdf,.svg"
-                                multiple
-                                className="hidden"
-                                onChange={e => handleHubDiagramUpload(org.id, e.target.files)}
-                              />
-                              <span className="text-xs text-primary hover:underline flex items-center gap-1">
-                                <Upload className="w-3 h-3" />
-                                Upload
-                              </span>
-                            </label>
-                          </h4>
-                          {diagrams.length === 0 ? (
-                            <label className="cursor-pointer">
-                              <input
-                                type="file"
-                                accept="image/*,.pdf,.svg"
-                                multiple
-                                className="hidden"
-                                onChange={e => handleHubDiagramUpload(org.id, e.target.files)}
-                              />
-                              <div className="border-2 border-dashed border-border/50 rounded-lg p-4 text-center hover:border-primary/50 hover:bg-muted/20 transition-colors">
-                                <Image className="w-6 h-6 text-muted-foreground mx-auto mb-1" />
-                                <p className="text-xs text-muted-foreground">Upload network or architecture diagrams</p>
-                              </div>
-                            </label>
-                          ) : (
-                            <div className="space-y-2">
-                              {diagrams.map((d, i) => (
-                                <div key={i} className="border border-border/50 rounded overflow-hidden">
-                                  {d.isImage && (
-                                    <img src={d.url} alt={d.name} className="w-full max-h-32 object-contain bg-muted/20" />
-                                  )}
-                                  <div className="flex items-center gap-1.5 p-2 bg-muted/20">
-                                    <FileText className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                                    <span className="text-xs flex-1 truncate">{d.name}</span>
-                                    <a href={d.url} download={d.name}>
-                                      <Button size="sm" variant="ghost" className="h-6 w-6 p-0">
-                                        <Download className="w-3 h-3" />
-                                      </Button>
-                                    </a>
-                                  </div>
-                                </div>
-                              ))}
-                              <label className="cursor-pointer block">
-                                <input
-                                  type="file"
-                                  accept="image/*,.pdf,.svg"
-                                  multiple
-                                  className="hidden"
-                                  onChange={e => handleHubDiagramUpload(org.id, e.target.files)}
-                                />
-                                <div className="text-xs text-center text-primary hover:underline cursor-pointer">+ Add more</div>
-                              </label>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+            {ip && <div className="font-mono text-xs text-foreground leading-tight truncate">{ip}</div>}
+            {port && <div className="font-mono text-xs text-primary leading-tight">:{port}</div>}
           </>
+        ) : (
+          <div className="font-mono text-xs text-muted-foreground/50">—</div>
         )}
       </div>
+    </div>
+  );
+
+  const Arrow = () => (
+    <div className="flex items-center justify-center text-muted-foreground/50 text-lg font-light shrink-0 px-1 mt-5">
+      {direction}
+    </div>
+  );
+
+  return (
+    <div className="flex items-start gap-1">
+      <Node label={leftLabel}  ip={leftIp}   port={leftPort} />
+      <Arrow />
+      <Node label={midLabel}   ip={midIp}    port={midPort} />
+      <Arrow />
+      <Node label={rightLabel} ip={rightIp}  port={rightPort} />
+    </div>
+  );
+}
+
+/** Card for a single organization showing its HL7 Orders + Results flows. */
+function HL7OrgCard({
+  org,
+  responses,
+}: {
+  org: { id: number; name: string; slug: string };
+  responses: Record<string, string>;
+}) {
+  const get = (qid: string) => responses[qid] ?? "";
+
+  const ordersComplete =
+    get("meta.hl7_ord_org_ip") || get("meta.hl7_ord_org_port") ||
+    get("meta.hl7_ord_sb_ip")  || get("meta.hl7_ord_nl_ip");
+
+  const resultsComplete =
+    get("meta.hl7_res_nl_ip") || get("meta.hl7_res_nl_port") ||
+    get("meta.hl7_res_sb_ip") || get("meta.hl7_res_org_ip");
+
+  return (
+    <Card className="border-border bg-card">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base font-semibold">{org.name}</CardTitle>
+          <div className="flex gap-1.5">
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${ordersComplete ? "bg-green-500/15 text-green-400" : "bg-muted text-muted-foreground"}`}>
+              Orders {ordersComplete ? "✓" : "—"}
+            </span>
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${resultsComplete ? "bg-blue-500/15 text-blue-400" : "bg-muted text-muted-foreground"}`}>
+              Results {resultsComplete ? "✓" : "—"}
+            </span>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4 pt-0">
+        {/* HL7 Orders: Site → Silverback → New Lantern */}
+        <div>
+          <div className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
+            HL7 Orders
+          </div>
+          <HL7FlowRow
+            direction="→"
+            leftLabel="Client Site"
+            leftIp={get("meta.hl7_ord_org_ip")}
+            leftPort={get("meta.hl7_ord_org_port")}
+            midLabel="Silverback"
+            midIp={get("meta.hl7_ord_sb_ip")}
+            midPort={get("meta.hl7_ord_sb_port")}
+            rightLabel="New Lantern"
+            rightIp={get("meta.hl7_ord_nl_ip")}
+            rightPort={get("meta.hl7_ord_nl_port")}
+          />
+        </div>
+
+        <div className="border-t border-border/40" />
+
+        {/* HL7 Results: New Lantern → Silverback → Site */}
+        <div>
+          <div className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />
+            HL7 Results
+          </div>
+          <HL7FlowRow
+            direction="→"
+            leftLabel="New Lantern"
+            leftIp={get("meta.hl7_res_nl_ip")}
+            leftPort={get("meta.hl7_res_nl_port")}
+            midLabel="Silverback"
+            midIp={get("meta.hl7_res_sb_ip")}
+            midPort={get("meta.hl7_res_sb_port")}
+            rightLabel="Client Site"
+            rightIp={get("meta.hl7_res_org_ip")}
+            rightPort={get("meta.hl7_res_org_port")}
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** HL7 Layout view — card per org showing Orders + Results flows. */
+function HL7Layout({ orgs }: { orgs: { id: number; name: string; slug: string }[] }) {
+  const { data: allResponses = [], isLoading } = trpc.admin.getAllOrgResponses.useQuery();
+
+  // Build per-org response lookup
+  const lookup = allResponses.reduce<Record<number, Record<string, string>>>((acc, r) => {
+    if (!acc[r.organizationId]) acc[r.organizationId] = {};
+    acc[r.organizationId][r.questionId] = r.response ?? "";
+    return acc;
+  }, {});
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
+  }
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold">HL7 Connectivity</h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Per-organization HL7 Orders and Results endpoint overview. Edit values in the Connectivity Matrix tab.
+        </p>
+      </div>
+
+      {orgs.length === 0 ? (
+        <p className="text-muted-foreground py-12 text-center">No organizations accessible.</p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {orgs.map(org => (
+            <HL7OrgCard
+              key={org.id}
+              org={org}
+              responses={lookup[org.id] ?? {}}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -3128,6 +2961,23 @@ function ConnectivityMatrix({ orgs }: { orgs: { id: number; name: string; slug: 
   const utils = trpc.useUtils();
   const { data: allResponses = [], isLoading } = trpc.admin.getAllOrgResponses.useQuery();
 
+  // Org visibility filter
+  const [visibleOrgIds, setVisibleOrgIds] = useState<Set<number>>(() => new Set(orgs.map(o => o.id)));
+  const toggleOrg = (id: number) => setVisibleOrgIds(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) { next.delete(id); } else { next.add(id); }
+    return next;
+  });
+  const filteredOrgs = orgs.filter(o => visibleOrgIds.has(o.id));
+
+  // Collapsed sections state
+  const [collapsedSections, setCollapsedSections] = useState<Set<number>>(new Set());
+  const toggleSection = (si: number) => setCollapsedSections(prev => {
+    const next = new Set(prev);
+    if (next.has(si)) { next.delete(si); } else { next.add(si); }
+    return next;
+  });
+
   // Import dialog state
   const [importOpen, setImportOpen]         = useState(false);
   const [importPreview, setImportPreview]   = useState<{ rows: { organizationId: number; questionId: string; response: string }[]; errors: string[] } | null>(null);
@@ -3264,51 +3114,151 @@ function ConnectivityMatrix({ orgs }: { orgs: { id: number; name: string; slug: 
         </div>
       </div>
 
+      {/* Client filter toggles */}
+      {orgs.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted-foreground font-medium">Show:</span>
+          {orgs.map(org => (
+            <button
+              key={org.id}
+              onClick={() => toggleOrg(org.id)}
+              className={cn(
+                'px-3 py-1 rounded-full text-xs font-medium border transition-colors',
+                visibleOrgIds.has(org.id)
+                  ? 'bg-primary/10 text-primary border-primary/30'
+                  : 'bg-muted text-muted-foreground border-border opacity-50',
+              )}
+            >
+              {org.name}
+            </button>
+          ))}
+          {visibleOrgIds.size < orgs.length && (
+            <button
+              onClick={() => setVisibleOrgIds(new Set(orgs.map(o => o.id)))}
+              className="px-3 py-1 rounded-full text-xs text-muted-foreground hover:text-foreground border border-dashed border-border"
+            >
+              Show all
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Integration Workflows thumbnails */}
+      {filteredOrgs.length > 0 && (
+        <div className="mb-6">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Integration Workflows Snapshots</p>
+          <div className="flex gap-4 overflow-x-auto pb-2">
+            {filteredOrgs.map(org => {
+              const orgData = lookup[org.id] ?? {};
+              const diagramUrl: string = orgData['IW.diagram']?.response ?? '';
+              const diagramFilename: string = orgData['IW.diagram_filename']?.response ?? '';
+              const systemsRaw: string = orgData['IW.systems']?.response ?? '';
+              let systems: IntegrationSystem[] = [];
+              try { if (systemsRaw) systems = JSON.parse(systemsRaw); } catch {}
+              const wfCount = ['orders', 'images', 'priors', 'reports'].filter(wf =>
+                (orgData[`IW.${wf}_description`]?.response ?? '').trim().length > 0
+              ).length;
+              const isImage = diagramFilename && /\.(png|jpg|jpeg)$/i.test(diagramFilename);
+
+              return (
+                <div key={org.id} className="flex-shrink-0 w-52 rounded-xl border bg-card p-3 space-y-2">
+                  <p className="font-semibold text-sm truncate">{org.name}</p>
+                  {diagramUrl && isImage ? (
+                    <img src={diagramUrl} className="w-full h-24 object-cover rounded-lg border" alt="" />
+                  ) : diagramUrl ? (
+                    <div className="w-full h-24 rounded-lg bg-muted/20 border flex items-center justify-center gap-2">
+                      <FileText className="w-6 h-6 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">PDF</span>
+                    </div>
+                  ) : (
+                    <div className="w-full h-24 rounded-lg bg-muted/10 border-2 border-dashed border-border flex items-center justify-center">
+                      <p className="text-xs text-muted-foreground">No diagram</p>
+                    </div>
+                  )}
+                  <div className="flex flex-wrap gap-1">
+                    {systems.slice(0, 4).map(s => (
+                      <span key={s.id} className={cn('text-xs px-1.5 py-0.5 rounded-full font-medium', TYPE_COLORS[s.type] ?? TYPE_COLORS['Other'])}>
+                        {s.type || s.name}
+                      </span>
+                    ))}
+                    {systems.length > 4 && (
+                      <span className="text-xs text-muted-foreground">+{systems.length - 4}</span>
+                    )}
+                    {systems.length === 0 && (
+                      <span className="text-xs text-muted-foreground italic">No systems</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">{wfCount}/4 workflows described</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {orgs.length === 0 ? (
         <p className="text-muted-foreground py-12 text-center">No organizations accessible.</p>
+      ) : filteredOrgs.length === 0 ? (
+        <p className="text-muted-foreground py-12 text-center">No organizations selected. Use the filters above to show orgs.</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border">
+        <div className="overflow-auto rounded-lg border border-border" style={{ maxHeight: 'calc(100vh - 260px)' }}>
           <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="border-b border-border bg-muted/30">
-                <th className="text-left py-3 px-4 font-semibold text-muted-foreground w-44 min-w-[11rem] border-r border-border">Detail</th>
-                {orgs.map(org => (
-                  <th key={org.id} className="text-left py-3 px-4 font-bold min-w-[10rem] border-r border-border last:border-r-0">{org.name}</th>
+            <thead className="sticky top-0 z-20">
+              <tr className="border-b border-border bg-card">
+                <th className="text-left py-3 px-4 font-semibold text-muted-foreground w-44 min-w-[11rem] border-r border-border bg-card">Detail</th>
+                {filteredOrgs.map(org => (
+                  <th key={org.id} className="text-left py-3 px-4 font-bold min-w-[10rem] border-r border-border last:border-r-0 bg-card">{org.name}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {MATRIX_SECTIONS.map((section, si) => (
-                <>
-                  <tr key={`sh-${si}`} className="bg-muted/20">
-                    <td colSpan={orgs.length + 1} className="py-2 px-4 font-bold text-sm border-t border-border">
-                      {section.title}
-                    </td>
-                  </tr>
-                  {section.rows.map((row, ri) => (
-                    <tr key={`r-${si}-${ri}`} className="border-t border-border/40 hover:bg-muted/10 transition-colors">
-                      <td className="py-2.5 px-4 text-foreground/70 border-r border-border/40 w-44">{row.label}</td>
-                      {orgs.map(org => {
-                        const entry = lookup[org.id]?.[row.questionId];
-                        return (
-                          <td key={org.id} className="py-2 px-3 border-r border-border/40 last:border-r-0">
-                            <MatrixCell
-                              orgId={org.id}
-                              questionId={row.questionId}
-                              initialValue={entry?.response ?? ""}
-                              audit={entry}
-                              isEmail={row.isEmail}
-                              isPhone={row.isPhone}
-                              isStatus={row.questionId === "meta.prod_status"}
-                              isGotcha={section.title === "Known Gotchas / Exceptions"}
-                            />
-                          </td>
-                        );
-                      })}
+              {MATRIX_SECTIONS.map((section, si) => {
+                const isCollapsed = collapsedSections.has(si);
+                return (
+                  <>
+                    <tr
+                      key={`sh-${si}`}
+                      className="bg-muted/30 hover:bg-muted/50 cursor-pointer select-none"
+                      onClick={() => toggleSection(si)}
+                    >
+                      <td colSpan={filteredOrgs.length + 1} className="py-2 px-4 font-bold text-sm border-t border-border">
+                        <div className="flex items-center gap-2">
+                          <svg
+                            className={cn('w-3.5 h-3.5 text-muted-foreground transition-transform flex-shrink-0', isCollapsed ? '-rotate-90' : '')}
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                          </svg>
+                          {section.title}
+                          <span className="text-xs font-normal text-muted-foreground ml-1">({section.rows.length})</span>
+                        </div>
+                      </td>
                     </tr>
-                  ))}
-                </>
-              ))}
+                    {!isCollapsed && section.rows.map((row, ri) => (
+                      <tr key={`r-${si}-${ri}`} className="border-t border-border/40 hover:bg-muted/10 transition-colors">
+                        <td className="py-2.5 px-4 text-foreground/70 border-r border-border/40 w-44">{row.label}</td>
+                        {filteredOrgs.map(org => {
+                          const entry = lookup[org.id]?.[row.questionId];
+                          return (
+                            <td key={org.id} className="py-2 px-3 border-r border-border/40 last:border-r-0">
+                              <MatrixCell
+                                orgId={org.id}
+                                questionId={row.questionId}
+                                initialValue={entry?.response ?? ""}
+                                audit={entry}
+                                isEmail={row.isEmail}
+                                isPhone={row.isPhone}
+                                isStatus={row.questionId === "meta.prod_status"}
+                                isGotcha={section.title === "Known Gotchas / Exceptions"}
+                              />
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </>
+                );
+              })}
             </tbody>
           </table>
         </div>
