@@ -53,12 +53,24 @@ export const questionnaireSections: Section[] = [
     ],
   },
   {
+    id: 'architecture',
+    title: 'Architecture',
+    description: 'Systems inventory and architecture diagram',
+    questions: [
+      { id: 'ARCH.diagram', text: 'Architecture Diagram: Upload a network or workflow diagram showing how your systems connect', type: 'upload', notes: 'Accepted formats: PNG, JPG, PDF' },
+      { id: 'ARCH.1', text: 'PACS system (vendor and product name)', type: 'text', placeholder: 'e.g., Sectra IDS7, Philips IntelliSpace, Agfa IMPAX' },
+      { id: 'ARCH.2', text: 'RIS system (vendor and product name)', type: 'text', placeholder: 'e.g., Epic Radiant, Cerner RadNet, Meditech' },
+      { id: 'ARCH.3', text: 'EMR / EHR system (vendor and product name)', type: 'text', placeholder: 'e.g., Epic, Cerner, Athenahealth, eClinicalWorks' },
+      { id: 'ARCH.4', text: 'Interface Engine / Middleware (if applicable)', type: 'text', placeholder: 'e.g., Mirth Connect, Rhapsody, Iguana, Infor Cloverleaf' },
+      { id: 'ARCH.5', text: 'Additional systems (VNA, AI platforms, cardiology PACS, dose tracking, etc.)', type: 'textarea', placeholder: 'List any other systems relevant to the integration, including vendor names and their roles' },
+    ],
+  },
+  {
     id: 'integration-workflows',
     type: 'integration-workflows',
     title: 'Integration Workflows',
-    description: 'Architecture diagram and workflow descriptions for orders, images, priors, and reports',
+    description: 'Workflow descriptions for orders, images, priors, and reports',
     questions: [
-      { id: 'IW.diagram', text: 'Architecture Diagram: Upload a network or workflow diagram showing how orders, images, priors, and reports move through your systems', type: 'upload', notes: 'Accepted formats: PNG, JPG, PDF' },
       { id: 'IW.orders_description', text: 'Orders Workflow: Describe how imaging orders reach the platform', type: 'textarea', placeholder: 'e.g., Orders originate in Epic, sent via HL7 ORM through Mirth Connect to New Lantern...' },
       { id: 'IW.images_description', text: 'Images Workflow: Describe how imaging studies are routed', type: 'textarea', placeholder: 'e.g., Studies acquired on modalities (CT, MR, XR) and sent via DICOM C-STORE to PACS, then forwarded to New Lantern...' },
       { id: 'IW.priors_description', text: 'Priors Workflow: Describe how prior studies are retrieved', type: 'textarea', placeholder: 'e.g., New Lantern queries prior PACS via C-FIND/C-MOVE for relevant prior studies when a new order arrives...' },

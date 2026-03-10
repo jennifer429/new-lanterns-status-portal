@@ -894,6 +894,7 @@ export const adminRouter = router({
         // Convert section progress from shared utility format to percentage format
         const sectionTitleToId: Record<string, string> = {
           "Organization Info": "organizationInfo",
+          "Architecture": "architecture",
           "Integration Workflows": "integrationWorkflows",
           "Connectivity": "connectivity",
           "HL7 & DICOM Data": "hl7DicomData",

@@ -33,9 +33,10 @@ import { WorkflowDiagram } from "@/components/WorkflowDiagram";
 // Section icons mapping
 const sectionIcons: Record<string, any> = {
   "org-info": FileText,
+  "architecture": Database,
   "integration-workflows": Network,
   "connectivity": FileUp,
-  "hl7-dicom": Database,
+  "hl7-dicom": ClipboardCheck,
 };
 
 // Helper to get file extension icon color
