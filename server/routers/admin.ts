@@ -866,16 +866,17 @@ export const adminRouter = router({
         // Build question list (include workflow sections)
         const allQuestions = questionnaireSections.flatMap(section => {
           if (section.questions) {
-            // Regular question sections — must pass conditionalOn so the shared
-            // utility excludes hidden conditional questions from the denominator,
-            // matching exactly what the org-facing portal calculates.
-            return section.questions.map(q => ({
-              id: q.id,
-              sectionTitle: section.title,
-              isWorkflow: false,
-              type: q.type,
-              conditionalOn: q.conditionalOn || null,
-            }));
+            // Regular question sections — filter inactive questions and pass conditionalOn
+            // so the shared utility matches exactly what the org-facing portal calculates.
+            return section.questions
+              .filter(q => !q.inactive)
+              .map(q => ({
+                id: q.id,
+                sectionTitle: section.title,
+                isWorkflow: false,
+                type: q.type,
+                conditionalOn: q.conditionalOn || null,
+              }));
           } else if (section.type === 'workflow') {
             return [{
               id: `${section.id}_config`,

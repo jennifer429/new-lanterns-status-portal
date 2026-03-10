@@ -29,12 +29,14 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { questionnaireSections, type Question, type Section } from "@shared/questionnaireData";
 import { toast } from "sonner";
 import { WorkflowDiagram } from "@/components/WorkflowDiagram";
+import { IntegrationWorkflows } from "@/components/IntegrationWorkflows";
 
 // Section icons mapping
 const sectionIcons: Record<string, any> = {
   "org-info": FileText,
   "overview-arch": Database,
   "data-integration": Database,
+  "integration-workflows": Network,
   "config-files": FileUp,
   "connectivity": Network,
   "dicom-validation": ClipboardCheck,
@@ -411,6 +413,13 @@ export default function IntakeNewRedesign() {
 
   // Calculate section progress (including uploaded files)
   const calculateSectionProgress = (section: Section) => {
+    // Handle integration-workflows section
+    if (section.type === 'integration-workflows') {
+      const keys = ['IW.orders_description', 'IW.images_description', 'IW.priors_description', 'IW.reports_description'];
+      const filled = keys.filter(k => { const v = responses[k]; return v && String(v).trim().length > 0; }).length;
+      return Math.round((filled / keys.length) * 100);
+    }
+
     // Handle workflow sections differently
     if (section.type === 'workflow') {
       const configKey = section.id + '_config';
@@ -1065,7 +1074,33 @@ export default function IntakeNewRedesign() {
               </div>
 
               {/* Questions Grid or Workflow Diagram */}
-              {currentSectionData?.type === 'workflow' ? (
+              {currentSectionData?.type === 'integration-workflows' ? (
+                <div className="mt-4">
+                  <IntegrationWorkflows
+                    values={responses}
+                    onChange={(key, value) => {
+                      setResponses(prev => ({ ...prev, [key]: value }));
+                      if (slug && user?.email) {
+                        saveMutation.mutate({
+                          organizationSlug: slug,
+                          questionId: key,
+                          response: typeof value === 'string' ? value : JSON.stringify(value),
+                          userEmail: user.email,
+                        });
+                      }
+                    }}
+                    organizationId={org?.id || 0}
+                    onBack={() => {
+                      const idx = questionnaireSections.findIndex(s => s.id === currentSection);
+                      if (idx > 0) setCurrentSection(questionnaireSections[idx - 1].id);
+                    }}
+                    onContinue={() => {
+                      const idx = questionnaireSections.findIndex(s => s.id === currentSection);
+                      if (idx < questionnaireSections.length - 1) setCurrentSection(questionnaireSections[idx + 1].id);
+                    }}
+                  />
+                </div>
+              ) : currentSectionData?.type === 'workflow' ? (
                 <div className="mt-6">
                   <WorkflowDiagram 
                     workflowType={currentSectionData.workflowType as any}

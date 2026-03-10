@@ -178,53 +178,6 @@ export const questionnaireSections: Section[] = [
       { id: 'G.7', text: 'Please share what values you send for Patient Location (PV1:3) - Optional but useful', type: 'textarea', placeholder: 'Example: MAIN^3RD^302A = Main building, 3rd floor, room 302A\nEAST^RAD^CT1 = East wing, Radiology, CT Scanner 1\n\nLeave blank if not applicable' },
     ],
   },
-  {
-    id: 'admin-tracking',
-    title: 'Admin Tracking',
-    description: 'Internal fields managed by New Lantern staff — not visible to clients',
-    questions: [
-      // Organization operational
-      { id: 'meta.prod_status',      text: 'Production Status',        type: 'dropdown', options: ['Active', 'Monitoring', 'Pending', 'Inactive'], inactive: true },
-      { id: 'meta.reading_group',    text: 'Reading Group / Client',   type: 'text',     inactive: true },
-      { id: 'meta.studies_per_day',  text: 'Avg Studies Per Day',      type: 'text',     inactive: true },
-      // IT contact (structured breakdown of A.2)
-      { id: 'meta.it_contact_name',  text: 'IT Contact Name',          type: 'text',     inactive: true },
-      { id: 'meta.it_contact_email', text: 'IT Contact Email',         type: 'text',     inactive: true },
-      { id: 'meta.it_contact_phone', text: 'IT Contact Phone',         type: 'text',     inactive: true },
-      // Systems inventory
-      { id: 'meta.pacs_system',       text: 'PACS System',            type: 'text',     inactive: true },
-      { id: 'meta.ris_system',        text: 'RIS System',             type: 'text',     inactive: true },
-      { id: 'meta.emr_system',        text: 'EMR / EHR System',       type: 'text',     inactive: true },
-      { id: 'meta.interface_engine',  text: 'Interface Engine',        type: 'text',     inactive: true },
-      // DICOM structured breakdown (supplements E.2 / E.2.1)
-      { id: 'meta.dicom_image_source', text: 'DICOM Image Source',    type: 'text',     inactive: true },
-      { id: 'meta.dicom_org_ae_title', text: 'Org AE Title',          type: 'text',     inactive: true },
-      { id: 'meta.dicom_org_ip',       text: 'Org DICOM IP',          type: 'text',     inactive: true },
-      { id: 'meta.dicom_org_port',     text: 'Org DICOM Port',        type: 'text',     inactive: true },
-      { id: 'meta.dicom_sb_ip',        text: 'Silverback DICOM IP',   type: 'text',     inactive: true },
-      { id: 'meta.dicom_sb_port',      text: 'Silverback DICOM Port', type: 'text',     inactive: true },
-      { id: 'meta.dicom_nl_ip',        text: 'NL DICOM IP',           type: 'text',     inactive: true },
-      { id: 'meta.dicom_nl_port',      text: 'NL DICOM Port',         type: 'text',     inactive: true },
-      // HL7 Orders structured breakdown (supplements E.3 / E.3.1)
-      { id: 'meta.hl7_ord_org_ip',    text: 'HL7 Orders – Org IP',          type: 'text', inactive: true },
-      { id: 'meta.hl7_ord_org_port',  text: 'HL7 Orders – Org Port',        type: 'text', inactive: true },
-      { id: 'meta.hl7_ord_sb_ip',     text: 'HL7 Orders – Silverback IP',   type: 'text', inactive: true },
-      { id: 'meta.hl7_ord_sb_port',   text: 'HL7 Orders – Silverback Port', type: 'text', inactive: true },
-      { id: 'meta.hl7_ord_nl_ip',     text: 'HL7 Orders – NL IP',           type: 'text', inactive: true },
-      { id: 'meta.hl7_ord_nl_port',   text: 'HL7 Orders – NL Port',         type: 'text', inactive: true },
-      // HL7 Results structured breakdown (supplements E.5 / E.5.1)
-      { id: 'meta.hl7_res_nl_ip',     text: 'HL7 Results – NL IP',           type: 'text', inactive: true },
-      { id: 'meta.hl7_res_nl_port',   text: 'HL7 Results – NL Port',         type: 'text', inactive: true },
-      { id: 'meta.hl7_res_sb_ip',     text: 'HL7 Results – Silverback IP',   type: 'text', inactive: true },
-      { id: 'meta.hl7_res_sb_port',   text: 'HL7 Results – Silverback Port', type: 'text', inactive: true },
-      { id: 'meta.hl7_res_org_ip',    text: 'HL7 Results – Org IP',          type: 'text', inactive: true },
-      { id: 'meta.hl7_res_org_port',  text: 'HL7 Results – Org Port',        type: 'text', inactive: true },
-      // Gotchas / notes
-      { id: 'meta.accession_format',  text: 'Accession Number Format',        type: 'text',     inactive: true },
-      { id: 'meta.priors_available',  text: 'Priors Availability',            type: 'text',     inactive: true },
-      { id: 'meta.other_notes',       text: 'Other Notes / Gotchas',          type: 'textarea', inactive: true },
-    ],
-  },
 ];
 
 // Total questions count
