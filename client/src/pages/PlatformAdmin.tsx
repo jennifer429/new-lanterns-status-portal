@@ -32,7 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Activity, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp, AlertTriangle, AlertCircle, Info, Image, CheckSquare, BarChart3, Copy, Check, Clock } from "lucide-react";
+import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Activity, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp, AlertTriangle, AlertCircle, Info, Image, CheckSquare, BarChart3, Copy, Check, Clock, ChevronsUpDown } from "lucide-react";
 import { questionnaireSections } from "@shared/questionnaireData";
 import { TYPE_COLORS, type IntegrationSystem } from "@/components/IntegrationWorkflows";
 import { cn } from "@/lib/utils";
@@ -44,6 +44,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 
 /**
  * Unified Admin Dashboard
@@ -861,7 +867,7 @@ export default function PlatformAdmin() {
             </button>
             <button
               onClick={() => setActiveTab("impl-dashboard")}
-              className={`pb-3 px-1 font-medium transition-colors relative ${
+              className={`pb-3 px-1 font-medium transition-colors relative whitespace-nowrap ${
                 activeTab === "impl-dashboard"
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
@@ -874,7 +880,7 @@ export default function PlatformAdmin() {
             </button>
             <button
               onClick={() => setActiveTab("users")}
-              className={`pb-3 px-1 font-medium transition-colors relative ${
+              className={`pb-3 px-1 font-medium transition-colors relative whitespace-nowrap ${
                 activeTab === "users"
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
@@ -887,7 +893,7 @@ export default function PlatformAdmin() {
             </button>
             <button
               onClick={() => setActiveTab("orgs")}
-              className={`pb-3 px-1 font-medium transition-colors relative ${
+              className={`pb-3 px-1 font-medium transition-colors relative whitespace-nowrap ${
                 activeTab === "orgs"
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
@@ -900,7 +906,7 @@ export default function PlatformAdmin() {
             </button>
             <button
               onClick={() => setActiveTab("templates")}
-              className={`pb-3 px-1 font-medium transition-colors relative ${
+              className={`pb-3 px-1 font-medium transition-colors relative whitespace-nowrap ${
                 activeTab === "templates"
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
@@ -914,7 +920,7 @@ export default function PlatformAdmin() {
             {isPlatformAdmin && (
               <button
                 onClick={() => setActiveTab("partners")}
-                className={`pb-3 px-1 font-medium transition-colors relative ${
+                className={`pb-3 px-1 font-medium transition-colors relative whitespace-nowrap ${
                   activeTab === "partners"
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
@@ -929,7 +935,7 @@ export default function PlatformAdmin() {
             {isPlatformAdmin && (
               <button
                 onClick={() => setActiveTab("specs")}
-                className={`pb-3 px-1 font-medium transition-colors relative ${
+                className={`pb-3 px-1 font-medium transition-colors relative whitespace-nowrap ${
                   activeTab === "specs"
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
@@ -1246,6 +1252,7 @@ export default function PlatformAdmin() {
 
             <h3 className="text-lg font-semibold mb-4">Active Organizations ({activeOrgs.length})</h3>
             <Card>
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -1332,6 +1339,7 @@ export default function PlatformAdmin() {
                   )}
                 </TableBody>
               </Table>
+              </div>
             </Card>
 
             {/* Completed Organizations Section */}
@@ -1339,6 +1347,7 @@ export default function PlatformAdmin() {
               <>
                 <h3 className="text-lg font-semibold mt-8 mb-4">Completed Organizations ({completedOrgs.length})</h3>
                 <Card>
+                  <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -1392,6 +1401,7 @@ export default function PlatformAdmin() {
                       })}
                     </TableBody>
                   </Table>
+                  </div>
                 </Card>
               </>
             )}
@@ -1401,6 +1411,7 @@ export default function PlatformAdmin() {
               <>
                 <h3 className="text-lg font-semibold mt-8 mb-4">Deactivated Organizations ({inactiveOrgs.length})</h3>
                 <Card>
+                  <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -1441,6 +1452,7 @@ export default function PlatformAdmin() {
                       })}
                     </TableBody>
                   </Table>
+                  </div>
                 </Card>
               </>
             )}
@@ -1699,6 +1711,7 @@ export default function PlatformAdmin() {
             <Card className="mb-8">
               <CardContent className="p-6">
                 <h3 className="text-lg font-semibold mb-4">Active Users ({activeUsers.length})</h3>
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1762,6 +1775,7 @@ export default function PlatformAdmin() {
                     })}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
 
@@ -1770,6 +1784,7 @@ export default function PlatformAdmin() {
               <Card>
                 <CardContent className="p-6">
                   <h3 className="text-lg font-semibold mb-4">Inactive Users ({inactiveUsers.length})</h3>
+                  <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -1809,6 +1824,7 @@ export default function PlatformAdmin() {
                       })}
                     </TableBody>
                   </Table>
+                  </div>
                 </CardContent>
               </Card>
             )}
@@ -1968,6 +1984,7 @@ export default function PlatformAdmin() {
                     <p className="text-sm">Upload a template to make it available on the intake form for your organizations.</p>
                   </div>
                 ) : (
+                  <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -2037,6 +2054,7 @@ export default function PlatformAdmin() {
                       ))}
                     </TableBody>
                   </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -2059,6 +2077,7 @@ export default function PlatformAdmin() {
                     {!inactiveTemplates || inactiveTemplates.length === 0 ? (
                       <p className="text-sm text-muted-foreground text-center py-4">No inactive templates.</p>
                     ) : (
+                      <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -2104,6 +2123,7 @@ export default function PlatformAdmin() {
                           ))}
                         </TableBody>
                       </Table>
+                      </div>
                     )}
                   </>
                 )}
@@ -2399,6 +2419,7 @@ export default function PlatformAdmin() {
                     <p className="text-sm">Upload specification documents for clients to download.</p>
                   </div>
                 ) : (
+                  <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -2466,6 +2487,7 @@ export default function PlatformAdmin() {
                       ))}
                     </TableBody>
                   </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -2667,12 +2689,16 @@ function HL7Layout({ orgs }: { orgs: { id: number; name: string; slug: string }[
 
 /** Rows the matrix always shows, keyed by questionId stored in intakeResponses.
  *  `meta.*` IDs are admin-only fields that don't exist in the client questionnaire
- *  but are stored the same way so they're fully editable and persistent. */
-const MATRIX_SECTIONS: { title: string; rows: { label: string; questionId: string; isEmail?: boolean; isPhone?: boolean }[] }[] = [
+ *  but are stored the same way so they're fully editable and persistent.
+ *  `fromQuestionnaire: true` rows pull directly from client intake answers. */
+const MATRIX_SECTIONS: { title: string; rows: { label: string; questionId: string; isEmail?: boolean; isPhone?: boolean; fromQuestionnaire?: boolean }[] }[] = [
   {
     title: "Organization",
     rows: [
-      { label: "Go-Live Date",   questionId: "D.2" },
+      { label: "Go-Live Date",   questionId: "D.2",  fromQuestionnaire: true },
+      { label: "# Sites",        questionId: "H.1",  fromQuestionnaire: true },
+      { label: "Site Names",     questionId: "H.2",  fromQuestionnaire: true },
+      { label: "Modalities",     questionId: "D.3",  fromQuestionnaire: true },
       { label: "Studies / Day",  questionId: "meta.studies_per_day" },
       { label: "Reading Group",  questionId: "meta.reading_group" },
       { label: "Status",         questionId: "meta.prod_status" },
@@ -2681,9 +2707,11 @@ const MATRIX_SECTIONS: { title: string; rows: { label: string; questionId: strin
   {
     title: "Contacts",
     rows: [
-      { label: "IT Contact",  questionId: "meta.it_contact_name" },
-      { label: "Email",       questionId: "meta.it_contact_email", isEmail: true },
-      { label: "Phone",       questionId: "meta.it_contact_phone", isPhone: true },
+      { label: "Admin Contact",  questionId: "A.1",  fromQuestionnaire: true },
+      { label: "IT Contact",     questionId: "A.2",  fromQuestionnaire: true },
+      { label: "IT Name",        questionId: "meta.it_contact_name" },
+      { label: "IT Email",       questionId: "meta.it_contact_email", isEmail: true },
+      { label: "IT Phone",       questionId: "meta.it_contact_phone", isPhone: true },
     ],
   },
   {
@@ -2698,36 +2726,42 @@ const MATRIX_SECTIONS: { title: string; rows: { label: string; questionId: strin
   {
     title: "DICOM Routing",
     rows: [
-      { label: "Image Source",    questionId: "meta.dicom_image_source" },
-      { label: "Org AE Title",    questionId: "meta.dicom_org_ae_title" },
-      { label: "Org IP",          questionId: "meta.dicom_org_ip" },
-      { label: "Org Port",        questionId: "meta.dicom_org_port" },
-      { label: "Silverback IP",   questionId: "meta.dicom_sb_ip" },
-      { label: "Silverback Port", questionId: "meta.dicom_sb_port" },
-      { label: "NL IP",           questionId: "meta.dicom_nl_ip" },
-      { label: "NL Port",         questionId: "meta.dicom_nl_port" },
+      { label: "Test Endpoints",    questionId: "E.2",   fromQuestionnaire: true },
+      { label: "Prod Endpoints",    questionId: "E.2.1", fromQuestionnaire: true },
+      { label: "Image Source",      questionId: "meta.dicom_image_source" },
+      { label: "Org AE Title",      questionId: "meta.dicom_org_ae_title" },
+      { label: "Org IP",            questionId: "meta.dicom_org_ip" },
+      { label: "Org Port",          questionId: "meta.dicom_org_port" },
+      { label: "Silverback IP",     questionId: "meta.dicom_sb_ip" },
+      { label: "Silverback Port",   questionId: "meta.dicom_sb_port" },
+      { label: "NL IP",             questionId: "meta.dicom_nl_ip" },
+      { label: "NL Port",           questionId: "meta.dicom_nl_port" },
     ],
   },
   {
     title: "HL7 Orders",
     rows: [
-      { label: "Org HL7 IP",      questionId: "meta.hl7_ord_org_ip" },
-      { label: "Org HL7 Port",    questionId: "meta.hl7_ord_org_port" },
-      { label: "Silverback IP",   questionId: "meta.hl7_ord_sb_ip" },
-      { label: "Silverback Port", questionId: "meta.hl7_ord_sb_port" },
-      { label: "NL IP",           questionId: "meta.hl7_ord_nl_ip" },
-      { label: "NL Port",         questionId: "meta.hl7_ord_nl_port" },
+      { label: "Test Environment",  questionId: "E.3",   fromQuestionnaire: true },
+      { label: "Prod Environment",  questionId: "E.3.1", fromQuestionnaire: true },
+      { label: "Org HL7 IP",        questionId: "meta.hl7_ord_org_ip" },
+      { label: "Org HL7 Port",      questionId: "meta.hl7_ord_org_port" },
+      { label: "Silverback IP",     questionId: "meta.hl7_ord_sb_ip" },
+      { label: "Silverback Port",   questionId: "meta.hl7_ord_sb_port" },
+      { label: "NL IP",             questionId: "meta.hl7_ord_nl_ip" },
+      { label: "NL Port",           questionId: "meta.hl7_ord_nl_port" },
     ],
   },
   {
     title: "HL7 Results",
     rows: [
-      { label: "NL IP",           questionId: "meta.hl7_res_nl_ip" },
-      { label: "NL Port",         questionId: "meta.hl7_res_nl_port" },
-      { label: "Silverback IP",   questionId: "meta.hl7_res_sb_ip" },
-      { label: "Silverback Port", questionId: "meta.hl7_res_sb_port" },
-      { label: "Org IP",          questionId: "meta.hl7_res_org_ip" },
-      { label: "Org Port",        questionId: "meta.hl7_res_org_port" },
+      { label: "Test Environment",  questionId: "E.5",   fromQuestionnaire: true },
+      { label: "Prod Environment",  questionId: "E.5.1", fromQuestionnaire: true },
+      { label: "NL IP",             questionId: "meta.hl7_res_nl_ip" },
+      { label: "NL Port",           questionId: "meta.hl7_res_nl_port" },
+      { label: "Silverback IP",     questionId: "meta.hl7_res_sb_ip" },
+      { label: "Silverback Port",   questionId: "meta.hl7_res_sb_port" },
+      { label: "Org IP",            questionId: "meta.hl7_res_org_ip" },
+      { label: "Org Port",          questionId: "meta.hl7_res_org_port" },
     ],
   },
   {
@@ -2735,7 +2769,9 @@ const MATRIX_SECTIONS: { title: string; rows: { label: string; questionId: strin
     rows: [
       { label: "Accession Format",  questionId: "meta.accession_format" },
       { label: "Priors Available",  questionId: "meta.priors_available" },
-      { label: "Downtime Behavior", questionId: "L.11" },
+      { label: "Downtime Plans",    questionId: "L.11", fromQuestionnaire: true },
+      { label: "ORC-1 Values",      questionId: "G.3",  fromQuestionnaire: true },
+      { label: "ORC-5 Values",      questionId: "G.4",  fromQuestionnaire: true },
       { label: "Other Notes",       questionId: "meta.other_notes" },
     ],
   },
@@ -3114,32 +3150,55 @@ function ConnectivityMatrix({ orgs }: { orgs: { id: number; name: string; slug: 
         </div>
       </div>
 
-      {/* Client filter toggles */}
+      {/* Site multi-select filter */}
       {orgs.length > 0 && (
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <span className="text-xs text-muted-foreground font-medium">Show:</span>
-          {orgs.map(org => (
-            <button
-              key={org.id}
-              onClick={() => toggleOrg(org.id)}
-              className={cn(
-                'px-3 py-1 rounded-full text-xs font-medium border transition-colors',
-                visibleOrgIds.has(org.id)
-                  ? 'bg-primary/10 text-primary border-primary/30'
-                  : 'bg-muted text-muted-foreground border-border opacity-50',
-              )}
-            >
-              {org.name}
-            </button>
-          ))}
-          {visibleOrgIds.size < orgs.length && (
-            <button
-              onClick={() => setVisibleOrgIds(new Set(orgs.map(o => o.id)))}
-              className="px-3 py-1 rounded-full text-xs text-muted-foreground hover:text-foreground border border-dashed border-border"
-            >
-              Show all
-            </button>
-          )}
+        <div className="mb-4 flex items-center gap-3">
+          <span className="text-xs text-muted-foreground font-medium shrink-0">Sites:</span>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-border bg-card text-sm hover:bg-muted/50 transition-colors min-w-[160px] justify-between">
+                <span className="text-sm">
+                  {visibleOrgIds.size === 0
+                    ? "None selected"
+                    : visibleOrgIds.size === orgs.length
+                    ? `All ${orgs.length} sites`
+                    : `${visibleOrgIds.size} of ${orgs.length} sites`}
+                </span>
+                <ChevronsUpDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-64 p-2">
+              <div className="space-y-1">
+                {/* Select all / Clear */}
+                <div className="flex items-center justify-between px-2 py-1 mb-1 border-b border-border">
+                  <button
+                    onClick={() => setVisibleOrgIds(new Set(orgs.map(o => o.id)))}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Select all
+                  </button>
+                  <button
+                    onClick={() => setVisibleOrgIds(new Set())}
+                    className="text-xs text-muted-foreground hover:text-foreground hover:underline"
+                  >
+                    Clear
+                  </button>
+                </div>
+                {orgs.map(org => (
+                  <label
+                    key={org.id}
+                    className="flex items-center gap-2.5 px-2 py-1.5 rounded hover:bg-muted/50 cursor-pointer"
+                  >
+                    <Checkbox
+                      checked={visibleOrgIds.has(org.id)}
+                      onCheckedChange={() => toggleOrg(org.id)}
+                    />
+                    <span className="text-sm truncate">{org.name}</span>
+                  </label>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       )}
 
@@ -3236,7 +3295,19 @@ function ConnectivityMatrix({ orgs }: { orgs: { id: number; name: string; slug: 
                     </tr>
                     {!isCollapsed && section.rows.map((row, ri) => (
                       <tr key={`r-${si}-${ri}`} className="border-t border-border/40 hover:bg-muted/10 transition-colors">
-                        <td className="py-2.5 px-4 text-foreground/70 border-r border-border/40 w-44">{row.label}</td>
+                        <td className="py-2.5 px-4 text-foreground/70 border-r border-border/40 w-44">
+                          <div className="flex items-center gap-1.5">
+                            {row.label}
+                            {row.fromQuestionnaire && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <ClipboardList className="w-3 h-3 text-primary/50 shrink-0" />
+                                </TooltipTrigger>
+                                <TooltipContent>From client questionnaire ({row.questionId})</TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
+                        </td>
                         {filteredOrgs.map(org => {
                           const entry = lookup[org.id]?.[row.questionId];
                           return (

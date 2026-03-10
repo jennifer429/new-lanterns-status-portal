@@ -308,7 +308,7 @@ export function IntegrationWorkflows({ values, onChange, organizationId, onBack,
             )}
           </div>
           {systems.length > 0 && (
-            <div className="border rounded-lg overflow-hidden">
+            <div className="border rounded-lg overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-muted/30">
                   <tr>
