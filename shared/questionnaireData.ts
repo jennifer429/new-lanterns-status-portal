@@ -7,7 +7,7 @@
 export interface Question {
   id: string;
   text: string;
-  type: 'text' | 'textarea' | 'dropdown' | 'date' | 'multi-select' | 'upload' | 'upload-download';
+  type: 'text' | 'textarea' | 'dropdown' | 'date' | 'multi-select' | 'upload' | 'upload-download' | 'contacts-table';
   options?: string[];
   notes?: string;
   placeholder?: string;
@@ -36,11 +36,12 @@ export const questionnaireSections: Section[] = [
       { id: 'H.1', text: 'Number of sites/locations (this determines how many VPN tunnels need to be built)', type: 'text', placeholder: 'Enter number of sites' },
       { id: 'H.2', text: 'Site names and identifiers', type: 'textarea', placeholder: 'List all site names and IDs' },
       { id: 'H.3', text: 'Site-specific user access restrictions', type: 'textarea', placeholder: 'Document any access restrictions by site' },
-      { id: 'A.1', text: 'Administrative point(s) of contact', type: 'textarea', placeholder: 'Name, title, email, phone' },
-      { id: 'A.2', text: 'IT point(s) of contact - Connectivity & Systems', type: 'textarea', placeholder: 'Name, title, email, phone' },
-      { id: 'A.3', text: 'Clinical contact(s) - Technologist/Clinical Informatics', type: 'textarea', placeholder: 'Name, title, email, phone' },
-      { id: 'A.4', text: 'Radiologist champion(s)', type: 'textarea', placeholder: 'Name, title, email, phone' },
-      { id: 'A.5', text: 'Project manager (if applicable)', type: 'textarea', placeholder: 'Name, title, email, phone' },
+      {
+        id: 'A.contacts',
+        text: 'Contacts',
+        type: 'contacts-table',
+        notes: 'All fields are optional — the block counts as complete once any field is filled. Rows: Administrative (A.1), IT Connectivity (A.2), IT Post-Production Support, Clinical (A.3), Radiologist Champion (A.4), Project Manager (A.5).',
+      },
       { id: 'A.6', text: 'Is a security questionnaire required?', type: 'dropdown', options: ['Yes', 'No'] },
       { id: 'A.6.1', text: 'Please provide details on how and when you plan to share the security questionnaire (link, email, timeline)', type: 'textarea', placeholder: 'Example: We will send the questionnaire via email to security@newlantern.ai by [date]. Link to our security portal: https://...', conditionalOn: { questionId: 'A.6', value: 'Yes' } },
       { id: 'L.2', text: 'Test patient data requirements', type: 'textarea', placeholder: 'Document test patient data needs' },

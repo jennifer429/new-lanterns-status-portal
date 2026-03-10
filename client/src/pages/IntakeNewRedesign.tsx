@@ -326,16 +326,22 @@ export default function IntakeNewRedesign() {
     });
     
     const answered = visibleQuestions.filter(q => {
-      // Check if question has a text response
       const response = responses[q.id];
-      const hasResponse = Array.isArray(response) 
-        ? response.length > 0 
+
+      // contacts-table: complete if any contact field is non-empty
+      if (q.type === 'contacts-table') {
+        try {
+          const data = response ? (typeof response === 'string' ? JSON.parse(response) : response) : {};
+          return Object.values(data).some((row: any) =>
+            Object.values(row || {}).some((v: any) => v && String(v).trim() !== '')
+          );
+        } catch { return false; }
+      }
+
+      const hasResponse = Array.isArray(response)
+        ? response.length > 0
         : (response !== undefined && response !== '' && response !== null);
-      
-      // Check if question has uploaded files (for file upload questions)
       const hasUploadedFile = allUploadedFiles.some(f => f.questionId === q.id);
-      
-      // Question is answered if it has EITHER a response OR uploaded files
       return hasResponse || hasUploadedFile;
     }).length;
     
@@ -650,6 +656,71 @@ export default function IntakeNewRedesign() {
         );
       }
 
+      case 'contacts-table': {
+        const CONTACT_ROWS = [
+          { key: 'admin',        label: 'Administrative (A.1)' },
+          { key: 'it',           label: 'IT — Connectivity & Systems (A.2)' },
+          { key: 'it_post_prod', label: 'IT — Post-Production Support' },
+          { key: 'clinical',     label: 'Clinical / Technologist (A.3)' },
+          { key: 'radiologist',  label: 'Radiologist Champion (A.4)' },
+          { key: 'pm',           label: 'Project Manager (A.5)' },
+        ] as const;
+
+        type ContactKey = typeof CONTACT_ROWS[number]['key'];
+        type ContactRow = { name: string; phone: string; email: string };
+        type ContactsData = Record<ContactKey, ContactRow>;
+
+        const empty: ContactRow = { name: '', phone: '', email: '' };
+        let parsed: ContactsData;
+        try {
+          parsed = value ? (typeof value === 'string' ? JSON.parse(value) : value) : {} as ContactsData;
+        } catch { parsed = {} as ContactsData; }
+
+        const updateContact = (rowKey: ContactKey, field: keyof ContactRow, val: string) => {
+          const next = { ...parsed, [rowKey]: { ...empty, ...(parsed[rowKey] || {}), [field]: val } };
+          // Only persist if any field is non-empty; otherwise clear the response
+          const hasContent = Object.values(next).some(r =>
+            Object.values(r).some(v => v.trim() !== '')
+          );
+          setResponses(prev => ({ ...prev, [question.id]: hasContent ? JSON.stringify(next) : '' }));
+        };
+
+        return (
+          <div className="overflow-x-auto rounded-lg border border-border col-span-2">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/30">
+                <tr>
+                  <th className="text-left px-3 py-2 font-medium text-muted-foreground w-56">Contact</th>
+                  <th className="text-left px-3 py-2 font-medium text-muted-foreground">Name</th>
+                  <th className="text-left px-3 py-2 font-medium text-muted-foreground">Phone</th>
+                  <th className="text-left px-3 py-2 font-medium text-muted-foreground">Email</th>
+                </tr>
+              </thead>
+              <tbody>
+                {CONTACT_ROWS.map(({ key, label }, idx) => {
+                  const row: ContactRow = { ...empty, ...(parsed[key as ContactKey] || {}) };
+                  return (
+                    <tr key={key} className={idx % 2 === 1 ? 'bg-muted/10' : ''}>
+                      <td className="px-3 py-1.5 text-xs text-muted-foreground font-medium align-middle">{label}</td>
+                      {(['name', 'phone', 'email'] as (keyof ContactRow)[]).map(field => (
+                        <td key={field} className="px-2 py-1">
+                          <Input
+                            value={row[field]}
+                            onChange={e => updateContact(key as ContactKey, field, e.target.value)}
+                            placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
+                            className="h-8 text-sm !bg-white !text-black border-0 shadow-none focus-visible:ring-1 focus-visible:ring-primary/50"
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        );
+      }
+
       default:
         return null;
     }
@@ -886,7 +957,7 @@ export default function IntakeNewRedesign() {
                   <>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span>
-                        {currentSectionData.questions.filter(q => !q.inactive && responses[q.id]).length || 0}/{currentSectionData.questions.filter(q => !q.inactive).length} questions answered ({calculateSectionProgress(currentSectionData)}%)
+                        {Math.round(calculateSectionProgress(currentSectionData) / 100 * currentSectionData.questions.filter(q => !q.inactive).length)}/{currentSectionData.questions.filter(q => !q.inactive).length} questions answered ({calculateSectionProgress(currentSectionData)}%)
                       </span>
                     </div>
                     <Progress value={calculateSectionProgress(currentSectionData)} className="mt-3 h-2" />
@@ -972,7 +1043,7 @@ export default function IntakeNewRedesign() {
                         key={question.id} 
                         data-question-id={question.id}
                         className={`${
-                          question.type === 'textarea' || isUploadType ? 'col-span-2' : 'col-span-1'
+                          question.type === 'textarea' || question.type === 'contacts-table' || isUploadType ? 'col-span-2' : 'col-span-1'
                         } ${
                           isUnanswered ? 'p-4 border-2 border-red-500 rounded-lg bg-red-500/5' : ''
                         } ${
