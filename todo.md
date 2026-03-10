@@ -1850,3 +1850,8 @@
 - [x] Add downloadable format spec for CF.2 (User list) showing required columns
 - [x] Clean up VPN downloadable form (Rad One vs SRV client types)
 - [x] Update progress counter to reflect only active questions (6 instead of 9)
+
+## Implementation & Validation Checklists Mockups (Mar 10, 2026)
+- [x] Mockup: Implementation Checklist with owner assignments and target dates
+- [x] Mockup: Validation Checklist with test cases and sign-off
+- [x] Mockup: Unified navigation showing how checklists fit into the portal as one cohesive flow
