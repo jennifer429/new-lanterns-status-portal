@@ -55,7 +55,7 @@ import {
 export default function PlatformAdmin() {
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"connectivity" | "impl-dashboard" | "dashboard" | "organizations" | "users" | "templates" | "partners" | "specs">("connectivity");
+  const [activeTab, setActiveTab] = useState<"prod-dashboard" | "impl-dashboard" | "organizations" | "users" | "templates" | "partners" | "specs">("prod-dashboard");
 
   // Template management state
   const [isUploadTemplateDialogOpen, setIsUploadTemplateDialogOpen] = useState(false);
@@ -846,43 +846,29 @@ export default function PlatformAdmin() {
           {/* Tab Navigation */}
           <div className="flex gap-6 mt-6 border-b border-border overflow-x-auto">
             <button
-              onClick={() => setActiveTab("connectivity")}
+              onClick={() => setActiveTab("prod-dashboard")}
               className={`pb-3 px-1 font-medium transition-colors relative whitespace-nowrap flex items-center gap-1.5 ${
-                activeTab === "connectivity"
+                activeTab === "prod-dashboard"
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
               <Activity className="w-4 h-4" />
               Connectivity Dashboard
-              {activeTab === "connectivity" && (
+              {activeTab === "prod-dashboard" && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
               )}
             </button>
             <button
               onClick={() => setActiveTab("impl-dashboard")}
-              className={`pb-3 px-1 font-medium transition-colors relative whitespace-nowrap flex items-center gap-1.5 ${
+              className={`pb-3 px-1 font-medium transition-colors relative ${
                 activeTab === "impl-dashboard"
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <BarChart3 className="w-4 h-4" />
-              HL7 Layout
-              {activeTab === "impl-dashboard" && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab("dashboard")}
-              className={`pb-3 px-1 font-medium transition-colors relative ${
-                activeTab === "dashboard"
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
               Implementation Dashboard
-              {activeTab === "dashboard" && (
+              {activeTab === "impl-dashboard" && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
               )}
             </button>
@@ -900,15 +886,15 @@ export default function PlatformAdmin() {
               )}
             </button>
             <button
-              onClick={() => setActiveTab("organizations")}
+              onClick={() => setActiveTab("orgs")}
               className={`pb-3 px-1 font-medium transition-colors relative ${
-                activeTab === "organizations"
+                activeTab === "orgs"
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
               Organizations
-              {activeTab === "organizations" && (
+              {activeTab === "orgs" && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
               )}
             </button>
@@ -963,16 +949,11 @@ export default function PlatformAdmin() {
       <div className="container py-8">
 
         {/* ── CONNECTIVITY MATRIX TAB ── */}
-        {activeTab === "connectivity" && (
+        {activeTab === "prod-dashboard" && (
           <ConnectivityMatrix orgs={orgs || []} />
         )}
 
-        {/* ── HL7 LAYOUT TAB ── */}
         {activeTab === "impl-dashboard" && (
-          <HL7Layout orgs={orgs || []} />
-        )}
-
-        {activeTab === "dashboard" && (
           <>
             <h2 className="text-2xl font-bold mb-6">Active Organizations ({activeOrgs.length})</h2>
             
@@ -1119,7 +1100,7 @@ export default function PlatformAdmin() {
           </>
         )}
 
-        {activeTab === "organizations" && (
+        {activeTab === "orgs" && (
           <>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold">Organization Management</h2>
@@ -3110,7 +3091,7 @@ function ConnectivityMatrix({ orgs }: { orgs: { id: number; name: string; slug: 
                     )}
                     <p className="text-muted-foreground">
                       Ready to write <strong className="text-foreground">{importPreview.rows.length}</strong> cell{importPreview.rows.length !== 1 ? "s" : ""} across{" "}
-                      <strong className="text-foreground">{[...new Set(importPreview.rows.map(r => r.organizationId))].length}</strong> org{[...new Set(importPreview.rows.map(r => r.organizationId))].length !== 1 ? "s" : ""}.
+                      <strong className="text-foreground">{Array.from(new Set(importPreview.rows.map(r => r.organizationId))).length}</strong> org{Array.from(new Set(importPreview.rows.map(r => r.organizationId))).length !== 1 ? "s" : ""}.
                     </p>
                     <Button
                       className="w-full"

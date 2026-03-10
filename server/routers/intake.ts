@@ -366,7 +366,7 @@ export const intakeRouter = router({
         completedQuestions: progress.completedQuestions,
         completionPercent: progress.completionPercentage,
         sectionProgress: Object.fromEntries(
-          Object.entries(progress.sectionStats).map(([title, s]: [string, any]) => [
+          Object.entries(progress.sectionProgress).map(([title, s]: [string, any]) => [
             title,
             { total: s.total, completed: s.completed },
           ])
