@@ -1855,3 +1855,18 @@
 - [x] Mockup: Implementation Checklist with owner assignments and target dates
 - [x] Mockup: Validation Checklist with test cases and sign-off
 - [x] Mockup: Unified navigation showing how checklists fit into the portal as one cohesive flow
+
+## New Pages Build (Mar 10, 2026)
+- [ ] Build Implementation Checklist page with owner badges (Client/NL/Joint), target dates, status, grouped by phase
+- [ ] Build Validation Checklist page with test cases, expected/actual results, pass/fail, sign-off
+- [ ] Update Intake - build Architecture page matching mockup
+- [ ] Update Intake - build Workflow page matching mockup
+- [x] Wire up routes and navigation for all new pages
+- [ ] Test all new pages
+
+## New Static Pages (Mar 10, 2026)
+- [x] Build Implementation Checklist page (static UI, mock data)
+- [x] Build Validation Checklist page (static UI, mock data)
+- [x] Build Architecture page in Intake (static UI, mock data)
+- [x] Build Workflow page in Intake (static UI, mock data)
+- [x] Wire up routes and navigation for all new pages
