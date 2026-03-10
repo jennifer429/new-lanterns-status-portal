@@ -1,6 +1,6 @@
 /**
  * Radiology One New Site Onboarding Questionnaire
- * 6 sections (5 standard + 1 integration workflows), 51 total questions
+ * 4 sections: Organization Info, Integration Workflows, Connectivity, HL7 & DICOM Data
  * Note: Router = Integration 3rd Party Router for all overlay situations
  */
 
@@ -23,8 +23,8 @@ export interface Section {
   title: string;
   description?: string;
   questions?: Question[]; // Optional for workflow sections
-  type?: 'standard' | 'workflow' | 'integration-workflows'; // New: workflow sections use WorkflowDiagram component
-  workflowType?: 'orders' | 'images' | 'priors' | 'reports'; // New: which workflow to render
+  type?: 'standard' | 'workflow' | 'integration-workflows'; // workflow sections use WorkflowDiagram component
+  workflowType?: 'orders' | 'images' | 'priors' | 'reports'; // which workflow to render
 }
 
 export const questionnaireSections: Section[] = [
@@ -53,34 +53,92 @@ export const questionnaireSections: Section[] = [
     ],
   },
   {
-    id: 'data-integration',
-    title: 'Data & Integration',
-    description: 'Data exchange and integration configuration',
-    questions: [
-      { id: 'D.1', text: 'Can production systems be configured for testing prior to go-live?', type: 'dropdown', options: ['Yes', 'No'] },
-      { id: 'D.2', text: 'Requested go-live date', type: 'date', placeholder: 'MM/DD/YYYY' },
-      { id: 'D.3', text: 'Expected modalities', type: 'multi-select', options: ['CT', 'MRI', 'X-Ray', 'Ultrasound', 'Nuclear Medicine', 'Mammography'] },
-
-      { id: 'D.7', text: 'Method for Historic Reports Data load', type: 'dropdown', options: ['HL7 messages bulk sent prior to go-live', 'Pipe delimited flat file (3-4 weeks lead time)', 'Automatically with images - Reports sent as DICOM with the images, so no historic data load required'] },
-      { id: 'D.8', text: 'Tech sheets input method', type: 'dropdown', options: ['Automatically with images', 'Manually as PDF'] },
-      { id: 'D.9', text: 'Are there DICOM SR or other data sources for auto-populating fields?', type: 'textarea', placeholder: 'List DICOM SR sources' },
-      { id: 'D.10', text: 'What are the HL7 priority values in your orders (OBR:27.1) and what do they mean?', type: 'textarea', placeholder: 'Example: S=Stat, R=Routine' },
-      { id: 'D.11', text: 'What patient identifier do you use for matching (e.g. MRN) and is it in PID:3.1?', type: 'textarea', placeholder: 'Document patient identifier field' },
-      { id: 'D.12', text: 'Is the patient identifier in your order the same as in prior reports and comparison images?', type: 'textarea', placeholder: 'Yes/No and explain any differences' },
-      { id: 'D.13', text: 'Please document DICOM tag 0008,1040 value and corresponding PV1:11 value for matching (Note: DICOM tagging is handled by the Router / Integration 3rd Party, not client sites)', type: 'textarea', placeholder: 'Document tag values for patient matching' },
-    ],
-  },
-  {
     id: 'integration-workflows',
     type: 'integration-workflows',
     title: 'Integration Workflows',
-    description: 'Architecture diagram, systems inventory, and workflow descriptions',
+    description: 'Architecture diagram and workflow descriptions for orders, images, priors, and reports',
+    questions: [
+      { id: 'IW.diagram', text: 'Architecture Diagram: Upload a network or workflow diagram showing how orders, images, priors, and reports move through your systems', type: 'upload', notes: 'Accepted formats: PNG, JPG, PDF' },
+      { id: 'IW.orders_description', text: 'Orders Workflow: Describe how imaging orders reach the platform', type: 'textarea', placeholder: 'e.g., Orders originate in Epic, sent via HL7 ORM through Mirth Connect to New Lantern...' },
+      { id: 'IW.images_description', text: 'Images Workflow: Describe how imaging studies are routed', type: 'textarea', placeholder: 'e.g., Studies acquired on modalities (CT, MR, XR) and sent via DICOM C-STORE to PACS, then forwarded to New Lantern...' },
+      { id: 'IW.priors_description', text: 'Priors Workflow: Describe how prior studies are retrieved', type: 'textarea', placeholder: 'e.g., New Lantern queries prior PACS via C-FIND/C-MOVE for relevant prior studies when a new order arrives...' },
+      { id: 'IW.reports_description', text: 'Reports Workflow: Describe how reports are delivered back', type: 'textarea', placeholder: 'e.g., Finalized reports sent via HL7 ORU through Mirth Connect back to Epic Radiant...' },
+    ],
   },
   {
-    id: 'config-files',
-    title: 'Configuration Files',
-    description: 'Required file uploads for configuration (IMPORTANT: Please de-identify all files before uploading)',
+    id: 'connectivity',
+    title: 'Connectivity',
+    description: 'VPN setup, network endpoints, and required configuration file uploads (IMPORTANT: Please de-identify all files before uploading)',
     questions: [
+      // VPN & Network Endpoints
+      {
+        id: 'E.1',
+        text: 'VPN form exchange: Download the VPN form template, complete it with your network details, and upload.',
+        type: 'upload-download',
+        notes: 'Required: Site-to-site VPN details, IP ranges, firewall rules, contact info. Rad One clients use the standard template. SRV clients require a separate form.',
+        templateFileName: 'VPN Form Template',
+      },
+      {
+        id: 'E.2',
+        text: 'DICOM Endpoints - Test/Proof Environment (IP address, Port, AE title for each endpoint)',
+        type: 'textarea',
+        placeholder: 'Example:\n- PACS Test: IP 10.1.2.4, Port 104, AE Title: PACS_TEST\n- CT Scanner Test: IP 10.1.2.11, Port 104, AE Title: CT1_TEST\n\nIf you do not have a test environment, write: Not applicable'
+      },
+      {
+        id: 'E.2.1',
+        text: 'DICOM Endpoints - Production Environment (IP address, Port, AE title for each endpoint)',
+        type: 'textarea',
+        placeholder: 'Example:\n- PACS: IP 10.1.2.3, Port 104, AE Title: PACS_PROD\n- CT Scanner 1: IP 10.1.2.10, Port 104, AE Title: CT1_PROD\n- Modality 1: IP 10.1.2.15, Port 104, AE Title: MOD1_PROD'
+      },
+      {
+        id: 'E.3',
+        text: 'HL7 Orders - Test/Proof Environment (IP address and Port)',
+        type: 'textarea',
+        placeholder: 'Example:\n- RIS Test: IP 10.1.3.10, Port 2575\n\nIf you do not have a test environment, write: Not applicable'
+      },
+      {
+        id: 'E.3.1',
+        text: 'HL7 Orders - Production Environment (IP address and Port)',
+        type: 'textarea',
+        placeholder: 'Example:\n- RIS Production: IP 10.1.3.5, Port 2575'
+      },
+      {
+        id: 'E.4',
+        text: 'HL7 Prior Reports - Test/Proof Environment (IP address and Port)',
+        type: 'textarea',
+        placeholder: 'Example:\n- EHR Test: IP 10.1.3.11, Port 2576\n\nIf you do not have a test environment, write: Not applicable'
+      },
+      {
+        id: 'E.4.1',
+        text: 'HL7 Prior Reports - Production Environment (IP address and Port)',
+        type: 'textarea',
+        placeholder: 'Example:\n- EHR Production: IP 10.1.3.6, Port 2576'
+      },
+      {
+        id: 'E.5',
+        text: 'HL7 Reports from New Lantern - Test/Proof Environment (IP address and Port where you will receive reports)',
+        type: 'textarea',
+        placeholder: 'Example:\n- Your HL7 Listener Test: IP 10.1.3.12, Port 2577\n\nIf you do not have a test environment, write: Not applicable'
+      },
+      {
+        id: 'E.5.1',
+        text: 'HL7 Reports from New Lantern - Production Environment (IP address and Port where you will receive reports)',
+        type: 'textarea',
+        placeholder: 'Example:\n- Your HL7 Listener Production: IP 10.1.3.7, Port 2577'
+      },
+      {
+        id: 'E.6',
+        text: 'HL7 ADTs (if in scope) - Test/Proof Environment (IP address and Port)',
+        type: 'textarea',
+        placeholder: 'Example:\n- ADT Interface Test: IP 10.1.3.13, Port 2578\n\nIf you do not have a test environment or ADTs are not in scope, write: Not applicable'
+      },
+      {
+        id: 'E.6.1',
+        text: 'HL7 ADTs (if in scope) - Production Environment (IP address and Port)',
+        type: 'textarea',
+        placeholder: 'Example:\n- ADT Interface Production: IP 10.1.3.8, Port 2578\n\nIf ADTs are not in scope for this implementation, write: Not applicable'
+      },
+      // Configuration File Uploads
       { id: 'CF.1', text: 'Procedure code list: Please upload your list of all procedure codes with modality that you will be sending in the order message.', type: 'upload-download', notes: 'Required: Procedure code, Description, Modality. Optional: CPT, Body part, Subspecialty', templateFileName: 'Procedure Code List Template' },
       { id: 'CF.2', text: 'User list: Please upload a file of all users and their roles.', type: 'upload-download', notes: 'Required: User email, User name, Role (Admin/PACS Admin/Tech)', templateFileName: 'User List Template' },
       { id: 'CF.3', text: 'Sample ORU report: Please upload a sample ORU report showing the expected format we will send to you', type: 'upload' },
@@ -93,84 +151,22 @@ export const questionnaireSections: Section[] = [
     ],
   },
   {
-    id: 'vpn-connectivity',
-    title: 'VPN & Connectivity',
-    description: 'VPN setup and network connectivity (DICOM requires: IP address, port | HL7 requires: IP address, port)',
+    id: 'hl7-dicom',
+    title: 'HL7 & DICOM Data',
+    description: 'Data exchange configuration, modalities, go-live details, and HL7 message field values',
     questions: [
-       { 
-        id: 'E.1', 
-        text: 'VPN form exchange: Download the VPN form template, complete it with your network details, and upload.', 
-        type: 'upload-download', 
-        notes: 'Required: Site-to-site VPN details, IP ranges, firewall rules, contact info. Rad One clients use the standard template. SRV clients require a separate form.',
-        templateFileName: 'VPN Form Template',
-      },
-      { 
-        id: 'E.2', 
-        text: 'DICOM Endpoints - Test/Proof Environment (IP address, Port, AE title for each endpoint)', 
-        type: 'textarea', 
-        placeholder: 'Example:\n- PACS Test: IP 10.1.2.4, Port 104, AE Title: PACS_TEST\n- CT Scanner Test: IP 10.1.2.11, Port 104, AE Title: CT1_TEST\n\nIf you do not have a test environment, write: Not applicable' 
-      },
-      { 
-        id: 'E.2.1', 
-        text: 'DICOM Endpoints - Production Environment (IP address, Port, AE title for each endpoint)', 
-        type: 'textarea', 
-        placeholder: 'Example:\n- PACS: IP 10.1.2.3, Port 104, AE Title: PACS_PROD\n- CT Scanner 1: IP 10.1.2.10, Port 104, AE Title: CT1_PROD\n- Modality 1: IP 10.1.2.15, Port 104, AE Title: MOD1_PROD' 
-      },
-      { 
-        id: 'E.3', 
-        text: 'HL7 Orders - Test/Proof Environment (IP address and Port)', 
-        type: 'textarea', 
-        placeholder: 'Example:\n- RIS Test: IP 10.1.3.10, Port 2575\n\nIf you do not have a test environment, write: Not applicable' 
-      },
-      { 
-        id: 'E.3.1', 
-        text: 'HL7 Orders - Production Environment (IP address and Port)', 
-        type: 'textarea', 
-        placeholder: 'Example:\n- RIS Production: IP 10.1.3.5, Port 2575' 
-      },
-      { 
-        id: 'E.4', 
-        text: 'HL7 Prior Reports - Test/Proof Environment (IP address and Port)', 
-        type: 'textarea', 
-        placeholder: 'Example:\n- EHR Test: IP 10.1.3.11, Port 2576\n\nIf you do not have a test environment, write: Not applicable' 
-      },
-      { 
-        id: 'E.4.1', 
-        text: 'HL7 Prior Reports - Production Environment (IP address and Port)', 
-        type: 'textarea', 
-        placeholder: 'Example:\n- EHR Production: IP 10.1.3.6, Port 2576' 
-      },
-      { 
-        id: 'E.5', 
-        text: 'HL7 Reports from New Lantern - Test/Proof Environment (IP address and Port where you will receive reports)', 
-        type: 'textarea', 
-        placeholder: 'Example:\n- Your HL7 Listener Test: IP 10.1.3.12, Port 2577\n\nIf you do not have a test environment, write: Not applicable' 
-      },
-      { 
-        id: 'E.5.1', 
-        text: 'HL7 Reports from New Lantern - Production Environment (IP address and Port where you will receive reports)', 
-        type: 'textarea', 
-        placeholder: 'Example:\n- Your HL7 Listener Production: IP 10.1.3.7, Port 2577' 
-      },
-      { 
-        id: 'E.6', 
-        text: 'HL7 ADTs (if in scope) - Test/Proof Environment (IP address and Port)', 
-        type: 'textarea', 
-        placeholder: 'Example:\n- ADT Interface Test: IP 10.1.3.13, Port 2578\n\nIf you do not have a test environment or ADTs are not in scope, write: Not applicable' 
-      },
-      { 
-        id: 'E.6.1', 
-        text: 'HL7 ADTs (if in scope) - Production Environment (IP address and Port)', 
-        type: 'textarea', 
-        placeholder: 'Example:\n- ADT Interface Production: IP 10.1.3.8, Port 2578\n\nIf ADTs are not in scope for this implementation, write: Not applicable' 
-      },
-    ],
-  },
-  {
-    id: 'hl7-config',
-    title: 'HL7 Configuration',
-    description: 'HL7 message field values and meanings (IP addresses and ports should be in VPN form)',
-    questions: [
+      // Integration & data configuration
+      { id: 'D.1', text: 'Can production systems be configured for testing prior to go-live?', type: 'dropdown', options: ['Yes', 'No'] },
+      { id: 'D.2', text: 'Requested go-live date', type: 'date', placeholder: 'MM/DD/YYYY' },
+      { id: 'D.3', text: 'Expected modalities', type: 'multi-select', options: ['CT', 'MRI', 'X-Ray', 'Ultrasound', 'Nuclear Medicine', 'Mammography'] },
+      { id: 'D.7', text: 'Method for Historic Reports Data load', type: 'dropdown', options: ['HL7 messages bulk sent prior to go-live', 'Pipe delimited flat file (3-4 weeks lead time)', 'Automatically with images - Reports sent as DICOM with the images, so no historic data load required'] },
+      { id: 'D.8', text: 'Tech sheets input method', type: 'dropdown', options: ['Automatically with images', 'Manually as PDF'] },
+      { id: 'D.9', text: 'Are there DICOM SR or other data sources for auto-populating fields?', type: 'textarea', placeholder: 'List DICOM SR sources' },
+      { id: 'D.10', text: 'What are the HL7 priority values in your orders (OBR:27.1) and what do they mean?', type: 'textarea', placeholder: 'Example: S=Stat, R=Routine' },
+      { id: 'D.11', text: 'What patient identifier do you use for matching (e.g. MRN) and is it in PID:3.1?', type: 'textarea', placeholder: 'Document patient identifier field' },
+      { id: 'D.12', text: 'Is the patient identifier in your order the same as in prior reports and comparison images?', type: 'textarea', placeholder: 'Yes/No and explain any differences' },
+      { id: 'D.13', text: 'Please document DICOM tag 0008,1040 value and corresponding PV1:11 value for matching (Note: DICOM tagging is handled by the Router / Integration 3rd Party, not client sites)', type: 'textarea', placeholder: 'Document tag values for patient matching' },
+      // HL7 message field values
       { id: 'G.3', text: 'ORC-1 (Order Control) - Please document the values you will send and what each means', type: 'textarea', placeholder: 'Example: NW = New order, CA = Cancel order, XO = Change order, etc.' },
       { id: 'G.4', text: 'ORC-5 (Order Status) - Please document the values you will send and what each means', type: 'textarea', placeholder: 'Example: SC = In process/scheduled, CM = Complete, CA = Canceled, etc.' },
       { id: 'G.5', text: 'OBR:27.1 (Quantity/Timing) in ORU messages - Please document the values you will send and what each means', type: 'textarea', placeholder: 'Example: STAT = Urgent/immediate, ROUTINE = Normal priority, ASAP = As soon as possible, etc.' },
@@ -180,10 +176,9 @@ export const questionnaireSections: Section[] = [
   },
 ];
 
-// Total questions count
-// Note: Workflow sections don't have questions array, so we filter them out
+// Total questions count (excluding inactive)
 export const TOTAL_QUESTIONS = questionnaireSections.reduce(
-  (sum, section) => sum + (section.questions?.length || 0),
+  (sum, section) => sum + (section.questions?.filter(q => !q.inactive).length || 0),
   0
 );
 

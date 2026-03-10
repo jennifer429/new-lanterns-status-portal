@@ -304,15 +304,17 @@ export const organizationsRouter = router({
         // Include workflow sections
         const allQuestions = questionnaireSections.flatMap(section => {
           if (section.questions) {
-            // Regular question sections
-            return section.questions.map(q => ({
-              id: q.id,
-              sectionTitle: section.title,
-              questionText: q.text,
-              isWorkflow: false,
-              type: q.type, // Pass question type for upload detection
-              conditionalOn: q.conditionalOn || null, // Pass conditional visibility metadata
-            }));
+            // Regular question sections — filter inactive questions to match the org portal
+            return section.questions
+              .filter(q => !q.inactive)
+              .map(q => ({
+                id: q.id,
+                sectionTitle: section.title,
+                questionText: q.text,
+                isWorkflow: false,
+                type: q.type,
+                conditionalOn: q.conditionalOn || null,
+              }));
           } else if (section.type === 'workflow') {
             // Workflow sections - count as 1 item each
             return [{
@@ -321,15 +323,6 @@ export const organizationsRouter = router({
               questionText: `${section.title} Configuration`,
               isWorkflow: true
             }];
-          } else if (section.type === 'integration-workflows') {
-            return ['orders', 'images', 'priors', 'reports'].map(wf => ({
-              id: `IW.${wf}_description`,
-              sectionTitle: section.title,
-              questionText: `${wf.charAt(0).toUpperCase() + wf.slice(1)} Workflow Description`,
-              isWorkflow: false,
-              type: 'textarea',
-              conditionalOn: null,
-            }));
           }
           return [];
         });

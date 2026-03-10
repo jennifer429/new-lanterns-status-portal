@@ -883,14 +883,6 @@ export const adminRouter = router({
               sectionTitle: section.title,
               isWorkflow: true,
             }];
-          } else if (section.type === 'integration-workflows') {
-            return ['orders', 'images', 'priors', 'reports'].map(wf => ({
-              id: `IW.${wf}_description`,
-              sectionTitle: section.title,
-              isWorkflow: false,
-              type: 'textarea',
-              conditionalOn: null,
-            }));
           }
           return [];
         });
@@ -902,14 +894,9 @@ export const adminRouter = router({
         // Convert section progress from shared utility format to percentage format
         const sectionTitleToId: Record<string, string> = {
           "Organization Info": "organizationInfo",
-          "Orders Workflow": "ordersWorkflow",
-          "Images Workflow": "imagesWorkflow",
-          "Priors Workflow": "priorsWorkflow",
-          "Reports Out Workflow": "reportsOutWorkflow",
-          "Data & Integration": "dataIntegration",
-          "Configuration Files": "configurationFiles",
-          "VPN & Connectivity": "vpnConnectivity",
-          "HL7 Configuration": "hl7Configuration"
+          "Integration Workflows": "integrationWorkflows",
+          "Connectivity": "connectivity",
+          "HL7 & DICOM Data": "hl7DicomData",
         };
         
         const sectionProgress: Record<string, {completed: number, total: number}> = {};
