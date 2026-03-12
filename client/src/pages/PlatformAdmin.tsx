@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { transformSectionProgress } from "@/lib/adminUtils";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -61,7 +61,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 export default function PlatformAdmin() {
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"prod-dashboard" | "impl-dashboard" | "organizations" | "users" | "templates" | "partners" | "specs">("prod-dashboard");
+  const [activeTab, setActiveTab] = useState<"prod-dashboard" | "impl-dashboard" | "orgs" | "users" | "templates" | "partners" | "specs">("prod-dashboard");
 
   // Template management state
   const [isUploadTemplateDialogOpen, setIsUploadTemplateDialogOpen] = useState(false);
