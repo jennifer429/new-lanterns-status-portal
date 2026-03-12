@@ -158,9 +158,6 @@ export const questionnaireSections: Section[] = [
       { id: 'CF.4', text: 'ORM/ORU specifications: Please upload your ORM specification and ORU specification if sending to New Lantern', type: 'upload' },
       { id: 'CF.5', text: 'Sample ORM report: Please upload a sample ORM report showing the expected format you will be sending', type: 'upload' },
       { id: 'CF.6', text: 'Provider Directory: Please upload your provider directory listing all referring and reading physicians', type: 'upload-download', notes: 'Required: Provider name, NPI, Specialty. Download the template below, complete it, and upload.', templateFileName: 'Provider Directory Template' },
-      { id: 'CF.7', text: 'NewLantern Technologists: Please upload the list of technologists who will use the NewLantern platform', type: 'upload', notes: 'Required: Technologist name, Email, Site/Location, Modality access', inactive: true },
-      { id: 'CF.8', text: 'PACS Admins: Please upload the list of PACS administrators', type: 'upload', notes: 'Required: Admin name, Email, Site/Location, Access level', inactive: true },
-      { id: 'CF.9', text: 'Radiologist Provider list for Radiology Portal: Please upload the user list for the Radiology Portal including all radiologists who will need access', type: 'upload', notes: 'Required: Radiologist name, Email, NPI, Subspecialty, Site/Location', inactive: true },
     ],
   },
   {
@@ -189,9 +186,9 @@ export const questionnaireSections: Section[] = [
   },
 ];
 
-// Total questions count (excluding inactive)
+// Total questions count
 export const TOTAL_QUESTIONS = questionnaireSections.reduce(
-  (sum, section) => sum + (section.questions?.filter(q => !q.inactive).length || 0),
+  (sum, section) => sum + (section.questions?.length || 0),
   0
 );
 
