@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Download, Upload, CheckCircle2, Circle, LogOut, FileText, Shield, Database, FileUp, Network, ClipboardCheck, Star, X, File, CloudUpload, Trash2, Paperclip, FileIcon } from "lucide-react";
+import { Loader2, Download, Upload, CheckCircle2, Circle, LogOut, FileText, Shield, Database, FileUp, Network, ClipboardCheck, Star, X, File, CloudUpload, Trash2, Paperclip, FileIcon, Menu } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -76,6 +76,7 @@ export default function IntakeNewRedesign() {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hasNavigatedRef = useRef(false); // Track if we've already auto-navigated
   const { user } = useAuth();
@@ -747,13 +748,32 @@ export default function IntakeNewRedesign() {
         background: "linear-gradient(135deg, #1a0b2e 0%, #2d1b4e 50%, #1a0b2e 100%)"
       }}
     >
+      {/* Mobile sidebar backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Left Sidebar */}
-      <div className="w-80 bg-black border-r border-purple-500/20 flex flex-col">
+      <div className={`
+        fixed inset-y-0 left-0 z-50 w-80 bg-black border-r border-purple-500/20 flex flex-col
+        transition-transform duration-200
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        md:static md:translate-x-0 md:shrink-0
+      `}>
         {/* Logo - links back to dashboard */}
-        <div className="p-6 border-b">
+        <div className="p-6 border-b flex items-center justify-between">
           <Link href={`/org/${slug}`}>
             <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-10 cursor-pointer hover:opacity-80 transition-opacity" />
           </Link>
+          <button
+            className="md:hidden text-muted-foreground hover:text-white p-1"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Progress Overview Card */}
@@ -821,7 +841,7 @@ export default function IntakeNewRedesign() {
             return (
               <button
                 key={section.id}
-                onClick={() => setCurrentSection(section.id)}
+                onClick={() => { setCurrentSection(section.id); setSidebarOpen(false); }}
                 className={`w-full text-left p-3 rounded-lg transition-colors flex items-center gap-3 ${
                   isActive
                     ? 'bg-primary text-primary-foreground'
@@ -848,14 +868,22 @@ export default function IntakeNewRedesign() {
       <div className="flex-1 flex flex-col bg-transparent">
         {/* Header */}
         <header className="border-b border-purple-500/20 bg-black/40 backdrop-blur-sm">
-          <div className="px-8 py-4 flex items-center justify-between">
-            <h1 className="text-xl font-bold">{org?.clientName || 'Loading...'} - {org?.name || 'Loading...'}</h1>
-            <div className="flex items-center gap-2">
+          <div className="px-4 md:px-8 py-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <button
+                className="md:hidden text-muted-foreground hover:text-white flex-shrink-0"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu className="w-6 h-6" />
+              </button>
+              <h1 className="text-base md:text-xl font-bold truncate">{org?.clientName || 'Loading...'} — {org?.name || 'Loading...'}</h1>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleExportCSV}
-                className="gap-2"
+                className="gap-2 hidden sm:flex"
               >
                 <Download className="w-4 h-4" />
                 Export
@@ -864,7 +892,7 @@ export default function IntakeNewRedesign() {
                 variant="outline"
                 size="sm"
                 onClick={() => setImportDialogOpen(true)}
-                className="gap-2"
+                className="gap-2 hidden sm:flex"
               >
                 <Upload className="w-4 h-4" />
                 Import
@@ -911,29 +939,29 @@ export default function IntakeNewRedesign() {
         </header>
 
         {/* Overall Stats Banner */}
-        <div className="bg-gradient-to-r from-purple-900/20 to-purple-800/20 border-b border-purple-500/20 px-8 py-4">
-          <div className="max-w-6xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-8">
+        <div className="bg-gradient-to-r from-purple-900/20 to-purple-800/20 border-b border-purple-500/20 px-4 md:px-8 py-3 md:py-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-8">
               <div>
                 <div className="text-sm text-muted-foreground mb-1">Overall Progress</div>
                 <div className="flex items-center gap-3">
-                  <Progress 
+                  <Progress
                     value={(() => {
                       const totalSections = questionnaireSections.length;
                       const sectionProgressSum = questionnaireSections.reduce((sum, s) => sum + calculateSectionProgress(s), 0);
                       return Math.round(sectionProgressSum / totalSections);
-                    })()} 
-                    className="w-48 h-2"
+                    })()}
+                    className="w-36 md:w-48 h-2"
                   />
-                  <span className="text-lg font-bold">
+                  <span className="text-base md:text-lg font-bold">
                     {questionnaireSections.filter(s => calculateSectionProgress(s) === 100).length}/{questionnaireSections.length} sections
                   </span>
                 </div>
               </div>
-              <div className="h-12 w-px bg-border" />
+              <div className="hidden sm:block h-12 w-px bg-border" />
               <div>
                 <div className="text-sm text-muted-foreground mb-1">Files Uploaded</div>
-                <div className="text-lg font-bold">
+                <div className="text-base md:text-lg font-bold">
                   {fileCount} files
                 </div>
               </div>
@@ -942,9 +970,9 @@ export default function IntakeNewRedesign() {
         </div>
 
         {/* Section Content */}
-        <div className="flex-1 overflow-y-auto p-8">
+        <div className="flex-1 overflow-y-auto p-3 md:p-8">
           <Card className="max-w-6xl mx-auto bg-black/40 backdrop-blur-sm border-purple-500/20">
-            <div className="p-8">
+            <div className="p-4 md:p-8">
               {/* Section Header */}
               <div className="mb-6">
                 <h2 className="text-2xl font-bold mb-2">{currentSectionData?.title}</h2>
@@ -1020,7 +1048,7 @@ export default function IntakeNewRedesign() {
                   />
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-x-8 gap-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 md:gap-x-8 gap-y-5 md:gap-y-6">
                   {currentSectionData?.questions?.filter((question) => {
                     // Filter out inactive and hidden conditional questions
                     if (question.inactive) return false;
@@ -1033,17 +1061,17 @@ export default function IntakeNewRedesign() {
                     return true;
                   }).map((question, qIndex) => {
                     const isUnanswered = unansweredQuestions.has(question.id);
-                    const hasTemplate = (question.type === 'upload' || question.type === 'upload-download') && 
+                    const hasTemplate = (question.type === 'upload' || question.type === 'upload-download') &&
                       (dbTemplateMap.get(question.id) || []).length > 0;
-                    
+
                     const isUploadType = question.type === 'upload' || question.type === 'upload-download';
-                    
+
                     return (
-                      <div 
-                        key={question.id} 
+                      <div
+                        key={question.id}
                         data-question-id={question.id}
                         className={`${
-                          question.type === 'textarea' || question.type === 'contacts-table' || isUploadType ? 'col-span-2' : 'col-span-1'
+                          question.type === 'textarea' || question.type === 'contacts-table' || isUploadType ? 'col-span-1 md:col-span-2' : 'col-span-1'
                         } ${
                           isUnanswered ? 'p-4 border-2 border-red-500 rounded-lg bg-red-500/5' : ''
                         } ${
