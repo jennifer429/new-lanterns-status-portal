@@ -1,13 +1,13 @@
 /**
  * Radiology One New Site Onboarding Questionnaire
- * 6 sections (5 standard + 1 integration workflows), 51 total questions
+ * 4 sections: Organization Info, Integration Workflows, Connectivity, HL7 & DICOM Data
  * Note: Router = Integration 3rd Party Router for all overlay situations
  */
 
 export interface Question {
   id: string;
   text: string;
-  type: 'text' | 'textarea' | 'dropdown' | 'date' | 'multi-select' | 'upload' | 'upload-download';
+  type: 'text' | 'textarea' | 'dropdown' | 'date' | 'multi-select' | 'upload' | 'upload-download' | 'contacts-table';
   options?: string[];
   notes?: string;
   placeholder?: string;
@@ -23,8 +23,8 @@ export interface Section {
   title: string;
   description?: string;
   questions?: Question[]; // Optional for workflow sections
-  type?: 'standard' | 'workflow' | 'integration-workflows'; // New: workflow sections use WorkflowDiagram component
-  workflowType?: 'orders' | 'images' | 'priors' | 'reports'; // New: which workflow to render
+  type?: 'standard' | 'workflow' | 'integration-workflows'; // workflow sections use WorkflowDiagram component
+  workflowType?: 'orders' | 'images' | 'priors' | 'reports'; // which workflow to render
 }
 
 export const questionnaireSections: Section[] = [
@@ -36,11 +36,12 @@ export const questionnaireSections: Section[] = [
       { id: 'H.1', text: 'Number of sites/locations (this determines how many VPN tunnels need to be built)', type: 'text', placeholder: 'Enter number of sites' },
       { id: 'H.2', text: 'Site names and identifiers', type: 'textarea', placeholder: 'List all site names and IDs' },
       { id: 'H.3', text: 'Site-specific user access restrictions', type: 'textarea', placeholder: 'Document any access restrictions by site' },
-      { id: 'A.1', text: 'Administrative point(s) of contact', type: 'textarea', placeholder: 'Name, title, email, phone' },
-      { id: 'A.2', text: 'IT point(s) of contact - Connectivity & Systems', type: 'textarea', placeholder: 'Name, title, email, phone' },
-      { id: 'A.3', text: 'Clinical contact(s) - Technologist/Clinical Informatics', type: 'textarea', placeholder: 'Name, title, email, phone' },
-      { id: 'A.4', text: 'Radiologist champion(s)', type: 'textarea', placeholder: 'Name, title, email, phone' },
-      { id: 'A.5', text: 'Project manager (if applicable)', type: 'textarea', placeholder: 'Name, title, email, phone' },
+      {
+        id: 'A.contacts',
+        text: 'Contacts',
+        type: 'contacts-table',
+        notes: 'All fields are optional — the block counts as complete once any field is filled. Rows: Administrative (A.1), IT Connectivity (A.2), IT Post-Production Support, Clinical (A.3), Radiologist Champion (A.4), Project Manager (A.5).',
+      },
       { id: 'A.6', text: 'Is a security questionnaire required?', type: 'dropdown', options: ['Yes', 'No'] },
       { id: 'A.6.1', text: 'Please provide details on how and when you plan to share the security questionnaire (link, email, timeline)', type: 'textarea', placeholder: 'Example: We will send the questionnaire via email to security@newlantern.ai by [date]. Link to our security portal: https://...', conditionalOn: { questionId: 'A.6', value: 'Yes' } },
       { id: 'L.2', text: 'Test patient data requirements', type: 'textarea', placeholder: 'Document test patient data needs' },
@@ -53,14 +54,121 @@ export const questionnaireSections: Section[] = [
     ],
   },
   {
-    id: 'data-integration',
-    title: 'Data & Integration',
-    description: 'Data exchange and integration configuration',
+    id: 'architecture',
+    title: 'Architecture',
+    description: 'Systems inventory and architecture diagram',
     questions: [
+      { id: 'ARCH.diagram', text: 'Architecture Diagram: Upload a network or workflow diagram showing how your systems connect', type: 'upload', notes: 'Accepted formats: PNG, JPG, PDF' },
+      { id: 'ARCH.1', text: 'PACS system (vendor and product name)', type: 'text', placeholder: 'e.g., Sectra IDS7, Philips IntelliSpace, Agfa IMPAX' },
+      { id: 'ARCH.2', text: 'RIS system (vendor and product name)', type: 'text', placeholder: 'e.g., Epic Radiant, Cerner RadNet, Meditech' },
+      { id: 'ARCH.3', text: 'EMR / EHR system (vendor and product name)', type: 'text', placeholder: 'e.g., Epic, Cerner, Athenahealth, eClinicalWorks' },
+      { id: 'ARCH.4', text: 'Interface Engine / Middleware (if applicable)', type: 'text', placeholder: 'e.g., Mirth Connect, Rhapsody, Iguana, Infor Cloverleaf' },
+      { id: 'ARCH.5', text: 'Additional systems (VNA, AI platforms, cardiology PACS, dose tracking, etc.)', type: 'textarea', placeholder: 'List any other systems relevant to the integration, including vendor names and their roles' },
+    ],
+  },
+  {
+    id: 'integration-workflows',
+    type: 'integration-workflows',
+    title: 'Integration Workflows',
+    description: 'Workflow descriptions for orders, images, priors, and reports',
+    questions: [
+      { id: 'IW.orders_description', text: 'Orders Workflow: Describe how imaging orders reach the platform', type: 'textarea', placeholder: 'e.g., Orders originate in Epic, sent via HL7 ORM through Mirth Connect to New Lantern...' },
+      { id: 'IW.images_description', text: 'Images Workflow: Describe how imaging studies are routed', type: 'textarea', placeholder: 'e.g., Studies acquired on modalities (CT, MR, XR) and sent via DICOM C-STORE to PACS, then forwarded to New Lantern...' },
+      { id: 'IW.priors_description', text: 'Priors Workflow: Describe how prior studies are retrieved', type: 'textarea', placeholder: 'e.g., New Lantern queries prior PACS via C-FIND/C-MOVE for relevant prior studies when a new order arrives...' },
+      { id: 'IW.reports_description', text: 'Reports Workflow: Describe how reports are delivered back', type: 'textarea', placeholder: 'e.g., Finalized reports sent via HL7 ORU through Mirth Connect back to Epic Radiant...' },
+    ],
+  },
+  {
+    id: 'connectivity',
+    title: 'Connectivity',
+    description: 'VPN setup, network endpoints, and required configuration file uploads (IMPORTANT: Please de-identify all files before uploading)',
+    questions: [
+      // VPN & Network Endpoints
+      {
+        id: 'E.1',
+        text: 'VPN form exchange: Download the VPN form template, complete it with your network details, and upload.',
+        type: 'upload-download',
+        notes: 'Required: Site-to-site VPN details, IP ranges, firewall rules, contact info. Rad One clients use the standard template. SRV clients require a separate form.',
+        templateFileName: 'VPN Form Template',
+      },
+      {
+        id: 'E.2',
+        text: 'DICOM Endpoints - Test/Proof Environment (IP address, Port, AE title for each endpoint)',
+        type: 'textarea',
+        placeholder: 'Example:\n- PACS Test: IP 10.1.2.4, Port 104, AE Title: PACS_TEST\n- CT Scanner Test: IP 10.1.2.11, Port 104, AE Title: CT1_TEST\n\nIf you do not have a test environment, write: Not applicable'
+      },
+      {
+        id: 'E.2.1',
+        text: 'DICOM Endpoints - Production Environment (IP address, Port, AE title for each endpoint)',
+        type: 'textarea',
+        placeholder: 'Example:\n- PACS: IP 10.1.2.3, Port 104, AE Title: PACS_PROD\n- CT Scanner 1: IP 10.1.2.10, Port 104, AE Title: CT1_PROD\n- Modality 1: IP 10.1.2.15, Port 104, AE Title: MOD1_PROD'
+      },
+      {
+        id: 'E.3',
+        text: 'HL7 Orders - Test/Proof Environment (IP address and Port)',
+        type: 'textarea',
+        placeholder: 'Example:\n- RIS Test: IP 10.1.3.10, Port 2575\n\nIf you do not have a test environment, write: Not applicable'
+      },
+      {
+        id: 'E.3.1',
+        text: 'HL7 Orders - Production Environment (IP address and Port)',
+        type: 'textarea',
+        placeholder: 'Example:\n- RIS Production: IP 10.1.3.5, Port 2575'
+      },
+      {
+        id: 'E.4',
+        text: 'HL7 Prior Reports - Test/Proof Environment (IP address and Port)',
+        type: 'textarea',
+        placeholder: 'Example:\n- EHR Test: IP 10.1.3.11, Port 2576\n\nIf you do not have a test environment, write: Not applicable'
+      },
+      {
+        id: 'E.4.1',
+        text: 'HL7 Prior Reports - Production Environment (IP address and Port)',
+        type: 'textarea',
+        placeholder: 'Example:\n- EHR Production: IP 10.1.3.6, Port 2576'
+      },
+      {
+        id: 'E.5',
+        text: 'HL7 Reports from New Lantern - Test/Proof Environment (IP address and Port where you will receive reports)',
+        type: 'textarea',
+        placeholder: 'Example:\n- Your HL7 Listener Test: IP 10.1.3.12, Port 2577\n\nIf you do not have a test environment, write: Not applicable'
+      },
+      {
+        id: 'E.5.1',
+        text: 'HL7 Reports from New Lantern - Production Environment (IP address and Port where you will receive reports)',
+        type: 'textarea',
+        placeholder: 'Example:\n- Your HL7 Listener Production: IP 10.1.3.7, Port 2577'
+      },
+      {
+        id: 'E.6',
+        text: 'HL7 ADTs (if in scope) - Test/Proof Environment (IP address and Port)',
+        type: 'textarea',
+        placeholder: 'Example:\n- ADT Interface Test: IP 10.1.3.13, Port 2578\n\nIf you do not have a test environment or ADTs are not in scope, write: Not applicable'
+      },
+      {
+        id: 'E.6.1',
+        text: 'HL7 ADTs (if in scope) - Production Environment (IP address and Port)',
+        type: 'textarea',
+        placeholder: 'Example:\n- ADT Interface Production: IP 10.1.3.8, Port 2578\n\nIf ADTs are not in scope for this implementation, write: Not applicable'
+      },
+      // Configuration File Uploads
+      { id: 'CF.1', text: 'Procedure code list: Please upload your list of all procedure codes with modality that you will be sending in the order message.', type: 'upload-download', notes: 'Required: Procedure code, Description, Modality. Optional: CPT, Body part, Subspecialty', templateFileName: 'Procedure Code List Template' },
+      { id: 'CF.2', text: 'User list: Please upload a file of all users and their roles.', type: 'upload-download', notes: 'Required: User email, User name, Role (Admin/PACS Admin/Tech)', templateFileName: 'User List Template' },
+      { id: 'CF.3', text: 'Sample ORU report: Please upload a sample ORU report showing the expected format we will send to you', type: 'upload' },
+      { id: 'CF.4', text: 'ORM/ORU specifications: Please upload your ORM specification and ORU specification if sending to New Lantern', type: 'upload' },
+      { id: 'CF.5', text: 'Sample ORM report: Please upload a sample ORM report showing the expected format you will be sending', type: 'upload' },
+      { id: 'CF.6', text: 'Provider Directory: Please upload your provider directory listing all referring and reading physicians', type: 'upload-download', notes: 'Required: Provider name, NPI, Specialty. Download the template below, complete it, and upload.', templateFileName: 'Provider Directory Template' },
+    ],
+  },
+  {
+    id: 'hl7-dicom',
+    title: 'HL7 & DICOM Data',
+    description: 'Data exchange configuration, modalities, go-live details, and HL7 message field values',
+    questions: [
+      // Integration & data configuration
       { id: 'D.1', text: 'Can production systems be configured for testing prior to go-live?', type: 'dropdown', options: ['Yes', 'No'] },
       { id: 'D.2', text: 'Requested go-live date', type: 'date', placeholder: 'MM/DD/YYYY' },
       { id: 'D.3', text: 'Expected modalities', type: 'multi-select', options: ['CT', 'MRI', 'X-Ray', 'Ultrasound', 'Nuclear Medicine', 'Mammography'] },
-
       { id: 'D.7', text: 'Method for Historic Reports Data load', type: 'dropdown', options: ['HL7 messages bulk sent prior to go-live', 'Pipe delimited flat file (3-4 weeks lead time)', 'Automatically with images - Reports sent as DICOM with the images, so no historic data load required'] },
       { id: 'D.8', text: 'Tech sheets input method', type: 'dropdown', options: ['Automatically with images', 'Manually as PDF'] },
       { id: 'D.9', text: 'Are there DICOM SR or other data sources for auto-populating fields?', type: 'textarea', placeholder: 'List DICOM SR sources' },
@@ -68,109 +176,7 @@ export const questionnaireSections: Section[] = [
       { id: 'D.11', text: 'What patient identifier do you use for matching (e.g. MRN) and is it in PID:3.1?', type: 'textarea', placeholder: 'Document patient identifier field' },
       { id: 'D.12', text: 'Is the patient identifier in your order the same as in prior reports and comparison images?', type: 'textarea', placeholder: 'Yes/No and explain any differences' },
       { id: 'D.13', text: 'Please document DICOM tag 0008,1040 value and corresponding PV1:11 value for matching (Note: DICOM tagging is handled by the Router / Integration 3rd Party, not client sites)', type: 'textarea', placeholder: 'Document tag values for patient matching' },
-    ],
-  },
-  {
-    id: 'integration-workflows',
-    type: 'integration-workflows',
-    title: 'Integration Workflows',
-    description: 'Architecture diagram, systems inventory, and workflow descriptions',
-  },
-  {
-    id: 'config-files',
-    title: 'Configuration Files',
-    description: 'Required file uploads for configuration (IMPORTANT: Please de-identify all files before uploading)',
-    questions: [
-      { id: 'CF.1', text: 'Procedure code list: Please upload your list of all procedure codes with modality that you will be sending in the order message.', type: 'upload-download', notes: 'Required: Procedure code, Description, Modality. Optional: CPT, Body part, Subspecialty', templateFileName: 'Procedure Code List Template' },
-      { id: 'CF.2', text: 'User list: Please upload a file of all users and their roles.', type: 'upload-download', notes: 'Required: User email, User name, Role (Admin/PACS Admin/Tech)', templateFileName: 'User List Template' },
-      { id: 'CF.3', text: 'Sample ORU report: Please upload a sample ORU report showing the expected format we will send to you', type: 'upload' },
-      { id: 'CF.4', text: 'ORM/ORU specifications: Please upload your ORM specification and ORU specification if sending to New Lantern', type: 'upload' },
-      { id: 'CF.5', text: 'Sample ORM report: Please upload a sample ORM report showing the expected format you will be sending', type: 'upload' },
-      { id: 'CF.6', text: 'Provider Directory: Please upload your provider directory listing all referring and reading physicians', type: 'upload-download', notes: 'Required: Provider name, NPI, Specialty. Download the template below, complete it, and upload.', templateFileName: 'Provider Directory Template' },
-      { id: 'CF.7', text: 'NewLantern Technologists: Please upload the list of technologists who will use the NewLantern platform', type: 'upload', notes: 'Required: Technologist name, Email, Site/Location, Modality access', inactive: true },
-      { id: 'CF.8', text: 'PACS Admins: Please upload the list of PACS administrators', type: 'upload', notes: 'Required: Admin name, Email, Site/Location, Access level', inactive: true },
-      { id: 'CF.9', text: 'Radiologist Provider list for Radiology Portal: Please upload the user list for the Radiology Portal including all radiologists who will need access', type: 'upload', notes: 'Required: Radiologist name, Email, NPI, Subspecialty, Site/Location', inactive: true },
-    ],
-  },
-  {
-    id: 'vpn-connectivity',
-    title: 'VPN & Connectivity',
-    description: 'VPN setup and network connectivity (DICOM requires: IP address, port | HL7 requires: IP address, port)',
-    questions: [
-       { 
-        id: 'E.1', 
-        text: 'VPN form exchange: Download the VPN form template, complete it with your network details, and upload.', 
-        type: 'upload-download', 
-        notes: 'Required: Site-to-site VPN details, IP ranges, firewall rules, contact info. Rad One clients use the standard template. SRV clients require a separate form.',
-        templateFileName: 'VPN Form Template',
-      },
-      { 
-        id: 'E.2', 
-        text: 'DICOM Endpoints - Test/Proof Environment (IP address, Port, AE title for each endpoint)', 
-        type: 'textarea', 
-        placeholder: 'Example:\n- PACS Test: IP 10.1.2.4, Port 104, AE Title: PACS_TEST\n- CT Scanner Test: IP 10.1.2.11, Port 104, AE Title: CT1_TEST\n\nIf you do not have a test environment, write: Not applicable' 
-      },
-      { 
-        id: 'E.2.1', 
-        text: 'DICOM Endpoints - Production Environment (IP address, Port, AE title for each endpoint)', 
-        type: 'textarea', 
-        placeholder: 'Example:\n- PACS: IP 10.1.2.3, Port 104, AE Title: PACS_PROD\n- CT Scanner 1: IP 10.1.2.10, Port 104, AE Title: CT1_PROD\n- Modality 1: IP 10.1.2.15, Port 104, AE Title: MOD1_PROD' 
-      },
-      { 
-        id: 'E.3', 
-        text: 'HL7 Orders - Test/Proof Environment (IP address and Port)', 
-        type: 'textarea', 
-        placeholder: 'Example:\n- RIS Test: IP 10.1.3.10, Port 2575\n\nIf you do not have a test environment, write: Not applicable' 
-      },
-      { 
-        id: 'E.3.1', 
-        text: 'HL7 Orders - Production Environment (IP address and Port)', 
-        type: 'textarea', 
-        placeholder: 'Example:\n- RIS Production: IP 10.1.3.5, Port 2575' 
-      },
-      { 
-        id: 'E.4', 
-        text: 'HL7 Prior Reports - Test/Proof Environment (IP address and Port)', 
-        type: 'textarea', 
-        placeholder: 'Example:\n- EHR Test: IP 10.1.3.11, Port 2576\n\nIf you do not have a test environment, write: Not applicable' 
-      },
-      { 
-        id: 'E.4.1', 
-        text: 'HL7 Prior Reports - Production Environment (IP address and Port)', 
-        type: 'textarea', 
-        placeholder: 'Example:\n- EHR Production: IP 10.1.3.6, Port 2576' 
-      },
-      { 
-        id: 'E.5', 
-        text: 'HL7 Reports from New Lantern - Test/Proof Environment (IP address and Port where you will receive reports)', 
-        type: 'textarea', 
-        placeholder: 'Example:\n- Your HL7 Listener Test: IP 10.1.3.12, Port 2577\n\nIf you do not have a test environment, write: Not applicable' 
-      },
-      { 
-        id: 'E.5.1', 
-        text: 'HL7 Reports from New Lantern - Production Environment (IP address and Port where you will receive reports)', 
-        type: 'textarea', 
-        placeholder: 'Example:\n- Your HL7 Listener Production: IP 10.1.3.7, Port 2577' 
-      },
-      { 
-        id: 'E.6', 
-        text: 'HL7 ADTs (if in scope) - Test/Proof Environment (IP address and Port)', 
-        type: 'textarea', 
-        placeholder: 'Example:\n- ADT Interface Test: IP 10.1.3.13, Port 2578\n\nIf you do not have a test environment or ADTs are not in scope, write: Not applicable' 
-      },
-      { 
-        id: 'E.6.1', 
-        text: 'HL7 ADTs (if in scope) - Production Environment (IP address and Port)', 
-        type: 'textarea', 
-        placeholder: 'Example:\n- ADT Interface Production: IP 10.1.3.8, Port 2578\n\nIf ADTs are not in scope for this implementation, write: Not applicable' 
-      },
-    ],
-  },
-  {
-    id: 'hl7-config',
-    title: 'HL7 Configuration',
-    description: 'HL7 message field values and meanings (IP addresses and ports should be in VPN form)',
-    questions: [
+      // HL7 message field values
       { id: 'G.3', text: 'ORC-1 (Order Control) - Please document the values you will send and what each means', type: 'textarea', placeholder: 'Example: NW = New order, CA = Cancel order, XO = Change order, etc.' },
       { id: 'G.4', text: 'ORC-5 (Order Status) - Please document the values you will send and what each means', type: 'textarea', placeholder: 'Example: SC = In process/scheduled, CM = Complete, CA = Canceled, etc.' },
       { id: 'G.5', text: 'OBR:27.1 (Quantity/Timing) in ORU messages - Please document the values you will send and what each means', type: 'textarea', placeholder: 'Example: STAT = Urgent/immediate, ROUTINE = Normal priority, ASAP = As soon as possible, etc.' },
@@ -178,57 +184,9 @@ export const questionnaireSections: Section[] = [
       { id: 'G.7', text: 'Please share what values you send for Patient Location (PV1:3) - Optional but useful', type: 'textarea', placeholder: 'Example: MAIN^3RD^302A = Main building, 3rd floor, room 302A\nEAST^RAD^CT1 = East wing, Radiology, CT Scanner 1\n\nLeave blank if not applicable' },
     ],
   },
-  {
-    id: 'admin-tracking',
-    title: 'Admin Tracking',
-    description: 'Internal fields managed by New Lantern staff — not visible to clients',
-    questions: [
-      // Organization operational
-      { id: 'meta.prod_status',      text: 'Production Status',        type: 'dropdown', options: ['Active', 'Monitoring', 'Pending', 'Inactive'], inactive: true },
-      { id: 'meta.reading_group',    text: 'Reading Group / Client',   type: 'text',     inactive: true },
-      { id: 'meta.studies_per_day',  text: 'Avg Studies Per Day',      type: 'text',     inactive: true },
-      // IT contact (structured breakdown of A.2)
-      { id: 'meta.it_contact_name',  text: 'IT Contact Name',          type: 'text',     inactive: true },
-      { id: 'meta.it_contact_email', text: 'IT Contact Email',         type: 'text',     inactive: true },
-      { id: 'meta.it_contact_phone', text: 'IT Contact Phone',         type: 'text',     inactive: true },
-      // Systems inventory
-      { id: 'meta.pacs_system',       text: 'PACS System',            type: 'text',     inactive: true },
-      { id: 'meta.ris_system',        text: 'RIS System',             type: 'text',     inactive: true },
-      { id: 'meta.emr_system',        text: 'EMR / EHR System',       type: 'text',     inactive: true },
-      { id: 'meta.interface_engine',  text: 'Interface Engine',        type: 'text',     inactive: true },
-      // DICOM structured breakdown (supplements E.2 / E.2.1)
-      { id: 'meta.dicom_image_source', text: 'DICOM Image Source',    type: 'text',     inactive: true },
-      { id: 'meta.dicom_org_ae_title', text: 'Org AE Title',          type: 'text',     inactive: true },
-      { id: 'meta.dicom_org_ip',       text: 'Org DICOM IP',          type: 'text',     inactive: true },
-      { id: 'meta.dicom_org_port',     text: 'Org DICOM Port',        type: 'text',     inactive: true },
-      { id: 'meta.dicom_sb_ip',        text: 'Silverback DICOM IP',   type: 'text',     inactive: true },
-      { id: 'meta.dicom_sb_port',      text: 'Silverback DICOM Port', type: 'text',     inactive: true },
-      { id: 'meta.dicom_nl_ip',        text: 'NL DICOM IP',           type: 'text',     inactive: true },
-      { id: 'meta.dicom_nl_port',      text: 'NL DICOM Port',         type: 'text',     inactive: true },
-      // HL7 Orders structured breakdown (supplements E.3 / E.3.1)
-      { id: 'meta.hl7_ord_org_ip',    text: 'HL7 Orders – Org IP',          type: 'text', inactive: true },
-      { id: 'meta.hl7_ord_org_port',  text: 'HL7 Orders – Org Port',        type: 'text', inactive: true },
-      { id: 'meta.hl7_ord_sb_ip',     text: 'HL7 Orders – Silverback IP',   type: 'text', inactive: true },
-      { id: 'meta.hl7_ord_sb_port',   text: 'HL7 Orders – Silverback Port', type: 'text', inactive: true },
-      { id: 'meta.hl7_ord_nl_ip',     text: 'HL7 Orders – NL IP',           type: 'text', inactive: true },
-      { id: 'meta.hl7_ord_nl_port',   text: 'HL7 Orders – NL Port',         type: 'text', inactive: true },
-      // HL7 Results structured breakdown (supplements E.5 / E.5.1)
-      { id: 'meta.hl7_res_nl_ip',     text: 'HL7 Results – NL IP',           type: 'text', inactive: true },
-      { id: 'meta.hl7_res_nl_port',   text: 'HL7 Results – NL Port',         type: 'text', inactive: true },
-      { id: 'meta.hl7_res_sb_ip',     text: 'HL7 Results – Silverback IP',   type: 'text', inactive: true },
-      { id: 'meta.hl7_res_sb_port',   text: 'HL7 Results – Silverback Port', type: 'text', inactive: true },
-      { id: 'meta.hl7_res_org_ip',    text: 'HL7 Results – Org IP',          type: 'text', inactive: true },
-      { id: 'meta.hl7_res_org_port',  text: 'HL7 Results – Org Port',        type: 'text', inactive: true },
-      // Gotchas / notes
-      { id: 'meta.accession_format',  text: 'Accession Number Format',        type: 'text',     inactive: true },
-      { id: 'meta.priors_available',  text: 'Priors Availability',            type: 'text',     inactive: true },
-      { id: 'meta.other_notes',       text: 'Other Notes / Gotchas',          type: 'textarea', inactive: true },
-    ],
-  },
 ];
 
 // Total questions count
-// Note: Workflow sections don't have questions array, so we filter them out
 export const TOTAL_QUESTIONS = questionnaireSections.reduce(
   (sum, section) => sum + (section.questions?.length || 0),
   0

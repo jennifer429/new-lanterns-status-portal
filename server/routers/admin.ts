@@ -866,30 +866,23 @@ export const adminRouter = router({
         // Build question list (include workflow sections)
         const allQuestions = questionnaireSections.flatMap(section => {
           if (section.questions) {
-            // Regular question sections — must pass conditionalOn so the shared
-            // utility excludes hidden conditional questions from the denominator,
-            // matching exactly what the org-facing portal calculates.
-            return section.questions.map(q => ({
-              id: q.id,
-              sectionTitle: section.title,
-              isWorkflow: false,
-              type: q.type,
-              conditionalOn: q.conditionalOn || null,
-            }));
+            // Regular question sections — filter inactive questions and pass conditionalOn
+            // so the shared utility matches exactly what the org-facing portal calculates.
+            return section.questions
+              .filter(q => !q.inactive)
+              .map(q => ({
+                id: q.id,
+                sectionTitle: section.title,
+                isWorkflow: false,
+                type: q.type,
+                conditionalOn: q.conditionalOn || null,
+              }));
           } else if (section.type === 'workflow') {
             return [{
               id: `${section.id}_config`,
               sectionTitle: section.title,
               isWorkflow: true,
             }];
-          } else if (section.type === 'integration-workflows') {
-            return ['orders', 'images', 'priors', 'reports'].map(wf => ({
-              id: `IW.${wf}_description`,
-              sectionTitle: section.title,
-              isWorkflow: false,
-              type: 'textarea',
-              conditionalOn: null,
-            }));
           }
           return [];
         });
@@ -901,14 +894,10 @@ export const adminRouter = router({
         // Convert section progress from shared utility format to percentage format
         const sectionTitleToId: Record<string, string> = {
           "Organization Info": "organizationInfo",
-          "Orders Workflow": "ordersWorkflow",
-          "Images Workflow": "imagesWorkflow",
-          "Priors Workflow": "priorsWorkflow",
-          "Reports Out Workflow": "reportsOutWorkflow",
-          "Data & Integration": "dataIntegration",
-          "Configuration Files": "configurationFiles",
-          "VPN & Connectivity": "vpnConnectivity",
-          "HL7 Configuration": "hl7Configuration"
+          "Architecture": "architecture",
+          "Integration Workflows": "integrationWorkflows",
+          "Connectivity": "connectivity",
+          "HL7 & DICOM Data": "hl7DicomData",
         };
         
         const sectionProgress: Record<string, {completed: number, total: number}> = {};

@@ -32,7 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Activity, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp, AlertTriangle, AlertCircle, Info, Image, CheckSquare, BarChart3, Copy, Check, Clock, ChevronsUpDown } from "lucide-react";
+import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Activity, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp, AlertTriangle, AlertCircle, Info, Image, CheckSquare, BarChart3, Copy, Check, Clock, ChevronsUpDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { questionnaireSections } from "@shared/questionnaireData";
 import { TYPE_COLORS, type IntegrationSystem } from "@/components/IntegrationWorkflows";
 import { cn } from "@/lib/utils";
@@ -794,9 +794,9 @@ export default function PlatformAdmin() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-12" />
-              <div>
+              <div className="flex flex-col justify-center">
                 <h1 className="text-3xl font-bold text-foreground">{headerTitle}</h1>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-sm text-muted-foreground mt-0.5">
                   {headerSubtitle}
                 </p>
               </div>
@@ -956,7 +956,15 @@ export default function PlatformAdmin() {
 
         {/* ── CONNECTIVITY MATRIX TAB ── */}
         {activeTab === "prod-dashboard" && (
-          <ConnectivityMatrix orgs={orgs || []} />
+          <ConnectivityMatrix orgs={(orgs || [])
+            .filter(o => o.status === 'active')
+            .map(o => ({
+              id: o.id,
+              name: o.name,
+              slug: o.slug,
+              partnerName: o.clientId && clients ? (clients.find(c => c.id === o.clientId)?.name ?? '') : '',
+            }))}
+          />
         )}
 
         {activeTab === "impl-dashboard" && (
@@ -2993,7 +3001,8 @@ function parseImportCSV(csvText: string, orgs: { id: number; name: string }[]) {
 }
 
 // ── ConnectivityMatrix ─────────────────────────────────────────────────────────
-function ConnectivityMatrix({ orgs }: { orgs: { id: number; name: string; slug: string }[] }) {
+type ConnectivityOrg = { id: number; name: string; slug: string; partnerName?: string };
+function ConnectivityMatrix({ orgs }: { orgs: ConnectivityOrg[] }) {
   const utils = trpc.useUtils();
   const { data: allResponses = [], isLoading } = trpc.admin.getAllOrgResponses.useQuery();
 
@@ -3019,6 +3028,9 @@ function ConnectivityMatrix({ orgs }: { orgs: { id: number; name: string; slug: 
   const [importPreview, setImportPreview]   = useState<{ rows: { organizationId: number; questionId: string; response: string }[]; errors: string[] } | null>(null);
   const [importFileName, setImportFileName] = useState("");
   const importFileRef = useRef<HTMLInputElement>(null);
+  const tableScrollRef = useRef<HTMLDivElement>(null);
+  const scrollTable = (dir: 'left' | 'right') =>
+    tableScrollRef.current?.scrollBy({ left: dir === 'left' ? -320 : 320, behavior: 'smooth' });
 
   const bulkSave = trpc.admin.bulkSaveOrgResponses.useMutation({
     onSuccess: (result) => {
@@ -3154,6 +3166,18 @@ function ConnectivityMatrix({ orgs }: { orgs: { id: number; name: string; slug: 
       {orgs.length > 0 && (
         <div className="mb-4 flex items-center gap-3">
           <span className="text-xs text-muted-foreground font-medium shrink-0">Sites:</span>
+          <button
+            onClick={() => setVisibleOrgIds(new Set(orgs.map(o => o.id)))}
+            className="text-xs px-2.5 py-1 rounded border border-border bg-card hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+          >
+            All
+          </button>
+          <button
+            onClick={() => setVisibleOrgIds(new Set())}
+            className="text-xs px-2.5 py-1 rounded border border-border bg-card hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+          >
+            None
+          </button>
           <Popover>
             <PopoverTrigger asChild>
               <button className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-border bg-card text-sm hover:bg-muted/50 transition-colors min-w-[160px] justify-between">
@@ -3204,50 +3228,24 @@ function ConnectivityMatrix({ orgs }: { orgs: { id: number; name: string; slug: 
 
       {/* Integration Workflows thumbnails */}
       {filteredOrgs.length > 0 && (
-        <div className="mb-6">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Integration Workflows Snapshots</p>
-          <div className="flex gap-4 overflow-x-auto pb-2">
+        <div className="mb-5">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Workflow Snapshots</p>
+          <div className="flex gap-2 overflow-x-auto pb-1">
             {filteredOrgs.map(org => {
               const orgData = lookup[org.id] ?? {};
-              const diagramUrl: string = orgData['IW.diagram']?.response ?? '';
-              const diagramFilename: string = orgData['IW.diagram_filename']?.response ?? '';
-              const systemsRaw: string = orgData['IW.systems']?.response ?? '';
-              let systems: IntegrationSystem[] = [];
-              try { if (systemsRaw) systems = JSON.parse(systemsRaw); } catch {}
               const wfCount = ['orders', 'images', 'priors', 'reports'].filter(wf =>
                 (orgData[`IW.${wf}_description`]?.response ?? '').trim().length > 0
               ).length;
-              const isImage = diagramFilename && /\.(png|jpg|jpeg)$/i.test(diagramFilename);
-
               return (
-                <div key={org.id} className="flex-shrink-0 w-52 rounded-xl border bg-card p-3 space-y-2">
-                  <p className="font-semibold text-sm truncate">{org.name}</p>
-                  {diagramUrl && isImage ? (
-                    <img src={diagramUrl} className="w-full h-24 object-cover rounded-lg border" alt="" />
-                  ) : diagramUrl ? (
-                    <div className="w-full h-24 rounded-lg bg-muted/20 border flex items-center justify-center gap-2">
-                      <FileText className="w-6 h-6 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">PDF</span>
-                    </div>
-                  ) : (
-                    <div className="w-full h-24 rounded-lg bg-muted/10 border-2 border-dashed border-border flex items-center justify-center">
-                      <p className="text-xs text-muted-foreground">No diagram</p>
-                    </div>
-                  )}
-                  <div className="flex flex-wrap gap-1">
-                    {systems.slice(0, 4).map(s => (
-                      <span key={s.id} className={cn('text-xs px-1.5 py-0.5 rounded-full font-medium', TYPE_COLORS[s.type] ?? TYPE_COLORS['Other'])}>
-                        {s.type || s.name}
-                      </span>
+                <div key={org.id} className="flex-shrink-0 rounded-lg border bg-card px-3 py-2 min-w-[120px] max-w-[180px]">
+                  <p className="font-medium text-xs truncate leading-tight">{org.name}</p>
+                  {org.partnerName && <p className="text-[10px] text-muted-foreground truncate leading-tight">{org.partnerName}</p>}
+                  <div className="flex items-center gap-0.5 mt-1.5">
+                    {[0, 1, 2, 3].map(i => (
+                      <div key={i} className={cn('h-1 flex-1 rounded-full', i < wfCount ? 'bg-primary' : 'bg-muted')} />
                     ))}
-                    {systems.length > 4 && (
-                      <span className="text-xs text-muted-foreground">+{systems.length - 4}</span>
-                    )}
-                    {systems.length === 0 && (
-                      <span className="text-xs text-muted-foreground italic">No systems</span>
-                    )}
+                    <span className="text-[10px] text-muted-foreground ml-1.5 shrink-0">{wfCount}/4</span>
                   </div>
-                  <p className="text-xs text-muted-foreground">{wfCount}/4 workflows described</p>
                 </div>
               );
             })}
@@ -3260,13 +3258,33 @@ function ConnectivityMatrix({ orgs }: { orgs: { id: number; name: string; slug: 
       ) : filteredOrgs.length === 0 ? (
         <p className="text-muted-foreground py-12 text-center">No organizations selected. Use the filters above to show orgs.</p>
       ) : (
-        <div className="overflow-auto rounded-lg border border-border" style={{ maxHeight: 'calc(100vh - 260px)' }}>
+        <div className="relative">
+          {/* Left scroll arrow */}
+          <button
+            onClick={() => scrollTable('left')}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-30 -translate-x-4 w-7 h-7 rounded-full bg-card border border-border shadow flex items-center justify-center hover:bg-muted/70 transition-colors"
+            aria-label="Scroll left"
+          >
+            <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+          </button>
+          {/* Right scroll arrow */}
+          <button
+            onClick={() => scrollTable('right')}
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-30 translate-x-4 w-7 h-7 rounded-full bg-card border border-border shadow flex items-center justify-center hover:bg-muted/70 transition-colors"
+            aria-label="Scroll right"
+          >
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </button>
+          <div ref={tableScrollRef} className="overflow-auto rounded-lg border border-border mx-8" style={{ maxHeight: 'calc(100vh - 260px)' }}>
           <table className="w-full text-sm border-collapse">
             <thead className="sticky top-0 z-20">
               <tr className="border-b border-border bg-card">
                 <th className="text-left py-3 px-4 font-semibold text-muted-foreground w-44 min-w-[11rem] border-r border-border bg-card">Detail</th>
                 {filteredOrgs.map(org => (
-                  <th key={org.id} className="text-left py-3 px-4 font-bold min-w-[10rem] border-r border-border last:border-r-0 bg-card">{org.name}</th>
+                  <th key={org.id} className="text-left py-3 px-4 min-w-[10rem] border-r border-border last:border-r-0 bg-card">
+                    <span className="font-bold block leading-tight">{org.name}</span>
+                    {org.partnerName && <span className="text-xs font-normal text-muted-foreground">{org.partnerName}</span>}
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -3332,6 +3350,7 @@ function ConnectivityMatrix({ orgs }: { orgs: { id: number; name: string; slug: 
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

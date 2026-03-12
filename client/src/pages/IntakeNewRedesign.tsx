@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Download, Upload, CheckCircle2, Circle, LogOut, FileText, Shield, Database, FileUp, Network, ClipboardCheck, Star, X, File, CloudUpload, Trash2, Paperclip, FileIcon } from "lucide-react";
+import { Loader2, Download, Upload, CheckCircle2, Circle, LogOut, FileText, Shield, Database, FileUp, Network, ClipboardCheck, Star, X, File, CloudUpload, Trash2, Paperclip, FileIcon, Menu } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,11 +33,10 @@ import { WorkflowDiagram } from "@/components/WorkflowDiagram";
 // Section icons mapping
 const sectionIcons: Record<string, any> = {
   "org-info": FileText,
-  "overview-arch": Database,
-  "data-integration": Database,
-  "config-files": FileUp,
-  "connectivity": Network,
-  "dicom-validation": ClipboardCheck,
+  "architecture": Database,
+  "integration-workflows": Network,
+  "connectivity": FileUp,
+  "hl7-dicom": ClipboardCheck,
 };
 
 // Helper to get file extension icon color
@@ -61,149 +60,6 @@ function formatFileSize(bytes: number | null | undefined): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-// Compact file upload row component - matches user's approved mockup
-function CompactFileUploadRow({ questionId, questionText, questionNotes, isUploading, organizationSlug, onFileUpload, onFileDelete, templates }: {
-  questionId: string;
-  questionText: string;
-  questionNotes?: string;
-  isUploading: boolean;
-  organizationSlug: string;
-  onFileUpload: (questionId: string, file: File) => void;
-  onFileDelete: (fileId: number) => void;
-  templates?: Array<{ fileName: string; fileUrl: string; label: string }>;
-}) {
-  const [isDragging, setIsDragging] = useState(false);
-  const uploadInputRef = useRef<HTMLInputElement>(null);
-  const { data: files = [], isLoading } = trpc.intake.getUploadedFiles.useQuery(
-    { organizationSlug, questionId },
-    { enabled: !!organizationSlug }
-  );
-
-  const hasFiles = files.length > 0;
-
-  // Shorten the question text: take the part after the colon if present
-  const shortTitle = questionText.includes(':') 
-    ? questionText.split(':')[0].trim()
-    : questionText;
-  const description = questionText.includes(':')
-    ? questionText.split(':').slice(1).join(':').trim()
-    : questionNotes || '';
-
-  return (
-    <div
-      onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
-      onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); }}
-      onDrop={(e) => {
-        e.preventDefault(); e.stopPropagation(); setIsDragging(false);
-        const file = e.dataTransfer.files?.[0];
-        if (file) onFileUpload(questionId, file);
-      }}
-      className={`flex items-center gap-4 px-4 py-2 rounded-lg border transition-all ${
-        isDragging
-          ? 'border-purple-400 bg-purple-500/10'
-          : 'border-purple-500/20 bg-purple-900/10 hover:border-purple-500/30'
-      }`}
-    >
-      {/* Left: Title + description + file status */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="text-purple-400 font-bold text-xs">[{questionId}]</span>
-          <span className="text-sm font-semibold text-foreground">{shortTitle}</span>
-        </div>
-        {description && (
-          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{description}</p>
-        )}
-        {/* File status line */}
-        <div className="mt-1">
-          {isLoading ? (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Loader2 className="w-3 h-3 animate-spin" />
-              <span>Loading...</span>
-            </div>
-          ) : hasFiles ? (
-            <div className="flex flex-wrap items-center gap-2">
-              {files.map((file) => (
-                <div key={file.id} className="flex items-center gap-1.5">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/20 border border-green-500/30 text-xs font-medium text-green-400">
-                    <CheckCircle2 className="w-3 h-3" />
-                    Uploaded
-                  </span>
-                  <a
-                    href={file.fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-purple-300 hover:text-purple-200 truncate max-w-[180px]"
-                  >
-                    {file.fileName}
-                  </a>
-                  <Paperclip className="w-3 h-3 text-muted-foreground" />
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onFileDelete(file.id); }}
-                    className="text-xs text-muted-foreground hover:text-red-400 transition-colors"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <FileIcon className="w-3 h-3" />
-              <span>No file uploaded</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Right: Template download + Upload button */}
-      <div className="flex items-center gap-2 flex-shrink-0">
-        {templates && templates.length > 0 && templates.map((tmpl, idx) => (
-          <Button
-            key={idx}
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const link = document.createElement('a');
-              link.href = tmpl.fileUrl;
-              link.download = tmpl.fileName;
-              link.click();
-            }}
-            className="h-8 text-xs bg-transparent border-purple-500/30 text-purple-300 hover:bg-purple-500/10 hover:text-purple-200"
-          >
-            <Download className="w-3 h-3 mr-1" />
-            Template
-          </Button>
-        ))}
-        <Button
-          onClick={() => uploadInputRef.current?.click()}
-          disabled={isUploading}
-          className="h-8 px-4 bg-purple-600 hover:bg-purple-700 text-white font-medium text-sm"
-        >
-          {isUploading ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <>
-              <Upload className="w-4 h-4 mr-1.5" />
-              Upload
-            </>
-          )}
-        </Button>
-      </div>
-
-      <input
-        ref={uploadInputRef}
-        type="file"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) onFileUpload(questionId, file);
-          e.target.value = '';
-        }}
-        disabled={isUploading}
-      />
-    </div>
-  );
-}
 
 export default function IntakeNewRedesign() {
   const [, params] = useRoute("/org/:slug/intake");
@@ -220,6 +76,7 @@ export default function IntakeNewRedesign() {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hasNavigatedRef = useRef(false); // Track if we've already auto-navigated
   const { user } = useAuth();
@@ -470,16 +327,22 @@ export default function IntakeNewRedesign() {
     });
     
     const answered = visibleQuestions.filter(q => {
-      // Check if question has a text response
       const response = responses[q.id];
-      const hasResponse = Array.isArray(response) 
-        ? response.length > 0 
+
+      // contacts-table: complete if any contact field is non-empty
+      if (q.type === 'contacts-table') {
+        try {
+          const data = response ? (typeof response === 'string' ? JSON.parse(response) : response) : {};
+          return Object.values(data).some((row: any) =>
+            Object.values(row || {}).some((v: any) => v && String(v).trim() !== '')
+          );
+        } catch { return false; }
+      }
+
+      const hasResponse = Array.isArray(response)
+        ? response.length > 0
         : (response !== undefined && response !== '' && response !== null);
-      
-      // Check if question has uploaded files (for file upload questions)
       const hasUploadedFile = allUploadedFiles.some(f => f.questionId === q.id);
-      
-      // Question is answered if it has EITHER a response OR uploaded files
       return hasResponse || hasUploadedFile;
     }).length;
     
@@ -706,8 +569,7 @@ export default function IntakeNewRedesign() {
 
       case 'upload':
       case 'upload-download': {
-        // For config-files section, rendering is handled by the compact layout below.
-        // For other sections (e.g., vpn-connectivity), render inline upload.
+        // Render inline file upload for upload and upload-download questions.
         const inlineTemplates = dbTemplateMap.get(question.id) || [];
         const questionFiles = allUploadedFiles.filter(f => f.questionId === question.id);
         const uploadInputRef = { current: null as HTMLInputElement | null };
@@ -795,6 +657,71 @@ export default function IntakeNewRedesign() {
         );
       }
 
+      case 'contacts-table': {
+        const CONTACT_ROWS = [
+          { key: 'admin',        label: 'Administrative (A.1)' },
+          { key: 'it',           label: 'IT — Connectivity & Systems (A.2)' },
+          { key: 'it_post_prod', label: 'IT — Post-Production Support' },
+          { key: 'clinical',     label: 'Clinical / Technologist (A.3)' },
+          { key: 'radiologist',  label: 'Radiologist Champion (A.4)' },
+          { key: 'pm',           label: 'Project Manager (A.5)' },
+        ] as const;
+
+        type ContactKey = typeof CONTACT_ROWS[number]['key'];
+        type ContactRow = { name: string; phone: string; email: string };
+        type ContactsData = Record<ContactKey, ContactRow>;
+
+        const empty: ContactRow = { name: '', phone: '', email: '' };
+        let parsed: ContactsData;
+        try {
+          parsed = value ? (typeof value === 'string' ? JSON.parse(value) : value) : {} as ContactsData;
+        } catch { parsed = {} as ContactsData; }
+
+        const updateContact = (rowKey: ContactKey, field: keyof ContactRow, val: string) => {
+          const next = { ...parsed, [rowKey]: { ...empty, ...(parsed[rowKey] || {}), [field]: val } };
+          // Only persist if any field is non-empty; otherwise clear the response
+          const hasContent = Object.values(next).some(r =>
+            Object.values(r).some(v => v.trim() !== '')
+          );
+          setResponses(prev => ({ ...prev, [question.id]: hasContent ? JSON.stringify(next) : '' }));
+        };
+
+        return (
+          <div className="overflow-x-auto rounded-lg border border-border col-span-2">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/30">
+                <tr>
+                  <th className="text-left px-3 py-2 font-medium text-muted-foreground w-56">Contact</th>
+                  <th className="text-left px-3 py-2 font-medium text-muted-foreground">Name</th>
+                  <th className="text-left px-3 py-2 font-medium text-muted-foreground">Phone</th>
+                  <th className="text-left px-3 py-2 font-medium text-muted-foreground">Email</th>
+                </tr>
+              </thead>
+              <tbody>
+                {CONTACT_ROWS.map(({ key, label }, idx) => {
+                  const row: ContactRow = { ...empty, ...(parsed[key as ContactKey] || {}) };
+                  return (
+                    <tr key={key} className={idx % 2 === 1 ? 'bg-muted/10' : ''}>
+                      <td className="px-3 py-1.5 text-xs text-muted-foreground font-medium align-middle">{label}</td>
+                      {(['name', 'phone', 'email'] as (keyof ContactRow)[]).map(field => (
+                        <td key={field} className="px-2 py-1">
+                          <Input
+                            value={row[field]}
+                            onChange={e => updateContact(key as ContactKey, field, e.target.value)}
+                            placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
+                            className="h-8 text-sm !bg-white !text-black border-0 shadow-none focus-visible:ring-1 focus-visible:ring-primary/50"
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        );
+      }
+
       default:
         return null;
     }
@@ -821,13 +748,32 @@ export default function IntakeNewRedesign() {
         background: "linear-gradient(135deg, #1a0b2e 0%, #2d1b4e 50%, #1a0b2e 100%)"
       }}
     >
+      {/* Mobile sidebar backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Left Sidebar */}
-      <div className="w-80 bg-black border-r border-purple-500/20 flex flex-col">
+      <div className={`
+        fixed inset-y-0 left-0 z-50 w-80 bg-black border-r border-purple-500/20 flex flex-col
+        transition-transform duration-200
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        md:static md:translate-x-0 md:shrink-0
+      `}>
         {/* Logo - links back to dashboard */}
-        <div className="p-6 border-b">
+        <div className="p-6 border-b flex items-center justify-between">
           <Link href={`/org/${slug}`}>
             <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-10 cursor-pointer hover:opacity-80 transition-opacity" />
           </Link>
+          <button
+            className="md:hidden text-muted-foreground hover:text-white p-1"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Progress Overview Card */}
@@ -895,7 +841,7 @@ export default function IntakeNewRedesign() {
             return (
               <button
                 key={section.id}
-                onClick={() => setCurrentSection(section.id)}
+                onClick={() => { setCurrentSection(section.id); setSidebarOpen(false); }}
                 className={`w-full text-left p-3 rounded-lg transition-colors flex items-center gap-3 ${
                   isActive
                     ? 'bg-primary text-primary-foreground'
@@ -922,14 +868,22 @@ export default function IntakeNewRedesign() {
       <div className="flex-1 flex flex-col bg-transparent">
         {/* Header */}
         <header className="border-b border-purple-500/20 bg-black/40 backdrop-blur-sm">
-          <div className="px-8 py-4 flex items-center justify-between">
-            <h1 className="text-xl font-bold">{org?.clientName || 'Loading...'} - {org?.name || 'Loading...'}</h1>
-            <div className="flex items-center gap-2">
+          <div className="px-4 md:px-8 py-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <button
+                className="md:hidden text-muted-foreground hover:text-white flex-shrink-0"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu className="w-6 h-6" />
+              </button>
+              <h1 className="text-base md:text-xl font-bold truncate">{org?.clientName || 'Loading...'} — {org?.name || 'Loading...'}</h1>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleExportCSV}
-                className="gap-2"
+                className="gap-2 hidden sm:flex"
               >
                 <Download className="w-4 h-4" />
                 Export
@@ -938,7 +892,7 @@ export default function IntakeNewRedesign() {
                 variant="outline"
                 size="sm"
                 onClick={() => setImportDialogOpen(true)}
-                className="gap-2"
+                className="gap-2 hidden sm:flex"
               >
                 <Upload className="w-4 h-4" />
                 Import
@@ -985,29 +939,29 @@ export default function IntakeNewRedesign() {
         </header>
 
         {/* Overall Stats Banner */}
-        <div className="bg-gradient-to-r from-purple-900/20 to-purple-800/20 border-b border-purple-500/20 px-8 py-4">
-          <div className="max-w-6xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-8">
+        <div className="bg-gradient-to-r from-purple-900/20 to-purple-800/20 border-b border-purple-500/20 px-4 md:px-8 py-3 md:py-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-8">
               <div>
                 <div className="text-sm text-muted-foreground mb-1">Overall Progress</div>
                 <div className="flex items-center gap-3">
-                  <Progress 
+                  <Progress
                     value={(() => {
                       const totalSections = questionnaireSections.length;
                       const sectionProgressSum = questionnaireSections.reduce((sum, s) => sum + calculateSectionProgress(s), 0);
                       return Math.round(sectionProgressSum / totalSections);
-                    })()} 
-                    className="w-48 h-2"
+                    })()}
+                    className="w-36 md:w-48 h-2"
                   />
-                  <span className="text-lg font-bold">
+                  <span className="text-base md:text-lg font-bold">
                     {questionnaireSections.filter(s => calculateSectionProgress(s) === 100).length}/{questionnaireSections.length} sections
                   </span>
                 </div>
               </div>
-              <div className="h-12 w-px bg-border" />
+              <div className="hidden sm:block h-12 w-px bg-border" />
               <div>
                 <div className="text-sm text-muted-foreground mb-1">Files Uploaded</div>
-                <div className="text-lg font-bold">
+                <div className="text-base md:text-lg font-bold">
                   {fileCount} files
                 </div>
               </div>
@@ -1016,47 +970,28 @@ export default function IntakeNewRedesign() {
         </div>
 
         {/* Section Content */}
-        <div className={`flex-1 overflow-y-auto ${currentSection === 'config-files' ? 'p-3' : 'p-8'}`}>
+        <div className="flex-1 overflow-y-auto p-3 md:p-8">
           <Card className="max-w-6xl mx-auto bg-black/40 backdrop-blur-sm border-purple-500/20">
-            <div className={currentSection === 'config-files' ? 'p-4' : 'p-8'}>
+            <div className="p-4 md:p-8">
               {/* Section Header */}
-              <div className={currentSection === 'config-files' ? 'mb-3' : 'mb-6'}>
-                <div className={currentSection === 'config-files' ? 'flex items-center justify-between' : ''}>
-                  <h2 className={currentSection === 'config-files' ? 'text-xl font-bold' : 'text-2xl font-bold mb-2'}>{currentSectionData?.title}</h2>
-                  {currentSection === 'config-files' && currentSectionData?.questions && (
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-muted-foreground">
-                        {currentSectionData.questions.filter(q => !q.inactive && responses[q.id]).length || 0}/{currentSectionData.questions.filter(q => !q.inactive).length} uploaded
-                      </span>
-                      <Progress value={calculateSectionProgress(currentSectionData)} className="h-1.5 w-24" />
-                    </div>
-                  )}
-                </div>
-                {currentSection !== 'config-files' && currentSectionData?.description && (
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold mb-2">{currentSectionData?.title}</h2>
+                {currentSectionData?.description && (
                   <p className="text-sm mb-2 text-muted-foreground">
                     {currentSectionData.description}
                   </p>
                 )}
-                {/* Only show progress for standard sections with questions (not config-files, handled inline above) */}
-                {currentSection !== 'config-files' && currentSectionData?.questions && (
+                {currentSectionData?.questions && (
                   <>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span>
-                        {currentSectionData.questions.filter(q => responses[q.id]).length || 0}/{currentSectionData.questions.length} questions answered ({calculateSectionProgress(currentSectionData)}%)
+                        {Math.round(calculateSectionProgress(currentSectionData) / 100 * currentSectionData.questions.filter(q => !q.inactive).length)}/{currentSectionData.questions.filter(q => !q.inactive).length} questions answered ({calculateSectionProgress(currentSectionData)}%)
                       </span>
                     </div>
                     <Progress value={calculateSectionProgress(currentSectionData)} className="mt-3 h-2" />
                   </>
                 )}
-
-                {/* PHI Warning - compact inline for config-files, full for others */}
-                {(currentSectionData?.id === 'config-files') && (
-                  <p className="text-xs text-yellow-400/80 mt-1.5 flex items-center gap-1.5">
-                    <Shield className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span>De-identify all files before uploading. Do not share PHI or patient data.</span>
-                  </p>
-                )}
-                {(currentSectionData?.id === 'vpn-connectivity') && (
+                {currentSectionData?.id === 'connectivity' && (
                   <p className="text-xs text-yellow-400/80 mt-1.5 flex items-center gap-1.5">
                     <Shield className="w-3.5 h-3.5 flex-shrink-0" />
                     <span>De-identify all files before uploading. Do not share PHI or patient data.</span>
@@ -1112,30 +1047,8 @@ export default function IntakeNewRedesign() {
                     }}
                   />
                 </div>
-              ) : currentSection === 'config-files' ? (
-                /* Compact single-screen layout for Configuration Files */
-                <div className="space-y-1">
-                  {currentSectionData?.questions?.filter((q) => !q.inactive).map((question) => (
-                    <CompactFileUploadRow
-                      key={question.id}
-                      questionId={question.id}
-                      questionText={question.text}
-                      questionNotes={question.notes}
-                      isUploading={uploadingFiles.has(question.id)}
-                      organizationSlug={slug || ''}
-                      onFileUpload={handleFileUpload}
-                      onFileDelete={(fileId: number) => {
-                        deleteMutation.mutate({
-                          organizationSlug: slug || '',
-                          fileId,
-                        });
-                      }}
-                      templates={dbTemplateMap.get(question.id) || undefined}
-                    />
-                  ))}
-                </div>
               ) : (
-                <div className={`grid ${currentSection === 'data-integration' ? 'grid-cols-1' : 'grid-cols-2'} gap-x-8 gap-y-6`}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 md:gap-x-8 gap-y-5 md:gap-y-6">
                   {currentSectionData?.questions?.filter((question) => {
                     // Filter out inactive and hidden conditional questions
                     if (question.inactive) return false;
@@ -1148,17 +1061,17 @@ export default function IntakeNewRedesign() {
                     return true;
                   }).map((question, qIndex) => {
                     const isUnanswered = unansweredQuestions.has(question.id);
-                    const hasTemplate = (question.type === 'upload' || question.type === 'upload-download') && 
+                    const hasTemplate = (question.type === 'upload' || question.type === 'upload-download') &&
                       (dbTemplateMap.get(question.id) || []).length > 0;
-                    
+
                     const isUploadType = question.type === 'upload' || question.type === 'upload-download';
-                    
+
                     return (
-                      <div 
-                        key={question.id} 
+                      <div
+                        key={question.id}
                         data-question-id={question.id}
                         className={`${
-                          currentSection === 'data-integration' ? 'col-span-1' : (question.type === 'textarea' || isUploadType ? 'col-span-2' : 'col-span-1')
+                          question.type === 'textarea' || question.type === 'contacts-table' || isUploadType ? 'col-span-1 md:col-span-2' : 'col-span-1'
                         } ${
                           isUnanswered ? 'p-4 border-2 border-red-500 rounded-lg bg-red-500/5' : ''
                         } ${
@@ -1185,7 +1098,7 @@ export default function IntakeNewRedesign() {
               )}
 
               {/* Bottom Buttons */}
-              <div className={`flex items-center justify-between border-t ${currentSection === 'config-files' ? 'mt-2 pt-2' : 'mt-8 pt-6'}`}>
+              <div className="flex items-center justify-between border-t mt-8 pt-6">
                 <Button
                   variant="outline"
                   onClick={() => setLocation(`/org/${slug}`)}
