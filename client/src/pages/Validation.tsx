@@ -8,7 +8,7 @@ import { useState, useRef, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle2, Circle, AlertTriangle, ShieldCheck, ChevronDown } from "lucide-react";
+import { CheckCircle2, Circle, AlertTriangle, ShieldCheck, ChevronDown, MessageSquare } from "lucide-react";
 import { useRoute, Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 
@@ -210,7 +210,9 @@ export default function Validation() {
   });
 
   // Local optimistic state on top of server data
-  const [localOverrides, setLocalOverrides] = useState<Record<string, { actual?: string; status?: TestStatus; signOff?: string }>>({});
+  const [localOverrides, setLocalOverrides] = useState<Record<string, { actual?: string; status?: TestStatus; signOff?: string; notes?: string }>>({});
+  // Which rows have comments expanded
+  const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({});
 
   function getMerged(key: string) {
     const server = resultMap[key];
@@ -219,10 +221,11 @@ export default function Validation() {
       actual: local.actual !== undefined ? local.actual : (server?.actual ?? ""),
       status: (local.status ?? server?.status ?? "Not Tested") as TestStatus,
       signOff: local.signOff !== undefined ? local.signOff : (server?.signOff ?? ""),
+      notes: local.notes !== undefined ? local.notes : (server?.notes ?? ""),
     };
   }
 
-  function save(pIdx: number, tIdx: number, patch: { actual?: string; status?: TestStatus; signOff?: string }) {
+  function save(pIdx: number, tIdx: number, patch: { actual?: string; status?: TestStatus; signOff?: string; notes?: string }) {
     const key = testKey(pIdx, tIdx);
     const current = getMerged(key);
     const merged = { ...current, ...patch };
@@ -233,6 +236,7 @@ export default function Validation() {
       actual: merged.actual || undefined,
       status: merged.status,
       signOff: merged.signOff || undefined,
+      notes: merged.notes || undefined,
     });
   }
 
@@ -329,67 +333,96 @@ export default function Validation() {
 
                     <CardContent className="p-0">
                       {/* Column headers */}
-                      <div className="hidden md:grid grid-cols-[auto_1fr_1fr_1fr_110px_1fr] gap-2 px-5 py-2 text-xs text-muted-foreground uppercase tracking-wider border-b border-border/20 bg-muted/10">
+                      <div className="hidden md:grid grid-cols-[auto_1fr_1fr_1fr_110px_1fr_auto] gap-2 px-5 py-2 text-xs text-muted-foreground uppercase tracking-wider border-b border-border/20 bg-muted/10">
                         <div className="w-5" />
                         <div>Test</div>
                         <div>Expected</div>
                         <div>Actual <span className="normal-case font-normal opacity-60">(click to edit)</span></div>
                         <div className="text-center">Result</div>
                         <div>Sign-Off <span className="normal-case font-normal opacity-60">(click to edit)</span></div>
+                        <div className="w-6" />
                       </div>
 
                       {phase.tests.map((test, tIdx) => {
                         const key = testKey(pIdx, tIdx);
-                        const { actual, status, signOff } = getMerged(key);
+                        const { actual, status, signOff, notes } = getMerged(key);
+                        const notesOpen = !!expandedNotes[key];
 
                         return (
-                          <div
-                            key={tIdx}
-                            className={`grid grid-cols-1 md:grid-cols-[auto_1fr_1fr_1fr_110px_1fr] gap-2 items-center px-5 py-3 ${
-                              tIdx < phase.tests.length - 1 ? "border-b border-border/20" : ""
-                            } ${status === "Pass" ? "opacity-60" : ""}`}
-                          >
-                            {getStatusIcon(status)}
+                          <div key={tIdx} className={tIdx < phase.tests.length - 1 ? "border-b border-border/20" : ""}>
+                            {/* Main row */}
+                            <div
+                              className={`grid grid-cols-1 md:grid-cols-[auto_1fr_1fr_1fr_110px_1fr_auto] gap-2 items-center px-5 py-3 ${
+                                status === "Pass" ? "opacity-60" : ""
+                              }`}
+                            >
+                              {getStatusIcon(status)}
 
-                            {/* Mobile: stacked */}
-                            <div className="md:hidden space-y-2 ml-8">
-                              <p className="text-sm font-medium">{test.name}</p>
-                              <p className="text-xs text-muted-foreground">Expected: {test.expected}</p>
-                              <InlineEdit
-                                value={actual}
-                                placeholder="Enter actual result…"
-                                onCommit={(v) => save(pIdx, tIdx, { actual: v })}
-                              />
-                              <div className="flex items-center gap-2 flex-wrap">
+                              {/* Mobile: stacked */}
+                              <div className="md:hidden space-y-2 ml-8">
+                                <p className="text-sm font-medium">{test.name}</p>
+                                <p className="text-xs text-muted-foreground">Expected: {test.expected}</p>
+                                <InlineEdit
+                                  value={actual}
+                                  placeholder="Enter actual result…"
+                                  onCommit={(v) => save(pIdx, tIdx, { actual: v })}
+                                />
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <StatusPicker value={status} onChange={(s) => save(pIdx, tIdx, { status: s })} />
+                                  <InlineEdit
+                                    value={signOff}
+                                    placeholder="Sign-off…"
+                                    onCommit={(v) => save(pIdx, tIdx, { signOff: v })}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Desktop: grid columns */}
+                              <span className="hidden md:block text-sm font-medium">{test.name}</span>
+                              <span className="hidden md:block text-xs text-muted-foreground">{test.expected}</span>
+                              <span className="hidden md:block">
+                                <InlineEdit
+                                  value={actual}
+                                  placeholder="Enter actual result…"
+                                  onCommit={(v) => save(pIdx, tIdx, { actual: v })}
+                                />
+                              </span>
+                              <div className="hidden md:flex justify-center">
                                 <StatusPicker value={status} onChange={(s) => save(pIdx, tIdx, { status: s })} />
+                              </div>
+                              <span className="hidden md:block">
                                 <InlineEdit
                                   value={signOff}
-                                  placeholder="Sign-off…"
+                                  placeholder="Name, date…"
                                   onCommit={(v) => save(pIdx, tIdx, { signOff: v })}
                                 />
-                              </div>
+                              </span>
+
+                              {/* Comment toggle */}
+                              <button
+                                onClick={() => setExpandedNotes((prev) => ({ ...prev, [key]: !notesOpen }))}
+                                className={`hidden md:flex items-center justify-center w-6 h-6 rounded hover:bg-muted/50 transition-colors ${notesOpen || notes ? "text-primary" : "text-muted-foreground/40 hover:text-muted-foreground"}`}
+                                title={notesOpen ? "Hide comments" : "Add comment"}
+                              >
+                                <MessageSquare className="w-3.5 h-3.5" />
+                                {notes && !notesOpen && (
+                                  <span className="absolute w-1.5 h-1.5 bg-primary rounded-full -top-0.5 -right-0.5" />
+                                )}
+                              </button>
                             </div>
 
-                            {/* Desktop: grid columns */}
-                            <span className="hidden md:block text-sm font-medium">{test.name}</span>
-                            <span className="hidden md:block text-xs text-muted-foreground">{test.expected}</span>
-                            <span className="hidden md:block">
-                              <InlineEdit
-                                value={actual}
-                                placeholder="Enter actual result…"
-                                onCommit={(v) => save(pIdx, tIdx, { actual: v })}
-                              />
-                            </span>
-                            <div className="hidden md:flex justify-center">
-                              <StatusPicker value={status} onChange={(s) => save(pIdx, tIdx, { status: s })} />
-                            </div>
-                            <span className="hidden md:block">
-                              <InlineEdit
-                                value={signOff}
-                                placeholder="Name, date…"
-                                onCommit={(v) => save(pIdx, tIdx, { signOff: v })}
-                              />
-                            </span>
+                            {/* Expandable notes row */}
+                            {notesOpen && (
+                              <div className="px-5 pb-3 pt-0 bg-muted/10 border-t border-border/10">
+                                <textarea
+                                  className="w-full bg-transparent text-xs text-muted-foreground placeholder:text-muted-foreground/40 resize-none outline-none border-none focus:ring-0 py-2 min-h-[56px]"
+                                  placeholder="Add a comment or note about this test…"
+                                  value={notes}
+                                  onChange={(e) => setLocalOverrides((prev) => ({ ...prev, [key]: { ...getMerged(key), notes: e.target.value } }))}
+                                  onBlur={(e) => save(pIdx, tIdx, { notes: e.target.value })}
+                                />
+                              </div>
+                            )}
                           </div>
                         );
                       })}

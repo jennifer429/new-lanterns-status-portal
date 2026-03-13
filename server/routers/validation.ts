@@ -30,12 +30,13 @@ export const validationRouter = router({
         .where(eq(validationResults.organizationId, org.id));
 
       // Return as a plain object keyed by testKey for easy lookup on the client
-      const resultMap: Record<string, { actual: string | null; status: string; signOff: string | null; updatedBy: string | null; updatedAt: Date }> = {};
+      const resultMap: Record<string, { actual: string | null; status: string; signOff: string | null; notes: string | null; updatedBy: string | null; updatedAt: Date }> = {};
       for (const row of rows) {
         resultMap[row.testKey] = {
           actual: row.actual,
           status: row.status,
           signOff: row.signOff,
+          notes: row.notes,
           updatedBy: row.updatedBy,
           updatedAt: row.updatedAt,
         };
@@ -54,6 +55,7 @@ export const validationRouter = router({
         actual: z.string().optional(),
         status: z.enum(["Pass", "Fail", "Not Tested", "Pending"]),
         signOff: z.string().optional(),
+        notes: z.string().optional(),
         updatedBy: z.string().optional(),
       })
     )
@@ -84,6 +86,7 @@ export const validationRouter = router({
         actual: input.actual ?? null,
         status: input.status,
         signOff: input.signOff ?? null,
+        notes: input.notes ?? null,
         updatedBy: input.updatedBy ?? null,
       };
 

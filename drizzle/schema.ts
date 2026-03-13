@@ -334,6 +334,7 @@ export const validationResults = mysqlTable("validationResults", {
   actual: text("actual"),
   status: mysqlEnum("status", ["Pass", "Fail", "Not Tested", "Pending"]).default("Not Tested").notNull(),
   signOff: varchar("signOff", { length: 255 }),
+  notes: text("notes"),
   updatedBy: varchar("updatedBy", { length: 320 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
