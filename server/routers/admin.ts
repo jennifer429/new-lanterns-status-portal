@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { questions, questionOptions, organizations, users, clients, intakeFileAttachments, partnerTemplates, specifications, intakeResponses, systemVendorOptions } from "../../drizzle/schema";
+import { questions, questionOptions, organizations, users, clients, intakeFileAttachments, partnerTemplates, specifications, intakeResponses, systemVendorOptions, vendorAuditLog } from "../../drizzle/schema";
 import { eq, and, or, desc, inArray, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
@@ -1616,7 +1616,7 @@ export const adminRouter = router({
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
     const allOptions = await db.select().from(systemVendorOptions)
-      .orderBy(systemVendorOptions.systemType, systemVendorOptions.displayOrder);
+      .orderBy(systemVendorOptions.systemType, systemVendorOptions.vendorName);
 
     return allOptions;
   }),
@@ -1630,13 +1630,22 @@ export const adminRouter = router({
 
     const activeOptions = await db.select().from(systemVendorOptions)
       .where(eq(systemVendorOptions.isActive, 1))
-      .orderBy(systemVendorOptions.systemType, systemVendorOptions.displayOrder);
+      .orderBy(systemVendorOptions.systemType, systemVendorOptions.vendorName);
 
-    // Group by systemType
+    // Group by systemType (alphabetized, with "Other" always last)
     const grouped: Record<string, string[]> = {};
     for (const opt of activeOptions) {
       if (!grouped[opt.systemType]) grouped[opt.systemType] = [];
       grouped[opt.systemType].push(opt.vendorName);
+    }
+    // Ensure "Other" is always last in each group
+    for (const key of Object.keys(grouped)) {
+      const list = grouped[key];
+      const otherIdx = list.indexOf('Other');
+      if (otherIdx > -1) {
+        list.splice(otherIdx, 1);
+        list.push('Other');
+      }
     }
     return grouped;
   }),
@@ -1670,6 +1679,15 @@ export const adminRouter = router({
         createdBy: ctx.user.email || "unknown",
       });
 
+      // Audit log
+      await db.insert(vendorAuditLog).values({
+        action: 'add',
+        systemType: input.systemType,
+        vendorName: input.vendorName,
+        newValue: input.vendorName,
+        performedBy: ctx.user.email || "unknown",
+      });
+
       return { success: true };
     }),
 
@@ -1689,9 +1707,25 @@ export const adminRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
+      // Get current value for audit log
+      const [current] = await db.select().from(systemVendorOptions)
+        .where(eq(systemVendorOptions.id, input.id)).limit(1);
+
       await db.update(systemVendorOptions)
         .set({ vendorName: input.vendorName })
         .where(eq(systemVendorOptions.id, input.id));
+
+      // Audit log
+      if (current) {
+        await db.insert(vendorAuditLog).values({
+          action: 'update',
+          systemType: current.systemType,
+          vendorName: input.vendorName,
+          previousValue: current.vendorName,
+          newValue: input.vendorName,
+          performedBy: ctx.user.email || "unknown",
+        });
+      }
 
       return { success: true };
     }),
@@ -1712,9 +1746,25 @@ export const adminRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
+      // Get current value for audit log
+      const [currentToggle] = await db.select().from(systemVendorOptions)
+        .where(eq(systemVendorOptions.id, input.id)).limit(1);
+
       await db.update(systemVendorOptions)
         .set({ isActive: input.isActive })
         .where(eq(systemVendorOptions.id, input.id));
+
+      // Audit log
+      if (currentToggle) {
+        await db.insert(vendorAuditLog).values({
+          action: 'toggle',
+          systemType: currentToggle.systemType,
+          vendorName: currentToggle.vendorName,
+          previousValue: currentToggle.isActive === 1 ? 'active' : 'inactive',
+          newValue: input.isActive === 1 ? 'active' : 'inactive',
+          performedBy: ctx.user.email || "unknown",
+        });
+      }
 
       return { success: true };
     }),
@@ -1732,8 +1782,23 @@ export const adminRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
+      // Get current value for audit log
+      const [currentDel] = await db.select().from(systemVendorOptions)
+        .where(eq(systemVendorOptions.id, input.id)).limit(1);
+
       await db.delete(systemVendorOptions)
         .where(eq(systemVendorOptions.id, input.id));
+
+      // Audit log
+      if (currentDel) {
+        await db.insert(vendorAuditLog).values({
+          action: 'delete',
+          systemType: currentDel.systemType,
+          vendorName: currentDel.vendorName,
+          previousValue: currentDel.vendorName,
+          performedBy: ctx.user.email || "unknown",
+        });
+      }
 
       return { success: true };
     }),
@@ -1764,6 +1829,15 @@ export const adminRouter = router({
       if (values.length > 0) {
         await db.insert(systemVendorOptions).values(values);
       }
+
+      // Audit log
+      await db.insert(vendorAuditLog).values({
+        action: 'add_system_type',
+        systemType: input.systemType,
+        vendorName: null,
+        newValue: JSON.stringify(input.vendors),
+        performedBy: ctx.user.email || "unknown",
+      });
 
       return { success: true };
     }),
@@ -1812,6 +1886,38 @@ export const adminRouter = router({
 
       await db.insert(systemVendorOptions).values(values);
 
+      // Audit log
+      await db.insert(vendorAuditLog).values({
+        action: 'seed_defaults',
+        systemType: 'ALL',
+        vendorName: null,
+        newValue: JSON.stringify(Object.keys(defaults)),
+        performedBy: ctx.user.email || "system",
+      });
+
       return { success: true, message: "Seeded defaults", count: values.length };
+    }),
+
+  /**
+   * Get vendor audit log entries
+   */
+  getVendorAuditLog: protectedProcedure
+    .input(z.object({
+      limit: z.number().min(1).max(200).default(50),
+    }).optional())
+    .query(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const limit = input?.limit ?? 50;
+      const logs = await db.select().from(vendorAuditLog)
+        .orderBy(desc(vendorAuditLog.performedAt))
+        .limit(limit);
+
+      return logs;
     }),
 });

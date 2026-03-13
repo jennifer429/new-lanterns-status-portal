@@ -2035,3 +2035,13 @@
 - [x] Add public intake.getActiveVendorOptions endpoint for intake form
 - [x] Write vitest tests for vendor CRUD, access control, and public endpoint (12 tests)
 - [x] Both Platform-Admin and RadOne-Admin can edit vendor picklists
+
+## Alphabetize Vendor Lists & Audit Log (Mar 13, 2026)
+- [x] Alphabetize vendor lists in admin Vendor Picklists tab (sorted A-Z, "Other" always last)
+- [x] Alphabetize vendor lists in intake form Architecture dropdowns (sorted A-Z, "Other" always last)
+- [x] Alphabetize vendor lists in backend getActiveVendorOptions endpoint (both admin and intake routers)
+- [x] Create vendorAuditLog database table (action, systemType, vendorName, previousValue, newValue, performedBy)
+- [x] Log all vendor picklist changes (add, update, toggle, delete, addSystemType, seedDefaults)
+- [x] Build Change History UI in Vendor Picklists tab with color-coded actions
+- [x] Write vitest tests for audit logging and alphabetization (20 tests total, all passing)
+- [x] Add getVendorAuditLog admin endpoint with limit parameter

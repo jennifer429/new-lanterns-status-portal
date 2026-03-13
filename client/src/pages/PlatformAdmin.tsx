@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { transformSectionProgress } from "@/lib/adminUtils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -32,7 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp, AlertTriangle, AlertCircle, Info, Image, CheckSquare, BarChart3, Copy, Check, Clock, ChevronsUpDown, ChevronLeft, ChevronRight, Settings, ChevronDown, ListChecks, TestTube2 } from "lucide-react";
+import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp, AlertTriangle, AlertCircle, Info, Image, CheckSquare, BarChart3, Copy, Check, Clock, ChevronsUpDown, ChevronLeft, ChevronRight, Settings, ChevronDown, ListChecks, TestTube2, History } from "lucide-react";
 import { questionnaireSections } from "@shared/questionnaireData";
 import { TYPE_COLORS, type IntegrationSystem } from "@/components/IntegrationWorkflows";
 import { cn } from "@/lib/utils";
@@ -163,6 +163,7 @@ export default function PlatformAdmin() {
   const { data: inactiveTemplates, refetch: refetchInactiveTemplates } = trpc.admin.getInactiveTemplates.useQuery();
   const { data: specs, refetch: refetchSpecs } = trpc.admin.getSpecifications.useQuery();
   const { data: vendorOptions, refetch: refetchVendorOptions } = trpc.admin.getSystemVendorOptions.useQuery();
+  const { data: vendorAuditLogs, refetch: refetchVendorAuditLogs } = trpc.admin.getVendorAuditLog.useQuery({ limit: 100 });
 
   // Logout mutation
   const logoutMutation = trpc.auth.logout.useMutation({
@@ -639,6 +640,7 @@ export default function PlatformAdmin() {
       toast.success("Vendor added!");
       setNewVendorName("");
       refetchVendorOptions();
+      refetchVendorAuditLogs();
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to add vendor");
@@ -651,6 +653,7 @@ export default function PlatformAdmin() {
       setEditVendorId(null);
       setEditVendorName("");
       refetchVendorOptions();
+      refetchVendorAuditLogs();
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to update vendor");
@@ -661,6 +664,7 @@ export default function PlatformAdmin() {
     onSuccess: () => {
       toast.success("Vendor removed");
       refetchVendorOptions();
+      refetchVendorAuditLogs();
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to remove vendor");
@@ -670,6 +674,7 @@ export default function PlatformAdmin() {
   const toggleVendorMutation = trpc.admin.toggleVendorOption.useMutation({
     onSuccess: () => {
       refetchVendorOptions();
+      refetchVendorAuditLogs();
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to toggle vendor");
@@ -682,6 +687,7 @@ export default function PlatformAdmin() {
       setNewSystemTypeName("");
       setNewSystemTypeVendors("");
       refetchVendorOptions();
+      refetchVendorAuditLogs();
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to add system type");
@@ -692,19 +698,28 @@ export default function PlatformAdmin() {
     onSuccess: (result) => {
       toast.success(result.message || "Defaults seeded");
       refetchVendorOptions();
+      refetchVendorAuditLogs();
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to seed defaults");
     },
   });
 
-  // Group vendor options by system type for display
+  // Group vendor options by system type for display (alphabetized, "Other" last)
   const vendorsByType = useMemo(() => {
     if (!vendorOptions) return {} as Record<string, typeof vendorOptions>;
     const grouped: Record<string, typeof vendorOptions> = {};
     for (const opt of vendorOptions) {
       if (!grouped[opt.systemType]) grouped[opt.systemType] = [];
       grouped[opt.systemType].push(opt);
+    }
+    // Sort each group alphabetically, keeping "Other" last
+    for (const key of Object.keys(grouped)) {
+      grouped[key].sort((a, b) => {
+        if (a.vendorName === 'Other') return 1;
+        if (b.vendorName === 'Other') return -1;
+        return a.vendorName.localeCompare(b.vendorName);
+      });
     }
     return grouped;
   }, [vendorOptions]);
@@ -2685,9 +2700,9 @@ export default function PlatformAdmin() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {(vendors || []).sort((a, b) => a.displayOrder - b.displayOrder).map((vendor) => (
+                            {(vendors || []).map((vendor, idx) => (
                               <TableRow key={vendor.id} className={cn(!vendor.isActive && "opacity-50")}>
-                                <TableCell className="text-muted-foreground text-sm">{vendor.displayOrder}</TableCell>
+                                <TableCell className="text-muted-foreground text-sm">{idx + 1}</TableCell>
                                 <TableCell>
                                   {editVendorId === vendor.id ? (
                                     <div className="flex gap-2 items-center">
@@ -2771,6 +2786,98 @@ export default function PlatformAdmin() {
                 ))}
               </div>
             )}
+
+            {/* Audit Log Section */}
+            <Card className="mt-8">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <History className="w-5 h-5" />
+                  Change History
+                </CardTitle>
+                <CardDescription>Recent changes to vendor picklists</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {!vendorAuditLogs || vendorAuditLogs.length === 0 ? (
+                  <p className="text-muted-foreground text-sm py-4 text-center">No changes recorded yet.</p>
+                ) : (
+                  <div className="rounded-md border max-h-[400px] overflow-y-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-36">Date</TableHead>
+                          <TableHead className="w-28">Action</TableHead>
+                          <TableHead>System Type</TableHead>
+                          <TableHead>Details</TableHead>
+                          <TableHead className="w-48">Changed By</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {vendorAuditLogs.map((log) => {
+                          const actionLabel: Record<string, string> = {
+                            add: 'Added',
+                            update: 'Renamed',
+                            toggle: 'Toggled',
+                            delete: 'Deleted',
+                            add_system_type: 'New Type',
+                            seed_defaults: 'Seeded',
+                          };
+                          const actionColor: Record<string, string> = {
+                            add: 'text-green-400',
+                            update: 'text-blue-400',
+                            toggle: 'text-yellow-400',
+                            delete: 'text-red-400',
+                            add_system_type: 'text-purple-400',
+                            seed_defaults: 'text-muted-foreground',
+                          };
+
+                          let details = '';
+                          if (log.action === 'add') {
+                            details = `Added "${log.vendorName}"`;
+                          } else if (log.action === 'update') {
+                            details = `"${log.previousValue}" → "${log.newValue}"`;
+                          } else if (log.action === 'toggle') {
+                            details = `"${log.vendorName}" ${log.newValue === 'active' ? 'activated' : 'deactivated'}`;
+                          } else if (log.action === 'delete') {
+                            details = `Removed "${log.vendorName}"`;
+                          } else if (log.action === 'add_system_type') {
+                            try {
+                              const vendors = JSON.parse(log.newValue || '[]');
+                              details = `Added ${vendors.length} vendors: ${vendors.join(', ')}`;
+                            } catch {
+                              details = log.newValue || '';
+                            }
+                          } else if (log.action === 'seed_defaults') {
+                            try {
+                              const types = JSON.parse(log.newValue || '[]');
+                              details = `Seeded ${types.length} system types`;
+                            } catch {
+                              details = 'Seeded default vendors';
+                            }
+                          }
+
+                          return (
+                            <TableRow key={log.id}>
+                              <TableCell className="text-xs text-muted-foreground">
+                                {new Date(log.performedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}{' '}
+                                {new Date(log.performedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                              </TableCell>
+                              <TableCell>
+                                <span className={cn('text-xs font-medium', actionColor[log.action] || 'text-muted-foreground')}>
+                                  {actionLabel[log.action] || log.action}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-sm">{log.systemType}</TableCell>
+                              <TableCell className="text-sm max-w-[300px] truncate" title={details}>{details}</TableCell>
+                              <TableCell className="text-xs text-muted-foreground">{log.performedBy}</TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </>
         )}
       </div>

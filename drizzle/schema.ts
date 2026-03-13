@@ -339,3 +339,21 @@ export const systemVendorOptions = mysqlTable("systemVendorOptions", {
 
 export type SystemVendorOption = typeof systemVendorOptions.$inferSelect;
 export type InsertSystemVendorOption = typeof systemVendorOptions.$inferInsert;
+
+/**
+ * Audit log for vendor picklist changes.
+ * Tracks who changed what, when, and the before/after values.
+ */
+export const vendorAuditLog = mysqlTable("vendorAuditLog", {
+  id: int("id").autoincrement().primaryKey(),
+  action: varchar("action", { length: 50 }).notNull(), // 'add', 'update', 'toggle', 'delete', 'add_system_type', 'seed_defaults'
+  systemType: varchar("systemType", { length: 100 }).notNull(),
+  vendorName: varchar("vendorName", { length: 255 }), // The vendor affected (null for bulk ops like seed)
+  previousValue: text("previousValue"), // JSON or plain text of previous state
+  newValue: text("newValue"), // JSON or plain text of new state
+  performedBy: varchar("performedBy", { length: 320 }).notNull(), // Email of admin who made the change
+  performedAt: timestamp("performedAt").defaultNow().notNull(),
+});
+
+export type VendorAuditLog = typeof vendorAuditLog.$inferSelect;
+export type InsertVendorAuditLog = typeof vendorAuditLog.$inferInsert;

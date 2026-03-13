@@ -309,4 +309,164 @@ describe("Vendor Options - Public Intake Endpoint", () => {
       await adminCaller.admin.deleteVendorOption({ id: c.id });
     }
   });
+
+  it("getActiveVendorOptions returns vendors alphabetized with Other last", async () => {
+    const adminCtx = createAdminContext();
+    const adminCaller = appRouter.createCaller(adminCtx);
+
+    const testSystemType = "AlphaTest_" + Date.now();
+
+    // Add vendors in non-alphabetical order, including "Other"
+    await adminCaller.admin.addVendorOption({ systemType: testSystemType, vendorName: "Zebra" });
+    await adminCaller.admin.addVendorOption({ systemType: testSystemType, vendorName: "Alpha" });
+    await adminCaller.admin.addVendorOption({ systemType: testSystemType, vendorName: "Other" });
+    await adminCaller.admin.addVendorOption({ systemType: testSystemType, vendorName: "Middle" });
+
+    const result = await adminCaller.intake.getActiveVendorOptions();
+    const vendors = result[testSystemType];
+    expect(vendors).toBeDefined();
+    expect(vendors!.length).toBe(4);
+
+    // Should be alphabetized with Other last
+    expect(vendors![0]).toBe("Alpha");
+    expect(vendors![1]).toBe("Middle");
+    expect(vendors![2]).toBe("Zebra");
+    expect(vendors![3]).toBe("Other");
+
+    // Clean up
+    const allOptions = await adminCaller.admin.getSystemVendorOptions();
+    const toClean = allOptions.filter((o) => o.systemType === testSystemType);
+    for (const c of toClean) {
+      await adminCaller.admin.deleteVendorOption({ id: c.id });
+    }
+  });
+});
+
+describe("Vendor Options - Audit Log", () => {
+  const adminCtx = createAdminContext();
+  const adminCaller = appRouter.createCaller(adminCtx);
+
+  it("getVendorAuditLog returns an array of log entries", async () => {
+    const result = await adminCaller.admin.getVendorAuditLog({ limit: 10 });
+    expect(Array.isArray(result)).toBe(true);
+  });
+
+  it("addVendorOption creates an audit log entry", async () => {
+    const testSystemType = "AuditAdd_" + Date.now();
+    const vendorName = "AuditTestVendor_" + Date.now();
+
+    await adminCaller.admin.addVendorOption({ systemType: testSystemType, vendorName });
+
+    const logs = await adminCaller.admin.getVendorAuditLog({ limit: 5 });
+    const addLog = logs.find(
+      (l) => l.action === "add" && l.systemType === testSystemType && l.vendorName === vendorName
+    );
+    expect(addLog).toBeDefined();
+    expect(addLog!.performedBy).toBe("admin@newlantern.ai");
+    expect(addLog!.newValue).toBe(vendorName);
+
+    // Clean up
+    const allOptions = await adminCaller.admin.getSystemVendorOptions();
+    const created = allOptions.find((o) => o.systemType === testSystemType && o.vendorName === vendorName);
+    if (created) await adminCaller.admin.deleteVendorOption({ id: created.id });
+  });
+
+  it("updateVendorOption creates an audit log entry with before/after", async () => {
+    const testSystemType = "AuditUpdate_" + Date.now();
+    const originalName = "OrigName_" + Date.now();
+    const newName = "NewName_" + Date.now();
+
+    await adminCaller.admin.addVendorOption({ systemType: testSystemType, vendorName: originalName });
+
+    const allOptions = await adminCaller.admin.getSystemVendorOptions();
+    const created = allOptions.find((o) => o.systemType === testSystemType && o.vendorName === originalName);
+    expect(created).toBeDefined();
+
+    await adminCaller.admin.updateVendorOption({ id: created!.id, vendorName: newName });
+
+    const logs = await adminCaller.admin.getVendorAuditLog({ limit: 5 });
+    const updateLog = logs.find(
+      (l) => l.action === "update" && l.systemType === testSystemType
+    );
+    expect(updateLog).toBeDefined();
+    expect(updateLog!.previousValue).toBe(originalName);
+    expect(updateLog!.newValue).toBe(newName);
+
+    // Clean up
+    await adminCaller.admin.deleteVendorOption({ id: created!.id });
+  });
+
+  it("toggleVendorOption creates an audit log entry", async () => {
+    const testSystemType = "AuditToggle_" + Date.now();
+    const vendorName = "ToggleAudit_" + Date.now();
+
+    await adminCaller.admin.addVendorOption({ systemType: testSystemType, vendorName });
+
+    const allOptions = await adminCaller.admin.getSystemVendorOptions();
+    const created = allOptions.find((o) => o.systemType === testSystemType && o.vendorName === vendorName);
+    expect(created).toBeDefined();
+
+    await adminCaller.admin.toggleVendorOption({ id: created!.id, isActive: 0 });
+
+    const logs = await adminCaller.admin.getVendorAuditLog({ limit: 5 });
+    const toggleLog = logs.find(
+      (l) => l.action === "toggle" && l.systemType === testSystemType && l.vendorName === vendorName
+    );
+    expect(toggleLog).toBeDefined();
+    expect(toggleLog!.previousValue).toBe("active");
+    expect(toggleLog!.newValue).toBe("inactive");
+
+    // Clean up
+    await adminCaller.admin.deleteVendorOption({ id: created!.id });
+  });
+
+  it("deleteVendorOption creates an audit log entry", async () => {
+    const testSystemType = "AuditDelete_" + Date.now();
+    const vendorName = "DeleteAudit_" + Date.now();
+
+    await adminCaller.admin.addVendorOption({ systemType: testSystemType, vendorName });
+
+    const allOptions = await adminCaller.admin.getSystemVendorOptions();
+    const created = allOptions.find((o) => o.systemType === testSystemType && o.vendorName === vendorName);
+    expect(created).toBeDefined();
+
+    await adminCaller.admin.deleteVendorOption({ id: created!.id });
+
+    const logs = await adminCaller.admin.getVendorAuditLog({ limit: 5 });
+    const deleteLog = logs.find(
+      (l) => l.action === "delete" && l.systemType === testSystemType && l.vendorName === vendorName
+    );
+    expect(deleteLog).toBeDefined();
+    expect(deleteLog!.previousValue).toBe(vendorName);
+  });
+
+  it("addSystemType creates an audit log entry", async () => {
+    const testSystemType = "AuditBulk_" + Date.now();
+    const vendors = ["V1", "V2", "V3"];
+
+    await adminCaller.admin.addSystemType({ systemType: testSystemType, vendors });
+
+    const logs = await adminCaller.admin.getVendorAuditLog({ limit: 5 });
+    const bulkLog = logs.find(
+      (l) => l.action === "add_system_type" && l.systemType === testSystemType
+    );
+    expect(bulkLog).toBeDefined();
+    expect(bulkLog!.newValue).toBe(JSON.stringify(vendors));
+
+    // Clean up
+    const allOptions = await adminCaller.admin.getSystemVendorOptions();
+    const toClean = allOptions.filter((o) => o.systemType === testSystemType);
+    for (const c of toClean) {
+      await adminCaller.admin.deleteVendorOption({ id: c.id });
+    }
+  });
+
+  it("regular user cannot access audit log", async () => {
+    const userCtx = createRegularUserContext();
+    const userCaller = appRouter.createCaller(userCtx);
+
+    await expect(
+      userCaller.admin.getVendorAuditLog({ limit: 10 })
+    ).rejects.toThrow("Admin access required");
+  });
 });

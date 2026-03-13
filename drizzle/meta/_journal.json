@@ -162,6 +162,13 @@
       "when": 1773426766992,
       "tag": "0022_lethal_bedlam",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "5",
+      "when": 1773427692220,
+      "tag": "0023_perfect_dragon_man",
+      "breakpoints": true
     }
   ]
 }

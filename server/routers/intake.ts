@@ -1003,13 +1003,22 @@ export const intakeRouter = router({
     const { systemVendorOptions } = await import("../../drizzle/schema");
     const activeOptions = await db.select().from(systemVendorOptions)
       .where(eq(systemVendorOptions.isActive, 1))
-      .orderBy(systemVendorOptions.systemType, systemVendorOptions.displayOrder);
+      .orderBy(systemVendorOptions.systemType, systemVendorOptions.vendorName);
 
-    // Group by systemType
+    // Group by systemType (alphabetized, with "Other" always last)
     const grouped: Record<string, string[]> = {};
     for (const opt of activeOptions) {
       if (!grouped[opt.systemType]) grouped[opt.systemType] = [];
       grouped[opt.systemType].push(opt.vendorName);
+    }
+    // Ensure "Other" is always last in each group
+    for (const key of Object.keys(grouped)) {
+      const list = grouped[key];
+      const otherIdx = list.indexOf('Other');
+      if (otherIdx > -1) {
+        list.splice(otherIdx, 1);
+        list.push('Other');
+      }
     }
     return grouped;
   }),
