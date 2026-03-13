@@ -2056,3 +2056,10 @@
 - [x] Update column headers with guidance (Questionnaire → "Start here", Testing → "Validate", Implementation → "Plan")
 - [x] Add muted/opacity for locked phases (validation & implementation muted at 40% if questionnaire incomplete)
 - [x] Remove View column since workflow columns are the actions
+
+## Implementation Dashboard UI Fixes (Mar 13, 2026)
+- [x] Issue 1: Increase font sizes (text-sm), tighter column widths, consistent font sizing throughout
+- [x] Issue 2: Clicking site name navigates to /org/{slug} (org dashboard)
+- [x] Issue 3: Questionnaire column has bigger progress dots (w-3 h-3 rounded-full), hover highlight, clickable appearance, no grayed out text
+- [x] Issue 4: Testing column shows 0/4 section counts with progress dots, consistent Start/Continue/View buttons, collapsible sections on Validation page, consistent font color/size (text-foreground)
+- [x] Issue 5: Implementation page is now a dedicated checklist-only view (removed sidebar/timeline), collapsible sections, links directly from dashboard
