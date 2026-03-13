@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Download, Upload, CheckCircle2, Circle, LogOut, FileText, Shield, Database, FileUp, Network, ClipboardCheck, Star, X, File, CloudUpload, Trash2, Paperclip, FileIcon, Menu, Pencil, Plus, RefreshCw } from "lucide-react";
+import { Loader2, Download, Upload, CheckCircle2, Circle, LogOut, FileText, Shield, FileUp, Network, ClipboardCheck, Star, X, File, CloudUpload, Trash2, Paperclip, FileIcon, Menu, Pencil, Plus, RefreshCw } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,11 +29,12 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { questionnaireSections, type Question, type Section } from "@shared/questionnaireData";
 import { toast } from "sonner";
 import { WorkflowDiagram } from "@/components/WorkflowDiagram";
+import { IntegrationWorkflows } from "@/components/IntegrationWorkflows";
+import { ConnectivityTable, type ConnectivityRow } from "@/components/ConnectivityTable";
 
 // Section icons mapping
 const sectionIcons: Record<string, any> = {
   "org-info": FileText,
-  "architecture": Database,
   "integration-workflows": Network,
   "connectivity": FileUp,
   "hl7-dicom": ClipboardCheck,
@@ -559,6 +560,51 @@ export default function IntakeNewRedesign() {
 
   // Calculate section progress (including uploaded files)
   const calculateSectionProgress = (section: Section) => {
+    // Handle integration-workflows section
+    if (section.type === 'integration-workflows') {
+      // Check IW.* keys in responses for completion
+      const diagramDone = !!responses['IW.diagram'];
+      const systemsRaw = responses['IW.systems'];
+      let systemsDone = false;
+      try {
+        const systems = typeof systemsRaw === 'string' ? JSON.parse(systemsRaw) : systemsRaw;
+        systemsDone = Array.isArray(systems) && systems.length > 0;
+      } catch { systemsDone = false; }
+      const wfKeys = ['orders', 'images', 'priors', 'reports'] as const;
+      const completedWorkflows = wfKeys.filter(wf => {
+        const v = responses[`IW.${wf}_description`];
+        return v && String(v).trim().length > 0;
+      }).length;
+      const totalComplete = (diagramDone ? 1 : 0) + (systemsDone ? 1 : 0) + completedWorkflows;
+      return Math.round((totalComplete / 6) * 100);
+    }
+
+    // Handle connectivity-table section
+    if (section.type === 'connectivity-table') {
+      // Count: D.1 answered + endpoints table has rows + file uploads
+      let total = 0;
+      let answered = 0;
+      // Standard questions (D.1, etc.)
+      const stdQuestions = (section.questions || []).filter(q => q.type !== 'upload' && q.type !== 'upload-download' && !q.inactive);
+      total += stdQuestions.length;
+      answered += stdQuestions.filter(q => {
+        const r = responses[q.id];
+        return r !== undefined && r !== '' && r !== null;
+      }).length;
+      // Endpoints table
+      total += 1;
+      try {
+        const v = responses['CONN.endpoints'];
+        const rows = v ? (typeof v === 'string' ? JSON.parse(v) : v) : [];
+        if (Array.isArray(rows) && rows.length > 0 && rows.some((r: any) => r.ip || r.sourceSystem)) answered += 1;
+      } catch { /* empty */ }
+      // File uploads
+      const uploadQuestions = (section.questions || []).filter(q => q.type === 'upload' || q.type === 'upload-download');
+      total += uploadQuestions.length;
+      answered += uploadQuestions.filter(q => allUploadedFiles.some(f => f.questionId === q.id)).length;
+      return total > 0 ? Math.round((answered / total) * 100) : 100;
+    }
+
     // Handle workflow sections differently
     if (section.type === 'workflow') {
       const configKey = section.id + '_config';
@@ -1272,6 +1318,35 @@ export default function IntakeNewRedesign() {
         <div className="flex-1 overflow-y-auto p-3 md:p-8">
           <Card className="max-w-6xl mx-auto bg-black/40 backdrop-blur-sm border-purple-500/20">
             <div className="p-4 md:p-8">
+              {/* Integration Workflows section — renders its own header */}
+              {currentSectionData?.type === 'integration-workflows' ? (
+                <IntegrationWorkflows
+                  values={responses}
+                  onChange={(key, value) => {
+                    setResponses(prev => ({ ...prev, [key]: value }));
+                    // Persist to DB
+                    if (slug && user?.email) {
+                      saveMutation.mutate({
+                        organizationSlug: slug,
+                        questionId: key,
+                        response: typeof value === 'object' ? JSON.stringify(value) : String(value),
+                        userEmail: user.email,
+                      });
+                    }
+                  }}
+                  organizationId={org?.id ?? 0}
+                  onBack={() => setLocation(`/org/${slug}`)}
+                  onContinue={() => {
+                    const idx = questionnaireSections.findIndex(s => s.id === currentSection);
+                    if (idx < questionnaireSections.length - 1) {
+                      setCurrentSection(questionnaireSections[idx + 1].id);
+                    } else {
+                      setShowFeedbackModal(true);
+                    }
+                  }}
+                />
+              ) : (
+              <>
               {/* Section Header */}
               <div className="mb-6">
                 <h2 className="text-2xl font-bold mb-2">{currentSectionData?.title}</h2>
@@ -1304,7 +1379,7 @@ export default function IntakeNewRedesign() {
                 )}
               </div>
 
-              {/* Questions Grid or Workflow Diagram or Architecture Overview */}
+              {/* Questions Grid / Workflow Diagram / Architecture Overview / Connectivity Table */}
               {currentSectionData?.type === 'architecture-overview' ? (
                 <ArchitectureOverview
                   slug={slug || ''}
@@ -1320,6 +1395,86 @@ export default function IntakeNewRedesign() {
                     }
                   }}
                 />
+              ) : currentSectionData?.type === 'connectivity-table' ? (
+                <div className="mt-6 space-y-8">
+                  {/* Render D.1 and other standard questions first */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 md:gap-x-8 gap-y-5 md:gap-y-6">
+                    {currentSectionData?.questions?.filter((question) => {
+                      if (question.inactive) return false;
+                      if (question.type === 'upload' || question.type === 'upload-download') return false;
+                      if (question.conditionalOn) {
+                        const parentResponse = responses[question.conditionalOn.questionId];
+                        if (parentResponse !== question.conditionalOn.value) return false;
+                      }
+                      return true;
+                    }).map((question) => (
+                      <div key={question.id} className={question.type === 'textarea' ? 'col-span-1 md:col-span-2' : 'col-span-1'}>
+                        <Label className="mb-3 block text-base">
+                          <span className="text-purple-400 font-bold mr-2">[{question.id}]</span>
+                          {question.text}
+                        </Label>
+                        {renderQuestion(question)}
+                        {question.notes && <p className="text-xs text-muted-foreground mt-1">{question.notes}</p>}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Endpoint Table */}
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-semibold">Network Endpoints</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Add each network endpoint that will carry traffic between your systems and New Lantern. Include DICOM, HL7, and any other connections for both test and production environments.
+                    </p>
+                    <ConnectivityTable
+                      rows={(() => {
+                        try {
+                          const v = responses['CONN.endpoints'];
+                          if (!v) return [];
+                          return typeof v === 'string' ? JSON.parse(v) : v;
+                        } catch { return []; }
+                      })()}
+                      systems={(() => {
+                        try {
+                          const v = responses['IW.systems'];
+                          if (!v) return [];
+                          return typeof v === 'string' ? JSON.parse(v) : v;
+                        } catch { return []; }
+                      })()}
+                      onChange={(rows) => {
+                        setResponses(prev => ({ ...prev, ['CONN.endpoints']: rows }));
+                        if (slug && user?.email) {
+                          saveMutation.mutate({
+                            organizationSlug: slug,
+                            questionId: 'CONN.endpoints',
+                            response: JSON.stringify(rows),
+                            userEmail: user.email,
+                          });
+                        }
+                      }}
+                    />
+                  </div>
+
+                  {/* File uploads section */}
+                  <div className="space-y-5">
+                    <h3 className="text-lg font-semibold">Configuration File Uploads</h3>
+                    <p className="text-xs text-yellow-400/80 flex items-center gap-1.5">
+                      <Shield className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span>De-identify all files before uploading. Do not share PHI or patient data.</span>
+                    </p>
+                    <div className="grid grid-cols-1 gap-y-5">
+                      {currentSectionData?.questions?.filter(q => q.type === 'upload' || q.type === 'upload-download').map((question) => (
+                        <div key={question.id} className="p-4 rounded-lg bg-purple-900/10 border border-purple-500/15 col-span-1">
+                          <Label className="mb-3 block text-base">
+                            <span className="text-purple-400 font-bold mr-2">[{question.id}]</span>
+                            {question.text}
+                          </Label>
+                          {question.notes && <p className="text-xs text-muted-foreground mb-3">{question.notes}</p>}
+                          {renderQuestion(question)}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               ) : currentSectionData?.type === 'workflow' ? (
                 <div className="mt-6">
                   <WorkflowDiagram 
@@ -1560,6 +1715,8 @@ export default function IntakeNewRedesign() {
                   {isLastSection ? 'Complete' : 'Save & Continue'}
                 </Button>
               </div>
+              </>
+              )}
             </div>
           </Card>
         </div>

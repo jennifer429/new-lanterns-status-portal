@@ -16,7 +16,6 @@ import IntakeComplete from "./pages/IntakeComplete";
 import CreateOrganization from "./pages/CreateOrganization";
 import Implementation from "./pages/Implementation";
 import Validation from "./pages/Validation";
-import Architecture from "./pages/Architecture";
 import Workflows from "./pages/Workflows";
 
 function Router() {
@@ -58,7 +57,6 @@ function Router() {
       <Route path="/org/:slug/intake" component={IntakeNewRedesign} />
       <Route path="/org/:slug/implement" component={Implementation} />
       <Route path="/org/:slug/validation" component={Validation} />
-      <Route path="/org/:slug/architecture" component={Architecture} />
       <Route path="/org/:slug/workflows" component={Workflows} />
       <Route path="/org/:slug/complete" component={IntakeComplete} />
       <Route path="/org/:slug/tasks" component={Tasks} />

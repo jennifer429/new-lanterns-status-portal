@@ -32,7 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Activity, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp, AlertTriangle, AlertCircle, Info, Image, CheckSquare, BarChart3, Copy, Check, Clock, ChevronsUpDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp, AlertTriangle, AlertCircle, Info, Image, CheckSquare, BarChart3, Copy, Check, Clock, ChevronsUpDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { questionnaireSections } from "@shared/questionnaireData";
 import { TYPE_COLORS, type IntegrationSystem } from "@/components/IntegrationWorkflows";
 import { cn } from "@/lib/utils";
@@ -859,7 +859,6 @@ export default function PlatformAdmin() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <Activity className="w-4 h-4" />
               Connectivity Dashboard
               {activeTab === "prod-dashboard" && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
@@ -3166,18 +3165,6 @@ function ConnectivityMatrix({ orgs }: { orgs: ConnectivityOrg[] }) {
       {orgs.length > 0 && (
         <div className="mb-4 flex items-center gap-3">
           <span className="text-xs text-muted-foreground font-medium shrink-0">Sites:</span>
-          <button
-            onClick={() => setVisibleOrgIds(new Set(orgs.map(o => o.id)))}
-            className="text-xs px-2.5 py-1 rounded border border-border bg-card hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
-          >
-            All
-          </button>
-          <button
-            onClick={() => setVisibleOrgIds(new Set())}
-            className="text-xs px-2.5 py-1 rounded border border-border bg-card hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
-          >
-            None
-          </button>
           <Popover>
             <PopoverTrigger asChild>
               <button className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-border bg-card text-sm hover:bg-muted/50 transition-colors min-w-[160px] justify-between">
@@ -3226,32 +3213,7 @@ function ConnectivityMatrix({ orgs }: { orgs: ConnectivityOrg[] }) {
         </div>
       )}
 
-      {/* Integration Workflows thumbnails */}
-      {filteredOrgs.length > 0 && (
-        <div className="mb-5">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Workflow Snapshots</p>
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {filteredOrgs.map(org => {
-              const orgData = lookup[org.id] ?? {};
-              const wfCount = ['orders', 'images', 'priors', 'reports'].filter(wf =>
-                (orgData[`IW.${wf}_description`]?.response ?? '').trim().length > 0
-              ).length;
-              return (
-                <div key={org.id} className="flex-shrink-0 rounded-lg border bg-card px-3 py-2 min-w-[120px] max-w-[180px]">
-                  <p className="font-medium text-xs truncate leading-tight">{org.name}</p>
-                  {org.partnerName && <p className="text-[10px] text-muted-foreground truncate leading-tight">{org.partnerName}</p>}
-                  <div className="flex items-center gap-0.5 mt-1.5">
-                    {[0, 1, 2, 3].map(i => (
-                      <div key={i} className={cn('h-1 flex-1 rounded-full', i < wfCount ? 'bg-primary' : 'bg-muted')} />
-                    ))}
-                    <span className="text-[10px] text-muted-foreground ml-1.5 shrink-0">{wfCount}/4</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+
 
       {orgs.length === 0 ? (
         <p className="text-muted-foreground py-12 text-center">No organizations accessible.</p>

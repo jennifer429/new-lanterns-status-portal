@@ -3,19 +3,19 @@ import { questionnaireSections } from '../shared/questionnaireData';
 
 describe('VPN Template Configuration', () => {
   it('should have VPN question E.1 as upload-download type', () => {
-    // Find the VPN & Connectivity section
-    const vpnSection = questionnaireSections.find(s => s.id === 'vpn-connectivity');
-    expect(vpnSection).toBeDefined();
+    // Find the Connectivity section (which now contains VPN questions)
+    const connSection = questionnaireSections.find(s => s.id === 'connectivity');
+    expect(connSection).toBeDefined();
     
     // Find the VPN question (E.1)
-    const vpnQuestion = vpnSection?.questions?.find(q => q.id === 'E.1');
+    const vpnQuestion = connSection?.questions?.find(q => q.id === 'E.1');
     expect(vpnQuestion).toBeDefined();
     expect(vpnQuestion?.type).toBe('upload-download');
   });
 
   it('should not have hardcoded partner templates in question data (templates come from DB)', () => {
-    const vpnSection = questionnaireSections.find(s => s.id === 'vpn-connectivity');
-    const vpnQuestion = vpnSection?.questions?.find(q => q.id === 'E.1');
+    const connSection = questionnaireSections.find(s => s.id === 'connectivity');
+    const vpnQuestion = connSection?.questions?.find(q => q.id === 'E.1');
     
     // Partner templates are now managed via the admin Templates tab (partnerTemplates DB table)
     // They should NOT be hardcoded in questionnaireData.ts

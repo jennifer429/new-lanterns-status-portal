@@ -1870,3 +1870,65 @@
 - [x] Build Architecture page in Intake (static UI, mock data)
 - [x] Build Workflow page in Intake (static UI, mock data)
 - [x] Wire up routes and navigation for all new pages
+
+## Navigation & Intake Integration (Mar 11, 2026)
+- [ ] Add top-level navigation tabs on org landing page (Connectivity, Intake, Implementation, Validation)
+- [ ] Integrate Architecture as a section within the Intake questionnaire
+- [x] Integrate Workflows as a section within the Intake questionnaire
+- [ ] Remove standalone Architecture and Workflows routes (now part of Intake)
+
+## Workflow Page Rebuild (Mar 12, 2026)
+- [x] Rebuild Workflows page to match screenshot: editable textareas, removable system chips, green checkmarks
+- [x] Add Save & Continue + Section Complete buttons
+- [x] Integrate as part of Intake flow (not standalone page)
+
+## Connectivity Matrix Fixes (Mar 12, 2026)
+- [x] Remove "All" and "None" buttons from sites filter — put all options in dropdown
+- [x] Remove Workflow Snapshots row (org cards with 0/4 counts)
+- [x] Remove icon next to "Connectivity Dashboard" in admin tab nav
+- [ ] Fix mobile menu overlap on connectivity page
+
+## Architecture & Diagram Display (Mar 12, 2026)
+- [x] Remove standalone Architecture page and route
+- [x] Display uploaded diagram image inline in Integration Workflows section (increased to 400px, clickable to open full size)
+
+## New Integration Workflow Sections (Mar 12, 2026)
+- [x] Add Historic Results workflow block (5yr typical, HL7 or flat file preferred)
+- [x] Add Tech Sheets / DICOM-wrapped documents workflow block
+- [x] Add Overlay PACS report routing workflow block (with example upload)
+- [x] Update completion counter to reflect new blocks (now 9 total)
+
+## CT Dose Information (Mar 12, 2026)
+- [x] Add CT Dose Information workflow block (HL7 vs DICOM-wrapped, location details)
+- [x] Update completion counter from 9 to 10
+
+## Remove Architecture Section (Mar 12, 2026)
+- [x] Remove Architecture section from intake questionnaire sidebar
+
+## Questionnaire Restructure (Mar 12, 2026)
+- [x] Move D.7 (Historic Reports method) into Integration Workflows — combine with Historic Results block
+- [x] Move D.8 (Tech sheets input method) into Integration Workflows — combine with Tech Sheets block
+- [x] Move D.1 (Can production systems be configured for testing?) into Connectivity section
+- [x] Redesign Connectivity section as editable table (IP, Port, Protocol, AE Title, Traffic Type, Source, Destination, Environment)
+- [x] Remove old DICOM/HL7 endpoint textarea questions from Connectivity
+- [x] Update admin progress calculation for connectivity-table type
+- [x] Update tests (workflowDiagram, adminUtils, vpn-templates) for 4-section structure
+
+## Fix Architecture Diagram Display (Mar 12, 2026)
+- [x] Fix broken image display for uploaded architecture diagram in Integration Workflows (URL space encoding)
+
+## CT Dose Dropdown Simplification (Mar 12, 2026)
+- [x] Simplify CT Dose delivery method to 3 options: HL7, DICOM, HL7 & DICOM
+- [x] Remove conditional HL7 location selector (no longer needed with simplified options)
+
+## Historic Results Dropdown Update (Mar 12, 2026)
+- [x] Update Historic Results delivery method to 3 options: HL7 (preferred), Flat File, DICOM
+
+## Connectivity Table Redesign (Mar 12, 2026)
+- [x] Widen IP Address and Port columns
+- [x] Remove Protocol column
+- [x] Change Environment to checkbox (Test/Prod/Both)
+- [x] Populate Source/Destination from systems inventory + common systems list
+- [x] Add pre-canned list of common traffic types with ability to add custom ones
+- [x] Add export functionality (CSV/JSON) for connectivity table
+- [x] Add import functionality with AI-friendly structured format and column mapping

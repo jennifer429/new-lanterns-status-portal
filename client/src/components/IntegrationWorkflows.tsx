@@ -138,7 +138,9 @@ export function IntegrationWorkflows({ values, onChange, organizationId, onBack,
           fileData: base64,
           mimeType: file.type,
         });
-        onChange('IW.diagram', result.fileUrl);
+        // Ensure the URL is properly encoded for browser display
+        const encodedUrl = result.fileUrl.replace(/ /g, '%20');
+        onChange('IW.diagram', encodedUrl);
         onChange('IW.diagram_filename', file.name);
         onChange('IW.diagram_uploaded_at', new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
       } catch {
@@ -150,10 +152,41 @@ export function IntegrationWorkflows({ values, onChange, organizationId, onBack,
     reader.readAsDataURL(file);
   }, [organizationId, uploadFileMutation, onChange]);
 
-  const diagramUrl: string | undefined = values['IW.diagram'];
+  const rawDiagramUrl: string | undefined = values['IW.diagram'];
+  // Encode spaces and special chars in the URL path (S3 keys may contain spaces)
+  const diagramUrl = rawDiagramUrl ? rawDiagramUrl.replace(/ /g, '%20') : undefined;
   const diagramFilename: string | undefined = values['IW.diagram_filename'];
   const diagramUploadedAt: string | undefined = values['IW.diagram_uploaded_at'];
   const isImageDiagram = diagramFilename && /\.(png|jpg|jpeg)$/i.test(diagramFilename);
+
+  // ── Overlay PACS example upload ──────────────────────────────────────────────
+  const [isUploadingOverlayExample, setIsUploadingOverlayExample] = useState(false);
+  const overlayExampleInputRef = useRef<HTMLInputElement>(null);
+
+  const handleOverlayExampleFile = useCallback(async (file: File) => {
+    setIsUploadingOverlayExample(true);
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const base64 = e.target?.result as string;
+      try {
+        const result = await uploadFileMutation.mutateAsync({
+          organizationId,
+          taskId: 'IW.overlay_example',
+          taskName: 'Overlay PACS Example Report',
+          fileName: file.name,
+          fileData: base64,
+          mimeType: file.type,
+        });
+        onChange('IW.overlay_example_url', result.fileUrl.replace(/ /g, '%20'));
+        onChange('IW.overlay_example_filename', file.name);
+      } catch {
+        alert('Upload failed. Please try again.');
+      } finally {
+        setIsUploadingOverlayExample(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  }, [organizationId, uploadFileMutation, onChange]);
 
   // ── Completion ───────────────────────────────────────────────────────────────
   const systemNames = systems.map(s => s.name).filter(Boolean);
@@ -164,8 +197,12 @@ export function IntegrationWorkflows({ values, onChange, organizationId, onBack,
   }).length;
   const diagramDone = !!diagramUrl;
   const systemsDone = systems.length > 0;
-  const totalComplete = (diagramDone ? 1 : 0) + (systemsDone ? 1 : 0) + completedWorkflows;
-  const allComplete = totalComplete === 6;
+  const historicDone = !!(values['IW.historic_results_description'] && String(values['IW.historic_results_description']).trim().length > 0);
+  const techSheetsDone = !!(values['IW.tech_sheets_description'] && String(values['IW.tech_sheets_description']).trim().length > 0);
+  const overlayDone = !!(values['IW.overlay_pacs_description'] && String(values['IW.overlay_pacs_description']).trim().length > 0);
+  const ctDoseDone = !!(values['IW.ct_dose_description'] && String(values['IW.ct_dose_description']).trim().length > 0);
+  const totalComplete = (diagramDone ? 1 : 0) + (systemsDone ? 1 : 0) + completedWorkflows + (historicDone ? 1 : 0) + (techSheetsDone ? 1 : 0) + (overlayDone ? 1 : 0) + (ctDoseDone ? 1 : 0);
+  const allComplete = totalComplete === 10;
 
   // ── Workflow block ────────────────────────────────────────────────────────────
   const WorkflowBlock = ({
@@ -226,7 +263,7 @@ export function IntegrationWorkflows({ values, onChange, organizationId, onBack,
             : 'bg-muted text-muted-foreground border-border',
         )}>
           {allComplete && <CheckCircle2 className="w-4 h-4" />}
-          {totalComplete}/6 Complete
+          {totalComplete}/10 Complete
         </div>
       </div>
 
@@ -276,9 +313,9 @@ export function IntegrationWorkflows({ values, onChange, organizationId, onBack,
           ) : (
             <div className="space-y-3">
               {isImageDiagram ? (
-                <div className="rounded-lg overflow-hidden border">
-                  <img src={diagramUrl} alt="Architecture diagram" className="w-full object-cover max-h-52" />
-                </div>
+                <a href={diagramUrl} target="_blank" rel="noopener noreferrer" className="block rounded-lg overflow-hidden border hover:border-primary/50 transition-colors">
+                  <img src={diagramUrl} alt="Architecture diagram" className="w-full object-contain max-h-[400px]" />
+                </a>
               ) : (
                 <div className="flex items-center gap-3 p-4 rounded-lg border bg-muted/20">
                   <FileText className="w-8 h-8 text-muted-foreground flex-shrink-0" />
@@ -402,6 +439,277 @@ export function IntegrationWorkflows({ values, onChange, organizationId, onBack,
           description="Describe how reports are delivered back."
           placeholder="e.g., Finalized reports sent via HL7 ORU through Mirth Connect back to Epic Radiant..."
         />
+      </div>
+
+      <hr className="border-border" />
+
+      {/* Additional Integration Sections */}
+      <div className="space-y-6">
+
+        {/* Historic Results */}
+        <div className={cn('space-y-4 p-5 rounded-xl border bg-card transition-colors', historicDone && 'border-primary/50')}>
+          <div className="flex items-center gap-2">
+            {historicDone
+              ? <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+              : <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 flex-shrink-0" />
+            }
+            <h3 className="font-semibold text-base">Historic Results Migration</h3>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            5 years of prior results is typical. HL7 or flat file is the preferred format for migration. Describe what historic data needs to be migrated and the source system.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">How many years of historic results?</label>
+              <Select
+                value={values['IW.historic_results_years'] || ''}
+                onValueChange={(v) => onChange('IW.historic_results_years', v)}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Select timeframe" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1 year</SelectItem>
+                  <SelectItem value="2">2 years</SelectItem>
+                  <SelectItem value="3">3 years</SelectItem>
+                  <SelectItem value="5">5 years (typical)</SelectItem>
+                  <SelectItem value="7">7 years</SelectItem>
+                  <SelectItem value="10">10+ years</SelectItem>
+                  <SelectItem value="all">All available</SelectItem>
+                  <SelectItem value="none">None needed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Delivery method</label>
+              <Select
+                value={values['IW.historic_results_delivery_method'] || ''}
+                onValueChange={(v) => onChange('IW.historic_results_delivery_method', v)}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Select method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="hl7">HL7 (preferred)</SelectItem>
+                  <SelectItem value="flat_file">Flat File</SelectItem>
+                  <SelectItem value="dicom">DICOM</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <Textarea
+            value={values['IW.historic_results_description'] || ''}
+            onChange={(e) => onChange('IW.historic_results_description', e.target.value)}
+            placeholder="Describe the source system, volume of data, any special considerations for the migration..."
+            rows={4}
+            className="resize-y"
+          />
+          <div className="space-y-1.5">
+            <p className="text-sm text-muted-foreground">Source system(s):</p>
+            <SystemsMultiSelect
+              selectedNames={(() => { try { const v = values['IW.historic_results_systems']; if (!v) return []; return Array.isArray(v) ? v : JSON.parse(v); } catch { return []; } })()}
+              allSystems={systems}
+              onChange={(v) => onChange('IW.historic_results_systems', v)}
+            />
+          </div>
+        </div>
+
+        {/* Tech Sheets / DICOM-wrapped Documents */}
+        <div className={cn('space-y-4 p-5 rounded-xl border bg-card transition-colors', techSheetsDone && 'border-primary/50')}>
+          <div className="flex items-center gap-2">
+            {techSheetsDone
+              ? <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+              : <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 flex-shrink-0" />
+            }
+            <h3 className="font-semibold text-base">Tech Sheets &amp; Documents</h3>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Are tech sheets and other documents sent as DICOM-wrapped objects? Describe how non-image documents (tech sheets, requisitions, consent forms) are handled in your environment.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Are documents sent as DICOM-wrapped?</label>
+              <Select
+                value={values['IW.tech_sheets_dicom_wrapped'] || ''}
+                onValueChange={(v) => onChange('IW.tech_sheets_dicom_wrapped', v)}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="yes">Yes — DICOM-wrapped</SelectItem>
+                  <SelectItem value="no">No — sent separately</SelectItem>
+                  <SelectItem value="some">Some are, some aren't</SelectItem>
+                  <SelectItem value="unsure">Not sure</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tech sheets input method</label>
+              <Select
+                value={values['IW.tech_sheets_input_method'] || ''}
+                onValueChange={(v) => onChange('IW.tech_sheets_input_method', v)}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Select method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto_with_images">Automatically with images</SelectItem>
+                  <SelectItem value="manual_pdf">Manually as PDF</SelectItem>
+                  <SelectItem value="both">Both (varies by modality)</SelectItem>
+                  <SelectItem value="not_applicable">Not applicable</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <Textarea
+            value={values['IW.tech_sheets_description'] || ''}
+            onChange={(e) => onChange('IW.tech_sheets_description', e.target.value)}
+            placeholder="Describe which document types are generated, how they are stored/routed, and whether they need to be available in New Lantern..."
+            rows={4}
+            className="resize-y"
+          />
+          <div className="space-y-1.5">
+            <p className="text-sm text-muted-foreground">Systems involved:</p>
+            <SystemsMultiSelect
+              selectedNames={(() => { try { const v = values['IW.tech_sheets_systems']; if (!v) return []; return Array.isArray(v) ? v : JSON.parse(v); } catch { return []; } })()}
+              allSystems={systems}
+              onChange={(v) => onChange('IW.tech_sheets_systems', v)}
+            />
+          </div>
+        </div>
+
+        {/* Overlay PACS */}
+        <div className={cn('space-y-4 p-5 rounded-xl border bg-card transition-colors', overlayDone && 'border-primary/50')}>
+          <div className="flex items-center gap-2">
+            {overlayDone
+              ? <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+              : <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 flex-shrink-0" />
+            }
+            <h3 className="font-semibold text-base">Overlay PACS — External Reports</h3>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            If not all reports are read in New Lantern, can you send a copy of reports read outside of New Lantern to the platform? If so, describe the source system and workflow.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Can external reports be sent to New Lantern?</label>
+              <Select
+                value={values['IW.overlay_pacs_can_send'] || ''}
+                onValueChange={(v) => onChange('IW.overlay_pacs_can_send', v)}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="yes">Yes</SelectItem>
+                  <SelectItem value="no">No</SelectItem>
+                  <SelectItem value="investigating">Investigating</SelectItem>
+                  <SelectItem value="not_applicable">N/A — all reports read in New Lantern</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Source system for external reports</label>
+              <Input
+                value={values['IW.overlay_pacs_source_system'] || ''}
+                onChange={(e) => onChange('IW.overlay_pacs_source_system', e.target.value)}
+                placeholder="e.g., PowerScribe 360, external PACS"
+              />
+            </div>
+          </div>
+          <Textarea
+            value={values['IW.overlay_pacs_description'] || ''}
+            onChange={(e) => onChange('IW.overlay_pacs_description', e.target.value)}
+            placeholder="Describe how external reports are generated and how they could be routed to New Lantern (HL7 ORU, DICOM SR, PDF, etc.)..."
+            rows={4}
+            className="resize-y"
+          />
+          <div className="space-y-1.5">
+            <p className="text-sm text-muted-foreground">Systems involved:</p>
+            <SystemsMultiSelect
+              selectedNames={(() => { try { const v = values['IW.overlay_pacs_systems']; if (!v) return []; return Array.isArray(v) ? v : JSON.parse(v); } catch { return []; } })()}
+              allSystems={systems}
+              onChange={(v) => onChange('IW.overlay_pacs_systems', v)}
+            />
+          </div>
+          {/* Example upload */}
+          <div className="space-y-2 pt-2 border-t border-border/50">
+            <label className="text-sm font-medium">Upload an example report</label>
+            <input
+              ref={overlayExampleInputRef}
+              type="file"
+              accept=".pdf,.png,.jpg,.jpeg,.hl7,.txt,.dcm"
+              className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleOverlayExampleFile(f); e.target.value = ''; }}
+            />
+            {values['IW.overlay_example_url'] ? (
+              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-muted-foreground" />
+                  <a href={(values['IW.overlay_example_url'] || '').replace(/ /g, '%20')} target="_blank" rel="noopener noreferrer" className="text-primary underline text-sm">
+                    {values['IW.overlay_example_filename'] || 'Example report'}
+                  </a>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => overlayExampleInputRef.current?.click()} disabled={isUploadingOverlayExample} className="gap-1.5">
+                  {isUploadingOverlayExample ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                  Replace
+                </Button>
+              </div>
+            ) : (
+              <Button variant="outline" size="sm" onClick={() => overlayExampleInputRef.current?.click()} disabled={isUploadingOverlayExample} className="gap-1.5">
+                {isUploadingOverlayExample ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                Upload Example
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* CT Dose Information */}
+        <div className={cn('space-y-4 p-5 rounded-xl border bg-card transition-colors', ctDoseDone && 'border-primary/50')}>
+          <div className="flex items-center gap-2">
+            {ctDoseDone
+              ? <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+              : <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 flex-shrink-0" />
+            }
+            <h3 className="font-semibold text-base">CT Dose Information</h3>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            CT dose data (DLP, CTDIvol, etc.) needs to be captured and routed. Will this information be included in HL7 messages, or will it come as a DICOM Radiation Dose Structured Report (RDSR) / DICOM-wrapped dose sheet?
+          </p>
+          <div className="space-y-2 max-w-xs">
+            <label className="text-sm font-medium">How is CT dose data delivered?</label>
+            <Select
+              value={values['IW.ct_dose_delivery_method'] || ''}
+              onValueChange={(v) => onChange('IW.ct_dose_delivery_method', v)}
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Select method" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="hl7">HL7</SelectItem>
+                <SelectItem value="dicom">DICOM</SelectItem>
+                <SelectItem value="hl7_and_dicom">HL7 & DICOM</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Textarea
+            value={values['IW.ct_dose_description'] || ''}
+            onChange={(e) => onChange('IW.ct_dose_description', e.target.value)}
+            placeholder="Describe how CT dose information is currently captured, which systems generate it, and how it should be routed to New Lantern. Include any third-party dose tracking tools (e.g., Radimetrics, DoseWatch) if applicable..."
+            rows={4}
+            className="resize-y"
+          />
+          <div className="space-y-1.5">
+            <p className="text-sm text-muted-foreground">Systems involved:</p>
+            <SystemsMultiSelect
+              selectedNames={(() => { try { const v = values['IW.ct_dose_systems']; if (!v) return []; return Array.isArray(v) ? v : JSON.parse(v); } catch { return []; } })()}
+              allSystems={systems}
+              onChange={(v) => onChange('IW.ct_dose_systems', v)}
+            />
+          </div>
+        </div>
+
       </div>
 
       {/* Footer */}
