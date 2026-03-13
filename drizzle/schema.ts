@@ -322,6 +322,28 @@ export type Specification = typeof specifications.$inferSelect;
 export type InsertSpecification = typeof specifications.$inferInsert;
 
 /**
+ * Validation test results - stores mutable test state per organization.
+ * Phase/test definitions stay in shared/validationPhases.ts;
+ * only the editable fields (actual, status, signOff) are persisted here.
+ */
+export const validationResults = mysqlTable("validationResults", {
+  id: int("id").autoincrement().primaryKey(),
+  organizationId: int("organizationId").notNull(),
+  /** Stable key: "<phaseIndex>:<testIndex>", e.g. "1:2" */
+  testKey: varchar("testKey", { length: 20 }).notNull(),
+  actual: text("actual"),
+  status: mysqlEnum("status", ["Pass", "Fail", "Not Tested", "Pending"]).default("Not Tested").notNull(),
+  signOff: varchar("signOff", { length: 255 }),
+  notes: text("notes"),
+  updatedBy: varchar("updatedBy", { length: 320 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ValidationResult = typeof validationResults.$inferSelect;
+export type InsertValidationResult = typeof validationResults.$inferInsert;
+
+/**
  * System Vendor Options - admin-configurable picklist for system types in the Architecture section.
  * Both partner admins (RadOne-Admin) and platform admins can manage these.
  * Each row is one vendor option under a system type (e.g., type="PACS", vendorName="Fujifilm Synapse").
