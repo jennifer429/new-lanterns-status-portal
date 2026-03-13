@@ -41,11 +41,13 @@ export default function Login() {
 
       const data = await response.json();
       
-      // Hard reload to ensure cookie is properly set
+      // Role-based redirect:
+      // - Admins/partners → /org/admin (Connectivity Dashboard)
+      // - Customer users → /org/:slug (Site Dashboard)
       if (data.orgSlug) {
         window.location.href = `/org/${data.orgSlug}`;
       } else {
-        window.location.href = "/";
+        window.location.href = "/org/admin";
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");

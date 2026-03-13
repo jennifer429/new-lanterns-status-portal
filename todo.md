@@ -1962,3 +1962,43 @@
 
 ## Admin Header Fix (Mar 13, 2026)
 - [x] Center "Platform Admin" heading in admin dashboard header
+
+## Admin Dashboard Restructure (Mar 13, 2026)
+- [x] Move Users, Organizations, Templates, Partners, Specifications into an Admin Menu (dropdown/collapsible)
+- [ ] Make Implementation Dashboard the main/default view
+- [ ] Add Validation Checklist section to Implementation Dashboard
+- [ ] Add Implementation Checklist section to Implementation Dashboard
+
+## Implementation Dashboard Table View (Mar 13, 2026)
+- [x] Replace org cards with collapsed table rows on Implementation Dashboard
+- [ ] All sections collapsed by default, expandable
+- [x] Make org name column clickable to navigate to site dashboard
+- [x] Move Users/Orgs/Templates/Partners/Specs into Admin Menu dropdown
+- [ ] Add Implementation Checklist section to Implementation Dashboard
+- [ ] Add Validation Checklist section to Implementation Dashboard
+- [ ] Replace Connectivity Dashboard with Notion DB integration (pending Notion DB setup)
+
+## Site Dashboard Page (Mar 13, 2026)
+- [ ] Create new Site Dashboard page at /org/:slug/dashboard
+- [ ] Architecture Diagram section: display uploaded diagram from intake
+- [ ] Connectivity Info section: auto-populate from questionnaire answers (contacts, systems, IPs, ports, AE titles)
+- [ ] Implementation Questionnaire status: show section completion with link to intake form
+- [ ] Validation Checklist: mock checklist items for testing/validation
+- [ ] Implementation Checklist: mock checklist items for project plan
+- [ ] Wire up route in App.tsx
+- [ ] Backend procedures for checklist data
+
+## Site Dashboard Page (Mar 13, 2026)
+- [ ] Create new Site Dashboard page at /org/:slug/dashboard
+- [ ] Architecture Diagram section: display uploaded diagram from intake
+- [ ] Connectivity Info section: placeholder for Notion database display (filtered per site)
+- [ ] Implementation Questionnaire status: show section completion with link to intake form
+- [ ] Validation Checklist: mock checklist items for testing/validation
+- [ ] Implementation Checklist: mock checklist items for project plan
+- [ ] Wire up route in App.tsx
+- [ ] Backend procedures for checklist and site dashboard data
+
+## Role-Based Landing Pages (Mar 13, 2026)
+- [x] Customer users land on Site Dashboard (/org/:slug) after login
+- [x] Admin users land on Platform Admin (/admin) after login - defaults to Connectivity Dashboard
+- [x] Update routing/redirect logic based on user role

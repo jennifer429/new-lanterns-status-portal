@@ -61,7 +61,7 @@ function Router() {
       <Route path="/org/:slug/complete" component={IntakeComplete} />
       <Route path="/org/:slug/tasks" component={Tasks} />
       <Route path="/org/:slug" component={Home} />
-      <Route path={"/"} component={Login} />
+      <Route path="/">{() => { window.location.href = '/login'; return null; }}</Route>
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

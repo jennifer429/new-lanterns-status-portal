@@ -32,7 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp, AlertTriangle, AlertCircle, Info, Image, CheckSquare, BarChart3, Copy, Check, Clock, ChevronsUpDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp, AlertTriangle, AlertCircle, Info, Image, CheckSquare, BarChart3, Copy, Check, Clock, ChevronsUpDown, ChevronLeft, ChevronRight, Settings, ChevronDown, ListChecks, TestTube2 } from "lucide-react";
 import { questionnaireSections } from "@shared/questionnaireData";
 import { TYPE_COLORS, type IntegrationSystem } from "@/components/IntegrationWorkflows";
 import { cn } from "@/lib/utils";
@@ -849,8 +849,8 @@ export default function PlatformAdmin() {
             </div>
           </div>
 
-          {/* Tab Navigation */}
-          <div className="flex gap-4 mt-4 sm:mt-6 border-b border-border overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
+          {/* Tab Navigation - Main tabs + Admin Menu */}
+          <div className="flex items-center gap-4 mt-4 sm:mt-6 border-b border-border overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
             <button
               onClick={() => setActiveTab("prod-dashboard")}
               className={`pb-2 sm:pb-3 px-1 text-sm font-medium transition-colors relative whitespace-nowrap flex items-center gap-1.5 shrink-0 ${
@@ -877,75 +877,53 @@ export default function PlatformAdmin() {
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
               )}
             </button>
-            <button
-              onClick={() => setActiveTab("users")}
-              className={`pb-2 sm:pb-3 px-1 text-sm font-medium transition-colors relative whitespace-nowrap shrink-0 ${
-                activeTab === "users"
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Users
-              {activeTab === "users" && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab("orgs")}
-              className={`pb-2 sm:pb-3 px-1 text-sm font-medium transition-colors relative whitespace-nowrap shrink-0 ${
-                activeTab === "orgs"
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Organizations
-              {activeTab === "orgs" && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab("templates")}
-              className={`pb-2 sm:pb-3 px-1 text-sm font-medium transition-colors relative whitespace-nowrap shrink-0 ${
-                activeTab === "templates"
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Templates
-              {activeTab === "templates" && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-              )}
-            </button>
-            {isPlatformAdmin && (
-              <button
-                onClick={() => setActiveTab("partners")}
-                className={`pb-2 sm:pb-3 px-1 text-sm font-medium transition-colors relative whitespace-nowrap shrink-0 ${
-                  activeTab === "partners"
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Partners
-                {activeTab === "partners" && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+
+            {/* Admin Menu Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className={`pb-2 sm:pb-3 px-1 text-sm font-medium transition-colors relative whitespace-nowrap flex items-center gap-1 shrink-0 ${
+                    ["users", "orgs", "templates", "partners", "specs"].includes(activeTab)
+                      ? "text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Settings className="w-4 h-4" />
+                  Admin
+                  <ChevronDown className="w-3 h-3" />
+                  {["users", "orgs", "templates", "partners", "specs"].includes(activeTab) && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48">
+                <DropdownMenuItem onClick={() => setActiveTab("users")} className="cursor-pointer">
+                  <Users className="mr-2 h-4 w-4" />
+                  Users
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveTab("orgs")} className="cursor-pointer">
+                  <ClipboardList className="mr-2 h-4 w-4" />
+                  Organizations
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveTab("templates")} className="cursor-pointer">
+                  <FileText className="mr-2 h-4 w-4" />
+                  Templates
+                </DropdownMenuItem>
+                {isPlatformAdmin && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setActiveTab("partners")} className="cursor-pointer">
+                      <Users className="mr-2 h-4 w-4" />
+                      Partners
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setActiveTab("specs")} className="cursor-pointer">
+                      <FileText className="mr-2 h-4 w-4" />
+                      Specifications
+                    </DropdownMenuItem>
+                  </>
                 )}
-              </button>
-            )}
-            {isPlatformAdmin && (
-              <button
-                onClick={() => setActiveTab("specs")}
-                className={`pb-2 sm:pb-3 px-1 text-sm font-medium transition-colors relative whitespace-nowrap shrink-0 ${
-                  activeTab === "specs"
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Specifications
-                {activeTab === "specs" && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-                )}
-              </button>
-            )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
@@ -968,148 +946,110 @@ export default function PlatformAdmin() {
 
         {activeTab === "impl-dashboard" && (
           <>
-            <h2 className="text-2xl font-bold mb-6">Active Organizations ({activeOrgs.length})</h2>
-            
-            {/* Organization Portal Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {activeOrgs.length === 0 ? (
-                <div className="col-span-full text-center py-12 text-muted-foreground">
-                  No active organizations
-                </div>
-              ) : (
-                activeOrgs.map(org => {
-                  const orgMetrics = metricsMap[org.id];
-                  const partnerName = org.clientId ? clientMap[org.clientId] : "Unknown";
-                  const completionPercent = orgMetrics?.completionPercent || 0;
-                  const sectionsComplete = orgMetrics?.sectionsComplete || 0;
-                  const totalSections = 9;
-                  const filesCount = orgMetrics?.files.length || 0;
-                  const userCount = orgMetrics?.userCount || 0;
-
-                  // Convert sectionProgress using shared utility
-                  const sectionProgress = transformSectionProgress(orgMetrics?.sectionProgress);
-
-                  return (
-                    <Card key={org.id} className="border-2 border-primary/30 bg-gradient-to-b from-card to-card/50">
-                      <CardContent className="p-6">
-                        {/* Header with Organization Name and Partner Badge */}
-                        <div className="flex items-center justify-between mb-6">
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <ClipboardList className="w-6 h-6 text-primary flex-shrink-0" />
-                            <div className="min-w-0 flex-1">
-                              <h3 className="text-lg font-bold truncate">{org.name}</h3>
-                              {isPlatformAdmin && (
-                                <Badge variant="outline" className="text-xs mt-1">
-                                  {partnerName}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                          <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-                        </div>
-
-                        {/* Stats Row */}
-                        <div className="grid grid-cols-3 gap-4 mb-6">
-                          <div className="flex items-center gap-2">
-                            <TrendingUp className="w-4 h-4 text-muted-foreground" />
-                            <div>
-                              <div className="text-xl font-bold">{completionPercent}%</div>
-                              <div className="text-xs text-muted-foreground">Complete</div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Users className="w-4 h-4 text-muted-foreground" />
-                            <div>
-                              <div className="text-xl font-bold">{userCount}</div>
-                              <div className="text-xs text-muted-foreground">Users</div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-muted-foreground" />
-                            <div>
-                              <div className="text-xl font-bold">{filesCount}</div>
-                              <div className="text-xs text-muted-foreground">Files</div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="border-t border-border/50 pt-4">
-                          {/* Overall Progress Section */}
-                          <div className="mb-4">
-                            <h4 className="text-sm font-semibold mb-1">Overall Progress</h4>
-                            <p className="text-xs text-muted-foreground mb-3">
-                              {sectionsComplete} of {totalSections} sections complete
-                            </p>
-
-                            {/* Big Percentage Box */}
-                            <div className="text-center p-6 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 border-2 border-primary/30 mb-4">
-                              <div className="text-5xl font-bold text-primary mb-1">
-                                {completionPercent}%
-                              </div>
-                              <div className="text-sm text-muted-foreground">Complete</div>
-                            </div>
-
-                            {/* Section List - Show all sections */}
-                              <div className="space-y-2 mb-4">
-                                {sectionProgress.map((section, index) => (
-                                  <div key={index} className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                      {section.progress === 100 ? (
-                                        <CheckCircle2 className="w-4 h-4 text-primary" />
-                                      ) : (
-                                        <Circle className="w-4 h-4 text-muted-foreground" />
-                                      )}
-                                      <span className="text-xs">{section.name}</span>
-                                    </div>
-                                    <span className="text-xs font-bold">{section.progress}%</span>
-                                  </div>
-                                ))}
-                              </div>
-
-                            {/* Status */}
-                            <div className="text-xs text-muted-foreground mb-4">
-                              In Progress
-                            </div>
-                          </div>
-
-                          {/* Uploaded Files Section */}
-                          <div className="border-t border-border/50 pt-4 mb-4">
-                            <h5 className="text-xs font-semibold mb-2">Uploaded Files:</h5>
-                            {filesCount === 0 ? (
-                              <p className="text-xs text-muted-foreground">No files uploaded yet</p>
-                            ) : (
-              <div className="space-y-1 max-h-32 overflow-y-auto">
-                {orgMetrics?.files.map((file) => (
-                  <a
-                    key={file.id}
-                    href={file.fileUrl}
-                    download
-                    className="flex items-center gap-2 text-xs text-primary hover:underline"
-                  >
-                    <Download className="w-3 h-3" />
-                    <span className="truncate">{file.fileName}</span>
-                  </a>
-                ))}
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold">Implementation Dashboard</h2>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>{activeOrgs.length} active organizations</span>
               </div>
-                            )}
-                          </div>
-
-                          {/* Open Portal Button */}
-                          <Button 
-                            size="lg" 
-                            className="w-full"
-                            onClick={() => setLocation(`/org/${org.slug}/intake`)}
-                          >
-                            <ExternalLink className="w-4 h-4 mr-2" />
-                            Open Portal
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })
-              )}
             </div>
+            
+            {/* Collapsed Table View */}
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="w-[250px]">Organization</TableHead>
+                      {isPlatformAdmin && <TableHead>Partner</TableHead>}
+                      <TableHead className="text-center">Questionnaire</TableHead>
+                      <TableHead className="text-center">Validation</TableHead>
+                      <TableHead className="text-center">Implementation</TableHead>
+                      <TableHead className="text-center">Files</TableHead>
+                      <TableHead className="text-center">Users</TableHead>
+                      <TableHead className="w-[100px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {activeOrgs.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={isPlatformAdmin ? 8 : 7} className="text-center py-12 text-muted-foreground">
+                          No active organizations
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      activeOrgs.map(org => {
+                        const orgMetrics = metricsMap[org.id];
+                        const partnerName = org.clientId ? clientMap[org.clientId] : "—";
+                        const sectionProgress = transformSectionProgress(orgMetrics?.sectionProgress);
+                        const sectionsComplete = sectionProgress.filter(s => s.progress === 100).length;
+                        const totalSections = sectionProgress.length || 6;
+                        const filesCount = orgMetrics?.files.length || 0;
+                        const userCount = orgMetrics?.userCount || 0;
+
+                        return (
+                          <TableRow key={org.id} className="hover:bg-muted/30">
+                            {/* Clickable org name → Site Dashboard */}
+                            <TableCell>
+                              <button
+                                onClick={() => setLocation(`/org/${org.slug}`)}
+                                className="text-left font-semibold text-primary hover:underline flex items-center gap-2"
+                              >
+                                {org.name}
+                                <ExternalLink className="w-3 h-3 opacity-50" />
+                              </button>
+                            </TableCell>
+                            {isPlatformAdmin && (
+                              <TableCell>
+                                <Badge variant="outline" className="text-xs">{partnerName}</Badge>
+                              </TableCell>
+                            )}
+                            {/* Questionnaire: sections complete */}
+                            <TableCell className="text-center">
+                              <div className="flex items-center justify-center gap-1.5">
+                                {sectionsComplete === totalSections ? (
+                                  <CheckCircle2 className="w-4 h-4 text-green-500" />
+                                ) : (
+                                  <Circle className="w-4 h-4 text-muted-foreground" />
+                                )}
+                                <span className="text-sm">{sectionsComplete}/{totalSections}</span>
+                              </div>
+                            </TableCell>
+                            {/* Validation: placeholder */}
+                            <TableCell className="text-center">
+                              <Badge variant="outline" className="text-xs text-muted-foreground">Pending</Badge>
+                            </TableCell>
+                            {/* Implementation: placeholder */}
+                            <TableCell className="text-center">
+                              <Badge variant="outline" className="text-xs text-muted-foreground">Pending</Badge>
+                            </TableCell>
+                            {/* Files */}
+                            <TableCell className="text-center">
+                              <span className="text-sm">{filesCount}</span>
+                            </TableCell>
+                            {/* Users */}
+                            <TableCell className="text-center">
+                              <span className="text-sm">{userCount}</span>
+                            </TableCell>
+                            {/* Actions */}
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setLocation(`/org/${org.slug}`)}
+                                className="gap-1"
+                              >
+                                View
+                                <ExternalLink className="w-3 h-3" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
           </>
         )}
 
