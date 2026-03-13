@@ -1881,3 +1881,9 @@
 - [x] Rebuild Workflows page to match screenshot: editable textareas, removable system chips, green checkmarks
 - [x] Add Save & Continue + Section Complete buttons
 - [x] Integrate as part of Intake flow (not standalone page)
+
+## Connectivity Matrix Fixes (Mar 12, 2026)
+- [x] Remove "All" and "None" buttons from sites filter — put all options in dropdown
+- [x] Remove Workflow Snapshots row (org cards with 0/4 counts)
+- [x] Remove icon next to "Connectivity Dashboard" in admin tab nav
+- [ ] Fix mobile menu overlap on connectivity page
