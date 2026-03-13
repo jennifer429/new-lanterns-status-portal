@@ -1913,3 +1913,13 @@
 - [x] Remove old DICOM/HL7 endpoint textarea questions from Connectivity
 - [x] Update admin progress calculation for connectivity-table type
 - [x] Update tests (workflowDiagram, adminUtils, vpn-templates) for 4-section structure
+
+## Fix Architecture Diagram Display (Mar 12, 2026)
+- [x] Fix broken image display for uploaded architecture diagram in Integration Workflows (URL space encoding)
+
+## CT Dose Dropdown Simplification (Mar 12, 2026)
+- [x] Simplify CT Dose delivery method to 3 options: HL7, DICOM, HL7 & DICOM
+- [x] Remove conditional HL7 location selector (no longer needed with simplified options)
+
+## Historic Results Dropdown Update (Mar 12, 2026)
+- [x] Update Historic Results delivery method to 3 options: HL7 (preferred), Flat File, DICOM

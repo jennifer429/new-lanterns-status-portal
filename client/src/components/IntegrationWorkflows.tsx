@@ -138,7 +138,9 @@ export function IntegrationWorkflows({ values, onChange, organizationId, onBack,
           fileData: base64,
           mimeType: file.type,
         });
-        onChange('IW.diagram', result.fileUrl);
+        // Ensure the URL is properly encoded for browser display
+        const encodedUrl = result.fileUrl.replace(/ /g, '%20');
+        onChange('IW.diagram', encodedUrl);
         onChange('IW.diagram_filename', file.name);
         onChange('IW.diagram_uploaded_at', new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
       } catch {
@@ -150,7 +152,9 @@ export function IntegrationWorkflows({ values, onChange, organizationId, onBack,
     reader.readAsDataURL(file);
   }, [organizationId, uploadFileMutation, onChange]);
 
-  const diagramUrl: string | undefined = values['IW.diagram'];
+  const rawDiagramUrl: string | undefined = values['IW.diagram'];
+  // Encode spaces and special chars in the URL path (S3 keys may contain spaces)
+  const diagramUrl = rawDiagramUrl ? rawDiagramUrl.replace(/ /g, '%20') : undefined;
   const diagramFilename: string | undefined = values['IW.diagram_filename'];
   const diagramUploadedAt: string | undefined = values['IW.diagram_uploaded_at'];
   const isImageDiagram = diagramFilename && /\.(png|jpg|jpeg)$/i.test(diagramFilename);
@@ -173,7 +177,7 @@ export function IntegrationWorkflows({ values, onChange, organizationId, onBack,
           fileData: base64,
           mimeType: file.type,
         });
-        onChange('IW.overlay_example_url', result.fileUrl);
+        onChange('IW.overlay_example_url', result.fileUrl.replace(/ /g, '%20'));
         onChange('IW.overlay_example_filename', file.name);
       } catch {
         alert('Upload failed. Please try again.');
@@ -477,36 +481,18 @@ export function IntegrationWorkflows({ values, onChange, organizationId, onBack,
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Preferred format</label>
+              <label className="text-sm font-medium">Delivery method</label>
               <Select
-                value={values['IW.historic_results_format'] || ''}
-                onValueChange={(v) => onChange('IW.historic_results_format', v)}
-              >
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Select format" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="hl7">HL7 (preferred)</SelectItem>
-                  <SelectItem value="flat_file">Flat file (preferred)</SelectItem>
-                  <SelectItem value="csv">CSV export</SelectItem>
-                  <SelectItem value="database">Direct database export</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Data load method</label>
-              <Select
-                value={values['IW.historic_results_load_method'] || ''}
-                onValueChange={(v) => onChange('IW.historic_results_load_method', v)}
+                value={values['IW.historic_results_delivery_method'] || ''}
+                onValueChange={(v) => onChange('IW.historic_results_delivery_method', v)}
               >
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder="Select method" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="hl7_bulk">HL7 messages bulk sent prior to go-live</SelectItem>
-                  <SelectItem value="flat_file">Pipe delimited flat file (3-4 weeks lead time)</SelectItem>
-                  <SelectItem value="with_images">Automatically with images (DICOM-wrapped)</SelectItem>
+                  <SelectItem value="hl7">HL7 (preferred)</SelectItem>
+                  <SelectItem value="flat_file">Flat File</SelectItem>
+                  <SelectItem value="dicom">DICOM</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -661,7 +647,7 @@ export function IntegrationWorkflows({ values, onChange, organizationId, onBack,
               <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
                 <div className="flex items-center gap-2">
                   <FileText className="w-4 h-4 text-muted-foreground" />
-                  <a href={values['IW.overlay_example_url']} target="_blank" rel="noopener noreferrer" className="text-primary underline text-sm">
+                  <a href={(values['IW.overlay_example_url'] || '').replace(/ /g, '%20')} target="_blank" rel="noopener noreferrer" className="text-primary underline text-sm">
                     {values['IW.overlay_example_filename'] || 'Example report'}
                   </a>
                 </div>
@@ -691,47 +677,21 @@ export function IntegrationWorkflows({ values, onChange, organizationId, onBack,
           <p className="text-sm text-muted-foreground">
             CT dose data (DLP, CTDIvol, etc.) needs to be captured and routed. Will this information be included in HL7 messages, or will it come as a DICOM Radiation Dose Structured Report (RDSR) / DICOM-wrapped dose sheet?
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">How is CT dose data delivered?</label>
-              <Select
-                value={values['IW.ct_dose_delivery_method'] || ''}
-                onValueChange={(v) => onChange('IW.ct_dose_delivery_method', v)}
-              >
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Select method" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="hl7">Included in HL7 messages</SelectItem>
-                  <SelectItem value="dicom_rdsr">DICOM RDSR (Radiation Dose SR)</SelectItem>
-                  <SelectItem value="dicom_wrapped">DICOM-wrapped dose sheet</SelectItem>
-                  <SelectItem value="both">Both HL7 and DICOM</SelectItem>
-                  <SelectItem value="third_party">Third-party dose tracking system</SelectItem>
-                  <SelectItem value="not_captured">Not currently captured</SelectItem>
-                  <SelectItem value="unsure">Not sure</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {(values['IW.ct_dose_delivery_method'] === 'hl7' || values['IW.ct_dose_delivery_method'] === 'both') && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Where in the HL7 message?</label>
-                <Select
-                  value={values['IW.ct_dose_hl7_location'] || ''}
-                  onValueChange={(v) => onChange('IW.ct_dose_hl7_location', v)}
-                >
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="Select segment" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="obx">OBX segment</SelectItem>
-                    <SelectItem value="zds">ZDS (custom Z-segment)</SelectItem>
-                    <SelectItem value="oru">ORU result message</SelectItem>
-                    <SelectItem value="other">Other / custom</SelectItem>
-                    <SelectItem value="unsure">Not sure</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+          <div className="space-y-2 max-w-xs">
+            <label className="text-sm font-medium">How is CT dose data delivered?</label>
+            <Select
+              value={values['IW.ct_dose_delivery_method'] || ''}
+              onValueChange={(v) => onChange('IW.ct_dose_delivery_method', v)}
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Select method" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="hl7">HL7</SelectItem>
+                <SelectItem value="dicom">DICOM</SelectItem>
+                <SelectItem value="hl7_and_dicom">HL7 & DICOM</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <Textarea
             value={values['IW.ct_dose_description'] || ''}

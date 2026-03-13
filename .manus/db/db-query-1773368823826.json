@@ -1,0 +1,40 @@
+{
+  "query": "SELECT questionId, response, fileUrl FROM intakeResponses WHERE questionId LIKE '%diagram%' LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT questionId, response, fileUrl FROM intakeResponses WHERE questionId LIKE '%diagram%' LIMIT 10;",
+  "rows": [
+    {
+      "questionId": "IW.diagram_uploaded_at",
+      "response": "Mar 12, 2026",
+      "fileUrl": "NULL"
+    },
+    {
+      "questionId": "IW.diagram_filename",
+      "response": "image (5).png",
+      "fileUrl": "NULL"
+    },
+    {
+      "questionId": "IW.diagram",
+      "response": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/intake/baycare/IW.diagram/1773365057927-image (5).png",
+      "fileUrl": "NULL"
+    },
+    {
+      "questionId": "IW.diagram_uploaded_at",
+      "response": "Mar 12, 2026",
+      "fileUrl": "NULL"
+    },
+    {
+      "questionId": "IW.diagram_filename",
+      "response": "Screenshot 2026-02-20 at 3.18.04 PM.png",
+      "fileUrl": "NULL"
+    },
+    {
+      "questionId": "IW.diagram",
+      "response": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/intake/hca-flwest/IW.diagram/1773368453827-Screenshot 2026-02-20 at 3.18.04 PM.png",
+      "fileUrl": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "questionId\tresponse\tfileUrl\nIW.diagram_uploaded_at\tMar 12, 2026\tNULL\nIW.diagram_filename\timage (5).png\tNULL\nIW.diagram\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/intake/baycare/IW.diagram/1773365057927-image (5).png\tNULL\nIW.diagram_uploaded_at\tMar 12, 2026\tNULL\nIW.diagram_filename\tScreenshot 2026-02-20 at 3.18.04 PM.png\tNULL\nIW.diagram\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/intake/hca-flwest/IW.diagram/1773368453827-Screenshot 2026-02-20 at 3.18.04 PM.png\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 383
+}
