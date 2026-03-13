@@ -35,8 +35,10 @@ import { ConnectivityTable, type ConnectivityRow } from "@/components/Connectivi
 // Section icons mapping
 const sectionIcons: Record<string, any> = {
   "org-info": FileText,
+  "architecture": Network,
   "integration-workflows": Network,
   "connectivity": FileUp,
+  "config-files": FileUp,
   "hl7-dicom": ClipboardCheck,
 };
 
@@ -158,8 +160,8 @@ function ArchitectureOverview({
     : null;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
-      {/* ── Left: Architecture Diagram ── */}
+    <div className="space-y-6 mt-4">
+      {/* ── Architecture Diagram (full width) ── */}
       <div className="rounded-xl border border-border/60 bg-card/60 p-5 flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-base">Architecture Diagram</h3>
@@ -177,7 +179,7 @@ function ArchitectureOverview({
                   <img
                     src={latestDiagram.fileUrl}
                     alt={latestDiagram.fileName}
-                    className="w-full object-contain max-h-72"
+                    className="w-full object-contain max-h-[60vh]"
                     onError={() => setImgError(true)}
                   />
                 </a>
@@ -247,7 +249,7 @@ function ArchitectureOverview({
         />
       </div>
 
-      {/* ── Right: Systems in Your Environment ── */}
+      {/* ── Systems in Your Environment (full width below diagram) ── */}
       <div className="rounded-xl border border-border/60 bg-card/60 p-5 flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-base">Systems in Your Environment</h3>
@@ -560,23 +562,14 @@ export default function IntakeNewRedesign() {
 
   // Calculate section progress (including uploaded files)
   const calculateSectionProgress = (section: Section) => {
-    // Handle integration-workflows section
+    // Handle integration-workflows section (workflow descriptions only — diagram & systems are in Architecture)
     if (section.type === 'integration-workflows') {
-      // Check IW.* keys in responses for completion
-      const diagramDone = !!responses['IW.diagram'];
-      const systemsRaw = responses['IW.systems'];
-      let systemsDone = false;
-      try {
-        const systems = typeof systemsRaw === 'string' ? JSON.parse(systemsRaw) : systemsRaw;
-        systemsDone = Array.isArray(systems) && systems.length > 0;
-      } catch { systemsDone = false; }
       const wfKeys = ['orders', 'images', 'priors', 'reports'] as const;
       const completedWorkflows = wfKeys.filter(wf => {
         const v = responses[`IW.${wf}_description`];
         return v && String(v).trim().length > 0;
       }).length;
-      const totalComplete = (diagramDone ? 1 : 0) + (systemsDone ? 1 : 0) + completedWorkflows;
-      return Math.round((totalComplete / 6) * 100);
+      return Math.round((completedWorkflows / 4) * 100);
     }
 
     // Handle connectivity-table section
@@ -1124,22 +1117,10 @@ export default function IntakeNewRedesign() {
         {/* Progress Overview Card */}
         <div className="p-4 border-b border-purple-500/20">
           <div className="bg-gradient-to-br from-purple-900/40 to-purple-800/40 rounded-lg p-4 border border-purple-500/30">
-            {/* Big Percentage */}
-            <div className="text-center mb-4">
-              <div className="text-5xl font-bold text-purple-300 mb-1">
-                {(() => {
-                  const totalSections = questionnaireSections.length;
-                  const sectionProgressSum = questionnaireSections.reduce((sum, s) => sum + calculateSectionProgress(s), 0);
-                  return Math.round(sectionProgressSum / totalSections);
-                })()}%
-              </div>
-              <div className="text-sm text-muted-foreground">Complete</div>
-            </div>
-            
-            {/* Overall Progress */}
+            {/* Section completion count */}
             <div className="mb-3">
               <div className="text-xs text-muted-foreground mb-1">Overall Progress</div>
-              <div className="text-sm font-medium">
+              <div className="text-lg font-bold text-white">
                 {questionnaireSections.filter(s => calculateSectionProgress(s) === 100).length} of {questionnaireSections.length} sections complete
               </div>
             </div>
@@ -1150,16 +1131,13 @@ export default function IntakeNewRedesign() {
                 const progress = calculateSectionProgress(section);
                 const isComplete = progress === 100;
                 return (
-                  <div key={section.id} className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      {isComplete ? (
-                        <CheckCircle2 className="w-3 h-3 text-purple-400 flex-shrink-0" />
-                      ) : (
-                        <Circle className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                      )}
-                      <span className="truncate text-muted-foreground">{section.title}</span>
-                    </div>
-                    <span className="font-semibold text-white ml-2">{progress}%</span>
+                  <div key={section.id} className="flex items-center gap-2 text-xs">
+                    {isComplete ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />
+                    ) : (
+                      <Circle className="w-3.5 h-3.5 text-muted-foreground/50 flex-shrink-0" />
+                    )}
+                    <span className={`truncate ${isComplete ? 'text-green-400 font-medium' : 'text-muted-foreground'}`}>{section.title}</span>
                   </div>
                 );
               })}
@@ -1288,19 +1266,9 @@ export default function IntakeNewRedesign() {
           <div className="max-w-6xl mx-auto">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-8">
               <div>
-                <div className="text-sm text-muted-foreground mb-1">Overall Progress</div>
-                <div className="flex items-center gap-3">
-                  <Progress
-                    value={(() => {
-                      const totalSections = questionnaireSections.length;
-                      const sectionProgressSum = questionnaireSections.reduce((sum, s) => sum + calculateSectionProgress(s), 0);
-                      return Math.round(sectionProgressSum / totalSections);
-                    })()}
-                    className="w-36 md:w-48 h-2"
-                  />
-                  <span className="text-base md:text-lg font-bold">
-                    {questionnaireSections.filter(s => calculateSectionProgress(s) === 100).length}/{questionnaireSections.length} sections
-                  </span>
+                <div className="text-sm text-muted-foreground mb-1">Sections Completed</div>
+                <div className="text-base md:text-lg font-bold">
+                  {questionnaireSections.filter(s => calculateSectionProgress(s) === 100).length} of {questionnaireSections.length}
                 </div>
               </div>
               <div className="hidden sm:block h-12 w-px bg-border" />
@@ -1356,19 +1324,10 @@ export default function IntakeNewRedesign() {
                   </p>
                 )}
                 {currentSectionData?.questions && currentSectionData?.type !== 'architecture-overview' && (
-                  <>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span>
-                        {Math.round(calculateSectionProgress(currentSectionData) / 100 * currentSectionData.questions.filter(q => !q.inactive).length)}/{currentSectionData.questions.filter(q => !q.inactive).length} questions answered ({calculateSectionProgress(currentSectionData)}%)
-                      </span>
-                    </div>
-                    <Progress value={calculateSectionProgress(currentSectionData)} className="mt-3 h-2" />
-                  </>
-                )}
-                {currentSectionData?.type === 'architecture-overview' && (
-                  <div className="flex items-center gap-3 mt-2">
-                    <Progress value={calculateSectionProgress(currentSectionData)} className="h-2 flex-1" />
-                    <span className="text-sm text-muted-foreground shrink-0">{calculateSectionProgress(currentSectionData)}%</span>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                    <span>
+                      {Math.round(calculateSectionProgress(currentSectionData) / 100 * currentSectionData.questions.filter(q => !q.inactive).length)}/{currentSectionData.questions.filter(q => !q.inactive).length} questions answered
+                    </span>
                   </div>
                 )}
                 {currentSectionData?.id === 'connectivity' && (
@@ -1435,7 +1394,7 @@ export default function IntakeNewRedesign() {
                       })()}
                       systems={(() => {
                         try {
-                          const v = responses['IW.systems'];
+                          const v = responses['ARCH.systems'];
                           if (!v) return [];
                           return typeof v === 'string' ? JSON.parse(v) : v;
                         } catch { return []; }

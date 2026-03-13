@@ -5,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Trash2, Plus, Upload, FileText, Loader2, CheckCircle2, ArrowLeft, ChevronRight, X, CloudUpload, ChevronsUpDown } from 'lucide-react';
+import { Upload, FileText, Loader2, CheckCircle2, ArrowLeft, ChevronRight, X, ChevronsUpDown } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 
@@ -84,7 +84,7 @@ function SystemsMultiSelect({ selectedNames, allSystems, onChange }: SystemsMult
                 ? available.length > 0
                   ? 'Select systems...'
                   : 'All systems selected'
-                : 'Add systems above first'}
+                : 'Add systems in Architecture first'}
             </span>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </button>
@@ -108,7 +108,6 @@ function SystemsMultiSelect({ selectedNames, allSystems, onChange }: SystemsMult
                     onSelect={() => {
                       onChange([...selectedNames, sys.name]);
                       setSearch('');
-                      // Keep open so user can select multiple
                     }}
                   >
                     <span className={cn('text-xs px-1.5 py-0.5 rounded-full font-medium mr-2', TYPE_COLORS[sys.type] || TYPE_COLORS['Other'])}>
@@ -135,66 +134,16 @@ interface IntegrationWorkflowsProps {
 }
 
 export function IntegrationWorkflows({ values, onChange, organizationId, onBack, onContinue }: IntegrationWorkflowsProps) {
-  const [isUploadingDiagram, setIsUploadingDiagram] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-  const diagramInputRef = useRef<HTMLInputElement>(null);
   const uploadFileMutation = trpc.files.upload.useMutation();
 
-  // ── Systems ──────────────────────────────────────────────────────────────────
+  // ── Systems (read from Architecture section via shared values) ──────────────
   const systems: IntegrationSystem[] = (() => {
     try {
-      const s = values['IW.systems'];
+      const s = values['ARCH.systems'];
       if (!s) return [];
       return typeof s === 'string' ? JSON.parse(s) : s;
     } catch { return []; }
   })();
-
-  const updateSystems = (next: IntegrationSystem[]) => onChange('IW.systems', next);
-  const addSystem = () => updateSystems([...systems, { id: crypto.randomUUID(), name: '', type: '', notes: '' }]);
-  const updateSystem = (id: string, field: keyof IntegrationSystem, val: string) =>
-    updateSystems(systems.map(s => s.id === id ? { ...s, [field]: val } : s));
-  const deleteSystem = (id: string) => updateSystems(systems.filter(s => s.id !== id));
-
-  // ── Diagram upload ────────────────────────────────────────────────────────────
-  const handleDiagramFile = useCallback(async (file: File) => {
-    const ext = '.' + (file.name.split('.').pop() ?? '').toLowerCase();
-    if (!['.png', '.jpg', '.jpeg', '.pdf'].includes(ext)) {
-      alert('Only PNG, JPG, JPEG, and PDF files are allowed.');
-      return;
-    }
-    setIsUploadingDiagram(true);
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const base64 = e.target?.result as string;
-      try {
-        const result = await uploadFileMutation.mutateAsync({
-          organizationId,
-          taskId: 'IW.diagram',
-          taskName: 'Architecture Diagram',
-          fileName: file.name,
-          fileData: base64,
-          mimeType: file.type,
-        });
-        // Ensure the URL is properly encoded for browser display
-        const encodedUrl = result.fileUrl.replace(/ /g, '%20');
-        onChange('IW.diagram', encodedUrl);
-        onChange('IW.diagram_filename', file.name);
-        onChange('IW.diagram_uploaded_at', new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
-      } catch {
-        alert('Diagram upload failed. Please try again.');
-      } finally {
-        setIsUploadingDiagram(false);
-      }
-    };
-    reader.readAsDataURL(file);
-  }, [organizationId, uploadFileMutation, onChange]);
-
-  const rawDiagramUrl: string | undefined = values['IW.diagram'];
-  // Encode spaces and special chars in the URL path (S3 keys may contain spaces)
-  const diagramUrl = rawDiagramUrl ? rawDiagramUrl.replace(/ /g, '%20') : undefined;
-  const diagramFilename: string | undefined = values['IW.diagram_filename'];
-  const diagramUploadedAt: string | undefined = values['IW.diagram_uploaded_at'];
-  const isImageDiagram = diagramFilename && /\.(png|jpg|jpeg)$/i.test(diagramFilename);
 
   // ── Overlay PACS example upload ──────────────────────────────────────────────
   const [isUploadingOverlayExample, setIsUploadingOverlayExample] = useState(false);
@@ -226,20 +175,17 @@ export function IntegrationWorkflows({ values, onChange, organizationId, onBack,
   }, [organizationId, uploadFileMutation, onChange]);
 
   // ── Completion ───────────────────────────────────────────────────────────────
-  const systemNames = systems.map(s => s.name).filter(Boolean);
   const wfKeys = ['orders', 'images', 'priors', 'reports'] as const;
   const completedWorkflows = wfKeys.filter(wf => {
     const v = values[`IW.${wf}_description`];
     return v && String(v).trim().length > 0;
   }).length;
-  const diagramDone = !!diagramUrl;
-  const systemsDone = systems.length > 0;
   const historicDone = !!(values['IW.historic_results_description'] && String(values['IW.historic_results_description']).trim().length > 0);
   const techSheetsDone = !!(values['IW.tech_sheets_description'] && String(values['IW.tech_sheets_description']).trim().length > 0);
   const overlayDone = !!(values['IW.overlay_pacs_description'] && String(values['IW.overlay_pacs_description']).trim().length > 0);
   const ctDoseDone = !!(values['IW.ct_dose_description'] && String(values['IW.ct_dose_description']).trim().length > 0);
-  const totalComplete = (diagramDone ? 1 : 0) + (systemsDone ? 1 : 0) + completedWorkflows + (historicDone ? 1 : 0) + (techSheetsDone ? 1 : 0) + (overlayDone ? 1 : 0) + (ctDoseDone ? 1 : 0);
-  const allComplete = totalComplete === 10;
+  const totalComplete = completedWorkflows + (historicDone ? 1 : 0) + (techSheetsDone ? 1 : 0) + (overlayDone ? 1 : 0) + (ctDoseDone ? 1 : 0);
+  const allComplete = totalComplete === 8;
 
   // ── Workflow block ────────────────────────────────────────────────────────────
   const WorkflowBlock = ({
@@ -291,7 +237,7 @@ export function IntegrationWorkflows({ values, onChange, organizationId, onBack,
       <div className="flex items-start justify-between">
         <div>
           <h2 className="text-2xl font-bold">Integration Workflows</h2>
-          <p className="text-muted-foreground mt-1">Define your systems and how data flows between them</p>
+          <p className="text-muted-foreground mt-1">Describe how data flows between your systems</p>
         </div>
         <div className={cn(
           'flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium border',
@@ -300,154 +246,11 @@ export function IntegrationWorkflows({ values, onChange, organizationId, onBack,
             : 'bg-muted text-muted-foreground border-border',
         )}>
           {allComplete && <CheckCircle2 className="w-4 h-4" />}
-          {totalComplete}/10 Complete
+          {totalComplete}/8 Complete
         </div>
       </div>
 
       <hr className="border-border" />
-
-      {/* Architecture Diagram — full width, prominent when uploaded */}
-      <div className="rounded-xl border bg-card p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-lg">Architecture Diagram</h3>
-          {diagramUrl && (
-            <span className="text-xs font-semibold text-green-500 uppercase tracking-wider">Uploaded</span>
-          )}
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Upload a network or workflow diagram showing how orders, images, priors, and reports move through your systems.
-        </p>
-        <input
-          ref={diagramInputRef}
-          type="file"
-          accept=".png,.jpg,.jpeg,.pdf"
-          className="hidden"
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleDiagramFile(f); e.target.value = ''; }}
-        />
-        {!diagramUrl ? (
-          <div
-            className={cn(
-              'border-2 border-dashed rounded-xl p-12 flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors',
-              isDragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40 hover:bg-muted/20',
-            )}
-            onClick={() => diagramInputRef.current?.click()}
-            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={(e) => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f) handleDiagramFile(f); }}
-          >
-            {isUploadingDiagram
-              ? <Loader2 className="w-10 h-10 animate-spin text-muted-foreground" />
-              : <CloudUpload className="w-10 h-10 text-muted-foreground" />
-            }
-            <div className="text-center">
-              <p className="text-sm font-medium">Drop file here or click to upload</p>
-              <p className="text-xs text-muted-foreground">PNG, JPG, PDF accepted</p>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {isImageDiagram ? (
-              <a href={diagramUrl} target="_blank" rel="noopener noreferrer" className="block rounded-lg overflow-hidden border border-border/50 hover:border-primary/50 transition-colors bg-black/20">
-                <img src={diagramUrl} alt="Architecture diagram" className="w-full object-contain" style={{ minHeight: '300px', maxHeight: '70vh' }} />
-              </a>
-            ) : (
-              <div className="flex items-center gap-3 p-6 rounded-lg border bg-muted/20">
-                <FileText className="w-10 h-10 text-muted-foreground flex-shrink-0" />
-                <a href={diagramUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline text-base">View PDF Document</a>
-              </div>
-            )}
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">{diagramFilename}</p>
-                {diagramUploadedAt && <p className="text-xs text-muted-foreground">Uploaded: {diagramUploadedAt}</p>}
-              </div>
-              <Button variant="outline" size="sm" onClick={() => diagramInputRef.current?.click()} disabled={isUploadingDiagram} className="gap-1.5 flex-shrink-0">
-                {isUploadingDiagram ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                Replace
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Systems Table — now full width below diagram */}
-      <div className="space-y-0">
-        {/* Systems Table */}
-        <div className="rounded-xl border bg-card p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-base">Systems in Your Environment</h3>
-            {systems.length > 0 && (
-              <span className="text-xs font-semibold text-green-500 uppercase tracking-wider">Populated</span>
-            )}
-          </div>
-          {systems.length > 0 && (
-            <div className="border rounded-lg overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/30">
-                  <tr>
-                    <th className="text-left px-3 py-2 font-medium">System Name</th>
-                    <th className="text-left px-3 py-2 font-medium w-36">Type</th>
-                    <th className="text-left px-3 py-2 font-medium">Notes</th>
-                    <th className="w-8 px-2 py-2"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {systems.map((sys, idx) => (
-                    <tr key={sys.id} className={cn('border-t border-border/40', idx % 2 === 1 && 'bg-muted/10')}>
-                      <td className="px-2 py-1">
-                        <Input
-                          value={sys.name}
-                          onChange={(e) => updateSystem(sys.id, 'name', e.target.value)}
-                          placeholder="e.g. Epic"
-                          className="h-7 text-sm border-0 bg-transparent px-1 focus-visible:ring-1 focus-visible:ring-primary/50"
-                        />
-                      </td>
-                      <td className="px-2 py-1">
-                        <Select value={sys.type} onValueChange={(v) => updateSystem(sys.id, 'type', v)}>
-                          <SelectTrigger
-                            className={cn(
-                              'h-7 text-xs rounded-full px-2.5 font-medium w-full',
-                              sys.type ? TYPE_COLORS[sys.type] : 'border-dashed',
-                            )}
-                          >
-                            <SelectValue placeholder="Type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {SYSTEM_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </td>
-                      <td className="px-2 py-1">
-                        <Input
-                          value={sys.notes}
-                          onChange={(e) => updateSystem(sys.id, 'notes', e.target.value)}
-                          placeholder="Notes"
-                          className="h-7 text-sm border-0 bg-transparent px-1 focus-visible:ring-1 focus-visible:ring-primary/50"
-                        />
-                      </td>
-                      <td className="px-2 py-1 text-center">
-                        <button
-                          onClick={() => deleteSystem(sys.id)}
-                          className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          {systems.length === 0 && (
-            <p className="text-sm text-muted-foreground italic text-center py-4">No systems added yet</p>
-          )}
-          <Button variant="outline" size="sm" onClick={addSystem} className="gap-1.5 w-full">
-            <Plus className="w-4 h-4" />
-            Add System
-          </Button>
-        </div>
-      </div>
 
       {/* Workflow blocks — 2×2 grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

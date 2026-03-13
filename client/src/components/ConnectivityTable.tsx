@@ -39,15 +39,9 @@ const DEFAULT_TRAFFIC_TYPES = [
   'HL7 - Orders (ORM)',
   'HL7 - Results (ORU)',
   'HL7 - ADT',
-  'HL7 - SIU (Scheduling)',
-  'HL7 - MDM (Documents)',
   // DICOM traffic types
   'DICOM - C-STORE (Images)',
   'DICOM - C-FIND/C-MOVE (Query/Retrieve)',
-  'DICOM - Worklist (MWL)',
-  'DICOM - MPPS',
-  'DICOM - Storage Commitment',
-  'DICOM - Dose Reports (RDSR)',
 ] as const;
 
 // Common systems that always appear as suggestions (alphabetical)

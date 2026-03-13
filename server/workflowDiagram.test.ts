@@ -30,9 +30,9 @@ describe('Integration Workflows', () => {
     });
   });
 
-  it('should have correct section count (4 total)', () => {
-    // 1 org info + 1 integration-workflows + 1 connectivity + 1 hl7 & dicom
-    expect(questionnaireSections).toHaveLength(4);
+  it('should have correct section count (6 total)', () => {
+    // 1 org info + 1 architecture + 1 integration-workflows + 1 connectivity + 1 config-files + 1 hl7 & dicom
+    expect(questionnaireSections).toHaveLength(6);
   });
 
   it('should have no legacy workflow sections', () => {

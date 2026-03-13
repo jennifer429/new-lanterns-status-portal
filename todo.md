@@ -1943,3 +1943,19 @@
 - [x] Split single IP/Port into Source IP/Port and Destination IP/Port
 - [x] Fix colors: Prod = green, Test = yellow
 - [x] Add D.9 question about HL7 tokens/segments for clinical data (medications, history, allergies, etc.)
+
+## Rename & Restructure Integration Workflows (Mar 12, 2026)
+- [x] Rename first Integration Workflows section to "Architecture" in sidebar
+- [x] Move Systems in Your Environment table to the Architecture tab
+- [x] Remove Architecture Diagram block and Systems table from second Integration Workflows tab
+- [x] Second IW tab keeps only workflow blocks (Orders, Priors, Reports, etc.)
+- [x] Update admin/progress references for renamed section
+- [x] Remove MDM, SIU, Worklist, MPPS, Storage Commitment, Dose Reports from traffic type dropdown
+- [x] Move Configuration Files (CF.1-CF.6) from Connectivity to their own new section tab
+- [x] Leave VPN form (E.1) in Connectivity section
+- [x] Remove Architecture Diagram and Systems table from Integration Workflows component (keep workflow blocks only)
+- [x] Add Config Files icon to sidebar
+- [x] Update admin references for new section structure
+
+- [x] Architecture section: stack diagram full-width on top, systems table below (not side-by-side)
+- [x] Simplify progress panel: remove percentages, show only complete/incomplete icons per section
