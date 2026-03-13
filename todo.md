@@ -1923,3 +1923,12 @@
 
 ## Historic Results Dropdown Update (Mar 12, 2026)
 - [x] Update Historic Results delivery method to 3 options: HL7 (preferred), Flat File, DICOM
+
+## Connectivity Table Redesign (Mar 12, 2026)
+- [x] Widen IP Address and Port columns
+- [x] Remove Protocol column
+- [x] Change Environment to checkbox (Test/Prod/Both)
+- [x] Populate Source/Destination from systems inventory + common systems list
+- [x] Add pre-canned list of common traffic types with ability to add custom ones
+- [x] Add export functionality (CSV/JSON) for connectivity table
+- [x] Add import functionality with AI-friendly structured format and column mapping

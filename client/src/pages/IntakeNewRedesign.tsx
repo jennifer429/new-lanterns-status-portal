@@ -1113,6 +1113,13 @@ export default function IntakeNewRedesign() {
                           return typeof v === 'string' ? JSON.parse(v) : v;
                         } catch { return []; }
                       })()}
+                      systems={(() => {
+                        try {
+                          const v = responses['IW.systems'];
+                          if (!v) return [];
+                          return typeof v === 'string' ? JSON.parse(v) : v;
+                        } catch { return []; }
+                      })()}
                       onChange={(rows) => {
                         setResponses(prev => ({ ...prev, ['CONN.endpoints']: rows }));
                         if (slug && user?.email) {
