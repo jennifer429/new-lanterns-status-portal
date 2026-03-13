@@ -2006,3 +2006,16 @@
 ## Admin Landing + Architecture Remove (Mar 13, 2026)
 - [x] Swap admin/partner landing page to Implementation Dashboard (not Connectivity)
 - [x] Add remove button to Architecture Diagram on Site Dashboard
+
+## Systems Add/Edit Fix (Mar 13, 2026)
+- [ ] Replace plain text "Add System" with dropdown fields for system type
+- [ ] System type dropdown: PACS, EHR/RIS, Router/Middleware, VNA, Integration Engine, AI, Cloud Storage, etc.
+- [ ] Proper add/edit/delete functionality with inline editing
+
+## Systems Section Redesign (Mar 13, 2026)
+- [x] Pre-loaded rows for PACS, VNA, Router, EHR, RIS, Integration Engine, AI with vendor dropdowns
+- [x] AI row supports multi-select (multiple AI platforms)
+- [x] Vendor dropdowns specific to each system type
+- [x] Users can add custom rows with customizable type and vendor
+- [x] Import/export buttons for systems data (JSON)
+- [x] Import/export buttons for architecture diagram

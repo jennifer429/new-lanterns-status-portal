@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Download, Upload, CheckCircle2, Circle, LogOut, FileText, Shield, FileUp, Network, ClipboardCheck, Star, X, File, CloudUpload, Trash2, Paperclip, FileIcon, Menu, Pencil, Plus, RefreshCw } from "lucide-react";
+import { Loader2, Download, Upload, CheckCircle2, Circle, LogOut, FileText, Shield, FileUp, Network, ClipboardCheck, Star, X, File, CloudUpload, Trash2, Paperclip, FileIcon, Menu, Pencil, Plus, RefreshCw, Import, FileDown, FileUp as FileUpIcon } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -64,20 +64,44 @@ function formatFileSize(bytes: number | null | undefined): string {
 }
 
 // ── System type badge config ──────────────────────────────────────────────────
-const SYSTEM_TYPES = ['EHR', 'PACS', 'Interface Engine', 'Router', 'RIS', 'VNA', 'Modality', 'AI Platform', 'Other'] as const;
+const SYSTEM_TYPES = ['PACS', 'VNA', 'Router', 'EHR', 'RIS', 'Integration Engine', 'AI', 'Modality', 'Other'] as const;
 type SystemType = typeof SYSTEM_TYPES[number];
 
 const SYSTEM_TYPE_COLORS: Record<string, string> = {
-  'EHR':              'bg-blue-500/20 text-blue-300 border-blue-500/30',
   'PACS':             'bg-purple-500/20 text-purple-300 border-purple-500/30',
-  'Interface Engine': 'bg-green-500/20 text-green-300 border-green-500/30',
-  'Router':           'bg-orange-500/20 text-orange-300 border-orange-500/30',
-  'RIS':              'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
   'VNA':              'bg-pink-500/20 text-pink-300 border-pink-500/30',
+  'Router':           'bg-orange-500/20 text-orange-300 border-orange-500/30',
+  'EHR':              'bg-blue-500/20 text-blue-300 border-blue-500/30',
+  'RIS':              'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
+  'Integration Engine': 'bg-green-500/20 text-green-300 border-green-500/30',
+  'AI':               'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
   'Modality':         'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-  'AI Platform':      'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
   'Other':            'bg-gray-500/20 text-gray-300 border-gray-500/30',
 };
+
+// Vendor/product options per system type
+const VENDOR_OPTIONS: Record<string, string[]> = {
+  'PACS':             ['Cerner', 'Merge', 'Philips', 'GE', 'Fujifilm', 'Sectra', 'Agfa', 'Renown PACS', 'Other'],
+  'VNA':              ['Merge', 'Hyland', 'Philips', 'GE', 'Fujifilm', 'Umbra', 'Other'],
+  'Router':           ['Laurel Bridge', 'Merge', 'Silverback', 'Mercure', 'DCM4J proxy', 'Other'],
+  'EHR':              ['Epic', 'Cerner', 'Meditech', 'Athena', 'Other'],
+  'RIS':              ['Epic', 'Cerner', 'Meditech', 'Abbadox', 'Other'],
+  'Integration Engine': ['Cloverleaf', 'Rhapsody', 'Mirth Connect', 'MetInformatics', 'Other'],
+  'AI':               ['Viz.AI', 'Aidoc', 'Nuance', 'CADstream', 'iCAD', 'Arterys', 'Zebra Medical', 'Other'],
+  'Modality':         ['GE', 'Siemens', 'Philips', 'Canon', 'Hologic', 'Other'],
+  'Other':            ['PowerScribe', 'Fluency', 'Abbadox', 'DataFirst', 'Other'],
+};
+
+// Default system rows that are always shown (pre-loaded)
+const DEFAULT_SYSTEM_ROWS: { type: string; label: string; multiSelect?: boolean }[] = [
+  { type: 'PACS', label: 'PACS' },
+  { type: 'VNA', label: 'VNA' },
+  { type: 'Router', label: 'Router / Middleware' },
+  { type: 'EHR', label: 'EHR' },
+  { type: 'RIS', label: 'RIS' },
+  { type: 'Integration Engine', label: 'Integration Engine' },
+  { type: 'AI', label: 'AI Platforms', multiSelect: true },
+];
 
 interface SystemEntry { id: string; name: string; type: string; description: string; }
 
@@ -113,16 +137,48 @@ function ArchitectureOverview({
     onSystemsChange(JSON.stringify(updated));
   };
 
-  // Add / edit / delete state
+  // Helper: get system entry for a default row type
+  const getSystemForType = (type: string) => systems.find(s => s.type === type);
+  // Helper: get all AI entries (multi-select)
+  const getAISystems = () => systems.filter(s => s.type === 'AI');
+  // Helper: get custom (non-default) systems
+  const customSystems = systems.filter(s => !DEFAULT_SYSTEM_ROWS.some(d => d.type === s.type));
+
+  // Update a default row's vendor selection
+  const setDefaultRowVendor = (type: string, vendor: string) => {
+    const existing = getSystemForType(type);
+    if (existing) {
+      saveSystems(systems.map(s => s.id === existing.id ? { ...s, name: vendor, description: '' } : s));
+    } else {
+      saveSystems([...systems, { id: crypto.randomUUID(), name: vendor, type, description: '' }]);
+    }
+  };
+
+  // Clear a default row
+  const clearDefaultRow = (type: string) => {
+    saveSystems(systems.filter(s => s.type !== type));
+  };
+
+  // Toggle AI vendor (multi-select)
+  const toggleAIVendor = (vendor: string) => {
+    const aiSystems = getAISystems();
+    const existing = aiSystems.find(s => s.name === vendor);
+    if (existing) {
+      saveSystems(systems.filter(s => s.id !== existing.id));
+    } else {
+      saveSystems([...systems, { id: crypto.randomUUID(), name: vendor, type: 'AI', description: '' }]);
+    }
+  };
+
+  // Custom row add/edit/delete
+  const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
-  const [editType, setEditType] = useState<string>('PACS');
+  const [editType, setEditType] = useState<string>('Other');
   const [editDesc, setEditDesc] = useState('');
-  const [isAdding, setIsAdding] = useState(false);
 
-  const startEdit = (s: SystemEntry) => {
-    setEditingId(s.id); setEditName(s.name); setEditType(s.type); setEditDesc(s.description);
-  };
+  const startAdd = () => { setIsAdding(true); setEditName(''); setEditType('Other'); setEditDesc(''); };
+  const startEdit = (s: SystemEntry) => { setEditingId(s.id); setEditName(s.name); setEditType(s.type); setEditDesc(s.description); };
   const cancelEdit = () => { setEditingId(null); setIsAdding(false); };
 
   const saveEdit = () => {
@@ -134,14 +190,38 @@ function ArchitectureOverview({
       saveSystems(systems.map(s => s.id === editingId ? { ...s, name: editName.trim(), type: editType, description: editDesc.trim() } : s));
       setEditingId(null);
     }
-    setEditName(''); setEditType('PACS'); setEditDesc('');
-  };
-
-  const startAdd = () => {
-    setEditingId(null); setIsAdding(true); setEditName(''); setEditType('PACS'); setEditDesc('');
+    setEditName(''); setEditType('Other'); setEditDesc('');
   };
 
   const deleteSystem = (id: string) => saveSystems(systems.filter(s => s.id !== id));
+
+  // Import/Export systems
+  const systemsImportRef = useRef<HTMLInputElement>(null);
+  const exportSystems = () => {
+    const blob = new Blob([JSON.stringify(systems, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'systems-export.json'; a.click();
+    URL.revokeObjectURL(url);
+  };
+  const importSystems = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const imported = JSON.parse(e.target?.result as string);
+        if (Array.isArray(imported)) {
+          // Merge: add imported systems that don't already exist
+          const merged = [...systems];
+          for (const item of imported) {
+            if (item.name && item.type && !merged.some(s => s.name === item.name && s.type === item.type)) {
+              merged.push({ id: crypto.randomUUID(), name: item.name, type: item.type, description: item.description || '' });
+            }
+          }
+          saveSystems(merged);
+        }
+      } catch { /* ignore bad JSON */ }
+    };
+    reader.readAsText(file);
+  };
 
   // allUploadedFiles is ordered DESC — index 0 is the newest file
   const latestDiagram = diagramFiles[0];
@@ -195,22 +275,34 @@ function ArchitectureOverview({
                 </a>
               )}
             </div>
-            {/* File info + replace */}
+            {/* File info + actions */}
             <div className="flex items-end justify-between gap-2">
               <div>
                 <p className="text-sm font-medium truncate">{latestDiagram.fileName}</p>
                 {uploadedDate && <p className="text-xs text-muted-foreground">Uploaded: {uploadedDate}</p>}
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => diagramInputRef.current?.click()}
-                disabled={isDiagramUploading}
-                className="shrink-0 gap-1.5"
-              >
-                {isDiagramUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                Replace Diagram
-              </Button>
+              <div className="flex gap-2">
+                <a
+                  href={latestDiagram.fileUrl}
+                  download={latestDiagram.fileName}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Button size="sm" variant="ghost" className="shrink-0 gap-1.5 text-muted-foreground hover:text-foreground">
+                    <FileDown className="w-3.5 h-3.5" /> Export
+                  </Button>
+                </a>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => diagramInputRef.current?.click()}
+                  disabled={isDiagramUploading}
+                  className="shrink-0 gap-1.5"
+                >
+                  {isDiagramUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                  Replace
+                </Button>
+              </div>
             </div>
           </>
         ) : (
@@ -253,43 +345,114 @@ function ArchitectureOverview({
       <div className="rounded-xl border border-border/60 bg-card/60 p-5 flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-base">Systems in Your Environment</h3>
-          {systems.length > 0 && (
-            <span className="text-xs font-semibold tracking-wide text-green-400 uppercase">Populated</span>
-          )}
+          <div className="flex items-center gap-2">
+            {systems.length > 0 && (
+              <span className="text-xs font-semibold tracking-wide text-green-400 uppercase mr-2">Populated</span>
+            )}
+            <Button size="sm" variant="ghost" onClick={exportSystems} className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground" title="Export systems">
+              <FileDown className="w-3.5 h-3.5" /> Export
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => systemsImportRef.current?.click()} className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground" title="Import systems">
+              <Import className="w-3.5 h-3.5" /> Import
+            </Button>
+            <input ref={systemsImportRef} type="file" accept=".json" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) importSystems(f); e.target.value = ''; }} />
+          </div>
         </div>
 
-        {/* System rows */}
+        {/* Pre-loaded system rows */}
         <div className="flex flex-col divide-y divide-border/40">
-          {systems.map(s => (
-            <div key={s.id} className="py-3">
-              {editingId === s.id ? (
-                <SystemEditRow
-                  name={editName} type={editType} description={editDesc}
-                  onNameChange={setEditName} onTypeChange={setEditType} onDescChange={setEditDesc}
-                  onSave={saveEdit} onCancel={cancelEdit}
-                />
-              ) : (
-                <div className="flex items-center gap-3">
-                  <span className="font-medium text-sm flex-1 min-w-0 truncate">{s.name}</span>
-                  <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded border ${SYSTEM_TYPE_COLORS[s.type] || SYSTEM_TYPE_COLORS['Other']}`}>{s.type}</span>
-                  <span className="text-sm text-muted-foreground flex-1 min-w-0 truncate hidden sm:block">{s.description}</span>
-                  <button onClick={() => startEdit(s)} className="text-muted-foreground hover:text-foreground shrink-0">
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                  <button onClick={() => deleteSystem(s.id)} className="text-muted-foreground hover:text-red-400 shrink-0">
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+          {DEFAULT_SYSTEM_ROWS.map(row => {
+            if (row.multiSelect) {
+              // AI row: multi-select checkboxes
+              const selectedAI = getAISystems().map(s => s.name);
+              const vendors = VENDOR_OPTIONS[row.type] || [];
+              return (
+                <div key={row.type} className="py-3">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded border ${SYSTEM_TYPE_COLORS[row.type] || SYSTEM_TYPE_COLORS['Other']}`}>{row.label}</span>
+                    {selectedAI.length > 0 && (
+                      <span className="text-xs text-muted-foreground">{selectedAI.length} selected</span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {vendors.filter(v => v !== 'Other').map(vendor => (
+                      <button
+                        key={vendor}
+                        onClick={() => toggleAIVendor(vendor)}
+                        className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
+                          selectedAI.includes(vendor)
+                            ? 'bg-indigo-500/30 border-indigo-500/50 text-indigo-200'
+                            : 'bg-background/30 border-border/50 text-muted-foreground hover:border-indigo-500/30 hover:text-indigo-300'
+                        }`}
+                      >
+                        {vendor}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              )}
-              {/* Description shown below on mobile */}
-              {editingId !== s.id && s.description && (
-                <p className="text-xs text-muted-foreground mt-1 sm:hidden">{s.description}</p>
-              )}
-            </div>
-          ))}
+              );
+            }
+
+            // Single-select row with vendor dropdown
+            const current = getSystemForType(row.type);
+            const vendors = VENDOR_OPTIONS[row.type] || [];
+            return (
+              <div key={row.type} className="py-3 flex items-center gap-3">
+                <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded border w-[130px] text-center ${SYSTEM_TYPE_COLORS[row.type] || SYSTEM_TYPE_COLORS['Other']}`}>{row.label}</span>
+                <select
+                  value={current?.name || ''}
+                  onChange={e => {
+                    if (e.target.value) setDefaultRowVendor(row.type, e.target.value);
+                    else clearDefaultRow(row.type);
+                  }}
+                  className="flex-1 h-8 text-sm rounded-md border border-input bg-background/50 px-2 text-foreground"
+                >
+                  <option value="">Select {row.label}...</option>
+                  {vendors.map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
+                {current && (
+                  <button onClick={() => clearDefaultRow(row.type)} className="text-muted-foreground hover:text-red-400 shrink-0" title="Clear">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
 
-        {/* Add system row */}
+        {/* Custom (additional) systems */}
+        {customSystems.length > 0 && (
+          <>
+            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2">Additional Systems</div>
+            <div className="flex flex-col divide-y divide-border/40">
+              {customSystems.map(s => (
+                <div key={s.id} className="py-3">
+                  {editingId === s.id ? (
+                    <SystemEditRow
+                      name={editName} type={editType} description={editDesc}
+                      onNameChange={setEditName} onTypeChange={setEditType} onDescChange={setEditDesc}
+                      onSave={saveEdit} onCancel={cancelEdit}
+                    />
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded border ${SYSTEM_TYPE_COLORS[s.type] || SYSTEM_TYPE_COLORS['Other']}`}>{s.type}</span>
+                      <span className="font-medium text-sm flex-1 min-w-0 truncate">{s.name}</span>
+                      {s.description && <span className="text-sm text-muted-foreground flex-1 min-w-0 truncate hidden sm:block">{s.description}</span>}
+                      <button onClick={() => startEdit(s)} className="text-muted-foreground hover:text-foreground shrink-0">
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => deleteSystem(s.id)} className="text-muted-foreground hover:text-red-400 shrink-0">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Add custom system row */}
         {isAdding ? (
           <SystemEditRow
             name={editName} type={editType} description={editDesc}
@@ -304,7 +467,7 @@ function ArchitectureOverview({
             className="self-start gap-1.5 bg-purple-600/20 border-purple-500/30 hover:bg-purple-600/30 text-purple-300"
           >
             <Plus className="w-4 h-4" />
-            Add System
+            Add Custom System
           </Button>
         )}
       </div>
