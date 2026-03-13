@@ -1897,3 +1897,7 @@
 - [x] Add Tech Sheets / DICOM-wrapped documents workflow block
 - [x] Add Overlay PACS report routing workflow block (with example upload)
 - [x] Update completion counter to reflect new blocks (now 9 total)
+
+## CT Dose Information (Mar 12, 2026)
+- [x] Add CT Dose Information workflow block (HL7 vs DICOM-wrapped, location details)
+- [x] Update completion counter from 9 to 10

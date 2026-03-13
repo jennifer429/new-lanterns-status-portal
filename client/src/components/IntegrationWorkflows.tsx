@@ -196,8 +196,9 @@ export function IntegrationWorkflows({ values, onChange, organizationId, onBack,
   const historicDone = !!(values['IW.historic_results_description'] && String(values['IW.historic_results_description']).trim().length > 0);
   const techSheetsDone = !!(values['IW.tech_sheets_description'] && String(values['IW.tech_sheets_description']).trim().length > 0);
   const overlayDone = !!(values['IW.overlay_pacs_description'] && String(values['IW.overlay_pacs_description']).trim().length > 0);
-  const totalComplete = (diagramDone ? 1 : 0) + (systemsDone ? 1 : 0) + completedWorkflows + (historicDone ? 1 : 0) + (techSheetsDone ? 1 : 0) + (overlayDone ? 1 : 0);
-  const allComplete = totalComplete === 9;
+  const ctDoseDone = !!(values['IW.ct_dose_description'] && String(values['IW.ct_dose_description']).trim().length > 0);
+  const totalComplete = (diagramDone ? 1 : 0) + (systemsDone ? 1 : 0) + completedWorkflows + (historicDone ? 1 : 0) + (techSheetsDone ? 1 : 0) + (overlayDone ? 1 : 0) + (ctDoseDone ? 1 : 0);
+  const allComplete = totalComplete === 10;
 
   // ── Workflow block ────────────────────────────────────────────────────────────
   const WorkflowBlock = ({
@@ -258,7 +259,7 @@ export function IntegrationWorkflows({ values, onChange, organizationId, onBack,
             : 'bg-muted text-muted-foreground border-border',
         )}>
           {allComplete && <CheckCircle2 className="w-4 h-4" />}
-          {totalComplete}/9 Complete
+          {totalComplete}/10 Complete
         </div>
       </div>
 
@@ -640,6 +641,77 @@ export function IntegrationWorkflows({ values, onChange, organizationId, onBack,
                 Upload Example
               </Button>
             )}
+          </div>
+        </div>
+
+        {/* CT Dose Information */}
+        <div className={cn('space-y-4 p-5 rounded-xl border bg-card transition-colors', ctDoseDone && 'border-primary/50')}>
+          <div className="flex items-center gap-2">
+            {ctDoseDone
+              ? <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+              : <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 flex-shrink-0" />
+            }
+            <h3 className="font-semibold text-base">CT Dose Information</h3>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            CT dose data (DLP, CTDIvol, etc.) needs to be captured and routed. Will this information be included in HL7 messages, or will it come as a DICOM Radiation Dose Structured Report (RDSR) / DICOM-wrapped dose sheet?
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">How is CT dose data delivered?</label>
+              <Select
+                value={values['IW.ct_dose_delivery_method'] || ''}
+                onValueChange={(v) => onChange('IW.ct_dose_delivery_method', v)}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Select method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="hl7">Included in HL7 messages</SelectItem>
+                  <SelectItem value="dicom_rdsr">DICOM RDSR (Radiation Dose SR)</SelectItem>
+                  <SelectItem value="dicom_wrapped">DICOM-wrapped dose sheet</SelectItem>
+                  <SelectItem value="both">Both HL7 and DICOM</SelectItem>
+                  <SelectItem value="third_party">Third-party dose tracking system</SelectItem>
+                  <SelectItem value="not_captured">Not currently captured</SelectItem>
+                  <SelectItem value="unsure">Not sure</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {(values['IW.ct_dose_delivery_method'] === 'hl7' || values['IW.ct_dose_delivery_method'] === 'both') && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Where in the HL7 message?</label>
+                <Select
+                  value={values['IW.ct_dose_hl7_location'] || ''}
+                  onValueChange={(v) => onChange('IW.ct_dose_hl7_location', v)}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Select segment" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="obx">OBX segment</SelectItem>
+                    <SelectItem value="zds">ZDS (custom Z-segment)</SelectItem>
+                    <SelectItem value="oru">ORU result message</SelectItem>
+                    <SelectItem value="other">Other / custom</SelectItem>
+                    <SelectItem value="unsure">Not sure</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+          <Textarea
+            value={values['IW.ct_dose_description'] || ''}
+            onChange={(e) => onChange('IW.ct_dose_description', e.target.value)}
+            placeholder="Describe how CT dose information is currently captured, which systems generate it, and how it should be routed to New Lantern. Include any third-party dose tracking tools (e.g., Radimetrics, DoseWatch) if applicable..."
+            rows={4}
+            className="resize-y"
+          />
+          <div className="space-y-1.5">
+            <p className="text-sm text-muted-foreground">Systems involved:</p>
+            <SystemsMultiSelect
+              selectedNames={(() => { try { const v = values['IW.ct_dose_systems']; if (!v) return []; return Array.isArray(v) ? v : JSON.parse(v); } catch { return []; } })()}
+              allSystems={systems}
+              onChange={(v) => onChange('IW.ct_dose_systems', v)}
+            />
           </div>
         </div>
 
