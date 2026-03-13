@@ -1904,3 +1904,12 @@
 
 ## Remove Architecture Section (Mar 12, 2026)
 - [x] Remove Architecture section from intake questionnaire sidebar
+
+## Questionnaire Restructure (Mar 12, 2026)
+- [x] Move D.7 (Historic Reports method) into Integration Workflows — combine with Historic Results block
+- [x] Move D.8 (Tech sheets input method) into Integration Workflows — combine with Tech Sheets block
+- [x] Move D.1 (Can production systems be configured for testing?) into Connectivity section
+- [x] Redesign Connectivity section as editable table (IP, Port, Protocol, AE Title, Traffic Type, Source, Destination, Environment)
+- [x] Remove old DICOM/HL7 endpoint textarea questions from Connectivity
+- [x] Update admin progress calculation for connectivity-table type
+- [x] Update tests (workflowDiagram, adminUtils, vpn-templates) for 4-section structure

@@ -30,6 +30,7 @@ import { questionnaireSections, type Question, type Section } from "@shared/ques
 import { toast } from "sonner";
 import { WorkflowDiagram } from "@/components/WorkflowDiagram";
 import { IntegrationWorkflows } from "@/components/IntegrationWorkflows";
+import { ConnectivityTable, type ConnectivityRow } from "@/components/ConnectivityTable";
 
 // Section icons mapping
 const sectionIcons: Record<string, any> = {
@@ -285,6 +286,32 @@ export default function IntakeNewRedesign() {
       }).length;
       const totalComplete = (diagramDone ? 1 : 0) + (systemsDone ? 1 : 0) + completedWorkflows;
       return Math.round((totalComplete / 6) * 100);
+    }
+
+    // Handle connectivity-table section
+    if (section.type === 'connectivity-table') {
+      // Count: D.1 answered + endpoints table has rows + file uploads
+      let total = 0;
+      let answered = 0;
+      // Standard questions (D.1, etc.)
+      const stdQuestions = (section.questions || []).filter(q => q.type !== 'upload' && q.type !== 'upload-download' && !q.inactive);
+      total += stdQuestions.length;
+      answered += stdQuestions.filter(q => {
+        const r = responses[q.id];
+        return r !== undefined && r !== '' && r !== null;
+      }).length;
+      // Endpoints table
+      total += 1;
+      try {
+        const v = responses['CONN.endpoints'];
+        const rows = v ? (typeof v === 'string' ? JSON.parse(v) : v) : [];
+        if (Array.isArray(rows) && rows.length > 0 && rows.some((r: any) => r.ip || r.sourceSystem)) answered += 1;
+      } catch { /* empty */ }
+      // File uploads
+      const uploadQuestions = (section.questions || []).filter(q => q.type === 'upload' || q.type === 'upload-download');
+      total += uploadQuestions.length;
+      answered += uploadQuestions.filter(q => allUploadedFiles.some(f => f.questionId === q.id)).length;
+      return total > 0 ? Math.round((answered / total) * 100) : 100;
     }
 
     // Handle workflow sections differently
@@ -1047,8 +1074,88 @@ export default function IntakeNewRedesign() {
                 )}
               </div>
 
+              {/* Connectivity Table */}
+              {currentSectionData?.type === 'connectivity-table' && (
+                <div className="mt-6 space-y-8">
+                  {/* Render D.1 and other standard questions first */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 md:gap-x-8 gap-y-5 md:gap-y-6">
+                    {currentSectionData?.questions?.filter((question) => {
+                      if (question.inactive) return false;
+                      if (question.type === 'upload' || question.type === 'upload-download') return false; // render uploads separately below
+                      if (question.conditionalOn) {
+                        const parentResponse = responses[question.conditionalOn.questionId];
+                        if (parentResponse !== question.conditionalOn.value) return false;
+                      }
+                      return true;
+                    }).map((question) => (
+                      <div key={question.id} className={question.type === 'textarea' ? 'col-span-1 md:col-span-2' : 'col-span-1'}>
+                        <Label className="mb-3 block text-base">
+                          <span className="text-purple-400 font-bold mr-2">[{question.id}]</span>
+                          {question.text}
+                        </Label>
+                        {renderQuestion(question)}
+                        {question.notes && <p className="text-xs text-muted-foreground mt-1">{question.notes}</p>}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Endpoint Table */}
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-semibold">Network Endpoints</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Add each network endpoint that will carry traffic between your systems and New Lantern. Include DICOM, HL7, and any other connections for both test and production environments.
+                    </p>
+                    <ConnectivityTable
+                      rows={(() => {
+                        try {
+                          const v = responses['CONN.endpoints'];
+                          if (!v) return [];
+                          return typeof v === 'string' ? JSON.parse(v) : v;
+                        } catch { return []; }
+                      })()}
+                      onChange={(rows) => {
+                        setResponses(prev => ({ ...prev, ['CONN.endpoints']: rows }));
+                        if (slug && user?.email) {
+                          saveMutation.mutate({
+                            organizationSlug: slug,
+                            questionId: 'CONN.endpoints',
+                            response: JSON.stringify(rows),
+                            userEmail: user.email,
+                          });
+                        }
+                      }}
+                    />
+                  </div>
+
+                  {/* File uploads section */}
+                  <div className="space-y-5">
+                    <h3 className="text-lg font-semibold">Configuration File Uploads</h3>
+                    <p className="text-xs text-yellow-400/80 flex items-center gap-1.5">
+                      <Shield className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span>De-identify all files before uploading. Do not share PHI or patient data.</span>
+                    </p>
+                    <div className="grid grid-cols-1 gap-y-5">
+                      {currentSectionData?.questions?.filter(q => q.type === 'upload' || q.type === 'upload-download').map((question) => {
+                        const hasTemplate = (question.type === 'upload' || question.type === 'upload-download') &&
+                          (dbTemplateMap.get(question.id) || []).length > 0;
+                        return (
+                          <div key={question.id} className="p-4 rounded-lg bg-purple-900/10 border border-purple-500/15 col-span-1">
+                            <Label className="mb-3 block text-base">
+                              <span className="text-purple-400 font-bold mr-2">[{question.id}]</span>
+                              {question.text}
+                            </Label>
+                            {question.notes && <p className="text-xs text-muted-foreground mb-3">{question.notes}</p>}
+                            {renderQuestion(question)}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Questions Grid or Workflow Diagram */}
-              {currentSectionData?.type === 'workflow' ? (
+              {currentSectionData?.type !== 'connectivity-table' && (currentSectionData?.type === 'workflow' ? (
                 <div className="mt-6">
                   <WorkflowDiagram 
                     workflowType={currentSectionData.workflowType as any}
@@ -1143,7 +1250,7 @@ export default function IntakeNewRedesign() {
                     );
                   })}
                 </div>
-              )}
+              ))}
 
               {/* Bottom Buttons */}
               <div className="flex items-center justify-between border-t mt-8 pt-6">

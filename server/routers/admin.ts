@@ -865,9 +865,39 @@ export const adminRouter = router({
 
         // Build question list (include workflow sections)
         const allQuestions = questionnaireSections.flatMap(section => {
-          if (section.questions) {
+          if (section.type === 'connectivity-table' && section.questions) {
+            // Connectivity table: include standard questions + a virtual CONN.endpoints question
+            const stdQuestions = section.questions
+              .filter(q => !q.inactive)
+              .map(q => ({
+                id: q.id,
+                sectionTitle: section.title,
+                isWorkflow: false,
+                type: q.type,
+                conditionalOn: q.conditionalOn || null,
+              }));
+            // Add virtual question for the endpoints table
+            stdQuestions.push({
+              id: 'CONN.endpoints',
+              sectionTitle: section.title,
+              isWorkflow: false,
+              type: 'textarea', // treated as text response (JSON)
+              conditionalOn: null,
+            });
+            return stdQuestions;
+          } else if (section.type === 'integration-workflows' && section.questions) {
+            // Integration workflows: include IW.* questions
+            return section.questions
+              .filter(q => !q.inactive)
+              .map(q => ({
+                id: q.id,
+                sectionTitle: section.title,
+                isWorkflow: false,
+                type: q.type,
+                conditionalOn: q.conditionalOn || null,
+              }));
+          } else if (section.questions) {
             // Regular question sections — filter inactive questions and pass conditionalOn
-            // so the shared utility matches exactly what the org-facing portal calculates.
             return section.questions
               .filter(q => !q.inactive)
               .map(q => ({

@@ -454,7 +454,7 @@ export function IntegrationWorkflows({ values, onChange, organizationId, onBack,
           <p className="text-sm text-muted-foreground">
             5 years of prior results is typical. HL7 or flat file is the preferred format for migration. Describe what historic data needs to be migrated and the source system.
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">How many years of historic results?</label>
               <Select
@@ -494,6 +494,22 @@ export function IntegrationWorkflows({ values, onChange, organizationId, onBack,
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Data load method</label>
+              <Select
+                value={values['IW.historic_results_load_method'] || ''}
+                onValueChange={(v) => onChange('IW.historic_results_load_method', v)}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Select method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="hl7_bulk">HL7 messages bulk sent prior to go-live</SelectItem>
+                  <SelectItem value="flat_file">Pipe delimited flat file (3-4 weeks lead time)</SelectItem>
+                  <SelectItem value="with_images">Automatically with images (DICOM-wrapped)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <Textarea
             value={values['IW.historic_results_description'] || ''}
@@ -524,22 +540,41 @@ export function IntegrationWorkflows({ values, onChange, organizationId, onBack,
           <p className="text-sm text-muted-foreground">
             Are tech sheets and other documents sent as DICOM-wrapped objects? Describe how non-image documents (tech sheets, requisitions, consent forms) are handled in your environment.
           </p>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Are documents sent as DICOM-wrapped?</label>
-            <Select
-              value={values['IW.tech_sheets_dicom_wrapped'] || ''}
-              onValueChange={(v) => onChange('IW.tech_sheets_dicom_wrapped', v)}
-            >
-              <SelectTrigger className="h-9 w-full md:w-64">
-                <SelectValue placeholder="Select" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="yes">Yes — DICOM-wrapped</SelectItem>
-                <SelectItem value="no">No — sent separately</SelectItem>
-                <SelectItem value="some">Some are, some aren't</SelectItem>
-                <SelectItem value="unsure">Not sure</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Are documents sent as DICOM-wrapped?</label>
+              <Select
+                value={values['IW.tech_sheets_dicom_wrapped'] || ''}
+                onValueChange={(v) => onChange('IW.tech_sheets_dicom_wrapped', v)}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="yes">Yes — DICOM-wrapped</SelectItem>
+                  <SelectItem value="no">No — sent separately</SelectItem>
+                  <SelectItem value="some">Some are, some aren't</SelectItem>
+                  <SelectItem value="unsure">Not sure</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tech sheets input method</label>
+              <Select
+                value={values['IW.tech_sheets_input_method'] || ''}
+                onValueChange={(v) => onChange('IW.tech_sheets_input_method', v)}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Select method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto_with_images">Automatically with images</SelectItem>
+                  <SelectItem value="manual_pdf">Manually as PDF</SelectItem>
+                  <SelectItem value="both">Both (varies by modality)</SelectItem>
+                  <SelectItem value="not_applicable">Not applicable</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <Textarea
             value={values['IW.tech_sheets_description'] || ''}
