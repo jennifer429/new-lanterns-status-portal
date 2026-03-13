@@ -2048,3 +2048,11 @@
 
 ## Collapsible Vendor Picklist Cards (Mar 13, 2026)
 - [x] Convert vendor picklist system type sections from static cards to collapsible/accordion cards (using Radix Collapsible with chevron rotation)
+
+## Implementation Dashboard Workflow Launcher Refactor (Mar 13, 2026)
+- [x] Make Questionnaire/Validation/Implementation columns clickable to launch workflows
+- [x] Turn status labels into smart buttons (Start/Continue/View based on progress)
+- [x] Add simple progress dots (○●) instead of progress bars
+- [x] Update column headers with guidance (Questionnaire → "Start here", Testing → "Validate", Implementation → "Plan")
+- [x] Add muted/opacity for locked phases (validation & implementation muted at 40% if questionnaire incomplete)
+- [x] Remove View column since workflow columns are the actions

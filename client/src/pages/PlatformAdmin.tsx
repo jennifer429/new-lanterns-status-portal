@@ -1058,26 +1058,40 @@ export default function PlatformAdmin() {
               </div>
             </div>
             
-            {/* Collapsed Table View */}
+            {/* Workflow Launcher Table */}
             <Card>
               <CardContent className="p-0">
                 <Table>
                   <TableHeader>
                     <TableRow className="hover:bg-transparent">
-                      <TableHead className="w-[250px]">Organization</TableHead>
+                      <TableHead className="w-[220px]">Organization</TableHead>
                       {isPlatformAdmin && <TableHead>Partner</TableHead>}
-                      <TableHead className="text-center">Questionnaire</TableHead>
-                      <TableHead className="text-center">Validation</TableHead>
-                      <TableHead className="text-center">Implementation</TableHead>
+                      <TableHead className="text-center">
+                        <div className="flex flex-col items-center">
+                          <span>Questionnaire</span>
+                          <span className="text-[10px] text-primary font-normal">Start here</span>
+                        </div>
+                      </TableHead>
+                      <TableHead className="text-center">
+                        <div className="flex flex-col items-center">
+                          <span>Testing</span>
+                          <span className="text-[10px] text-muted-foreground font-normal">Validate</span>
+                        </div>
+                      </TableHead>
+                      <TableHead className="text-center">
+                        <div className="flex flex-col items-center">
+                          <span>Implementation</span>
+                          <span className="text-[10px] text-muted-foreground font-normal">Plan</span>
+                        </div>
+                      </TableHead>
                       <TableHead className="text-center">Files</TableHead>
                       <TableHead className="text-center">Users</TableHead>
-                      <TableHead className="w-[100px]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {activeOrgs.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={isPlatformAdmin ? 8 : 7} className="text-center py-12 text-muted-foreground">
+                        <TableCell colSpan={isPlatformAdmin ? 7 : 6} className="text-center py-12 text-muted-foreground">
                           No active organizations
                         </TableCell>
                       </TableRow>
@@ -1090,10 +1104,14 @@ export default function PlatformAdmin() {
                         const totalSections = sectionProgress.length || 6;
                         const filesCount = orgMetrics?.files.length || 0;
                         const userCount = orgMetrics?.userCount || 0;
+                        const questionnaireComplete = sectionsComplete === totalSections;
+                        // Determine button labels
+                        const qLabel = sectionsComplete === 0 ? "Start" : questionnaireComplete ? "View" : "Continue";
+                        const qVariant = questionnaireComplete ? "outline" as const : sectionsComplete === 0 ? "default" as const : "secondary" as const;
 
                         return (
                           <TableRow key={org.id} className="hover:bg-muted/30">
-                            {/* Clickable org name → Site Dashboard */}
+                            {/* Org name → Site Dashboard */}
                             <TableCell>
                               <button
                                 onClick={() => setLocation(`/org/${org.slug}`)}
@@ -1108,24 +1126,67 @@ export default function PlatformAdmin() {
                                 <Badge variant="outline" className="text-xs">{partnerName}</Badge>
                               </TableCell>
                             )}
-                            {/* Questionnaire: sections complete */}
+                            {/* Questionnaire — clickable workflow launcher */}
                             <TableCell className="text-center">
-                              <div className="flex items-center justify-center gap-1.5">
-                                {sectionsComplete === totalSections ? (
-                                  <CheckCircle2 className="w-4 h-4 text-green-500" />
-                                ) : (
-                                  <Circle className="w-4 h-4 text-muted-foreground" />
-                                )}
-                                <span className="text-sm">{sectionsComplete}/{totalSections}</span>
-                              </div>
+                              <button
+                                onClick={() => setLocation(`/org/${org.slug}/questionnaire`)}
+                                className="inline-flex flex-col items-center gap-1 group cursor-pointer"
+                              >
+                                <Badge
+                                  variant={qVariant}
+                                  className={cn(
+                                    "text-xs cursor-pointer transition-colors",
+                                    qLabel === "Start" && "bg-primary text-primary-foreground hover:bg-primary/90",
+                                    qLabel === "Continue" && "bg-primary/20 text-primary hover:bg-primary/30",
+                                    qLabel === "View" && "text-green-400 border-green-500/30 hover:bg-green-500/10"
+                                  )}
+                                >
+                                  {qLabel}
+                                </Badge>
+                                <span className="text-[11px] text-muted-foreground">{sectionsComplete}/{totalSections} complete</span>
+                                <div className="flex gap-0.5">
+                                  {Array.from({ length: totalSections }).map((_, i) => (
+                                    <span key={i} className={cn("text-[10px]", i < sectionsComplete ? "text-primary" : "text-muted-foreground/40")}>
+                                      {i < sectionsComplete ? "●" : "○"}
+                                    </span>
+                                  ))}
+                                </div>
+                              </button>
                             </TableCell>
-                            {/* Validation: placeholder */}
-                            <TableCell className="text-center">
-                              <Badge variant="outline" className="text-xs text-muted-foreground">Pending</Badge>
+                            {/* Testing — muted if questionnaire incomplete */}
+                            <TableCell className={cn("text-center", !questionnaireComplete && "opacity-40")}>
+                              <button
+                                onClick={() => setLocation(`/org/${org.slug}/validation`)}
+                                className="inline-flex flex-col items-center gap-1 cursor-pointer"
+                              >
+                                <Badge
+                                  variant={questionnaireComplete ? "default" : "outline"}
+                                  className={cn(
+                                    "text-xs cursor-pointer transition-colors",
+                                    questionnaireComplete
+                                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                                      : "text-muted-foreground"
+                                  )}
+                                >
+                                  {questionnaireComplete ? "Start" : "Start"}
+                                </Badge>
+                                <span className="text-[11px] text-muted-foreground">Pending</span>
+                              </button>
                             </TableCell>
-                            {/* Implementation: placeholder */}
-                            <TableCell className="text-center">
-                              <Badge variant="outline" className="text-xs text-muted-foreground">Pending</Badge>
+                            {/* Implementation — muted if questionnaire incomplete */}
+                            <TableCell className={cn("text-center", !questionnaireComplete && "opacity-40")}>
+                              <button
+                                onClick={() => setLocation(`/org/${org.slug}`)}
+                                className="inline-flex flex-col items-center gap-1 cursor-pointer"
+                              >
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs cursor-pointer text-muted-foreground hover:bg-muted/50 transition-colors"
+                                >
+                                  Start
+                                </Badge>
+                                <span className="text-[11px] text-muted-foreground">Pending</span>
+                              </button>
                             </TableCell>
                             {/* Files */}
                             <TableCell className="text-center">
@@ -1134,18 +1195,6 @@ export default function PlatformAdmin() {
                             {/* Users */}
                             <TableCell className="text-center">
                               <span className="text-sm">{userCount}</span>
-                            </TableCell>
-                            {/* Actions */}
-                            <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setLocation(`/org/${org.slug}`)}
-                                className="gap-1"
-                              >
-                                View
-                                <ExternalLink className="w-3 h-3" />
-                              </Button>
                             </TableCell>
                           </TableRow>
                         );
