@@ -1901,3 +1901,6 @@
 ## CT Dose Information (Mar 12, 2026)
 - [x] Add CT Dose Information workflow block (HL7 vs DICOM-wrapped, location details)
 - [x] Update completion counter from 9 to 10
+
+## Remove Architecture Section (Mar 12, 2026)
+- [x] Remove Architecture section from intake questionnaire sidebar

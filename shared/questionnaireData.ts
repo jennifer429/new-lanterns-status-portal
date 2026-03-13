@@ -1,6 +1,7 @@
 /**
  * Radiology One New Site Onboarding Questionnaire
  * 4 sections: Organization Info, Integration Workflows, Connectivity, HL7 & DICOM Data
+ * Note: Architecture/Systems inventory is now part of Integration Workflows
  * Note: Router = Integration 3rd Party Router for all overlay situations
  */
 
@@ -51,19 +52,6 @@ export const questionnaireSections: Section[] = [
       { id: 'L.9', text: 'Post go-live monitoring requirements', type: 'textarea', placeholder: 'Document post go-live monitoring' },
       { id: 'L.10', text: 'Issue escalation process', type: 'textarea', placeholder: 'Document escalation process' },
       { id: 'L.11', text: 'Downtime Plans - Please describe how your organization handles downtimes planned and unplanned that impact orders and reports or backup reading', type: 'textarea', placeholder: 'Example: During planned maintenance windows (announced 2 weeks in advance), we route orders to backup PACS. For unplanned outages, we have 4-hour SLA for critical systems and maintain paper backup procedures for order entry.' },
-    ],
-  },
-  {
-    id: 'architecture',
-    title: 'Architecture',
-    description: 'Systems inventory and architecture diagram',
-    questions: [
-      { id: 'ARCH.diagram', text: 'Architecture Diagram: Upload a network or workflow diagram showing how your systems connect', type: 'upload', notes: 'Accepted formats: PNG, JPG, PDF' },
-      { id: 'ARCH.1', text: 'PACS system (vendor and product name)', type: 'text', placeholder: 'e.g., Sectra IDS7, Philips IntelliSpace, Agfa IMPAX' },
-      { id: 'ARCH.2', text: 'RIS system (vendor and product name)', type: 'text', placeholder: 'e.g., Epic Radiant, Cerner RadNet, Meditech' },
-      { id: 'ARCH.3', text: 'EMR / EHR system (vendor and product name)', type: 'text', placeholder: 'e.g., Epic, Cerner, Athenahealth, eClinicalWorks' },
-      { id: 'ARCH.4', text: 'Interface Engine / Middleware (if applicable)', type: 'text', placeholder: 'e.g., Mirth Connect, Rhapsody, Iguana, Infor Cloverleaf' },
-      { id: 'ARCH.5', text: 'Additional systems (VNA, AI platforms, cardiology PACS, dose tracking, etc.)', type: 'textarea', placeholder: 'List any other systems relevant to the integration, including vendor names and their roles' },
     ],
   },
   {
