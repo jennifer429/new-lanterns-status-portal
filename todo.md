@@ -1891,3 +1891,9 @@
 ## Architecture & Diagram Display (Mar 12, 2026)
 - [x] Remove standalone Architecture page and route
 - [x] Display uploaded diagram image inline in Integration Workflows section (increased to 400px, clickable to open full size)
+
+## New Integration Workflow Sections (Mar 12, 2026)
+- [x] Add Historic Results workflow block (5yr typical, HL7 or flat file preferred)
+- [x] Add Tech Sheets / DICOM-wrapped documents workflow block
+- [x] Add Overlay PACS report routing workflow block (with example upload)
+- [x] Update completion counter to reflect new blocks (now 9 total)
