@@ -276,9 +276,9 @@ export function IntegrationWorkflows({ values, onChange, organizationId, onBack,
           ) : (
             <div className="space-y-3">
               {isImageDiagram ? (
-                <div className="rounded-lg overflow-hidden border">
-                  <img src={diagramUrl} alt="Architecture diagram" className="w-full object-cover max-h-52" />
-                </div>
+                <a href={diagramUrl} target="_blank" rel="noopener noreferrer" className="block rounded-lg overflow-hidden border hover:border-primary/50 transition-colors">
+                  <img src={diagramUrl} alt="Architecture diagram" className="w-full object-contain max-h-[400px]" />
+                </a>
               ) : (
                 <div className="flex items-center gap-3 p-4 rounded-lg border bg-muted/20">
                   <FileText className="w-8 h-8 text-muted-foreground flex-shrink-0" />

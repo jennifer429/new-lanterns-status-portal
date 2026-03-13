@@ -1887,3 +1887,7 @@
 - [x] Remove Workflow Snapshots row (org cards with 0/4 counts)
 - [x] Remove icon next to "Connectivity Dashboard" in admin tab nav
 - [ ] Fix mobile menu overlap on connectivity page
+
+## Architecture & Diagram Display (Mar 12, 2026)
+- [x] Remove standalone Architecture page and route
+- [x] Display uploaded diagram image inline in Integration Workflows section (increased to 400px, clickable to open full size)
