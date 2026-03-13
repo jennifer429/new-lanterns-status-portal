@@ -1,0 +1,50 @@
+{
+  "query": "SELECT slug, name FROM organizations LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT slug, name FROM organizations LIMIT 10;",
+  "rows": [
+    {
+      "slug": "munson",
+      "name": "Munson Medical Center"
+    },
+    {
+      "slug": "jcrhc",
+      "name": "JCRHC"
+    },
+    {
+      "slug": "baycare",
+      "name": "Baycare"
+    },
+    {
+      "slug": "RRMC",
+      "name": "RRAL"
+    },
+    {
+      "slug": "Boulder",
+      "name": "Boulder Community Health"
+    },
+    {
+      "slug": "fakehosp",
+      "name": "my fake hospital"
+    },
+    {
+      "slug": "fake2",
+      "name": "fake 2"
+    },
+    {
+      "slug": "testa",
+      "name": "testa"
+    },
+    {
+      "slug": "test1",
+      "name": "test 1"
+    },
+    {
+      "slug": "Last",
+      "name": "Testlast"
+    }
+  ],
+  "messages": [],
+  "stdout": "slug\tname\nmunson\tMunson Medical Center\njcrhc\tJCRHC\nbaycare\tBaycare\nRRMC\tRRAL\nBoulder\tBoulder Community Health\nfakehosp\tmy fake hospital\nfake2\tfake 2\ntesta\ttesta\ntest1\ttest 1\nLast\tTestlast\n",
+  "stderr": "",
+  "execution_time_ms": 780
+}

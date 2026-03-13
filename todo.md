@@ -1870,3 +1870,14 @@
 - [x] Build Architecture page in Intake (static UI, mock data)
 - [x] Build Workflow page in Intake (static UI, mock data)
 - [x] Wire up routes and navigation for all new pages
+
+## Navigation & Intake Integration (Mar 11, 2026)
+- [ ] Add top-level navigation tabs on org landing page (Connectivity, Intake, Implementation, Validation)
+- [ ] Integrate Architecture as a section within the Intake questionnaire
+- [x] Integrate Workflows as a section within the Intake questionnaire
+- [ ] Remove standalone Architecture and Workflows routes (now part of Intake)
+
+## Workflow Page Rebuild (Mar 12, 2026)
+- [x] Rebuild Workflows page to match screenshot: editable textareas, removable system chips, green checkmarks
+- [x] Add Save & Continue + Section Complete buttons
+- [x] Integrate as part of Intake flow (not standalone page)

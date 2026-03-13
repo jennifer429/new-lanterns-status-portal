@@ -29,6 +29,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { questionnaireSections, type Question, type Section } from "@shared/questionnaireData";
 import { toast } from "sonner";
 import { WorkflowDiagram } from "@/components/WorkflowDiagram";
+import { IntegrationWorkflows } from "@/components/IntegrationWorkflows";
 
 // Section icons mapping
 const sectionIcons: Record<string, any> = {
@@ -268,6 +269,25 @@ export default function IntakeNewRedesign() {
 
   // Calculate section progress (including uploaded files)
   const calculateSectionProgress = (section: Section) => {
+    // Handle integration-workflows section
+    if (section.type === 'integration-workflows') {
+      // Check IW.* keys in responses for completion
+      const diagramDone = !!responses['IW.diagram'];
+      const systemsRaw = responses['IW.systems'];
+      let systemsDone = false;
+      try {
+        const systems = typeof systemsRaw === 'string' ? JSON.parse(systemsRaw) : systemsRaw;
+        systemsDone = Array.isArray(systems) && systems.length > 0;
+      } catch { systemsDone = false; }
+      const wfKeys = ['orders', 'images', 'priors', 'reports'] as const;
+      const completedWorkflows = wfKeys.filter(wf => {
+        const v = responses[`IW.${wf}_description`];
+        return v && String(v).trim().length > 0;
+      }).length;
+      const totalComplete = (diagramDone ? 1 : 0) + (systemsDone ? 1 : 0) + completedWorkflows;
+      return Math.round((totalComplete / 6) * 100);
+    }
+
     // Handle workflow sections differently
     if (section.type === 'workflow') {
       const configKey = section.id + '_config';
@@ -973,6 +993,35 @@ export default function IntakeNewRedesign() {
         <div className="flex-1 overflow-y-auto p-3 md:p-8">
           <Card className="max-w-6xl mx-auto bg-black/40 backdrop-blur-sm border-purple-500/20">
             <div className="p-4 md:p-8">
+              {/* Integration Workflows section — renders its own header */}
+              {currentSectionData?.type === 'integration-workflows' ? (
+                <IntegrationWorkflows
+                  values={responses}
+                  onChange={(key, value) => {
+                    setResponses(prev => ({ ...prev, [key]: value }));
+                    // Persist to DB
+                    if (slug && user?.email) {
+                      saveMutation.mutate({
+                        organizationSlug: slug,
+                        questionId: key,
+                        response: typeof value === 'object' ? JSON.stringify(value) : String(value),
+                        userEmail: user.email,
+                      });
+                    }
+                  }}
+                  organizationId={org?.id ?? 0}
+                  onBack={() => setLocation(`/org/${slug}`)}
+                  onContinue={() => {
+                    const idx = questionnaireSections.findIndex(s => s.id === currentSection);
+                    if (idx < questionnaireSections.length - 1) {
+                      setCurrentSection(questionnaireSections[idx + 1].id);
+                    } else {
+                      setShowFeedbackModal(true);
+                    }
+                  }}
+                />
+              ) : (
+              <>
               {/* Section Header */}
               <div className="mb-6">
                 <h2 className="text-2xl font-bold mb-2">{currentSectionData?.title}</h2>
@@ -1240,6 +1289,8 @@ export default function IntakeNewRedesign() {
                   {isLastSection ? 'Complete' : 'Save & Continue'}
                 </Button>
               </div>
+              </>
+              )}
             </div>
           </Card>
         </div>
