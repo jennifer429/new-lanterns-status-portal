@@ -790,12 +790,12 @@ export default function PlatformAdmin() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm">
-        <div className="container py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-12" />
-              <div className="flex flex-col justify-center">
-                <h1 className="text-3xl font-bold text-foreground">{headerTitle}</h1>
+        <div className="container py-3 sm:py-6">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+              <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-8 sm:h-12 shrink-0" />
+              <div className="flex flex-col justify-center min-w-0">
+                <h1 className="text-lg sm:text-3xl font-bold text-foreground truncate">{headerTitle}</h1>
                 <p className="text-sm text-muted-foreground mt-0.5">
                   {headerSubtitle}
                 </p>
@@ -850,10 +850,10 @@ export default function PlatformAdmin() {
           </div>
 
           {/* Tab Navigation */}
-          <div className="flex gap-6 mt-6 border-b border-border overflow-x-auto">
+          <div className="flex gap-4 mt-4 sm:mt-6 border-b border-border overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
             <button
               onClick={() => setActiveTab("prod-dashboard")}
-              className={`pb-3 px-1 font-medium transition-colors relative whitespace-nowrap flex items-center gap-1.5 ${
+              className={`pb-2 sm:pb-3 px-1 text-sm font-medium transition-colors relative whitespace-nowrap flex items-center gap-1.5 shrink-0 ${
                 activeTab === "prod-dashboard"
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
@@ -867,7 +867,7 @@ export default function PlatformAdmin() {
             </button>
             <button
               onClick={() => setActiveTab("impl-dashboard")}
-              className={`pb-3 px-1 font-medium transition-colors relative whitespace-nowrap ${
+              className={`pb-2 sm:pb-3 px-1 text-sm font-medium transition-colors relative whitespace-nowrap shrink-0 ${
                 activeTab === "impl-dashboard"
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
@@ -880,7 +880,7 @@ export default function PlatformAdmin() {
             </button>
             <button
               onClick={() => setActiveTab("users")}
-              className={`pb-3 px-1 font-medium transition-colors relative whitespace-nowrap ${
+              className={`pb-2 sm:pb-3 px-1 text-sm font-medium transition-colors relative whitespace-nowrap shrink-0 ${
                 activeTab === "users"
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
@@ -893,7 +893,7 @@ export default function PlatformAdmin() {
             </button>
             <button
               onClick={() => setActiveTab("orgs")}
-              className={`pb-3 px-1 font-medium transition-colors relative whitespace-nowrap ${
+              className={`pb-2 sm:pb-3 px-1 text-sm font-medium transition-colors relative whitespace-nowrap shrink-0 ${
                 activeTab === "orgs"
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
@@ -906,7 +906,7 @@ export default function PlatformAdmin() {
             </button>
             <button
               onClick={() => setActiveTab("templates")}
-              className={`pb-3 px-1 font-medium transition-colors relative whitespace-nowrap ${
+              className={`pb-2 sm:pb-3 px-1 text-sm font-medium transition-colors relative whitespace-nowrap shrink-0 ${
                 activeTab === "templates"
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
@@ -920,7 +920,7 @@ export default function PlatformAdmin() {
             {isPlatformAdmin && (
               <button
                 onClick={() => setActiveTab("partners")}
-                className={`pb-3 px-1 font-medium transition-colors relative whitespace-nowrap ${
+                className={`pb-2 sm:pb-3 px-1 text-sm font-medium transition-colors relative whitespace-nowrap shrink-0 ${
                   activeTab === "partners"
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
@@ -935,7 +935,7 @@ export default function PlatformAdmin() {
             {isPlatformAdmin && (
               <button
                 onClick={() => setActiveTab("specs")}
-                className={`pb-3 px-1 font-medium transition-colors relative whitespace-nowrap ${
+                className={`pb-2 sm:pb-3 px-1 text-sm font-medium transition-colors relative whitespace-nowrap shrink-0 ${
                   activeTab === "specs"
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
