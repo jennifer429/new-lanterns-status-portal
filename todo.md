@@ -2063,3 +2063,20 @@
 - [x] Issue 3: Questionnaire column has bigger progress dots (w-3 h-3 rounded-full), hover highlight, clickable appearance, no grayed out text
 - [x] Issue 4: Testing column shows 0/4 section counts with progress dots, consistent Start/Continue/View buttons, collapsible sections on Validation page, consistent font color/size (text-foreground)
 - [x] Issue 5: Implementation page is now a dedicated checklist-only view (removed sidebar/timeline), collapsible sections, links directly from dashboard
+
+## Validation Check Date Fields (Mar 13, 2026)
+- [x] Add date field to every validation check item
+- [x] Auto-populate date with today's date when checkbox is checked
+- [x] Allow manual date override via date picker
+
+## Validation Check Simplification (Mar 13, 2026)
+- [x] Replace Pass/Fail/Pending status with simple checkbox (tested or not)
+- [x] Remove Expected column (performance thresholds not relevant — it's about task completion)
+- [x] Auto-populate date when checkbox is checked
+- [x] Allow manual date override
+
+## Linked Questionnaire Answers in Validation (Mar 13, 2026)
+- [x] Map questionnaire questions to related validation test items (18 tests mapped to 30+ question IDs)
+- [x] Show related questionnaire answers beside each test via expandable "Show related answers" toggle
+- [x] Clicking a linked answer navigates to questionnaire section with question highlighted (deep link with ?section=&q=)
+- [x] Added id attributes to question containers in IntakeNewRedesign for scroll-to-question support

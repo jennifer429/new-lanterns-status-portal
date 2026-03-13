@@ -176,6 +176,13 @@
       "when": 1773429945947,
       "tag": "0024_cultured_steel_serpent",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "5",
+      "when": 1773443454118,
+      "tag": "0025_shiny_dakota_north",
+      "breakpoints": true
     }
   ]
 }

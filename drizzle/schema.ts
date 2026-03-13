@@ -335,6 +335,8 @@ export const validationResults = mysqlTable("validationResults", {
   status: mysqlEnum("status", ["Pass", "Fail", "Not Tested", "Pending"]).default("Not Tested").notNull(),
   signOff: varchar("signOff", { length: 255 }),
   notes: text("notes"),
+  /** User-settable date for when this test was documented. Auto-populates with today's date. */
+  testedDate: varchar("testedDate", { length: 10 }), // YYYY-MM-DD format
   updatedBy: varchar("updatedBy", { length: 320 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
