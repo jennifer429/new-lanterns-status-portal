@@ -2022,3 +2022,6 @@
 
 ## Vendor Dropdown Additions (Mar 13, 2026)
 - [x] Add Fuji, Agfa, Sectra and other common radiology vendors to system type dropdowns
+
+## Reporting/Dictation Category (Mar 13, 2026)
+- [x] Add Reporting/Dictation system type with PowerScribe, Fluency, mModal, etc.
