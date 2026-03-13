@@ -8,7 +8,7 @@
 export interface Question {
   id: string;
   text: string;
-  type: 'text' | 'textarea' | 'dropdown' | 'date' | 'multi-select' | 'upload' | 'upload-download' | 'contacts-table';
+  type: 'text' | 'textarea' | 'dropdown' | 'date' | 'multi-select' | 'upload' | 'upload-download' | 'contacts-table' | 'systems-list';
   options?: string[];
   notes?: string;
   placeholder?: string;
@@ -24,7 +24,7 @@ export interface Section {
   title: string;
   description?: string;
   questions?: Question[]; // Optional for workflow sections
-  type?: 'standard' | 'workflow' | 'integration-workflows' | 'connectivity-table'; // workflow sections use WorkflowDiagram component, connectivity-table renders editable endpoint table
+  type?: 'standard' | 'workflow' | 'integration-workflows' | 'architecture-overview' | 'connectivity-table'; // workflow sections use WorkflowDiagram component, connectivity-table renders editable endpoint table
   workflowType?: 'orders' | 'images' | 'priors' | 'reports'; // which workflow to render
 }
 
@@ -52,6 +52,22 @@ export const questionnaireSections: Section[] = [
       { id: 'L.9', text: 'Post go-live monitoring requirements', type: 'textarea', placeholder: 'Document post go-live monitoring' },
       { id: 'L.10', text: 'Issue escalation process', type: 'textarea', placeholder: 'Document escalation process' },
       { id: 'L.11', text: 'Downtime Plans - Please describe how your organization handles downtimes planned and unplanned that impact orders and reports or backup reading', type: 'textarea', placeholder: 'Example: During planned maintenance windows (announced 2 weeks in advance), we route orders to backup PACS. For unplanned outages, we have 4-hour SLA for critical systems and maintain paper backup procedures for order entry.' },
+    ],
+  },
+  {
+    id: 'architecture',
+    type: 'architecture-overview',
+    title: 'Integration Workflows',
+    description: 'Define your systems and how data flows between them',
+    questions: [
+      { id: 'ARCH.diagram', text: 'Architecture Diagram', type: 'upload', notes: 'Accepted formats: PNG, JPG, PDF' },
+      { id: 'ARCH.systems', text: 'Systems in Your Environment', type: 'systems-list' },
+      // Legacy fields - kept for data compatibility but hidden from new UI
+      { id: 'ARCH.1', text: 'PACS system (vendor and product name)', type: 'text', placeholder: 'e.g., Sectra IDS7, Philips IntelliSpace, Agfa IMPAX', inactive: true },
+      { id: 'ARCH.2', text: 'RIS system (vendor and product name)', type: 'text', placeholder: 'e.g., Epic Radiant, Cerner RadNet, Meditech', inactive: true },
+      { id: 'ARCH.3', text: 'EMR / EHR system (vendor and product name)', type: 'text', placeholder: 'e.g., Epic, Cerner, Athenahealth, eClinicalWorks', inactive: true },
+      { id: 'ARCH.4', text: 'Interface Engine / Middleware (if applicable)', type: 'text', placeholder: 'e.g., Mirth Connect, Rhapsody, Iguana, Infor Cloverleaf', inactive: true },
+      { id: 'ARCH.5', text: 'Additional systems (VNA, AI platforms, cardiology PACS, dose tracking, etc.)', type: 'textarea', placeholder: 'List any other systems relevant to the integration, including vendor names and their roles', inactive: true },
     ],
   },
   {

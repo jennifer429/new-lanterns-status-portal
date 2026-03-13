@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Download, Upload, CheckCircle2, Circle, LogOut, FileText, Shield, FileUp, Network, ClipboardCheck, Star, X, File, CloudUpload, Trash2, Paperclip, FileIcon, Menu } from "lucide-react";
+import { Loader2, Download, Upload, CheckCircle2, Circle, LogOut, FileText, Shield, FileUp, Network, ClipboardCheck, Star, X, File, CloudUpload, Trash2, Paperclip, FileIcon, Menu, Pencil, Plus, RefreshCw } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,6 +61,297 @@ function formatFileSize(bytes: number | null | undefined): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+// ── System type badge config ──────────────────────────────────────────────────
+const SYSTEM_TYPES = ['EHR', 'PACS', 'Interface Engine', 'Router', 'RIS', 'VNA', 'Modality', 'AI Platform', 'Other'] as const;
+type SystemType = typeof SYSTEM_TYPES[number];
+
+const SYSTEM_TYPE_COLORS: Record<string, string> = {
+  'EHR':              'bg-blue-500/20 text-blue-300 border-blue-500/30',
+  'PACS':             'bg-purple-500/20 text-purple-300 border-purple-500/30',
+  'Interface Engine': 'bg-green-500/20 text-green-300 border-green-500/30',
+  'Router':           'bg-orange-500/20 text-orange-300 border-orange-500/30',
+  'RIS':              'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
+  'VNA':              'bg-pink-500/20 text-pink-300 border-pink-500/30',
+  'Modality':         'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+  'AI Platform':      'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
+  'Other':            'bg-gray-500/20 text-gray-300 border-gray-500/30',
+};
+
+interface SystemEntry { id: string; name: string; type: string; description: string; }
+
+interface ArchitectureOverviewProps {
+  slug: string;
+  diagramFiles: Array<{ id: number; fileName: string; fileUrl: string; mimeType?: string | null; createdAt?: string | Date | null }>;
+  isDiagramUploading: boolean;
+  onDiagramUpload: (file: File) => void;
+  onDiagramDelete: (fileId: number) => void;
+  systemsJson: any;
+  onSystemsChange: (json: string) => void;
+}
+
+function ArchitectureOverview({
+  diagramFiles,
+  isDiagramUploading,
+  onDiagramUpload,
+  onDiagramDelete,
+  systemsJson,
+  onSystemsChange,
+}: ArchitectureOverviewProps) {
+  const diagramInputRef = useRef<HTMLInputElement>(null);
+
+  // Parse systems from JSON
+  const systems: SystemEntry[] = (() => {
+    try {
+      const raw = systemsJson ? (typeof systemsJson === 'string' ? JSON.parse(systemsJson) : systemsJson) : [];
+      return Array.isArray(raw) ? raw : [];
+    } catch { return []; }
+  })();
+
+  const saveSystems = (updated: SystemEntry[]) => {
+    onSystemsChange(JSON.stringify(updated));
+  };
+
+  // Add / edit / delete state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editType, setEditType] = useState<string>('PACS');
+  const [editDesc, setEditDesc] = useState('');
+  const [isAdding, setIsAdding] = useState(false);
+
+  const startEdit = (s: SystemEntry) => {
+    setEditingId(s.id); setEditName(s.name); setEditType(s.type); setEditDesc(s.description);
+  };
+  const cancelEdit = () => { setEditingId(null); setIsAdding(false); };
+
+  const saveEdit = () => {
+    if (!editName.trim()) return;
+    if (isAdding) {
+      saveSystems([...systems, { id: crypto.randomUUID(), name: editName.trim(), type: editType, description: editDesc.trim() }]);
+      setIsAdding(false);
+    } else {
+      saveSystems(systems.map(s => s.id === editingId ? { ...s, name: editName.trim(), type: editType, description: editDesc.trim() } : s));
+      setEditingId(null);
+    }
+    setEditName(''); setEditType('PACS'); setEditDesc('');
+  };
+
+  const startAdd = () => {
+    setEditingId(null); setIsAdding(true); setEditName(''); setEditType('PACS'); setEditDesc('');
+  };
+
+  const deleteSystem = (id: string) => saveSystems(systems.filter(s => s.id !== id));
+
+  // allUploadedFiles is ordered DESC — index 0 is the newest file
+  const latestDiagram = diagramFiles[0];
+  const isImage = latestDiagram
+    ? (latestDiagram.mimeType?.startsWith('image/') ?? /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(latestDiagram.fileName))
+    : false;
+  const [imgError, setImgError] = useState(false);
+  // Reset error state when a new file is uploaded
+  const lastFileId = useRef<number | undefined>(undefined);
+  if (latestDiagram?.id !== lastFileId.current) {
+    lastFileId.current = latestDiagram?.id;
+    if (imgError) setImgError(false);
+  }
+  const uploadedDate = latestDiagram?.createdAt
+    ? new Date(latestDiagram.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : null;
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+      {/* ── Left: Architecture Diagram ── */}
+      <div className="rounded-xl border border-border/60 bg-card/60 p-5 flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-base">Architecture Diagram</h3>
+          {latestDiagram && (
+            <span className="text-xs font-semibold tracking-wide text-green-400 uppercase">Uploaded</span>
+          )}
+        </div>
+
+        {latestDiagram ? (
+          <>
+            {/* Diagram preview */}
+            <div className="rounded-lg overflow-hidden border border-border/40 bg-muted/20 flex items-center justify-center min-h-40">
+              {isImage && !imgError ? (
+                <a href={latestDiagram.fileUrl} target="_blank" rel="noopener noreferrer" className="w-full">
+                  <img
+                    src={latestDiagram.fileUrl}
+                    alt={latestDiagram.fileName}
+                    className="w-full object-contain max-h-72"
+                    onError={() => setImgError(true)}
+                  />
+                </a>
+              ) : (
+                <a
+                  href={latestDiagram.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-col items-center gap-2 p-8 text-muted-foreground hover:text-purple-400 transition-colors"
+                >
+                  <FileText className="w-10 h-10" />
+                  <span className="text-sm">Click to view {latestDiagram.fileName}</span>
+                </a>
+              )}
+            </div>
+            {/* File info + replace */}
+            <div className="flex items-end justify-between gap-2">
+              <div>
+                <p className="text-sm font-medium truncate">{latestDiagram.fileName}</p>
+                {uploadedDate && <p className="text-xs text-muted-foreground">Uploaded: {uploadedDate}</p>}
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => diagramInputRef.current?.click()}
+                disabled={isDiagramUploading}
+                className="shrink-0 gap-1.5"
+              >
+                {isDiagramUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                Replace Diagram
+              </Button>
+            </div>
+          </>
+        ) : (
+          /* Upload drop zone */
+          <div
+            className="flex-1 border-2 border-dashed border-border/50 rounded-lg p-10 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-purple-500/50 hover:bg-purple-500/5 transition-colors"
+            onClick={() => diagramInputRef.current?.click()}
+          >
+            {isDiagramUploading ? (
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            ) : (
+              <>
+                <CloudUpload className="w-10 h-10 text-muted-foreground" />
+                <div className="text-center">
+                  <p className="text-sm font-medium">Upload Architecture Diagram</p>
+                  <p className="text-xs text-muted-foreground mt-1">PNG, JPG, SVG, PDF supported</p>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        <input
+          ref={diagramInputRef}
+          type="file"
+          accept="image/*,.pdf"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+              if (latestDiagram) onDiagramDelete(latestDiagram.id);
+              onDiagramUpload(file);
+            }
+            e.target.value = '';
+          }}
+        />
+      </div>
+
+      {/* ── Right: Systems in Your Environment ── */}
+      <div className="rounded-xl border border-border/60 bg-card/60 p-5 flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-base">Systems in Your Environment</h3>
+          {systems.length > 0 && (
+            <span className="text-xs font-semibold tracking-wide text-green-400 uppercase">Populated</span>
+          )}
+        </div>
+
+        {/* System rows */}
+        <div className="flex flex-col divide-y divide-border/40">
+          {systems.map(s => (
+            <div key={s.id} className="py-3">
+              {editingId === s.id ? (
+                <SystemEditRow
+                  name={editName} type={editType} description={editDesc}
+                  onNameChange={setEditName} onTypeChange={setEditType} onDescChange={setEditDesc}
+                  onSave={saveEdit} onCancel={cancelEdit}
+                />
+              ) : (
+                <div className="flex items-center gap-3">
+                  <span className="font-medium text-sm flex-1 min-w-0 truncate">{s.name}</span>
+                  <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded border ${SYSTEM_TYPE_COLORS[s.type] || SYSTEM_TYPE_COLORS['Other']}`}>{s.type}</span>
+                  <span className="text-sm text-muted-foreground flex-1 min-w-0 truncate hidden sm:block">{s.description}</span>
+                  <button onClick={() => startEdit(s)} className="text-muted-foreground hover:text-foreground shrink-0">
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={() => deleteSystem(s.id)} className="text-muted-foreground hover:text-red-400 shrink-0">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+              {/* Description shown below on mobile */}
+              {editingId !== s.id && s.description && (
+                <p className="text-xs text-muted-foreground mt-1 sm:hidden">{s.description}</p>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Add system row */}
+        {isAdding ? (
+          <SystemEditRow
+            name={editName} type={editType} description={editDesc}
+            onNameChange={setEditName} onTypeChange={setEditType} onDescChange={setEditDesc}
+            onSave={saveEdit} onCancel={cancelEdit}
+          />
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={startAdd}
+            className="self-start gap-1.5 bg-purple-600/20 border-purple-500/30 hover:bg-purple-600/30 text-purple-300"
+          >
+            <Plus className="w-4 h-4" />
+            Add System
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SystemEditRow({
+  name, type, description,
+  onNameChange, onTypeChange, onDescChange,
+  onSave, onCancel,
+}: {
+  name: string; type: string; description: string;
+  onNameChange: (v: string) => void; onTypeChange: (v: string) => void; onDescChange: (v: string) => void;
+  onSave: () => void; onCancel: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-2 py-1">
+      <div className="flex gap-2">
+        <Input
+          value={name}
+          onChange={e => onNameChange(e.target.value)}
+          placeholder="System name"
+          className="flex-1 h-8 text-sm bg-background/50"
+          autoFocus
+          onKeyDown={e => { if (e.key === 'Enter') onSave(); if (e.key === 'Escape') onCancel(); }}
+        />
+        <select
+          value={type}
+          onChange={e => onTypeChange(e.target.value)}
+          className="h-8 text-sm rounded-md border border-input bg-background/50 px-2 text-foreground"
+        >
+          {SYSTEM_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+      </div>
+      <Input
+        value={description}
+        onChange={e => onDescChange(e.target.value)}
+        placeholder="Description (optional)"
+        className="h-8 text-sm bg-background/50"
+        onKeyDown={e => { if (e.key === 'Enter') onSave(); if (e.key === 'Escape') onCancel(); }}
+      />
+      <div className="flex gap-2">
+        <Button size="sm" onClick={onSave} className="bg-purple-600 hover:bg-purple-700 text-white h-7 text-xs">Save</Button>
+        <Button size="sm" variant="ghost" onClick={onCancel} className="h-7 text-xs">Cancel</Button>
+      </div>
+    </div>
+  );
+}
 
 export default function IntakeNewRedesign() {
   const [, params] = useRoute("/org/:slug/intake");
@@ -374,6 +665,14 @@ export default function IntakeNewRedesign() {
     
     const answered = visibleQuestions.filter(q => {
       const response = responses[q.id];
+
+      // systems-list: complete if at least one system has been added
+      if (q.type === 'systems-list') {
+        try {
+          const data = response ? (typeof response === 'string' ? JSON.parse(response) : response) : [];
+          return Array.isArray(data) && data.length > 0;
+        } catch { return false; }
+      }
 
       // contacts-table: complete if any contact field is non-empty
       if (q.type === 'contacts-table') {
@@ -1056,7 +1355,7 @@ export default function IntakeNewRedesign() {
                     {currentSectionData.description}
                   </p>
                 )}
-                {currentSectionData?.questions && (
+                {currentSectionData?.questions && currentSectionData?.type !== 'architecture-overview' && (
                   <>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span>
@@ -1066,6 +1365,12 @@ export default function IntakeNewRedesign() {
                     <Progress value={calculateSectionProgress(currentSectionData)} className="mt-3 h-2" />
                   </>
                 )}
+                {currentSectionData?.type === 'architecture-overview' && (
+                  <div className="flex items-center gap-3 mt-2">
+                    <Progress value={calculateSectionProgress(currentSectionData)} className="h-2 flex-1" />
+                    <span className="text-sm text-muted-foreground shrink-0">{calculateSectionProgress(currentSectionData)}%</span>
+                  </div>
+                )}
                 {currentSectionData?.id === 'connectivity' && (
                   <p className="text-xs text-yellow-400/80 mt-1.5 flex items-center gap-1.5">
                     <Shield className="w-3.5 h-3.5 flex-shrink-0" />
@@ -1074,14 +1379,29 @@ export default function IntakeNewRedesign() {
                 )}
               </div>
 
-              {/* Connectivity Table */}
-              {currentSectionData?.type === 'connectivity-table' && (
+              {/* Questions Grid / Workflow Diagram / Architecture Overview / Connectivity Table */}
+              {currentSectionData?.type === 'architecture-overview' ? (
+                <ArchitectureOverview
+                  slug={slug || ''}
+                  diagramFiles={allUploadedFiles.filter(f => f.questionId === 'ARCH.diagram')}
+                  isDiagramUploading={uploadingFiles.has('ARCH.diagram')}
+                  onDiagramUpload={(file) => handleFileUpload('ARCH.diagram', file)}
+                  onDiagramDelete={(fileId) => deleteMutation.mutate({ organizationSlug: slug || '', fileId })}
+                  systemsJson={responses['ARCH.systems']}
+                  onSystemsChange={(json) => {
+                    setResponses(prev => ({ ...prev, 'ARCH.systems': json }));
+                    if (slug && user?.email) {
+                      saveMutation.mutate({ organizationSlug: slug, questionId: 'ARCH.systems', response: json, userEmail: user.email });
+                    }
+                  }}
+                />
+              ) : currentSectionData?.type === 'connectivity-table' ? (
                 <div className="mt-6 space-y-8">
                   {/* Render D.1 and other standard questions first */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 md:gap-x-8 gap-y-5 md:gap-y-6">
                     {currentSectionData?.questions?.filter((question) => {
                       if (question.inactive) return false;
-                      if (question.type === 'upload' || question.type === 'upload-download') return false; // render uploads separately below
+                      if (question.type === 'upload' || question.type === 'upload-download') return false;
                       if (question.conditionalOn) {
                         const parentResponse = responses[question.conditionalOn.questionId];
                         if (parentResponse !== question.conditionalOn.value) return false;
@@ -1142,27 +1462,20 @@ export default function IntakeNewRedesign() {
                       <span>De-identify all files before uploading. Do not share PHI or patient data.</span>
                     </p>
                     <div className="grid grid-cols-1 gap-y-5">
-                      {currentSectionData?.questions?.filter(q => q.type === 'upload' || q.type === 'upload-download').map((question) => {
-                        const hasTemplate = (question.type === 'upload' || question.type === 'upload-download') &&
-                          (dbTemplateMap.get(question.id) || []).length > 0;
-                        return (
-                          <div key={question.id} className="p-4 rounded-lg bg-purple-900/10 border border-purple-500/15 col-span-1">
-                            <Label className="mb-3 block text-base">
-                              <span className="text-purple-400 font-bold mr-2">[{question.id}]</span>
-                              {question.text}
-                            </Label>
-                            {question.notes && <p className="text-xs text-muted-foreground mb-3">{question.notes}</p>}
-                            {renderQuestion(question)}
-                          </div>
-                        );
-                      })}
+                      {currentSectionData?.questions?.filter(q => q.type === 'upload' || q.type === 'upload-download').map((question) => (
+                        <div key={question.id} className="p-4 rounded-lg bg-purple-900/10 border border-purple-500/15 col-span-1">
+                          <Label className="mb-3 block text-base">
+                            <span className="text-purple-400 font-bold mr-2">[{question.id}]</span>
+                            {question.text}
+                          </Label>
+                          {question.notes && <p className="text-xs text-muted-foreground mb-3">{question.notes}</p>}
+                          {renderQuestion(question)}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
-              )}
-
-              {/* Questions Grid or Workflow Diagram */}
-              {currentSectionData?.type !== 'connectivity-table' && (currentSectionData?.type === 'workflow' ? (
+              ) : currentSectionData?.type === 'workflow' ? (
                 <div className="mt-6">
                   <WorkflowDiagram 
                     workflowType={currentSectionData.workflowType as any}
@@ -1257,7 +1570,7 @@ export default function IntakeNewRedesign() {
                     );
                   })}
                 </div>
-              ))}
+              )}
 
               {/* Bottom Buttons */}
               <div className="flex items-center justify-between border-t mt-8 pt-6">
