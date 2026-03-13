@@ -1959,3 +1959,6 @@
 
 - [x] Architecture section: stack diagram full-width on top, systems table below (not side-by-side)
 - [x] Simplify progress panel: remove percentages, show only complete/incomplete icons per section
+
+## Admin Header Fix (Mar 13, 2026)
+- [x] Center "Platform Admin" heading in admin dashboard header

@@ -791,15 +791,15 @@ export default function PlatformAdmin() {
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm">
         <div className="container py-3 sm:py-6">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 sm:gap-4 shrink-0">
               <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-8 sm:h-12 shrink-0" />
-              <div className="flex flex-col justify-center min-w-0">
-                <h1 className="text-lg sm:text-3xl font-bold text-foreground truncate">{headerTitle}</h1>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  {headerSubtitle}
-                </p>
-              </div>
+            </div>
+            <div className="flex-1 flex flex-col items-center justify-center min-w-0">
+              <h1 className="text-lg sm:text-3xl font-bold text-foreground truncate">{headerTitle}</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {headerSubtitle}
+              </p>
             </div>
             <div className="flex items-center gap-3">
               {/* Export All Button */}
