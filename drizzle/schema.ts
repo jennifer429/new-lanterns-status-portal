@@ -320,3 +320,22 @@ export const specifications = mysqlTable("specifications", {
 
 export type Specification = typeof specifications.$inferSelect;
 export type InsertSpecification = typeof specifications.$inferInsert;
+
+/**
+ * System Vendor Options - admin-configurable picklist for system types in the Architecture section.
+ * Both partner admins (RadOne-Admin) and platform admins can manage these.
+ * Each row is one vendor option under a system type (e.g., type="PACS", vendorName="Fujifilm Synapse").
+ */
+export const systemVendorOptions = mysqlTable("systemVendorOptions", {
+  id: int("id").autoincrement().primaryKey(),
+  systemType: varchar("systemType", { length: 100 }).notNull(), // e.g., "PACS", "VNA", "EHR", "AI", "Reporting"
+  vendorName: varchar("vendorName", { length: 255 }).notNull(), // e.g., "Fujifilm Synapse", "Epic"
+  displayOrder: int("displayOrder").default(0).notNull(), // Sort order within the system type
+  isActive: tinyint("isActive").default(1).notNull(), // 1 = active, 0 = hidden
+  createdBy: varchar("createdBy", { length: 320 }), // Admin email who created
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SystemVendorOption = typeof systemVendorOptions.$inferSelect;
+export type InsertSystemVendorOption = typeof systemVendorOptions.$inferInsert;

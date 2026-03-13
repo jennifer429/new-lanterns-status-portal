@@ -128,6 +128,10 @@ function ArchitectureOverview({
 }: ArchitectureOverviewProps) {
   const diagramInputRef = useRef<HTMLInputElement>(null);
 
+  // Fetch dynamic vendor options from database (falls back to hardcoded if unavailable)
+  const { data: dynamicVendors } = trpc.intake.getActiveVendorOptions.useQuery();
+  const vendorOptions = dynamicVendors && Object.keys(dynamicVendors).length > 0 ? dynamicVendors : VENDOR_OPTIONS;
+
   // Parse systems from JSON
   const systems: SystemEntry[] = (() => {
     try {
@@ -368,7 +372,7 @@ function ArchitectureOverview({
             if (row.multiSelect) {
               // AI row: multi-select checkboxes
               const selectedAI = getAISystems().map(s => s.name);
-              const vendors = VENDOR_OPTIONS[row.type] || [];
+              const vendors = vendorOptions[row.type] || VENDOR_OPTIONS[row.type] || [];
               return (
                 <div key={row.type} className="py-3">
                   <div className="flex items-center gap-3 mb-2">
@@ -398,7 +402,7 @@ function ArchitectureOverview({
 
             // Single-select row with vendor dropdown
             const current = getSystemForType(row.type);
-            const vendors = VENDOR_OPTIONS[row.type] || [];
+            const vendors = vendorOptions[row.type] || VENDOR_OPTIONS[row.type] || [];
             return (
               <div key={row.type} className="py-3 flex items-center gap-3">
                 <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded border w-[130px] text-center ${SYSTEM_TYPE_COLORS[row.type] || SYSTEM_TYPE_COLORS['Other']}`}>{row.label}</span>

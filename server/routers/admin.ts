@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { questions, questionOptions, organizations, users, clients, intakeFileAttachments, partnerTemplates, specifications, intakeResponses } from "../../drizzle/schema";
+import { questions, questionOptions, organizations, users, clients, intakeFileAttachments, partnerTemplates, specifications, intakeResponses, systemVendorOptions } from "../../drizzle/schema";
 import { eq, and, or, desc, inArray, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
@@ -1597,5 +1597,221 @@ export const adminRouter = router({
         .where(eq(specifications.id, input.id));
 
       return { success: true };
+    }),
+
+  // ============================================================================
+  // SYSTEM VENDOR OPTIONS (Picklist Management)
+  // Both partner admins and platform admins can manage these
+  // ============================================================================
+
+  /**
+   * Get all active system vendor options grouped by system type
+   */
+  getSystemVendorOptions: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user.role !== "admin") {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+    }
+
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+    const allOptions = await db.select().from(systemVendorOptions)
+      .orderBy(systemVendorOptions.systemType, systemVendorOptions.displayOrder);
+
+    return allOptions;
+  }),
+
+  /**
+   * Get active vendor options for the intake form (public for authenticated users)
+   */
+  getActiveVendorOptions: protectedProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+    const activeOptions = await db.select().from(systemVendorOptions)
+      .where(eq(systemVendorOptions.isActive, 1))
+      .orderBy(systemVendorOptions.systemType, systemVendorOptions.displayOrder);
+
+    // Group by systemType
+    const grouped: Record<string, string[]> = {};
+    for (const opt of activeOptions) {
+      if (!grouped[opt.systemType]) grouped[opt.systemType] = [];
+      grouped[opt.systemType].push(opt.vendorName);
+    }
+    return grouped;
+  }),
+
+  /**
+   * Add a vendor option to a system type
+   */
+  addVendorOption: protectedProcedure
+    .input(z.object({
+      systemType: z.string().min(1),
+      vendorName: z.string().min(1),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Get max displayOrder for this system type
+      const existing = await db.select().from(systemVendorOptions)
+        .where(eq(systemVendorOptions.systemType, input.systemType))
+        .orderBy(desc(systemVendorOptions.displayOrder));
+      const maxOrder = existing.length > 0 ? existing[0].displayOrder : 0;
+
+      await db.insert(systemVendorOptions).values({
+        systemType: input.systemType,
+        vendorName: input.vendorName,
+        displayOrder: maxOrder + 1,
+        createdBy: ctx.user.email || "unknown",
+      });
+
+      return { success: true };
+    }),
+
+  /**
+   * Update a vendor option (rename)
+   */
+  updateVendorOption: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      vendorName: z.string().min(1),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      await db.update(systemVendorOptions)
+        .set({ vendorName: input.vendorName })
+        .where(eq(systemVendorOptions.id, input.id));
+
+      return { success: true };
+    }),
+
+  /**
+   * Toggle active/inactive for a vendor option
+   */
+  toggleVendorOption: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      isActive: z.number().min(0).max(1),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      await db.update(systemVendorOptions)
+        .set({ isActive: input.isActive })
+        .where(eq(systemVendorOptions.id, input.id));
+
+      return { success: true };
+    }),
+
+  /**
+   * Delete a vendor option permanently
+   */
+  deleteVendorOption: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      await db.delete(systemVendorOptions)
+        .where(eq(systemVendorOptions.id, input.id));
+
+      return { success: true };
+    }),
+
+  /**
+   * Add a new system type with its vendor options (bulk)
+   */
+  addSystemType: protectedProcedure
+    .input(z.object({
+      systemType: z.string().min(1),
+      vendors: z.array(z.string().min(1)),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const values = input.vendors.map((v, i) => ({
+        systemType: input.systemType,
+        vendorName: v,
+        displayOrder: i + 1,
+        createdBy: ctx.user.email || "unknown",
+      }));
+
+      if (values.length > 0) {
+        await db.insert(systemVendorOptions).values(values);
+      }
+
+      return { success: true };
+    }),
+
+  /**
+   * Seed default vendor options (only if table is empty)
+   */
+  seedDefaultVendorOptions: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Check if already seeded
+      const existing = await db.select().from(systemVendorOptions);
+      if (existing.length > 0) {
+        return { success: true, message: "Already seeded", count: existing.length };
+      }
+
+      const defaults: Record<string, string[]> = {
+        'PACS': ['Agfa', 'Carestream', 'Cerner', 'Fujifilm Synapse', 'GE Centricity', 'Horos', 'Infinitt', 'McKesson', 'Merge', 'Sectra', 'Siemens syngo.plaza', 'Visage', 'Other'],
+        'VNA': ['Agfa', 'Dell/EMC', 'Fujifilm', 'GE', 'Hyland', 'IBM', 'Merge', 'Mach7', 'Novarad', 'Philips', 'Other'],
+        'Router': ['DCM4J proxy', 'Laurel Bridge', 'Mercure', 'Merge', 'Silverback', 'Other'],
+        'EHR': ['AllScripts', 'Athena', 'Cerner', 'eClinicalWorks', 'Epic', 'Meditech', 'NextGen', 'Other'],
+        'RIS': ['Abbadox', 'Agfa', 'Cerner', 'Epic', 'Fujifilm', 'Meditech', 'Sectra', 'Other'],
+        'Integration Engine': ['Cloverleaf', 'MetInformatics', 'Mirth Connect', 'Rhapsody', 'Other'],
+        'AI': ['Aidoc', 'Arterys', 'Bayer (Calantic)', 'CADstream', 'Enlitic', 'HeartFlow', 'iCAD', 'Koios', 'Lunit', 'Nuance', 'Qure.ai', 'RapidAI', 'Viz.AI', 'Zebra Medical', 'Other'],
+        'Reporting': ['Fluency', 'mModal', 'Nuance PowerScribe', 'PowerScribe 360', 'RadReport', 'Speechnotes', 'Other'],
+        'Modality': ['Canon', 'Fujifilm', 'GE', 'Hologic', 'Philips', 'Siemens', 'Other'],
+      };
+
+      const values: { systemType: string; vendorName: string; displayOrder: number; createdBy: string }[] = [];
+      for (const [type, vendors] of Object.entries(defaults)) {
+        vendors.forEach((v, i) => {
+          values.push({
+            systemType: type,
+            vendorName: v,
+            displayOrder: i + 1,
+            createdBy: ctx.user.email || "system",
+          });
+        });
+      }
+
+      await db.insert(systemVendorOptions).values(values);
+
+      return { success: true, message: "Seeded defaults", count: values.length };
     }),
 });

@@ -2025,3 +2025,13 @@
 
 ## Reporting/Dictation Category (Mar 13, 2026)
 - [x] Add Reporting/Dictation system type with PowerScribe, Fluency, mModal, etc.
+
+## Admin-Configurable Vendor Picklists (Mar 13, 2026)
+- [x] Create DB table for system_vendor_options (system_type, vendor_name, sort_order)
+- [x] Add backend CRUD procedures for managing vendor options (add, update, toggle, delete, addSystemType, seedDefaults)
+- [x] Build Vendor Picklists tab in Platform Admin page for managing vendor options per system type
+- [x] Update IntakeNewRedesign ArchitectureOverview to load vendor options from DB (fallback to hardcoded defaults)
+- [x] Seed DB with current hardcoded vendor options (9 system types, 90+ vendors)
+- [x] Add public intake.getActiveVendorOptions endpoint for intake form
+- [x] Write vitest tests for vendor CRUD, access control, and public endpoint (12 tests)
+- [x] Both Platform-Admin and RadOne-Admin can edit vendor picklists

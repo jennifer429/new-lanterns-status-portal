@@ -1,0 +1,46 @@
+{
+  "query": "SELECT systemType, COUNT(*) as vendor_count FROM systemVendorOptions GROUP BY systemType ORDER BY systemType;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT systemType, COUNT(*) as vendor_count FROM systemVendorOptions GROUP BY systemType ORDER BY systemType;",
+  "rows": [
+    {
+      "systemType": "AI",
+      "vendor_count": "15"
+    },
+    {
+      "systemType": "EHR",
+      "vendor_count": "8"
+    },
+    {
+      "systemType": "Integration Engine",
+      "vendor_count": "5"
+    },
+    {
+      "systemType": "Modality",
+      "vendor_count": "7"
+    },
+    {
+      "systemType": "PACS",
+      "vendor_count": "13"
+    },
+    {
+      "systemType": "Reporting",
+      "vendor_count": "7"
+    },
+    {
+      "systemType": "RIS",
+      "vendor_count": "8"
+    },
+    {
+      "systemType": "Router",
+      "vendor_count": "6"
+    },
+    {
+      "systemType": "VNA",
+      "vendor_count": "11"
+    }
+  ],
+  "messages": [],
+  "stdout": "systemType\tvendor_count\nAI\t15\nEHR\t8\nIntegration Engine\t5\nModality\t7\nPACS\t13\nReporting\t7\nRIS\t8\nRouter\t6\nVNA\t11\n",
+  "stderr": "",
+  "execution_time_ms": 367
+}

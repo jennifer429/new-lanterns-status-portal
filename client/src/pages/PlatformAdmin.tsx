@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
@@ -61,7 +61,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 export default function PlatformAdmin() {
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"prod-dashboard" | "impl-dashboard" | "orgs" | "users" | "templates" | "partners" | "specs">("impl-dashboard");
+  const [activeTab, setActiveTab] = useState<"prod-dashboard" | "impl-dashboard" | "orgs" | "users" | "templates" | "partners" | "specs" | "vendor-picklists">("impl-dashboard");
 
   // Template management state
   const [isUploadTemplateDialogOpen, setIsUploadTemplateDialogOpen] = useState(false);
@@ -120,6 +120,14 @@ export default function PlatformAdmin() {
   const [editPartnerSlug, setEditPartnerSlug] = useState("");
   const [editPartnerDescription, setEditPartnerDescription] = useState("");
 
+  // Vendor picklist management state
+  const [newVendorType, setNewVendorType] = useState("");
+  const [newVendorName, setNewVendorName] = useState("");
+  const [newSystemTypeName, setNewSystemTypeName] = useState("");
+  const [newSystemTypeVendors, setNewSystemTypeVendors] = useState("");
+  const [editVendorId, setEditVendorId] = useState<number | null>(null);
+  const [editVendorName, setEditVendorName] = useState("");
+
   // Specifications management state
   const [isUploadSpecDialogOpen, setIsUploadSpecDialogOpen] = useState(false);
   const [specTitle, setSpecTitle] = useState("");
@@ -154,6 +162,7 @@ export default function PlatformAdmin() {
   const { data: templates, refetch: refetchTemplates } = trpc.admin.getTemplates.useQuery();
   const { data: inactiveTemplates, refetch: refetchInactiveTemplates } = trpc.admin.getInactiveTemplates.useQuery();
   const { data: specs, refetch: refetchSpecs } = trpc.admin.getSpecifications.useQuery();
+  const { data: vendorOptions, refetch: refetchVendorOptions } = trpc.admin.getSystemVendorOptions.useQuery();
 
   // Logout mutation
   const logoutMutation = trpc.auth.logout.useMutation({
@@ -624,6 +633,82 @@ export default function PlatformAdmin() {
     },
   });
 
+  // Vendor picklist mutations
+  const addVendorMutation = trpc.admin.addVendorOption.useMutation({
+    onSuccess: () => {
+      toast.success("Vendor added!");
+      setNewVendorName("");
+      refetchVendorOptions();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to add vendor");
+    },
+  });
+
+  const updateVendorMutation = trpc.admin.updateVendorOption.useMutation({
+    onSuccess: () => {
+      toast.success("Vendor updated!");
+      setEditVendorId(null);
+      setEditVendorName("");
+      refetchVendorOptions();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to update vendor");
+    },
+  });
+
+  const deleteVendorMutation = trpc.admin.deleteVendorOption.useMutation({
+    onSuccess: () => {
+      toast.success("Vendor removed");
+      refetchVendorOptions();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to remove vendor");
+    },
+  });
+
+  const toggleVendorMutation = trpc.admin.toggleVendorOption.useMutation({
+    onSuccess: () => {
+      refetchVendorOptions();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to toggle vendor");
+    },
+  });
+
+  const addSystemTypeMutation = trpc.admin.addSystemType.useMutation({
+    onSuccess: () => {
+      toast.success("System type added!");
+      setNewSystemTypeName("");
+      setNewSystemTypeVendors("");
+      refetchVendorOptions();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to add system type");
+    },
+  });
+
+  const seedVendorsMutation = trpc.admin.seedDefaultVendorOptions.useMutation({
+    onSuccess: (result) => {
+      toast.success(result.message || "Defaults seeded");
+      refetchVendorOptions();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to seed defaults");
+    },
+  });
+
+  // Group vendor options by system type for display
+  const vendorsByType = useMemo(() => {
+    if (!vendorOptions) return {} as Record<string, typeof vendorOptions>;
+    const grouped: Record<string, typeof vendorOptions> = {};
+    for (const opt of vendorOptions) {
+      if (!grouped[opt.systemType]) grouped[opt.systemType] = [];
+      grouped[opt.systemType].push(opt);
+    }
+    return grouped;
+  }, [vendorOptions]);
+
   const handleUploadSpec = async () => {
     if (!specTitle || !specFile) {
       toast.error("Please provide a title and file");
@@ -908,6 +993,10 @@ export default function PlatformAdmin() {
                 <DropdownMenuItem onClick={() => setActiveTab("templates")} className="cursor-pointer">
                   <FileText className="mr-2 h-4 w-4" />
                   Templates
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveTab("vendor-picklists")} className="cursor-pointer">
+                  <ListChecks className="mr-2 h-4 w-4" />
+                  Vendor Picklists
                 </DropdownMenuItem>
                 {isPlatformAdmin && (
                   <>
@@ -2440,12 +2529,254 @@ export default function PlatformAdmin() {
             </Card>
           </>
         )}
+
+        {/* ── VENDOR PICKLISTS TAB ── */}
+        {activeTab === "vendor-picklists" && (
+          <>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold">Vendor Picklists</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Manage the vendor dropdown options shown in the Architecture section of the intake questionnaire.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                {(!vendorOptions || vendorOptions.length === 0) && (
+                  <Button
+                    variant="outline"
+                    onClick={() => seedVendorsMutation.mutate()}
+                    disabled={seedVendorsMutation.isPending}
+                  >
+                    {seedVendorsMutation.isPending ? "Seeding..." : "Seed Defaults"}
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Add New System Type */}
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="text-lg">Add New System Type</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex-1">
+                    <Label className="text-xs text-muted-foreground">System Type Name</Label>
+                    <Input
+                      placeholder="e.g., Cloud PACS, Dose Monitoring"
+                      value={newSystemTypeName}
+                      onChange={(e) => setNewSystemTypeName(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex-[2]">
+                    <Label className="text-xs text-muted-foreground">Vendors (comma-separated)</Label>
+                    <Input
+                      placeholder="e.g., Vendor A, Vendor B, Vendor C, Other"
+                      value={newSystemTypeVendors}
+                      onChange={(e) => setNewSystemTypeVendors(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <Button
+                      onClick={() => {
+                        if (!newSystemTypeName.trim()) {
+                          toast.error("Please enter a system type name");
+                          return;
+                        }
+                        const vendors = newSystemTypeVendors.split(",").map(v => v.trim()).filter(Boolean);
+                        if (vendors.length === 0) {
+                          toast.error("Please enter at least one vendor");
+                          return;
+                        }
+                        addSystemTypeMutation.mutate({ systemType: newSystemTypeName.trim(), vendors });
+                      }}
+                      disabled={addSystemTypeMutation.isPending}
+                    >
+                      <Plus className="w-4 h-4 mr-1" />
+                      {addSystemTypeMutation.isPending ? "Adding..." : "Add System Type"}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* System Type Cards */}
+            {Object.keys(vendorsByType).length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  <ListChecks className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg font-medium">No vendor options configured</p>
+                  <p className="text-sm">Click "Seed Defaults" to load the standard vendor lists, or add system types manually above.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {Object.entries(vendorsByType).sort(([a], [b]) => a.localeCompare(b)).map(([systemType, vendors]) => (
+                  <Card key={systemType}>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <Badge variant="outline" className="text-sm">{systemType}</Badge>
+                          <span className="text-sm text-muted-foreground font-normal">
+                            {(vendors || []).filter(v => v.isActive).length} active / {(vendors || []).length} total
+                          </span>
+                        </CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {/* Add vendor to this type */}
+                      <div className="flex gap-2 mb-4">
+                        {newVendorType === systemType ? (
+                          <>
+                            <Input
+                              placeholder="New vendor name"
+                              value={newVendorName}
+                              onChange={(e) => setNewVendorName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && newVendorName.trim()) {
+                                  addVendorMutation.mutate({ systemType, vendorName: newVendorName.trim() });
+                                  setNewVendorType("");
+                                }
+                              }}
+                              className="max-w-xs"
+                              autoFocus
+                            />
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                if (newVendorName.trim()) {
+                                  addVendorMutation.mutate({ systemType, vendorName: newVendorName.trim() });
+                                  setNewVendorType("");
+                                }
+                              }}
+                              disabled={addVendorMutation.isPending || !newVendorName.trim()}
+                            >
+                              <Check className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => { setNewVendorType(""); setNewVendorName(""); }}
+                            >
+                              Cancel
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => { setNewVendorType(systemType); setNewVendorName(""); }}
+                          >
+                            <Plus className="w-3 h-3 mr-1" />
+                            Add Vendor
+                          </Button>
+                        )}
+                      </div>
+
+                      {/* Vendor list */}
+                      <div className="border rounded-lg overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-12">#</TableHead>
+                              <TableHead>Vendor Name</TableHead>
+                              <TableHead className="w-24 text-center">Status</TableHead>
+                              <TableHead className="w-32 text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {(vendors || []).sort((a, b) => a.displayOrder - b.displayOrder).map((vendor) => (
+                              <TableRow key={vendor.id} className={cn(!vendor.isActive && "opacity-50")}>
+                                <TableCell className="text-muted-foreground text-sm">{vendor.displayOrder}</TableCell>
+                                <TableCell>
+                                  {editVendorId === vendor.id ? (
+                                    <div className="flex gap-2 items-center">
+                                      <Input
+                                        value={editVendorName}
+                                        onChange={(e) => setEditVendorName(e.target.value)}
+                                        onKeyDown={(e) => {
+                                          if (e.key === "Enter" && editVendorName.trim()) {
+                                            updateVendorMutation.mutate({ id: vendor.id, vendorName: editVendorName.trim() });
+                                          }
+                                          if (e.key === "Escape") {
+                                            setEditVendorId(null);
+                                          }
+                                        }}
+                                        className="max-w-xs h-8"
+                                        autoFocus
+                                      />
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-8 w-8 p-0"
+                                        onClick={() => {
+                                          if (editVendorName.trim()) {
+                                            updateVendorMutation.mutate({ id: vendor.id, vendorName: editVendorName.trim() });
+                                          }
+                                        }}
+                                      >
+                                        <Check className="w-3 h-3" />
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <span className="text-sm font-medium">{vendor.vendorName}</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <Badge
+                                    variant={vendor.isActive ? "default" : "secondary"}
+                                    className={cn(
+                                      "cursor-pointer text-xs",
+                                      vendor.isActive ? "bg-green-600/20 text-green-400 hover:bg-green-600/30" : ""
+                                    )}
+                                    onClick={() => toggleVendorMutation.mutate({ id: vendor.id, isActive: vendor.isActive ? 0 : 1 })}
+                                  >
+                                    {vendor.isActive ? "Active" : "Hidden"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex gap-1 justify-end">
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-7 w-7 p-0"
+                                      onClick={() => {
+                                        setEditVendorId(vendor.id);
+                                        setEditVendorName(vendor.vendorName);
+                                      }}
+                                    >
+                                      <Edit className="w-3 h-3" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                                      onClick={() => {
+                                        if (confirm(`Remove "${vendor.vendorName}" from ${systemType}?`)) {
+                                          deleteVendorMutation.mutate({ id: vendor.id });
+                                        }
+                                      }}
+                                    >
+                                      <AlertCircle className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
 }
-
-// ─── HL7 Layout ───────────────────────────────────────────────────────────────
 
 /** HL7 connectivity fields shown per-org in the card layout. */
 const HL7_ORDERS_FIELDS = [
