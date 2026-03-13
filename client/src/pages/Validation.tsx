@@ -1,24 +1,39 @@
 /**
  * Validation Checklist Page
- * Loads/saves test results from the database per organization.
- * Phases and test definitions are static; actual/status/signOff are editable.
+ * Checkbox-based completion: check = tested, date auto-populates.
+ * Related questionnaire answers shown beside each test for context.
+ * Sections are collapsible. Font is consistent — no grayed-out text.
  */
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle2, Circle, AlertTriangle, ShieldCheck, ChevronDown, MessageSquare } from "lucide-react";
+import {
+  CheckCircle2,
+  Circle,
+  ShieldCheck,
+  ChevronDown,
+  ChevronRight,
+  MessageSquare,
+  ExternalLink,
+  FileText,
+} from "lucide-react";
 import { useRoute, Link } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { cn } from "@/lib/utils";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-type TestStatus = "Pass" | "Fail" | "Not Tested" | "Pending";
-
 interface TestCase {
   name: string;
-  expected: string;
+  description: string; // What to verify
+  /** Related questionnaire question IDs — shown as context beside the test */
+  relatedQuestions?: Array<{
+    questionId: string;
+    label: string; // Short label like "VPN Details" or "PACS Vendor"
+    sectionId: string; // Questionnaire section to link to
+  }>;
 }
 
 interface Phase {
@@ -26,110 +41,175 @@ interface Phase {
   tests: TestCase[];
 }
 
-// ── Static test definitions (template — no mutable state here) ─────────────────
+// ── Static test definitions with questionnaire mappings ─────────────────────
 
 const phases: Phase[] = [
   {
     title: "Connectivity Validation",
     tests: [
-      { name: "VPN Tunnel Connectivity", expected: "Bidirectional ping < 50ms" },
-      { name: "DICOM Echo Test (C-ECHO)", expected: "Success response from all AE titles" },
-      { name: "HL7 Port Connectivity", expected: "ACK received on all ports" },
+      {
+        name: "VPN Tunnel Connectivity",
+        description: "Verify bidirectional connectivity through VPN tunnel",
+        relatedQuestions: [
+          { questionId: "E.1", label: "VPN Form", sectionId: "connectivity" },
+          { questionId: "H.1", label: "Number of Sites", sectionId: "org-info" },
+        ],
+      },
+      {
+        name: "DICOM Echo Test (C-ECHO)",
+        description: "Confirm C-ECHO success from all AE titles",
+        relatedQuestions: [
+          { questionId: "ARCH.systems", label: "Systems Inventory", sectionId: "architecture" },
+          { questionId: "CONN.endpoints", label: "Endpoints", sectionId: "connectivity" },
+        ],
+      },
+      {
+        name: "HL7 Port Connectivity",
+        description: "Verify ACK received on all configured HL7 ports",
+        relatedQuestions: [
+          { questionId: "CONN.endpoints", label: "Endpoints", sectionId: "connectivity" },
+        ],
+      },
     ],
   },
   {
     title: "HL7 Message Validation",
     tests: [
-      { name: "ORM New Order (NW)", expected: "Order appears in worklist within 5s" },
-      { name: "ORM Cancel Order (CA)", expected: "Order removed from worklist" },
-      { name: "ORU Report Delivery", expected: "Report delivered to EHR within 10s" },
-      { name: "ADT Patient Update", expected: "Demographics updated in PACS" },
-      { name: "Priority Routing (STAT)", expected: "STAT orders flagged in worklist" },
+      {
+        name: "ORM New Order (NW)",
+        description: "Send a new order and verify it appears in worklist",
+        relatedQuestions: [
+          { questionId: "IW.orders_description", label: "Orders Workflow", sectionId: "integration-workflows" },
+          { questionId: "G.3", label: "ORC-1 Values", sectionId: "hl7-dicom" },
+        ],
+      },
+      {
+        name: "ORM Cancel Order (CA)",
+        description: "Cancel an order and verify removal from worklist",
+        relatedQuestions: [
+          { questionId: "G.3", label: "ORC-1 Values", sectionId: "hl7-dicom" },
+          { questionId: "G.4", label: "ORC-5 Values", sectionId: "hl7-dicom" },
+        ],
+      },
+      {
+        name: "ORU Report Delivery",
+        description: "Verify finalized report delivered back to EHR",
+        relatedQuestions: [
+          { questionId: "IW.reports_description", label: "Reports Workflow", sectionId: "integration-workflows" },
+          { questionId: "G.5", label: "OBR:27.1 Values", sectionId: "hl7-dicom" },
+          { questionId: "CF.3", label: "Sample ORU", sectionId: "config-files" },
+        ],
+      },
+      {
+        name: "ADT Patient Update",
+        description: "Verify patient demographics update in PACS",
+        relatedQuestions: [
+          { questionId: "D.11", label: "Patient Identifier", sectionId: "hl7-dicom" },
+          { questionId: "D.12", label: "ID Matching", sectionId: "hl7-dicom" },
+        ],
+      },
+      {
+        name: "Priority Routing (STAT)",
+        description: "Verify STAT orders are flagged correctly in worklist",
+        relatedQuestions: [
+          { questionId: "D.10", label: "Priority Values", sectionId: "hl7-dicom" },
+          { questionId: "G.6", label: "Patient Class", sectionId: "hl7-dicom" },
+        ],
+      },
     ],
   },
   {
     title: "Image Routing Validation",
     tests: [
-      { name: "DICOM Store from Modality", expected: "Images arrive in < 30s" },
-      { name: "Prior Image Query/Retrieve", expected: "Priors available within 60s" },
-      { name: "Worklist (MWL) Query", expected: "Scheduled exams returned" },
-      { name: "AI Routing (if applicable)", expected: "Images routed to AI engine" },
+      {
+        name: "DICOM Store from Modality",
+        description: "Verify images arrive from modality to PACS",
+        relatedQuestions: [
+          { questionId: "IW.images_description", label: "Images Workflow", sectionId: "integration-workflows" },
+          { questionId: "D.3", label: "Modalities", sectionId: "hl7-dicom" },
+        ],
+      },
+      {
+        name: "Prior Image Query/Retrieve",
+        description: "Verify prior studies are retrievable",
+        relatedQuestions: [
+          { questionId: "IW.priors_description", label: "Priors Workflow", sectionId: "integration-workflows" },
+          { questionId: "D.12", label: "ID Matching", sectionId: "hl7-dicom" },
+        ],
+      },
+      {
+        name: "Worklist (MWL) Query",
+        description: "Verify scheduled exams returned via modality worklist",
+        relatedQuestions: [
+          { questionId: "ARCH.systems", label: "Systems Inventory", sectionId: "architecture" },
+        ],
+      },
+      {
+        name: "AI Routing (if applicable)",
+        description: "Verify images routed to AI engine if configured",
+        relatedQuestions: [
+          { questionId: "ARCH.systems", label: "Systems Inventory", sectionId: "architecture" },
+          { questionId: "D.9", label: "DICOM SR / Clinical Data", sectionId: "hl7-dicom" },
+        ],
+      },
     ],
   },
   {
     title: "User Acceptance Testing",
     tests: [
-      { name: "End-to-End Order Workflow", expected: "Order → Image → Report complete" },
-      { name: "Radiologist Reading Workflow", expected: "Study opens, report dictated, signed" },
-      { name: "Tech QC Workflow", expected: "Tech can reject/accept images" },
-      { name: "Report Distribution", expected: "Final report reaches referring provider" },
-      { name: "STAT Escalation Path", expected: "Critical results alert fires" },
-      { name: "Downtime Recovery", expected: "Queued studies process after reconnect" },
+      {
+        name: "End-to-End Order Workflow",
+        description: "Complete cycle: Order → Image → Report",
+        relatedQuestions: [
+          { questionId: "IW.orders_description", label: "Orders Workflow", sectionId: "integration-workflows" },
+          { questionId: "IW.images_description", label: "Images Workflow", sectionId: "integration-workflows" },
+          { questionId: "IW.reports_description", label: "Reports Workflow", sectionId: "integration-workflows" },
+        ],
+      },
+      {
+        name: "Radiologist Reading Workflow",
+        description: "Study opens, report dictated and signed",
+        relatedQuestions: [
+          { questionId: "CF.1", label: "Procedure Codes", sectionId: "config-files" },
+          { questionId: "CF.2", label: "User List", sectionId: "config-files" },
+        ],
+      },
+      {
+        name: "Tech QC Workflow",
+        description: "Tech can reject/accept images",
+        relatedQuestions: [
+          { questionId: "CF.2", label: "User List", sectionId: "config-files" },
+        ],
+      },
+      {
+        name: "Report Distribution",
+        description: "Final report reaches referring provider",
+        relatedQuestions: [
+          { questionId: "CF.6", label: "Provider Directory", sectionId: "config-files" },
+          { questionId: "IW.reports_description", label: "Reports Workflow", sectionId: "integration-workflows" },
+        ],
+      },
+      {
+        name: "STAT Escalation Path",
+        description: "Critical results alert fires correctly",
+        relatedQuestions: [
+          { questionId: "D.10", label: "Priority Values", sectionId: "hl7-dicom" },
+        ],
+      },
+      {
+        name: "Downtime Recovery",
+        description: "Queued studies process after reconnect",
+        relatedQuestions: [
+          { questionId: "L.11", label: "Downtime Plans", sectionId: "org-info" },
+          { questionId: "L.8", label: "Go-Live Support", sectionId: "org-info" },
+        ],
+      },
     ],
   },
 ];
 
 function testKey(pIdx: number, tIdx: number) {
   return `${pIdx}:${tIdx}`;
-}
-
-// ── Status badge ───────────────────────────────────────────────────────────────
-
-function TestStatusBadge({ status }: { status: TestStatus }) {
-  const styles: Record<TestStatus, string> = {
-    Pass: "bg-green-500/20 text-green-400 border-green-500/30",
-    Fail: "bg-red-500/20 text-red-400 border-red-500/30",
-    "Not Tested": "bg-muted text-muted-foreground border-border",
-    Pending: "bg-amber-500/20 text-amber-400 border-amber-500/30",
-  };
-  return (
-    <Badge variant="outline" className={`text-xs font-medium ${styles[status]}`}>
-      {status}
-    </Badge>
-  );
-}
-
-// ── Status picker dropdown ─────────────────────────────────────────────────────
-
-const STATUS_OPTIONS: TestStatus[] = ["Pass", "Fail", "Pending", "Not Tested"];
-
-function StatusPicker({ value, onChange }: { value: TestStatus; onChange: (s: TestStatus) => void }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  return (
-    <div className="relative inline-block" ref={ref}>
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1 group"
-        title="Change status"
-      >
-        <TestStatusBadge status={value} />
-        <ChevronDown className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-      </button>
-      {open && (
-        <div className="absolute z-50 top-full mt-1 left-0 bg-card border border-border rounded-md shadow-xl py-1 min-w-[130px]">
-          {STATUS_OPTIONS.map((s) => (
-            <button
-              key={s}
-              className={`w-full text-left px-3 py-1.5 text-xs hover:bg-muted/50 flex items-center gap-2 ${s === value ? "opacity-100" : "opacity-70"}`}
-              onClick={() => { onChange(s); setOpen(false); }}
-            >
-              <TestStatusBadge status={s} />
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
 }
 
 // ── Inline editable text ───────────────────────────────────────────────────────
@@ -153,7 +233,6 @@ function InlineEdit({
     if (editing) inputRef.current?.focus();
   }, [editing]);
 
-  // Sync external value when not editing
   useEffect(() => {
     if (!editing) setDraft(value);
   }, [value, editing]);
@@ -174,7 +253,7 @@ function InlineEdit({
           if (e.key === "Enter") commit();
           if (e.key === "Escape") { setDraft(value); setEditing(false); }
         }}
-        className={`bg-transparent border-b border-primary outline-none text-xs w-full ${className}`}
+        className={`bg-transparent border-b border-primary outline-none text-sm w-full ${className}`}
         placeholder={placeholder}
       />
     );
@@ -183,12 +262,81 @@ function InlineEdit({
   return (
     <span
       onClick={() => setEditing(true)}
-      className={`cursor-text text-xs group relative inline-block w-full ${className}`}
+      className={`cursor-text text-sm group relative inline-block w-full ${className}`}
       title="Click to edit"
     >
-      {value || <span className="text-muted-foreground/40">{placeholder}</span>}
+      {value || <span className="text-muted-foreground/50 italic">{placeholder}</span>}
       <span className="absolute right-0 top-0 text-muted-foreground/30 text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">✎</span>
     </span>
+  );
+}
+
+// ── Related question answer display ─────────────────────────────────────────
+
+function RelatedAnswers({
+  questions,
+  responses,
+  slug,
+}: {
+  questions: TestCase["relatedQuestions"];
+  responses: Record<string, string>;
+  slug: string;
+}) {
+  if (!questions || questions.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap gap-2 mt-1">
+      {questions.map((rq) => {
+        const answer = responses[rq.questionId];
+        const hasAnswer = answer && answer.trim() !== "" && answer !== "null" && answer !== "undefined";
+        let displayAnswer = "";
+        if (hasAnswer) {
+          try {
+            const parsed = JSON.parse(answer);
+            if (Array.isArray(parsed)) {
+              displayAnswer = parsed.join(", ");
+            } else if (typeof parsed === "object") {
+              displayAnswer = "Configured";
+            } else {
+              displayAnswer = String(parsed);
+            }
+          } catch {
+            displayAnswer = answer;
+          }
+          // Truncate long answers
+          if (displayAnswer.length > 60) {
+            displayAnswer = displayAnswer.substring(0, 57) + "…";
+          }
+        }
+
+        return (
+          <Link
+            key={rq.questionId}
+            href={`/org/${slug}/intake?section=${rq.sectionId}&q=${rq.questionId}`}
+            className={cn(
+              "inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs border transition-colors",
+              hasAnswer
+                ? "bg-primary/10 border-primary/30 text-primary hover:bg-primary/20"
+                : "bg-muted/30 border-border/40 text-muted-foreground hover:bg-muted/50"
+            )}
+            title={hasAnswer ? `${rq.label}: ${displayAnswer} — Click to edit in questionnaire` : `${rq.label}: Not answered — Click to fill in questionnaire`}
+          >
+            <FileText className="w-3 h-3 flex-shrink-0" />
+            <span className="font-medium">{rq.label}</span>
+            {hasAnswer && (
+              <>
+                <span className="text-muted-foreground mx-0.5">:</span>
+                <span className="truncate max-w-[150px]">{displayAnswer}</span>
+              </>
+            )}
+            {!hasAnswer && (
+              <span className="text-muted-foreground/60 italic ml-0.5">empty</span>
+            )}
+            <ExternalLink className="w-2.5 h-2.5 flex-shrink-0 opacity-50" />
+          </Link>
+        );
+      })}
+    </div>
   );
 }
 
@@ -203,29 +351,83 @@ export default function Validation() {
     { refetchOnWindowFocus: false }
   );
 
+  // Fetch questionnaire responses for this org to show related answers
+  const { data: intakeResponses = [] } = trpc.intake.getResponses.useQuery(
+    { organizationSlug: slug },
+    { refetchOnWindowFocus: false }
+  );
+
+  // Build a lookup map of questionId → response value
+  const responseLookup = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const r of intakeResponses) {
+      if (r.questionId && r.response) {
+        map[r.questionId] = r.response;
+      }
+    }
+    return map;
+  }, [intakeResponses]);
+
   const utils = trpc.useUtils();
 
   const updateMutation = trpc.validation.updateResult.useMutation({
     onSuccess: () => utils.validation.getResults.invalidate({ organizationSlug: slug }),
   });
 
-  // Local optimistic state on top of server data
-  const [localOverrides, setLocalOverrides] = useState<Record<string, { actual?: string; status?: TestStatus; signOff?: string; notes?: string }>>({});
-  // Which rows have comments expanded
+  // Local optimistic state
+  const [localOverrides, setLocalOverrides] = useState<Record<string, { status?: string; signOff?: string; notes?: string; testedDate?: string }>>({});
   const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({});
+  const [collapsedPhases, setCollapsedPhases] = useState<Record<number, boolean>>({});
+  // Track which tests have their related questions expanded
+  const [expandedRelated, setExpandedRelated] = useState<Record<string, boolean>>({});
+
+  function togglePhase(pIdx: number) {
+    setCollapsedPhases(prev => ({ ...prev, [pIdx]: !prev[pIdx] }));
+  }
+
+  function todayStr() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
 
   function getMerged(key: string) {
     const server = resultMap[key];
     const local = localOverrides[key] ?? {};
     return {
-      actual: local.actual !== undefined ? local.actual : (server?.actual ?? ""),
-      status: (local.status ?? server?.status ?? "Not Tested") as TestStatus,
+      status: (local.status ?? server?.status ?? "Not Tested") as string,
       signOff: local.signOff !== undefined ? local.signOff : (server?.signOff ?? ""),
       notes: local.notes !== undefined ? local.notes : (server?.notes ?? ""),
+      testedDate: local.testedDate !== undefined ? local.testedDate : (server?.testedDate ?? ""),
     };
   }
 
-  function save(pIdx: number, tIdx: number, patch: { actual?: string; status?: TestStatus; signOff?: string; notes?: string }) {
+  function toggleTested(pIdx: number, tIdx: number) {
+    const key = testKey(pIdx, tIdx);
+    const current = getMerged(key);
+    const isTested = current.status === "Pass";
+
+    // Toggle: if already tested, uncheck; if not, check and auto-date
+    const newStatus = isTested ? "Not Tested" : "Pass";
+    const newDate = isTested ? "" : (current.testedDate || todayStr());
+
+    const merged = {
+      ...current,
+      status: newStatus,
+      testedDate: newDate,
+    };
+
+    setLocalOverrides((prev) => ({ ...prev, [key]: merged }));
+    updateMutation.mutate({
+      organizationSlug: slug,
+      testKey: key,
+      status: newStatus as any,
+      signOff: merged.signOff || undefined,
+      notes: merged.notes || undefined,
+      testedDate: merged.testedDate || undefined,
+    });
+  }
+
+  function saveField(pIdx: number, tIdx: number, patch: { signOff?: string; notes?: string; testedDate?: string }) {
     const key = testKey(pIdx, tIdx);
     const current = getMerged(key);
     const merged = { ...current, ...patch };
@@ -233,33 +435,18 @@ export default function Validation() {
     updateMutation.mutate({
       organizationSlug: slug,
       testKey: key,
-      actual: merged.actual || undefined,
-      status: merged.status,
+      status: merged.status as any,
       signOff: merged.signOff || undefined,
       notes: merged.notes || undefined,
+      testedDate: merged.testedDate || undefined,
     });
   }
 
   // Computed stats
   const allKeys = phases.flatMap((p, pIdx) => p.tests.map((_, tIdx) => testKey(pIdx, tIdx)));
   const total = allKeys.length;
-  const passed = allKeys.filter((k) => getMerged(k).status === "Pass").length;
-  const failed = allKeys.filter((k) => getMerged(k).status === "Fail").length;
-  const pending = allKeys.filter((k) => ["Not Tested", "Pending"].includes(getMerged(k).status)).length;
-  const passPct = total > 0 ? Math.round((passed / total) * 100) : 0;
-
-  const blockers = phases.flatMap((p, pIdx) =>
-    p.tests
-      .map((t, tIdx) => ({ ...t, ...getMerged(testKey(pIdx, tIdx)) }))
-      .filter((t) => t.status === "Fail")
-  );
-
-  const getStatusIcon = (status: TestStatus) => {
-    if (status === "Pass") return <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />;
-    if (status === "Fail") return <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0" />;
-    if (status === "Pending") return <Circle className="w-5 h-5 text-amber-400/60 flex-shrink-0" />;
-    return <Circle className="w-5 h-5 text-muted-foreground/30 flex-shrink-0" />;
-  };
+  const completed = allKeys.filter((k) => getMerged(k).status === "Pass").length;
+  const completePct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -269,11 +456,11 @@ export default function Validation() {
           <div className="flex items-center gap-3">
             <img src="/images/flame-icon.png" alt="New Lantern" className="h-8 w-8" />
             <div>
-              <h1 className="text-xl font-bold">Validation Checklist</h1>
-              <p className="text-xs text-muted-foreground">PACS Onboarding</p>
+              <h1 className="text-xl font-bold text-foreground">Testing Checklist</h1>
+              <p className="text-sm text-muted-foreground">PACS Onboarding</p>
             </div>
           </div>
-          <Link href={`/org/${slug}`} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <Link href={`/org/${slug}`} className="text-sm text-foreground hover:text-primary transition-colors">
             Back to Dashboard
           </Link>
         </div>
@@ -282,11 +469,11 @@ export default function Validation() {
       {/* Main content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
         {isLoading ? (
-          <div className="flex items-center justify-center py-24 text-muted-foreground text-sm">
-            Loading validation data…
+          <div className="flex items-center justify-center py-24 text-foreground text-sm">
+            Loading testing data…
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-8">
             {/* Left column — Test phases */}
             <div className="space-y-6">
               {/* Overall progress */}
@@ -294,139 +481,190 @@ export default function Validation() {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="w-5 h-5 text-primary" />
-                    <span className="text-sm text-muted-foreground">{passed} of {total} tests passed</span>
+                    <span className="text-sm text-foreground">{completed} of {total} tests completed</span>
                   </div>
-                  <span className="text-sm font-bold text-primary">{passPct}%</span>
+                  <span className="text-sm font-bold text-primary">{completePct}%</span>
                 </div>
-                <Progress value={passPct} className="h-2" />
+                <Progress value={completePct} className="h-2" />
               </div>
 
-              {/* Phases */}
+              {/* Phases — collapsible */}
               {phases.map((phase, pIdx) => {
                 const phaseKeys = phase.tests.map((_, tIdx) => testKey(pIdx, tIdx));
-                const phasePassed = phaseKeys.filter((k) => getMerged(k).status === "Pass").length;
-                const phaseFailed = phaseKeys.filter((k) => getMerged(k).status === "Fail").length;
+                const phaseCompleted = phaseKeys.filter((k) => getMerged(k).status === "Pass").length;
                 const phaseTotal = phase.tests.length;
-                const allNotStarted = phaseKeys.every((k) => getMerged(k).status === "Not Tested");
-
-                let phaseLabel = `${phasePassed}/${phaseTotal} Passed`;
-                let phaseLabelStyle = "border-green-500/40 text-green-400";
-                if (allNotStarted) {
-                  phaseLabel = `0/${phaseTotal} Not Started`;
-                  phaseLabelStyle = "border-border text-muted-foreground";
-                } else if (phaseFailed > 0) {
-                  phaseLabelStyle = "border-amber-500/40 text-amber-400";
-                }
+                const isCollapsed = !!collapsedPhases[pIdx];
+                const allDone = phaseCompleted === phaseTotal;
 
                 return (
                   <Card key={pIdx} className="border-border/50 overflow-hidden">
-                    <div className="px-5 py-3 bg-muted/30 border-b border-border/40">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-bold uppercase tracking-wider">
-                          Phase {pIdx + 1}: {phase.title}
-                        </h3>
-                        <Badge variant="outline" className={`text-xs ${phaseLabelStyle}`}>
-                          {phaseLabel}
-                        </Badge>
+                    {/* Collapsible section header */}
+                    <button
+                      onClick={() => togglePhase(pIdx)}
+                      className="w-full px-5 py-4 bg-muted/30 border-b border-border/40 flex items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        {isCollapsed ? (
+                          <ChevronRight className="w-5 h-5 text-foreground" />
+                        ) : (
+                          <ChevronDown className="w-5 h-5 text-foreground" />
+                        )}
+                        <div className="text-left">
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+                            Phase {pIdx + 1}
+                          </p>
+                          <h3 className="text-sm font-bold text-foreground mt-0.5">{phase.title}</h3>
+                        </div>
                       </div>
-                    </div>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-xs",
+                          allDone
+                            ? "border-green-500/40 text-green-400"
+                            : phaseCompleted > 0
+                              ? "border-primary/40 text-primary"
+                              : "border-border text-foreground"
+                        )}
+                      >
+                        {phaseCompleted}/{phaseTotal} Complete
+                      </Badge>
+                    </button>
 
-                    <CardContent className="p-0">
-                      {/* Column headers */}
-                      <div className="hidden md:grid grid-cols-[auto_1fr_1fr_1fr_110px_1fr_auto] gap-2 px-5 py-2 text-xs text-muted-foreground uppercase tracking-wider border-b border-border/20 bg-muted/10">
-                        <div className="w-5" />
-                        <div>Test</div>
-                        <div>Expected</div>
-                        <div>Actual <span className="normal-case font-normal opacity-60">(click to edit)</span></div>
-                        <div className="text-center">Result</div>
-                        <div>Sign-Off <span className="normal-case font-normal opacity-60">(click to edit)</span></div>
-                        <div className="w-6" />
-                      </div>
+                    {/* Collapsible content */}
+                    {!isCollapsed && (
+                      <CardContent className="p-0">
+                        {/* Column headers */}
+                        <div className="hidden md:grid grid-cols-[40px_1fr_100px_140px_auto] gap-3 px-5 py-2 text-xs text-muted-foreground uppercase tracking-wider border-b border-border/20 bg-muted/10">
+                          <div className="text-center">Done</div>
+                          <div>Test</div>
+                          <div>Date</div>
+                          <div>Sign-Off</div>
+                          <div className="w-6" />
+                        </div>
 
-                      {phase.tests.map((test, tIdx) => {
-                        const key = testKey(pIdx, tIdx);
-                        const { actual, status, signOff, notes } = getMerged(key);
-                        const notesOpen = !!expandedNotes[key];
+                        {phase.tests.map((test, tIdx) => {
+                          const key = testKey(pIdx, tIdx);
+                          const { status, signOff, notes, testedDate } = getMerged(key);
+                          const isTested = status === "Pass";
+                          const notesOpen = !!expandedNotes[key];
+                          const relatedOpen = !!expandedRelated[key];
+                          const hasRelated = test.relatedQuestions && test.relatedQuestions.length > 0;
 
-                        return (
-                          <div key={tIdx} className={tIdx < phase.tests.length - 1 ? "border-b border-border/20" : ""}>
-                            {/* Main row */}
-                            <div
-                              className={`grid grid-cols-1 md:grid-cols-[auto_1fr_1fr_1fr_110px_1fr_auto] gap-2 items-center px-5 py-3 ${
-                                status === "Pass" ? "opacity-60" : ""
-                              }`}
-                            >
-                              {getStatusIcon(status)}
+                          return (
+                            <div key={tIdx} className={tIdx < phase.tests.length - 1 ? "border-b border-border/20" : ""}>
+                              {/* Main row */}
+                              <div className="grid grid-cols-1 md:grid-cols-[40px_1fr_100px_140px_auto] gap-3 items-start px-5 py-3">
+                                {/* Checkbox */}
+                                <div className="flex justify-center pt-0.5">
+                                  <button
+                                    onClick={() => toggleTested(pIdx, tIdx)}
+                                    className="focus:outline-none"
+                                    title={isTested ? "Mark as not tested" : "Mark as tested"}
+                                  >
+                                    {isTested ? (
+                                      <CheckCircle2 className="w-6 h-6 text-green-500 hover:text-green-400 transition-colors" />
+                                    ) : (
+                                      <Circle className="w-6 h-6 text-muted-foreground/40 hover:text-primary/60 transition-colors cursor-pointer" />
+                                    )}
+                                  </button>
+                                </div>
 
-                              {/* Mobile: stacked */}
-                              <div className="md:hidden space-y-2 ml-8">
-                                <p className="text-sm font-medium">{test.name}</p>
-                                <p className="text-xs text-muted-foreground">Expected: {test.expected}</p>
-                                <InlineEdit
-                                  value={actual}
-                                  placeholder="Enter actual result…"
-                                  onCommit={(v) => save(pIdx, tIdx, { actual: v })}
-                                />
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <StatusPicker value={status} onChange={(s) => save(pIdx, tIdx, { status: s })} />
-                                  <InlineEdit
-                                    value={signOff}
-                                    placeholder="Sign-off…"
-                                    onCommit={(v) => save(pIdx, tIdx, { signOff: v })}
+                                {/* Test name + description + related questions toggle */}
+                                <div className="space-y-1">
+                                  <p className={cn(
+                                    "text-sm font-medium",
+                                    isTested ? "text-foreground" : "text-foreground"
+                                  )}>
+                                    {test.name}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">{test.description}</p>
+
+                                  {/* Related questions toggle */}
+                                  {hasRelated && (
+                                    <button
+                                      onClick={() => setExpandedRelated(prev => ({ ...prev, [key]: !relatedOpen }))}
+                                      className="inline-flex items-center gap-1 text-xs text-primary/70 hover:text-primary transition-colors mt-0.5"
+                                    >
+                                      <FileText className="w-3 h-3" />
+                                      {relatedOpen ? "Hide" : "Show"} related answers ({test.relatedQuestions!.length})
+                                    </button>
+                                  )}
+
+                                  {/* Related questionnaire answers — expandable */}
+                                  {relatedOpen && hasRelated && (
+                                    <RelatedAnswers
+                                      questions={test.relatedQuestions}
+                                      responses={responseLookup}
+                                      slug={slug}
+                                    />
+                                  )}
+
+                                  {/* Mobile: date + sign-off inline */}
+                                  <div className="md:hidden flex items-center gap-3 mt-2">
+                                    <input
+                                      type="date"
+                                      value={testedDate}
+                                      onChange={(e) => saveField(pIdx, tIdx, { testedDate: e.target.value })}
+                                      className="bg-transparent border border-border/40 rounded px-1.5 py-0.5 text-xs text-foreground focus:outline-none focus:border-primary/60 [&::-webkit-calendar-picker-indicator]:invert"
+                                    />
+                                    <InlineEdit
+                                      value={signOff}
+                                      placeholder="Sign-off…"
+                                      onCommit={(v) => saveField(pIdx, tIdx, { signOff: v })}
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Date — desktop */}
+                                <div className="hidden md:block">
+                                  <input
+                                    type="date"
+                                    value={testedDate}
+                                    onChange={(e) => saveField(pIdx, tIdx, { testedDate: e.target.value })}
+                                    className="bg-transparent border border-border/40 rounded px-1.5 py-1 text-xs text-foreground w-full focus:outline-none focus:border-primary/60 [&::-webkit-calendar-picker-indicator]:invert"
                                   />
                                 </div>
+
+                                {/* Sign-off — desktop */}
+                                <div className="hidden md:block">
+                                  <InlineEdit
+                                    value={signOff}
+                                    placeholder="Name…"
+                                    onCommit={(v) => saveField(pIdx, tIdx, { signOff: v })}
+                                  />
+                                </div>
+
+                                {/* Comment toggle */}
+                                <button
+                                  onClick={() => setExpandedNotes((prev) => ({ ...prev, [key]: !notesOpen }))}
+                                  className={cn(
+                                    "hidden md:flex items-center justify-center w-6 h-6 rounded hover:bg-muted/50 transition-colors",
+                                    notesOpen || notes ? "text-primary" : "text-muted-foreground/40 hover:text-muted-foreground"
+                                  )}
+                                  title={notesOpen ? "Hide comments" : "Add comment"}
+                                >
+                                  <MessageSquare className="w-3.5 h-3.5" />
+                                </button>
                               </div>
 
-                              {/* Desktop: grid columns */}
-                              <span className="hidden md:block text-sm font-medium">{test.name}</span>
-                              <span className="hidden md:block text-xs text-muted-foreground">{test.expected}</span>
-                              <span className="hidden md:block">
-                                <InlineEdit
-                                  value={actual}
-                                  placeholder="Enter actual result…"
-                                  onCommit={(v) => save(pIdx, tIdx, { actual: v })}
-                                />
-                              </span>
-                              <div className="hidden md:flex justify-center">
-                                <StatusPicker value={status} onChange={(s) => save(pIdx, tIdx, { status: s })} />
-                              </div>
-                              <span className="hidden md:block">
-                                <InlineEdit
-                                  value={signOff}
-                                  placeholder="Name, date…"
-                                  onCommit={(v) => save(pIdx, tIdx, { signOff: v })}
-                                />
-                              </span>
-
-                              {/* Comment toggle */}
-                              <button
-                                onClick={() => setExpandedNotes((prev) => ({ ...prev, [key]: !notesOpen }))}
-                                className={`hidden md:flex items-center justify-center w-6 h-6 rounded hover:bg-muted/50 transition-colors ${notesOpen || notes ? "text-primary" : "text-muted-foreground/40 hover:text-muted-foreground"}`}
-                                title={notesOpen ? "Hide comments" : "Add comment"}
-                              >
-                                <MessageSquare className="w-3.5 h-3.5" />
-                                {notes && !notesOpen && (
-                                  <span className="absolute w-1.5 h-1.5 bg-primary rounded-full -top-0.5 -right-0.5" />
-                                )}
-                              </button>
+                              {/* Expandable notes row */}
+                              {notesOpen && (
+                                <div className="px-5 pb-3 pt-0 bg-muted/10 border-t border-border/10">
+                                  <textarea
+                                    className="w-full bg-transparent text-sm text-muted-foreground placeholder:text-muted-foreground/40 resize-none outline-none border-none focus:ring-0 py-2 min-h-[56px]"
+                                    placeholder="Add a comment or note about this test…"
+                                    value={notes}
+                                    onChange={(e) => setLocalOverrides((prev) => ({ ...prev, [key]: { ...getMerged(key), notes: e.target.value } }))}
+                                    onBlur={(e) => saveField(pIdx, tIdx, { notes: e.target.value })}
+                                  />
+                                </div>
+                              )}
                             </div>
-
-                            {/* Expandable notes row */}
-                            {notesOpen && (
-                              <div className="px-5 pb-3 pt-0 bg-muted/10 border-t border-border/10">
-                                <textarea
-                                  className="w-full bg-transparent text-xs text-muted-foreground placeholder:text-muted-foreground/40 resize-none outline-none border-none focus:ring-0 py-2 min-h-[56px]"
-                                  placeholder="Add a comment or note about this test…"
-                                  value={notes}
-                                  onChange={(e) => setLocalOverrides((prev) => ({ ...prev, [key]: { ...getMerged(key), notes: e.target.value } }))}
-                                  onBlur={(e) => save(pIdx, tIdx, { notes: e.target.value })}
-                                />
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </CardContent>
+                          );
+                        })}
+                      </CardContent>
+                    )}
                   </Card>
                 );
               })}
@@ -436,7 +674,7 @@ export default function Validation() {
             <div className="space-y-6">
               <Card className="border-border/50 sticky top-8">
                 <CardContent className="p-5 space-y-6">
-                  <h3 className="font-bold text-base">Validation Summary</h3>
+                  <h3 className="font-bold text-base text-foreground">Testing Summary</h3>
 
                   {/* Donut chart */}
                   <div className="flex justify-center">
@@ -445,19 +683,13 @@ export default function Validation() {
                         <circle cx="18" cy="18" r="15.9155" fill="none" stroke="hsl(var(--muted))" strokeWidth="3" />
                         <circle
                           cx="18" cy="18" r="15.9155" fill="none"
-                          stroke="hsl(0 70% 50%)" strokeWidth="3"
-                          strokeDasharray={`${(failed / total) * 100} ${100 - (failed / total) * 100}`}
-                          strokeDashoffset={`${-(passed / total) * 100}`}
-                        />
-                        <circle
-                          cx="18" cy="18" r="15.9155" fill="none"
                           stroke="hsl(142 70% 45%)" strokeWidth="3"
-                          strokeDasharray={`${(passed / total) * 100} ${100 - (passed / total) * 100}`}
+                          strokeDasharray={`${(completed / total) * 100} ${100 - (completed / total) * 100}`}
                         />
                       </svg>
                       <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="text-2xl font-bold">{passPct}%</span>
-                        <span className="text-xs text-muted-foreground">Passed</span>
+                        <span className="text-2xl font-bold text-foreground">{completePct}%</span>
+                        <span className="text-sm text-muted-foreground">Complete</span>
                       </div>
                     </div>
                   </div>
@@ -467,52 +699,30 @@ export default function Validation() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full bg-green-500" />
-                        <span>Passed ({passPct}%)</span>
+                        <span className="text-foreground">Tested</span>
                       </div>
-                      <span className="font-medium">{passed}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-red-500" />
-                        <span>Failed ({Math.round((failed / total) * 100)}%)</span>
-                      </div>
-                      <span className="font-medium">{failed}</span>
+                      <span className="font-medium text-foreground">{completed}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full bg-muted-foreground/30" />
-                        <span>Pending ({Math.round((pending / total) * 100)}%)</span>
+                        <span className="text-foreground">Remaining</span>
                       </div>
-                      <span className="font-medium">{pending}</span>
+                      <span className="font-medium text-foreground">{total - completed}</span>
                     </div>
                   </div>
 
-                  {/* Blockers */}
-                  {blockers.length > 0 && (
-                    <div className="border-t border-border/40 pt-4 space-y-2">
-                      <h4 className="font-bold text-sm flex items-center gap-2 text-red-400">
-                        <AlertTriangle className="w-4 h-4" />
-                        Blockers ({blockers.length})
-                      </h4>
-                      {blockers.map((b, i) => (
-                        <p key={i} className="text-xs text-muted-foreground">
-                          {b.name}{b.actual ? ` — ${b.actual}` : ""}
-                        </p>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Next Steps: auto-generated from first few not-tested items */}
+                  {/* Next Up */}
                   {(() => {
-                    const notTested = phases.flatMap((p, pIdx) =>
+                    const remaining = phases.flatMap((p, pIdx) =>
                       p.tests
-                        .map((t, tIdx) => ({ ...t, ...getMerged(testKey(pIdx, tIdx)) }))
-                        .filter((t) => t.status === "Not Tested" || t.status === "Pending")
+                        .map((t, tIdx) => ({ ...t, key: testKey(pIdx, tIdx) }))
+                        .filter((t) => getMerged(t.key).status !== "Pass")
                     ).slice(0, 3);
 
-                    if (notTested.length === 0) return (
+                    if (remaining.length === 0) return (
                       <div className="border-t border-border/40 pt-4">
-                        <p className="text-xs text-green-400 font-medium flex items-center gap-1.5">
+                        <p className="text-sm text-green-400 font-medium flex items-center gap-1.5">
                           <CheckCircle2 className="w-4 h-4" /> All tests completed!
                         </p>
                       </div>
@@ -520,9 +730,9 @@ export default function Validation() {
 
                     return (
                       <div className="border-t border-border/40 pt-4 space-y-3">
-                        <h4 className="font-bold text-sm">Next Up</h4>
-                        <ul className="text-xs text-muted-foreground space-y-1.5">
-                          {notTested.map((t, i) => (
+                        <h4 className="font-bold text-sm text-foreground">Next Up</h4>
+                        <ul className="text-sm text-foreground space-y-1.5">
+                          {remaining.map((t, i) => (
                             <li key={i} className="flex items-start gap-1.5">
                               <span className="text-primary mt-0.5">•</span>
                               {t.name}

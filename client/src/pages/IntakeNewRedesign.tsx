@@ -622,6 +622,34 @@ export default function IntakeNewRedesign() {
   }, [existingResponses]);
 
   // Auto-navigate to first incomplete section ONLY on first load (skipped when ?section= is present)
+  // Handle deep-link query params (?section=xxx&q=yyy) from Implementation/Validation pages
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sectionParam = params.get('section');
+    const questionParam = params.get('q');
+
+    if (sectionParam) {
+      const validSection = questionnaireSections.find(s => s.id === sectionParam);
+      if (validSection) {
+        // Section already set synchronously by useState initializer; just block auto-navigate
+        hasNavigatedRef.current = true;
+
+        // If a specific question is targeted, scroll to it after render
+        if (questionParam) {
+          setTimeout(() => {
+            const el = document.getElementById(`question-${questionParam}`);
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              el.classList.add('ring-2', 'ring-primary', 'ring-offset-2', 'ring-offset-background', 'rounded-lg');
+              setTimeout(() => {
+                el.classList.remove('ring-2', 'ring-primary', 'ring-offset-2', 'ring-offset-background', 'rounded-lg');
+              }, 3000);
+            }
+          }, 500);
+        }
+      }
+    }
+  }, []); // Run once on mount
   useEffect(() => {
     // Skip if already navigated, responses not loaded, or explicit section param given
     const urlSection = new URLSearchParams(window.location.search).get("section");
@@ -1543,7 +1571,7 @@ export default function IntakeNewRedesign() {
                       }
                       return true;
                     }).map((question) => (
-                      <div key={question.id} className={question.type === 'textarea' ? 'col-span-1 md:col-span-2' : 'col-span-1'}>
+                      <div key={question.id} id={`question-${question.id}`} className={question.type === 'textarea' ? 'col-span-1 md:col-span-2' : 'col-span-1'}>
                         <Label className="mb-3 block text-base">
                           <span className="text-purple-400 font-bold mr-2">[{question.id}]</span>
                           {question.text}
@@ -1598,7 +1626,7 @@ export default function IntakeNewRedesign() {
                     </p>
                     <div className="grid grid-cols-1 gap-y-5">
                       {currentSectionData?.questions?.filter(q => q.type === 'upload' || q.type === 'upload-download').map((question) => (
-                        <div key={question.id} className="p-4 rounded-lg bg-purple-900/10 border border-purple-500/15 col-span-1">
+                        <div key={question.id} id={`question-${question.id}`} className="p-4 rounded-lg bg-purple-900/10 border border-purple-500/15 col-span-1">
                           <Label className="mb-3 block text-base">
                             <span className="text-purple-400 font-bold mr-2">[{question.id}]</span>
                             {question.text}

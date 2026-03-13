@@ -1,0 +1,1 @@
+ALTER TABLE `validationResults` ADD `testedDate` varchar(10);

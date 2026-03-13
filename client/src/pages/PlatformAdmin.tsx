@@ -35,6 +35,7 @@ import {
 import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp, AlertTriangle, AlertCircle, Info, Image, CheckSquare, BarChart3, Copy, Check, Clock, ChevronsUpDown, ChevronLeft, ChevronRight, Settings, ChevronDown, ListChecks, TestTube2, History } from "lucide-react";
 import { questionnaireSections } from "@shared/questionnaireData";
 import { TYPE_COLORS, type IntegrationSystem } from "@/components/IntegrationWorkflows";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -1057,26 +1058,31 @@ export default function PlatformAdmin() {
               </div>
             </div>
             
-            {/* Collapsed Table View */}
+            {/* Workflow Launcher Table */}
             <Card>
               <CardContent className="p-0">
                 <Table>
                   <TableHeader>
                     <TableRow className="hover:bg-transparent">
-                      <TableHead className="w-[250px]">Organization</TableHead>
-                      {isPlatformAdmin && <TableHead>Partner</TableHead>}
-                      <TableHead className="text-center">Questionnaire</TableHead>
-                      <TableHead className="text-center">Validation</TableHead>
-                      <TableHead className="text-center">Implementation</TableHead>
-                      <TableHead className="text-center">Files</TableHead>
-                      <TableHead className="text-center">Users</TableHead>
-                      <TableHead className="w-[100px]"></TableHead>
+                      <TableHead className="w-[200px] text-sm">Organization</TableHead>
+                      {isPlatformAdmin && <TableHead className="w-[140px] text-sm">Partner</TableHead>}
+                      <TableHead className="text-center text-sm w-[200px]">
+                        <span>Questionnaire</span>
+                      </TableHead>
+                      <TableHead className="text-center text-sm w-[200px]">
+                        <span>Testing</span>
+                      </TableHead>
+                      <TableHead className="text-center text-sm w-[200px]">
+                        <span>Implementation</span>
+                      </TableHead>
+                      <TableHead className="text-center text-sm w-[70px]">Files</TableHead>
+                      <TableHead className="text-center text-sm w-[70px]">Users</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {activeOrgs.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={isPlatformAdmin ? 8 : 7} className="text-center py-12 text-muted-foreground">
+                        <TableCell colSpan={isPlatformAdmin ? 7 : 6} className="text-center py-12 text-muted-foreground text-sm">
                           No active organizations
                         </TableCell>
                       </TableRow>
@@ -1089,62 +1095,116 @@ export default function PlatformAdmin() {
                         const totalSections = sectionProgress.length || 6;
                         const filesCount = orgMetrics?.files.length || 0;
                         const userCount = orgMetrics?.userCount || 0;
+                        const questionnaireComplete = sectionsComplete === totalSections;
+                        // Determine questionnaire button label
+                        const qLabel = sectionsComplete === 0 ? "Start" : questionnaireComplete ? "View" : "Continue";
+                        // Testing: 4 phases, placeholder 0 complete for now
+                        const testingTotal = 4;
+                        const testingComplete = 0;
+                        const testingLabel = testingComplete === 0 ? "Start" : testingComplete === testingTotal ? "View" : "Continue";
+                        // Implementation: 5 sections, placeholder 0 complete for now
+                        const implTotal = 5;
+                        const implComplete = 0;
+                        const implLabel = implComplete === 0 ? "Start" : implComplete === implTotal ? "View" : "Continue";
 
                         return (
                           <TableRow key={org.id} className="hover:bg-muted/30">
-                            {/* Clickable org name → Site Dashboard */}
+                            {/* Org name → Site Dashboard */}
                             <TableCell>
                               <button
                                 onClick={() => setLocation(`/org/${org.slug}`)}
-                                className="text-left font-semibold text-primary hover:underline flex items-center gap-2"
+                                className="text-left font-semibold text-sm text-primary hover:underline"
                               >
                                 {org.name}
-                                <ExternalLink className="w-3 h-3 opacity-50" />
                               </button>
                             </TableCell>
                             {isPlatformAdmin && (
                               <TableCell>
-                                <Badge variant="outline" className="text-xs">{partnerName}</Badge>
+                                <span className="text-sm text-foreground">{partnerName}</span>
                               </TableCell>
                             )}
-                            {/* Questionnaire: sections complete */}
+                            {/* Questionnaire — clickable workflow launcher */}
                             <TableCell className="text-center">
-                              <div className="flex items-center justify-center gap-1.5">
-                                {sectionsComplete === totalSections ? (
-                                  <CheckCircle2 className="w-4 h-4 text-green-500" />
-                                ) : (
-                                  <Circle className="w-4 h-4 text-muted-foreground" />
-                                )}
-                                <span className="text-sm">{sectionsComplete}/{totalSections}</span>
-                              </div>
+                              <button
+                                onClick={() => setLocation(`/org/${org.slug}/intake`)}
+                                className="inline-flex flex-col items-center gap-1.5 cursor-pointer hover:bg-muted/40 rounded-lg px-3 py-2 transition-colors w-full"
+                              >
+                                <span className={cn(
+                                  "text-sm font-semibold px-3 py-1 rounded-full transition-colors",
+                                  qLabel === "Start" && "bg-primary text-primary-foreground",
+                                  qLabel === "Continue" && "bg-primary/20 text-primary",
+                                  qLabel === "View" && "bg-green-500/20 text-green-400"
+                                )}>
+                                  {qLabel}
+                                </span>
+                                <span className="text-sm text-foreground">{sectionsComplete}/{totalSections} complete</span>
+                                <div className="flex gap-1">
+                                  {Array.from({ length: totalSections }).map((_, i) => (
+                                    <span key={i} className={cn(
+                                      "w-3 h-3 rounded-full inline-block",
+                                      i < sectionsComplete ? "bg-primary" : "bg-muted-foreground/20 border border-muted-foreground/30"
+                                    )} />
+                                  ))}
+                                </div>
+                              </button>
                             </TableCell>
-                            {/* Validation: placeholder */}
+                            {/* Testing — consistent status display */}
                             <TableCell className="text-center">
-                              <Badge variant="outline" className="text-xs text-muted-foreground">Pending</Badge>
+                              <button
+                                onClick={() => setLocation(`/org/${org.slug}/validation`)}
+                                className="inline-flex flex-col items-center gap-1.5 cursor-pointer hover:bg-muted/40 rounded-lg px-3 py-2 transition-colors w-full"
+                              >
+                                <span className={cn(
+                                  "text-sm font-semibold px-3 py-1 rounded-full transition-colors",
+                                  testingLabel === "Start" && "bg-primary text-primary-foreground",
+                                  testingLabel === "Continue" && "bg-primary/20 text-primary",
+                                  testingLabel === "View" && "bg-green-500/20 text-green-400"
+                                )}>
+                                  {testingLabel}
+                                </span>
+                                <span className="text-sm text-foreground">{testingComplete}/{testingTotal} complete</span>
+                                <div className="flex gap-1">
+                                  {Array.from({ length: testingTotal }).map((_, i) => (
+                                    <span key={i} className={cn(
+                                      "w-3 h-3 rounded-full inline-block",
+                                      i < testingComplete ? "bg-primary" : "bg-muted-foreground/20 border border-muted-foreground/30"
+                                    )} />
+                                  ))}
+                                </div>
+                              </button>
                             </TableCell>
-                            {/* Implementation: placeholder */}
+                            {/* Implementation — consistent status display */}
                             <TableCell className="text-center">
-                              <Badge variant="outline" className="text-xs text-muted-foreground">Pending</Badge>
+                              <button
+                                onClick={() => setLocation(`/org/${org.slug}/implement`)}
+                                className="inline-flex flex-col items-center gap-1.5 cursor-pointer hover:bg-muted/40 rounded-lg px-3 py-2 transition-colors w-full"
+                              >
+                                <span className={cn(
+                                  "text-sm font-semibold px-3 py-1 rounded-full transition-colors",
+                                  implLabel === "Start" && "bg-primary text-primary-foreground",
+                                  implLabel === "Continue" && "bg-primary/20 text-primary",
+                                  implLabel === "View" && "bg-green-500/20 text-green-400"
+                                )}>
+                                  {implLabel}
+                                </span>
+                                <span className="text-sm text-foreground">{implComplete}/{implTotal} complete</span>
+                                <div className="flex gap-1">
+                                  {Array.from({ length: implTotal }).map((_, i) => (
+                                    <span key={i} className={cn(
+                                      "w-3 h-3 rounded-full inline-block",
+                                      i < implComplete ? "bg-primary" : "bg-muted-foreground/20 border border-muted-foreground/30"
+                                    )} />
+                                  ))}
+                                </div>
+                              </button>
                             </TableCell>
                             {/* Files */}
                             <TableCell className="text-center">
-                              <span className="text-sm">{filesCount}</span>
+                              <span className="text-sm text-foreground">{filesCount}</span>
                             </TableCell>
                             {/* Users */}
                             <TableCell className="text-center">
-                              <span className="text-sm">{userCount}</span>
-                            </TableCell>
-                            {/* Actions */}
-                            <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setLocation(`/org/${org.slug}`)}
-                                className="gap-1"
-                              >
-                                View
-                                <ExternalLink className="w-3 h-3" />
-                              </Button>
+                              <span className="text-sm text-foreground">{userCount}</span>
                             </TableCell>
                           </TableRow>
                         );
@@ -2625,20 +2685,25 @@ export default function PlatformAdmin() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {Object.entries(vendorsByType).sort(([a], [b]) => a.localeCompare(b)).map(([systemType, vendors]) => (
-                  <Card key={systemType}>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <Badge variant="outline" className="text-sm">{systemType}</Badge>
-                          <span className="text-sm text-muted-foreground font-normal">
-                            {(vendors || []).filter(v => v.isActive).length} active / {(vendors || []).length} total
-                          </span>
-                        </CardTitle>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
+                  <Collapsible key={systemType} asChild>
+                    <Card>
+                      <CollapsibleTrigger asChild>
+                        <CardHeader className="pb-3 cursor-pointer hover:bg-muted/30 transition-colors rounded-t-lg group">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                              <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
+                              <Badge variant="outline" className="text-sm">{systemType}</Badge>
+                              <span className="text-sm text-muted-foreground font-normal">
+                                {(vendors || []).filter(v => v.isActive).length} active / {(vendors || []).length} total
+                              </span>
+                            </CardTitle>
+                          </div>
+                        </CardHeader>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <CardContent>
                       {/* Add vendor to this type */}
                       <div className="flex gap-2 mb-4">
                         {newVendorType === systemType ? (
@@ -2781,8 +2846,10 @@ export default function PlatformAdmin() {
                           </TableBody>
                         </Table>
                       </div>
-                    </CardContent>
-                  </Card>
+                        </CardContent>
+                      </CollapsibleContent>
+                    </Card>
+                  </Collapsible>
                 ))}
               </div>
             )}
