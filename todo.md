@@ -2045,3 +2045,6 @@
 - [x] Build Change History UI in Vendor Picklists tab with color-coded actions
 - [x] Write vitest tests for audit logging and alphabetization (20 tests total, all passing)
 - [x] Add getVendorAuditLog admin endpoint with limit parameter
+
+## Collapsible Vendor Picklist Cards (Mar 13, 2026)
+- [x] Convert vendor picklist system type sections from static cards to collapsible/accordion cards (using Radix Collapsible with chevron rotation)

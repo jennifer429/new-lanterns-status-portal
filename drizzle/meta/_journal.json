@@ -169,6 +169,13 @@
       "when": 1773427692220,
       "tag": "0023_perfect_dragon_man",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "5",
+      "when": 1773429945947,
+      "tag": "0024_cultured_steel_serpent",
+      "breakpoints": true
     }
   ]
 }

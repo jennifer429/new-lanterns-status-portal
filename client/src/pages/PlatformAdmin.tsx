@@ -35,6 +35,7 @@ import {
 import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp, AlertTriangle, AlertCircle, Info, Image, CheckSquare, BarChart3, Copy, Check, Clock, ChevronsUpDown, ChevronLeft, ChevronRight, Settings, ChevronDown, ListChecks, TestTube2, History } from "lucide-react";
 import { questionnaireSections } from "@shared/questionnaireData";
 import { TYPE_COLORS, type IntegrationSystem } from "@/components/IntegrationWorkflows";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -2625,20 +2626,25 @@ export default function PlatformAdmin() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {Object.entries(vendorsByType).sort(([a], [b]) => a.localeCompare(b)).map(([systemType, vendors]) => (
-                  <Card key={systemType}>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <Badge variant="outline" className="text-sm">{systemType}</Badge>
-                          <span className="text-sm text-muted-foreground font-normal">
-                            {(vendors || []).filter(v => v.isActive).length} active / {(vendors || []).length} total
-                          </span>
-                        </CardTitle>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
+                  <Collapsible key={systemType} asChild>
+                    <Card>
+                      <CollapsibleTrigger asChild>
+                        <CardHeader className="pb-3 cursor-pointer hover:bg-muted/30 transition-colors rounded-t-lg group">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                              <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
+                              <Badge variant="outline" className="text-sm">{systemType}</Badge>
+                              <span className="text-sm text-muted-foreground font-normal">
+                                {(vendors || []).filter(v => v.isActive).length} active / {(vendors || []).length} total
+                              </span>
+                            </CardTitle>
+                          </div>
+                        </CardHeader>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <CardContent>
                       {/* Add vendor to this type */}
                       <div className="flex gap-2 mb-4">
                         {newVendorType === systemType ? (
@@ -2781,8 +2787,10 @@ export default function PlatformAdmin() {
                           </TableBody>
                         </Table>
                       </div>
-                    </CardContent>
-                  </Card>
+                        </CardContent>
+                      </CollapsibleContent>
+                    </Card>
+                  </Collapsible>
                 ))}
               </div>
             )}
