@@ -138,7 +138,7 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       {/* Header with Logo */}
       <div className="border-b border-border/50 bg-card">
-        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
           <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-10" />
           <div className="text-sm text-muted-foreground">{orgData.name}</div>
         </div>
@@ -149,13 +149,13 @@ export default function Home() {
 
       {/* Tab Navigation */}
       <div className="border-b border-border/50 bg-card">
-        <div className="max-w-3xl mx-auto px-6">
-          <div className="flex gap-6">
+        <div className="max-w-3xl mx-auto px-2 sm:px-6">
+          <div className="flex gap-1 sm:gap-6 overflow-x-auto">
             {(["overview", "validation", "training"] as HomeTab[]).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`pb-3 pt-3 px-1 font-medium text-sm transition-colors relative capitalize flex items-center gap-2 ${
+                className={`pb-3 pt-3 px-1 sm:px-2 font-medium text-xs sm:text-sm transition-colors relative capitalize flex items-center gap-1 sm:gap-2 whitespace-nowrap ${
                   activeTab === tab
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
@@ -174,8 +174,8 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="flex items-center justify-center p-6">
-        <div className="w-full max-w-3xl space-y-6">
+      <div className="flex items-center justify-center p-3 sm:p-6">
+        <div className="w-full max-w-3xl space-y-4 sm:space-y-6">
 
           {/* ── OVERVIEW TAB ── */}
           {activeTab === "overview" && (
@@ -236,18 +236,18 @@ export default function Home() {
 
               {/* Main Card */}
               <Card className="border-2 border-primary/30 bg-gradient-to-b from-card to-card/50">
-                <CardContent className="p-8">
+                <CardContent className="p-4 sm:p-8">
                   {/* Header with Organization Name */}
-                  <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center justify-between mb-6 sm:mb-8">
                     <div className="flex items-center gap-3">
-                      <ClipboardList className="w-8 h-8 text-primary" />
-                      <h1 className="text-2xl font-bold">{orgData.name}</h1>
+                      <ClipboardList className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
+                      <h1 className="text-xl sm:text-2xl font-bold truncate">{orgData.name}</h1>
                     </div>
                     {isComplete && <CheckCircle2 className="w-6 h-6 text-green-500" />}
                   </div>
 
                   {/* Stats Row */}
-                  <div className="grid grid-cols-2 gap-6 mb-8">
+                  <div className="grid grid-cols-2 gap-3 sm:gap-6 mb-6 sm:mb-8">
                     <div className="flex items-center gap-3">
                       <TrendingUp className="w-5 h-5 text-muted-foreground" />
                       <div>
@@ -273,12 +273,12 @@ export default function Home() {
                       </p>
 
                       {/* Big Percentage Box */}
-                      <div className={`text-center p-8 rounded-xl border-2 mb-6 ${
+                      <div className={`text-center p-5 sm:p-8 rounded-xl border-2 mb-6 ${
                         isComplete
                           ? "bg-gradient-to-br from-green-500/20 to-emerald-500/10 border-green-500/30"
                           : "bg-gradient-to-br from-primary/20 to-primary/10 border-primary/30"
                       }`}>
-                        <div className={`text-7xl font-bold mb-2 ${isComplete ? "text-green-500" : "text-primary"}`}>
+                        <div className={`text-5xl sm:text-7xl font-bold mb-2 ${isComplete ? "text-green-500" : "text-primary"}`}>
                           {intakeCompletion}%
                         </div>
                         <div className="text-lg text-muted-foreground">
@@ -290,13 +290,13 @@ export default function Home() {
                       <div className="space-y-3 mb-6">
                         {sectionProgress.map((section, index) => (
                           <div key={index} className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                               {section.progress === 100 ? (
-                                <CheckCircle2 className="w-5 h-5 text-green-500" />
+                                <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 shrink-0" />
                               ) : (
-                                <Circle className="w-5 h-5 text-muted-foreground" />
+                                <Circle className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground shrink-0" />
                               )}
-                              <span className="text-sm">{section.name}</span>
+                              <span className="text-xs sm:text-sm truncate">{section.name}</span>
                             </div>
                             <span className={`text-sm font-bold ${section.progress === 100 ? "text-green-500" : ""}`}>
                               {section.progress}%
@@ -449,7 +449,7 @@ export default function Home() {
               {/* Diagram Upload — 3rd Party Tech */}
               <Card className="border border-border/50">
                 <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
                     <h3 className="text-base font-semibold flex items-center gap-2">
                       <Image className="w-5 h-5 text-primary" />
                       Validation Diagrams
@@ -567,7 +567,7 @@ export default function Home() {
               {/* Training Materials & Diagrams */}
               <Card className="border border-border/50">
                 <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
                     <h3 className="text-base font-semibold flex items-center gap-2">
                       <Image className="w-5 h-5 text-primary" />
                       Training Materials & Diagrams

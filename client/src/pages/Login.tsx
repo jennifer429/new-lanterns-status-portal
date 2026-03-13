@@ -61,13 +61,13 @@ export default function Login() {
       }}
     >
       <Card className="w-full max-w-md border-purple-500/20 bg-black">
-        <CardHeader className="space-y-6 pb-8">
+        <CardHeader className="space-y-4 pb-6 pt-6">
           <div className="flex flex-col items-center gap-0.5">
             {/* New Lantern Logo */}
-            <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-60 w-60 object-contain" />
-            
+            <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-28 w-28 sm:h-48 sm:w-48 object-contain" />
+
             {/* Main Heading */}
-            <h1 className="text-4xl font-bold text-center leading-tight">
+            <h1 className="text-2xl sm:text-4xl font-bold text-center leading-tight">
               <span className="text-white">Customer</span>
               <br />
               <span className="bg-gradient-to-r from-purple-400 via-purple-300 to-purple-400 bg-clip-text text-transparent">
