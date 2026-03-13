@@ -531,7 +531,12 @@ export default function IntakeNewRedesign() {
   const [, setLocation] = useLocation();
   const [responses, setResponses] = useState<Record<string, any>>({});
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
-  const [currentSection, setCurrentSection] = useState<string>("org-info");
+  const [currentSection, setCurrentSection] = useState<string>(() => {
+    // Honor ?section= query param for deep-linking from Implementation page
+    const params = new URLSearchParams(window.location.search);
+    const s = params.get("section");
+    return s && questionnaireSections.find(sec => sec.id === s) ? s : "org-info";
+  });
   const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
   const [unansweredQuestions, setUnansweredQuestions] = useState<Set<string>>(new Set());
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -616,10 +621,11 @@ export default function IntakeNewRedesign() {
     }
   }, [existingResponses]);
 
-  // Auto-navigate to first incomplete section ONLY on first load
+  // Auto-navigate to first incomplete section ONLY on first load (skipped when ?section= is present)
   useEffect(() => {
-    // Skip if already navigated or responses not loaded yet
-    if (hasNavigatedRef.current || Object.keys(responses).length === 0) return;
+    // Skip if already navigated, responses not loaded, or explicit section param given
+    const urlSection = new URLSearchParams(window.location.search).get("section");
+    if (hasNavigatedRef.current || Object.keys(responses).length === 0 || urlSection) return;
     
     // Find first section that is not 100% complete
     const firstIncompleteSection = questionnaireSections.find(section => {
