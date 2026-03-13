@@ -25,6 +25,7 @@ import {
   Clock,
   ChevronDown,
   ChevronRight,
+  Trash2,
 } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -159,6 +160,20 @@ export default function Home() {
   // Fetch New Lantern specifications
   const { data: specs = [] } = trpc.admin.getSpecifications.useQuery();
 
+  // Delete file mutation
+  const utils = trpc.useUtils();
+  const deleteFileMutation = trpc.intake.deleteFile.useMutation({
+    onSuccess: () => {
+      utils.intake.getAllUploadedFiles.invalidate({ organizationSlug: orgSlug });
+    },
+  });
+
+  const handleRemoveDiagram = (fileId: number) => {
+    if (window.confirm("Remove this architecture diagram?")) {
+      deleteFileMutation.mutate({ fileId, organizationSlug: orgSlug });
+    }
+  };
+
   // Build responses map
   const responsesMap: Record<string, string> = {};
   existingResponses.forEach((r: any) => {
@@ -270,11 +285,21 @@ export default function Home() {
                           />
                           <div className="flex items-center justify-between px-4 py-2 bg-muted/20 border-t border-border/30">
                             <span className="text-sm text-muted-foreground">{file.fileName}</span>
-                            <a href={file.fileUrl} download={file.fileName}>
-                              <Button size="sm" variant="ghost">
-                                <Download className="w-4 h-4 mr-1" /> Download
+                            <div className="flex items-center gap-2">
+                              <a href={file.fileUrl} download={file.fileName}>
+                                <Button size="sm" variant="ghost">
+                                  <Download className="w-4 h-4 mr-1" /> Download
+                                </Button>
+                              </a>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                onClick={() => handleRemoveDiagram(file.id)}
+                              >
+                                <Trash2 className="w-4 h-4 mr-1" /> Remove
                               </Button>
-                            </a>
+                            </div>
                           </div>
                         </div>
                       ) : (
@@ -283,11 +308,21 @@ export default function Home() {
                             <FileText className="w-5 h-5 text-muted-foreground" />
                             <span className="text-sm font-medium">{file.fileName}</span>
                           </div>
-                          <a href={file.fileUrl} download={file.fileName}>
-                            <Button size="sm" variant="ghost">
-                              <Download className="w-4 h-4 mr-1" /> Download
+                          <div className="flex items-center gap-2">
+                            <a href={file.fileUrl} download={file.fileName}>
+                              <Button size="sm" variant="ghost">
+                                <Download className="w-4 h-4 mr-1" /> Download
+                              </Button>
+                            </a>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                              onClick={() => handleRemoveDiagram(file.id)}
+                            >
+                              <Trash2 className="w-4 h-4 mr-1" /> Remove
                             </Button>
-                          </a>
+                          </div>
                         </div>
                       )}
                     </div>

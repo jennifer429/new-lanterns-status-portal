@@ -2002,3 +2002,7 @@
 - [x] Customer users land on Site Dashboard (/org/:slug) after login
 - [x] Admin users land on Platform Admin (/admin) after login - defaults to Connectivity Dashboard
 - [x] Update routing/redirect logic based on user role
+
+## Admin Landing + Architecture Remove (Mar 13, 2026)
+- [x] Swap admin/partner landing page to Implementation Dashboard (not Connectivity)
+- [x] Add remove button to Architecture Diagram on Site Dashboard
