@@ -1932,3 +1932,116 @@
 - [x] Add pre-canned list of common traffic types with ability to add custom ones
 - [x] Add export functionality (CSV/JSON) for connectivity table
 - [x] Add import functionality with AI-friendly structured format and column mapping
+
+## Diagram Display & Dropdown Fix (Mar 12, 2026)
+- [x] Fix architecture diagram to display large at top of Integration Workflows when uploaded
+- [x] Fix broken image rendering (URL encoding fix already applied)
+- [x] Fix glitchy Systems Involved multi-select dropdown (rewrote with Popover/Command)
+- [x] Update traffic types in ConnectivityTable to HL7/DICOM traffic only
+- [x] Make Source System, Destination System, and Systems in Environment a shared alphabetical picklist anyone can add to
+- [x] Reorder columns: Traffic Type → Source System → Dest System → Source IP/Port → Dest IP/Port → AE Title → Test/Prod → Actions
+- [x] Split single IP/Port into Source IP/Port and Destination IP/Port
+- [x] Fix colors: Prod = green, Test = yellow
+- [x] Add D.9 question about HL7 tokens/segments for clinical data (medications, history, allergies, etc.)
+
+## Rename & Restructure Integration Workflows (Mar 12, 2026)
+- [x] Rename first Integration Workflows section to "Architecture" in sidebar
+- [x] Move Systems in Your Environment table to the Architecture tab
+- [x] Remove Architecture Diagram block and Systems table from second Integration Workflows tab
+- [x] Second IW tab keeps only workflow blocks (Orders, Priors, Reports, etc.)
+- [x] Update admin/progress references for renamed section
+- [x] Remove MDM, SIU, Worklist, MPPS, Storage Commitment, Dose Reports from traffic type dropdown
+- [x] Move Configuration Files (CF.1-CF.6) from Connectivity to their own new section tab
+- [x] Leave VPN form (E.1) in Connectivity section
+- [x] Remove Architecture Diagram and Systems table from Integration Workflows component (keep workflow blocks only)
+- [x] Add Config Files icon to sidebar
+- [x] Update admin references for new section structure
+
+- [x] Architecture section: stack diagram full-width on top, systems table below (not side-by-side)
+- [x] Simplify progress panel: remove percentages, show only complete/incomplete icons per section
+
+## Admin Header Fix (Mar 13, 2026)
+- [x] Center "Platform Admin" heading in admin dashboard header
+
+## Admin Dashboard Restructure (Mar 13, 2026)
+- [x] Move Users, Organizations, Templates, Partners, Specifications into an Admin Menu (dropdown/collapsible)
+- [ ] Make Implementation Dashboard the main/default view
+- [ ] Add Validation Checklist section to Implementation Dashboard
+- [ ] Add Implementation Checklist section to Implementation Dashboard
+
+## Implementation Dashboard Table View (Mar 13, 2026)
+- [x] Replace org cards with collapsed table rows on Implementation Dashboard
+- [ ] All sections collapsed by default, expandable
+- [x] Make org name column clickable to navigate to site dashboard
+- [x] Move Users/Orgs/Templates/Partners/Specs into Admin Menu dropdown
+- [ ] Add Implementation Checklist section to Implementation Dashboard
+- [ ] Add Validation Checklist section to Implementation Dashboard
+- [ ] Replace Connectivity Dashboard with Notion DB integration (pending Notion DB setup)
+
+## Site Dashboard Page (Mar 13, 2026)
+- [ ] Create new Site Dashboard page at /org/:slug/dashboard
+- [ ] Architecture Diagram section: display uploaded diagram from intake
+- [ ] Connectivity Info section: auto-populate from questionnaire answers (contacts, systems, IPs, ports, AE titles)
+- [ ] Implementation Questionnaire status: show section completion with link to intake form
+- [ ] Validation Checklist: mock checklist items for testing/validation
+- [ ] Implementation Checklist: mock checklist items for project plan
+- [ ] Wire up route in App.tsx
+- [ ] Backend procedures for checklist data
+
+## Site Dashboard Page (Mar 13, 2026)
+- [ ] Create new Site Dashboard page at /org/:slug/dashboard
+- [ ] Architecture Diagram section: display uploaded diagram from intake
+- [ ] Connectivity Info section: placeholder for Notion database display (filtered per site)
+- [ ] Implementation Questionnaire status: show section completion with link to intake form
+- [ ] Validation Checklist: mock checklist items for testing/validation
+- [ ] Implementation Checklist: mock checklist items for project plan
+- [ ] Wire up route in App.tsx
+- [ ] Backend procedures for checklist and site dashboard data
+
+## Role-Based Landing Pages (Mar 13, 2026)
+- [x] Customer users land on Site Dashboard (/org/:slug) after login
+- [x] Admin users land on Platform Admin (/admin) after login - defaults to Connectivity Dashboard
+- [x] Update routing/redirect logic based on user role
+
+## Admin Landing + Architecture Remove (Mar 13, 2026)
+- [x] Swap admin/partner landing page to Implementation Dashboard (not Connectivity)
+- [x] Add remove button to Architecture Diagram on Site Dashboard
+
+## Systems Add/Edit Fix (Mar 13, 2026)
+- [ ] Replace plain text "Add System" with dropdown fields for system type
+- [ ] System type dropdown: PACS, EHR/RIS, Router/Middleware, VNA, Integration Engine, AI, Cloud Storage, etc.
+- [ ] Proper add/edit/delete functionality with inline editing
+
+## Systems Section Redesign (Mar 13, 2026)
+- [x] Pre-loaded rows for PACS, VNA, Router, EHR, RIS, Integration Engine, AI with vendor dropdowns
+- [x] AI row supports multi-select (multiple AI platforms)
+- [x] Vendor dropdowns specific to each system type
+- [x] Users can add custom rows with customizable type and vendor
+- [x] Import/export buttons for systems data (JSON)
+- [x] Import/export buttons for architecture diagram
+
+## Vendor Dropdown Additions (Mar 13, 2026)
+- [x] Add Fuji, Agfa, Sectra and other common radiology vendors to system type dropdowns
+
+## Reporting/Dictation Category (Mar 13, 2026)
+- [x] Add Reporting/Dictation system type with PowerScribe, Fluency, mModal, etc.
+
+## Admin-Configurable Vendor Picklists (Mar 13, 2026)
+- [x] Create DB table for system_vendor_options (system_type, vendor_name, sort_order)
+- [x] Add backend CRUD procedures for managing vendor options (add, update, toggle, delete, addSystemType, seedDefaults)
+- [x] Build Vendor Picklists tab in Platform Admin page for managing vendor options per system type
+- [x] Update IntakeNewRedesign ArchitectureOverview to load vendor options from DB (fallback to hardcoded defaults)
+- [x] Seed DB with current hardcoded vendor options (9 system types, 90+ vendors)
+- [x] Add public intake.getActiveVendorOptions endpoint for intake form
+- [x] Write vitest tests for vendor CRUD, access control, and public endpoint (12 tests)
+- [x] Both Platform-Admin and RadOne-Admin can edit vendor picklists
+
+## Alphabetize Vendor Lists & Audit Log (Mar 13, 2026)
+- [x] Alphabetize vendor lists in admin Vendor Picklists tab (sorted A-Z, "Other" always last)
+- [x] Alphabetize vendor lists in intake form Architecture dropdowns (sorted A-Z, "Other" always last)
+- [x] Alphabetize vendor lists in backend getActiveVendorOptions endpoint (both admin and intake routers)
+- [x] Create vendorAuditLog database table (action, systemType, vendorName, previousValue, newValue, performedBy)
+- [x] Log all vendor picklist changes (add, update, toggle, delete, addSystemType, seedDefaults)
+- [x] Build Change History UI in Vendor Picklists tab with color-coded actions
+- [x] Write vitest tests for audit logging and alphabetization (20 tests total, all passing)
+- [x] Add getVendorAuditLog admin endpoint with limit parameter

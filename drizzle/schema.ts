@@ -342,3 +342,40 @@ export const validationResults = mysqlTable("validationResults", {
 
 export type ValidationResult = typeof validationResults.$inferSelect;
 export type InsertValidationResult = typeof validationResults.$inferInsert;
+
+/**
+ * System Vendor Options - admin-configurable picklist for system types in the Architecture section.
+ * Both partner admins (RadOne-Admin) and platform admins can manage these.
+ * Each row is one vendor option under a system type (e.g., type="PACS", vendorName="Fujifilm Synapse").
+ */
+export const systemVendorOptions = mysqlTable("systemVendorOptions", {
+  id: int("id").autoincrement().primaryKey(),
+  systemType: varchar("systemType", { length: 100 }).notNull(), // e.g., "PACS", "VNA", "EHR", "AI", "Reporting"
+  vendorName: varchar("vendorName", { length: 255 }).notNull(), // e.g., "Fujifilm Synapse", "Epic"
+  displayOrder: int("displayOrder").default(0).notNull(), // Sort order within the system type
+  isActive: tinyint("isActive").default(1).notNull(), // 1 = active, 0 = hidden
+  createdBy: varchar("createdBy", { length: 320 }), // Admin email who created
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SystemVendorOption = typeof systemVendorOptions.$inferSelect;
+export type InsertSystemVendorOption = typeof systemVendorOptions.$inferInsert;
+
+/**
+ * Audit log for vendor picklist changes.
+ * Tracks who changed what, when, and the before/after values.
+ */
+export const vendorAuditLog = mysqlTable("vendorAuditLog", {
+  id: int("id").autoincrement().primaryKey(),
+  action: varchar("action", { length: 50 }).notNull(), // 'add', 'update', 'toggle', 'delete', 'add_system_type', 'seed_defaults'
+  systemType: varchar("systemType", { length: 100 }).notNull(),
+  vendorName: varchar("vendorName", { length: 255 }), // The vendor affected (null for bulk ops like seed)
+  previousValue: text("previousValue"), // JSON or plain text of previous state
+  newValue: text("newValue"), // JSON or plain text of new state
+  performedBy: varchar("performedBy", { length: 320 }).notNull(), // Email of admin who made the change
+  performedAt: timestamp("performedAt").defaultNow().notNull(),
+});
+
+export type VendorAuditLog = typeof vendorAuditLog.$inferSelect;
+export type InsertVendorAuditLog = typeof vendorAuditLog.$inferInsert;

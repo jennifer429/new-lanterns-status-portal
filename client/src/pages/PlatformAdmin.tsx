@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { transformSectionProgress } from "@/lib/adminUtils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -32,7 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp, AlertTriangle, AlertCircle, Info, Image, CheckSquare, BarChart3, Copy, Check, Clock, ChevronsUpDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp, AlertTriangle, AlertCircle, Info, Image, CheckSquare, BarChart3, Copy, Check, Clock, ChevronsUpDown, ChevronLeft, ChevronRight, Settings, ChevronDown, ListChecks, TestTube2, History } from "lucide-react";
 import { questionnaireSections } from "@shared/questionnaireData";
 import { TYPE_COLORS, type IntegrationSystem } from "@/components/IntegrationWorkflows";
 import { cn } from "@/lib/utils";
@@ -61,7 +61,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 export default function PlatformAdmin() {
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"prod-dashboard" | "impl-dashboard" | "orgs" | "users" | "templates" | "partners" | "specs">("prod-dashboard");
+  const [activeTab, setActiveTab] = useState<"prod-dashboard" | "impl-dashboard" | "orgs" | "users" | "templates" | "partners" | "specs" | "vendor-picklists">("impl-dashboard");
 
   // Template management state
   const [isUploadTemplateDialogOpen, setIsUploadTemplateDialogOpen] = useState(false);
@@ -120,6 +120,14 @@ export default function PlatformAdmin() {
   const [editPartnerSlug, setEditPartnerSlug] = useState("");
   const [editPartnerDescription, setEditPartnerDescription] = useState("");
 
+  // Vendor picklist management state
+  const [newVendorType, setNewVendorType] = useState("");
+  const [newVendorName, setNewVendorName] = useState("");
+  const [newSystemTypeName, setNewSystemTypeName] = useState("");
+  const [newSystemTypeVendors, setNewSystemTypeVendors] = useState("");
+  const [editVendorId, setEditVendorId] = useState<number | null>(null);
+  const [editVendorName, setEditVendorName] = useState("");
+
   // Specifications management state
   const [isUploadSpecDialogOpen, setIsUploadSpecDialogOpen] = useState(false);
   const [specTitle, setSpecTitle] = useState("");
@@ -154,6 +162,8 @@ export default function PlatformAdmin() {
   const { data: templates, refetch: refetchTemplates } = trpc.admin.getTemplates.useQuery();
   const { data: inactiveTemplates, refetch: refetchInactiveTemplates } = trpc.admin.getInactiveTemplates.useQuery();
   const { data: specs, refetch: refetchSpecs } = trpc.admin.getSpecifications.useQuery();
+  const { data: vendorOptions, refetch: refetchVendorOptions } = trpc.admin.getSystemVendorOptions.useQuery();
+  const { data: vendorAuditLogs, refetch: refetchVendorAuditLogs } = trpc.admin.getVendorAuditLog.useQuery({ limit: 100 });
 
   // Logout mutation
   const logoutMutation = trpc.auth.logout.useMutation({
@@ -624,6 +634,96 @@ export default function PlatformAdmin() {
     },
   });
 
+  // Vendor picklist mutations
+  const addVendorMutation = trpc.admin.addVendorOption.useMutation({
+    onSuccess: () => {
+      toast.success("Vendor added!");
+      setNewVendorName("");
+      refetchVendorOptions();
+      refetchVendorAuditLogs();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to add vendor");
+    },
+  });
+
+  const updateVendorMutation = trpc.admin.updateVendorOption.useMutation({
+    onSuccess: () => {
+      toast.success("Vendor updated!");
+      setEditVendorId(null);
+      setEditVendorName("");
+      refetchVendorOptions();
+      refetchVendorAuditLogs();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to update vendor");
+    },
+  });
+
+  const deleteVendorMutation = trpc.admin.deleteVendorOption.useMutation({
+    onSuccess: () => {
+      toast.success("Vendor removed");
+      refetchVendorOptions();
+      refetchVendorAuditLogs();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to remove vendor");
+    },
+  });
+
+  const toggleVendorMutation = trpc.admin.toggleVendorOption.useMutation({
+    onSuccess: () => {
+      refetchVendorOptions();
+      refetchVendorAuditLogs();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to toggle vendor");
+    },
+  });
+
+  const addSystemTypeMutation = trpc.admin.addSystemType.useMutation({
+    onSuccess: () => {
+      toast.success("System type added!");
+      setNewSystemTypeName("");
+      setNewSystemTypeVendors("");
+      refetchVendorOptions();
+      refetchVendorAuditLogs();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to add system type");
+    },
+  });
+
+  const seedVendorsMutation = trpc.admin.seedDefaultVendorOptions.useMutation({
+    onSuccess: (result) => {
+      toast.success(result.message || "Defaults seeded");
+      refetchVendorOptions();
+      refetchVendorAuditLogs();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to seed defaults");
+    },
+  });
+
+  // Group vendor options by system type for display (alphabetized, "Other" last)
+  const vendorsByType = useMemo(() => {
+    if (!vendorOptions) return {} as Record<string, typeof vendorOptions>;
+    const grouped: Record<string, typeof vendorOptions> = {};
+    for (const opt of vendorOptions) {
+      if (!grouped[opt.systemType]) grouped[opt.systemType] = [];
+      grouped[opt.systemType].push(opt);
+    }
+    // Sort each group alphabetically, keeping "Other" last
+    for (const key of Object.keys(grouped)) {
+      grouped[key].sort((a, b) => {
+        if (a.vendorName === 'Other') return 1;
+        if (b.vendorName === 'Other') return -1;
+        return a.vendorName.localeCompare(b.vendorName);
+      });
+    }
+    return grouped;
+  }, [vendorOptions]);
+
   const handleUploadSpec = async () => {
     if (!specTitle || !specFile) {
       toast.error("Please provide a title and file");
@@ -791,15 +891,15 @@ export default function PlatformAdmin() {
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm">
         <div className="container py-3 sm:py-6">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 sm:gap-4 shrink-0">
               <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-8 sm:h-12 shrink-0" />
-              <div className="flex flex-col justify-center min-w-0">
-                <h1 className="text-lg sm:text-3xl font-bold text-foreground truncate">{headerTitle}</h1>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  {headerSubtitle}
-                </p>
-              </div>
+            </div>
+            <div className="flex-1 flex flex-col items-center justify-center min-w-0">
+              <h1 className="text-lg sm:text-3xl font-bold text-foreground truncate">{headerTitle}</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {headerSubtitle}
+              </p>
             </div>
             <div className="flex items-center gap-3">
               {/* Export All Button */}
@@ -849,8 +949,8 @@ export default function PlatformAdmin() {
             </div>
           </div>
 
-          {/* Tab Navigation */}
-          <div className="flex gap-4 mt-4 sm:mt-6 border-b border-border overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
+          {/* Tab Navigation - Main tabs + Admin Menu */}
+          <div className="flex items-center gap-4 mt-4 sm:mt-6 border-b border-border overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
             <button
               onClick={() => setActiveTab("prod-dashboard")}
               className={`pb-2 sm:pb-3 px-1 text-sm font-medium transition-colors relative whitespace-nowrap flex items-center gap-1.5 shrink-0 ${
@@ -877,75 +977,57 @@ export default function PlatformAdmin() {
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
               )}
             </button>
-            <button
-              onClick={() => setActiveTab("users")}
-              className={`pb-2 sm:pb-3 px-1 text-sm font-medium transition-colors relative whitespace-nowrap shrink-0 ${
-                activeTab === "users"
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Users
-              {activeTab === "users" && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab("orgs")}
-              className={`pb-2 sm:pb-3 px-1 text-sm font-medium transition-colors relative whitespace-nowrap shrink-0 ${
-                activeTab === "orgs"
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Organizations
-              {activeTab === "orgs" && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab("templates")}
-              className={`pb-2 sm:pb-3 px-1 text-sm font-medium transition-colors relative whitespace-nowrap shrink-0 ${
-                activeTab === "templates"
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Templates
-              {activeTab === "templates" && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-              )}
-            </button>
-            {isPlatformAdmin && (
-              <button
-                onClick={() => setActiveTab("partners")}
-                className={`pb-2 sm:pb-3 px-1 text-sm font-medium transition-colors relative whitespace-nowrap shrink-0 ${
-                  activeTab === "partners"
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Partners
-                {activeTab === "partners" && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+
+            {/* Admin Menu Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className={`pb-2 sm:pb-3 px-1 text-sm font-medium transition-colors relative whitespace-nowrap flex items-center gap-1 shrink-0 ${
+                    ["users", "orgs", "templates", "partners", "specs"].includes(activeTab)
+                      ? "text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Settings className="w-4 h-4" />
+                  Admin
+                  <ChevronDown className="w-3 h-3" />
+                  {["users", "orgs", "templates", "partners", "specs"].includes(activeTab) && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48">
+                <DropdownMenuItem onClick={() => setActiveTab("users")} className="cursor-pointer">
+                  <Users className="mr-2 h-4 w-4" />
+                  Users
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveTab("orgs")} className="cursor-pointer">
+                  <ClipboardList className="mr-2 h-4 w-4" />
+                  Organizations
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveTab("templates")} className="cursor-pointer">
+                  <FileText className="mr-2 h-4 w-4" />
+                  Templates
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveTab("vendor-picklists")} className="cursor-pointer">
+                  <ListChecks className="mr-2 h-4 w-4" />
+                  Vendor Picklists
+                </DropdownMenuItem>
+                {isPlatformAdmin && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setActiveTab("partners")} className="cursor-pointer">
+                      <Users className="mr-2 h-4 w-4" />
+                      Partners
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setActiveTab("specs")} className="cursor-pointer">
+                      <FileText className="mr-2 h-4 w-4" />
+                      Specifications
+                    </DropdownMenuItem>
+                  </>
                 )}
-              </button>
-            )}
-            {isPlatformAdmin && (
-              <button
-                onClick={() => setActiveTab("specs")}
-                className={`pb-2 sm:pb-3 px-1 text-sm font-medium transition-colors relative whitespace-nowrap shrink-0 ${
-                  activeTab === "specs"
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Specifications
-                {activeTab === "specs" && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-                )}
-              </button>
-            )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
@@ -968,148 +1050,110 @@ export default function PlatformAdmin() {
 
         {activeTab === "impl-dashboard" && (
           <>
-            <h2 className="text-2xl font-bold mb-6">Active Organizations ({activeOrgs.length})</h2>
-            
-            {/* Organization Portal Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {activeOrgs.length === 0 ? (
-                <div className="col-span-full text-center py-12 text-muted-foreground">
-                  No active organizations
-                </div>
-              ) : (
-                activeOrgs.map(org => {
-                  const orgMetrics = metricsMap[org.id];
-                  const partnerName = org.clientId ? clientMap[org.clientId] : "Unknown";
-                  const completionPercent = orgMetrics?.completionPercent || 0;
-                  const sectionsComplete = orgMetrics?.sectionsComplete || 0;
-                  const totalSections = 9;
-                  const filesCount = orgMetrics?.files.length || 0;
-                  const userCount = orgMetrics?.userCount || 0;
-
-                  // Convert sectionProgress using shared utility
-                  const sectionProgress = transformSectionProgress(orgMetrics?.sectionProgress);
-
-                  return (
-                    <Card key={org.id} className="border-2 border-primary/30 bg-gradient-to-b from-card to-card/50">
-                      <CardContent className="p-6">
-                        {/* Header with Organization Name and Partner Badge */}
-                        <div className="flex items-center justify-between mb-6">
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <ClipboardList className="w-6 h-6 text-primary flex-shrink-0" />
-                            <div className="min-w-0 flex-1">
-                              <h3 className="text-lg font-bold truncate">{org.name}</h3>
-                              {isPlatformAdmin && (
-                                <Badge variant="outline" className="text-xs mt-1">
-                                  {partnerName}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                          <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-                        </div>
-
-                        {/* Stats Row */}
-                        <div className="grid grid-cols-3 gap-4 mb-6">
-                          <div className="flex items-center gap-2">
-                            <TrendingUp className="w-4 h-4 text-muted-foreground" />
-                            <div>
-                              <div className="text-xl font-bold">{completionPercent}%</div>
-                              <div className="text-xs text-muted-foreground">Complete</div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Users className="w-4 h-4 text-muted-foreground" />
-                            <div>
-                              <div className="text-xl font-bold">{userCount}</div>
-                              <div className="text-xs text-muted-foreground">Users</div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-muted-foreground" />
-                            <div>
-                              <div className="text-xl font-bold">{filesCount}</div>
-                              <div className="text-xs text-muted-foreground">Files</div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="border-t border-border/50 pt-4">
-                          {/* Overall Progress Section */}
-                          <div className="mb-4">
-                            <h4 className="text-sm font-semibold mb-1">Overall Progress</h4>
-                            <p className="text-xs text-muted-foreground mb-3">
-                              {sectionsComplete} of {totalSections} sections complete
-                            </p>
-
-                            {/* Big Percentage Box */}
-                            <div className="text-center p-6 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 border-2 border-primary/30 mb-4">
-                              <div className="text-5xl font-bold text-primary mb-1">
-                                {completionPercent}%
-                              </div>
-                              <div className="text-sm text-muted-foreground">Complete</div>
-                            </div>
-
-                            {/* Section List - Show all sections */}
-                              <div className="space-y-2 mb-4">
-                                {sectionProgress.map((section, index) => (
-                                  <div key={index} className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                      {section.progress === 100 ? (
-                                        <CheckCircle2 className="w-4 h-4 text-primary" />
-                                      ) : (
-                                        <Circle className="w-4 h-4 text-muted-foreground" />
-                                      )}
-                                      <span className="text-xs">{section.name}</span>
-                                    </div>
-                                    <span className="text-xs font-bold">{section.progress}%</span>
-                                  </div>
-                                ))}
-                              </div>
-
-                            {/* Status */}
-                            <div className="text-xs text-muted-foreground mb-4">
-                              In Progress
-                            </div>
-                          </div>
-
-                          {/* Uploaded Files Section */}
-                          <div className="border-t border-border/50 pt-4 mb-4">
-                            <h5 className="text-xs font-semibold mb-2">Uploaded Files:</h5>
-                            {filesCount === 0 ? (
-                              <p className="text-xs text-muted-foreground">No files uploaded yet</p>
-                            ) : (
-              <div className="space-y-1 max-h-32 overflow-y-auto">
-                {orgMetrics?.files.map((file) => (
-                  <a
-                    key={file.id}
-                    href={file.fileUrl}
-                    download
-                    className="flex items-center gap-2 text-xs text-primary hover:underline"
-                  >
-                    <Download className="w-3 h-3" />
-                    <span className="truncate">{file.fileName}</span>
-                  </a>
-                ))}
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold">Implementation Dashboard</h2>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>{activeOrgs.length} active organizations</span>
               </div>
-                            )}
-                          </div>
-
-                          {/* Open Portal Button */}
-                          <Button 
-                            size="lg" 
-                            className="w-full"
-                            onClick={() => setLocation(`/org/${org.slug}/intake`)}
-                          >
-                            <ExternalLink className="w-4 h-4 mr-2" />
-                            Open Portal
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })
-              )}
             </div>
+            
+            {/* Collapsed Table View */}
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="w-[250px]">Organization</TableHead>
+                      {isPlatformAdmin && <TableHead>Partner</TableHead>}
+                      <TableHead className="text-center">Questionnaire</TableHead>
+                      <TableHead className="text-center">Validation</TableHead>
+                      <TableHead className="text-center">Implementation</TableHead>
+                      <TableHead className="text-center">Files</TableHead>
+                      <TableHead className="text-center">Users</TableHead>
+                      <TableHead className="w-[100px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {activeOrgs.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={isPlatformAdmin ? 8 : 7} className="text-center py-12 text-muted-foreground">
+                          No active organizations
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      activeOrgs.map(org => {
+                        const orgMetrics = metricsMap[org.id];
+                        const partnerName = org.clientId ? clientMap[org.clientId] : "—";
+                        const sectionProgress = transformSectionProgress(orgMetrics?.sectionProgress);
+                        const sectionsComplete = sectionProgress.filter(s => s.progress === 100).length;
+                        const totalSections = sectionProgress.length || 6;
+                        const filesCount = orgMetrics?.files.length || 0;
+                        const userCount = orgMetrics?.userCount || 0;
+
+                        return (
+                          <TableRow key={org.id} className="hover:bg-muted/30">
+                            {/* Clickable org name → Site Dashboard */}
+                            <TableCell>
+                              <button
+                                onClick={() => setLocation(`/org/${org.slug}`)}
+                                className="text-left font-semibold text-primary hover:underline flex items-center gap-2"
+                              >
+                                {org.name}
+                                <ExternalLink className="w-3 h-3 opacity-50" />
+                              </button>
+                            </TableCell>
+                            {isPlatformAdmin && (
+                              <TableCell>
+                                <Badge variant="outline" className="text-xs">{partnerName}</Badge>
+                              </TableCell>
+                            )}
+                            {/* Questionnaire: sections complete */}
+                            <TableCell className="text-center">
+                              <div className="flex items-center justify-center gap-1.5">
+                                {sectionsComplete === totalSections ? (
+                                  <CheckCircle2 className="w-4 h-4 text-green-500" />
+                                ) : (
+                                  <Circle className="w-4 h-4 text-muted-foreground" />
+                                )}
+                                <span className="text-sm">{sectionsComplete}/{totalSections}</span>
+                              </div>
+                            </TableCell>
+                            {/* Validation: placeholder */}
+                            <TableCell className="text-center">
+                              <Badge variant="outline" className="text-xs text-muted-foreground">Pending</Badge>
+                            </TableCell>
+                            {/* Implementation: placeholder */}
+                            <TableCell className="text-center">
+                              <Badge variant="outline" className="text-xs text-muted-foreground">Pending</Badge>
+                            </TableCell>
+                            {/* Files */}
+                            <TableCell className="text-center">
+                              <span className="text-sm">{filesCount}</span>
+                            </TableCell>
+                            {/* Users */}
+                            <TableCell className="text-center">
+                              <span className="text-sm">{userCount}</span>
+                            </TableCell>
+                            {/* Actions */}
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setLocation(`/org/${org.slug}`)}
+                                className="gap-1"
+                              >
+                                View
+                                <ExternalLink className="w-3 h-3" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
           </>
         )}
 
@@ -2500,12 +2544,346 @@ export default function PlatformAdmin() {
             </Card>
           </>
         )}
+
+        {/* ── VENDOR PICKLISTS TAB ── */}
+        {activeTab === "vendor-picklists" && (
+          <>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold">Vendor Picklists</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Manage the vendor dropdown options shown in the Architecture section of the intake questionnaire.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                {(!vendorOptions || vendorOptions.length === 0) && (
+                  <Button
+                    variant="outline"
+                    onClick={() => seedVendorsMutation.mutate()}
+                    disabled={seedVendorsMutation.isPending}
+                  >
+                    {seedVendorsMutation.isPending ? "Seeding..." : "Seed Defaults"}
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Add New System Type */}
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="text-lg">Add New System Type</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex-1">
+                    <Label className="text-xs text-muted-foreground">System Type Name</Label>
+                    <Input
+                      placeholder="e.g., Cloud PACS, Dose Monitoring"
+                      value={newSystemTypeName}
+                      onChange={(e) => setNewSystemTypeName(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex-[2]">
+                    <Label className="text-xs text-muted-foreground">Vendors (comma-separated)</Label>
+                    <Input
+                      placeholder="e.g., Vendor A, Vendor B, Vendor C, Other"
+                      value={newSystemTypeVendors}
+                      onChange={(e) => setNewSystemTypeVendors(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <Button
+                      onClick={() => {
+                        if (!newSystemTypeName.trim()) {
+                          toast.error("Please enter a system type name");
+                          return;
+                        }
+                        const vendors = newSystemTypeVendors.split(",").map(v => v.trim()).filter(Boolean);
+                        if (vendors.length === 0) {
+                          toast.error("Please enter at least one vendor");
+                          return;
+                        }
+                        addSystemTypeMutation.mutate({ systemType: newSystemTypeName.trim(), vendors });
+                      }}
+                      disabled={addSystemTypeMutation.isPending}
+                    >
+                      <Plus className="w-4 h-4 mr-1" />
+                      {addSystemTypeMutation.isPending ? "Adding..." : "Add System Type"}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* System Type Cards */}
+            {Object.keys(vendorsByType).length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  <ListChecks className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg font-medium">No vendor options configured</p>
+                  <p className="text-sm">Click "Seed Defaults" to load the standard vendor lists, or add system types manually above.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {Object.entries(vendorsByType).sort(([a], [b]) => a.localeCompare(b)).map(([systemType, vendors]) => (
+                  <Card key={systemType}>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <Badge variant="outline" className="text-sm">{systemType}</Badge>
+                          <span className="text-sm text-muted-foreground font-normal">
+                            {(vendors || []).filter(v => v.isActive).length} active / {(vendors || []).length} total
+                          </span>
+                        </CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {/* Add vendor to this type */}
+                      <div className="flex gap-2 mb-4">
+                        {newVendorType === systemType ? (
+                          <>
+                            <Input
+                              placeholder="New vendor name"
+                              value={newVendorName}
+                              onChange={(e) => setNewVendorName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && newVendorName.trim()) {
+                                  addVendorMutation.mutate({ systemType, vendorName: newVendorName.trim() });
+                                  setNewVendorType("");
+                                }
+                              }}
+                              className="max-w-xs"
+                              autoFocus
+                            />
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                if (newVendorName.trim()) {
+                                  addVendorMutation.mutate({ systemType, vendorName: newVendorName.trim() });
+                                  setNewVendorType("");
+                                }
+                              }}
+                              disabled={addVendorMutation.isPending || !newVendorName.trim()}
+                            >
+                              <Check className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => { setNewVendorType(""); setNewVendorName(""); }}
+                            >
+                              Cancel
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => { setNewVendorType(systemType); setNewVendorName(""); }}
+                          >
+                            <Plus className="w-3 h-3 mr-1" />
+                            Add Vendor
+                          </Button>
+                        )}
+                      </div>
+
+                      {/* Vendor list */}
+                      <div className="border rounded-lg overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-12">#</TableHead>
+                              <TableHead>Vendor Name</TableHead>
+                              <TableHead className="w-24 text-center">Status</TableHead>
+                              <TableHead className="w-32 text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {(vendors || []).map((vendor, idx) => (
+                              <TableRow key={vendor.id} className={cn(!vendor.isActive && "opacity-50")}>
+                                <TableCell className="text-muted-foreground text-sm">{idx + 1}</TableCell>
+                                <TableCell>
+                                  {editVendorId === vendor.id ? (
+                                    <div className="flex gap-2 items-center">
+                                      <Input
+                                        value={editVendorName}
+                                        onChange={(e) => setEditVendorName(e.target.value)}
+                                        onKeyDown={(e) => {
+                                          if (e.key === "Enter" && editVendorName.trim()) {
+                                            updateVendorMutation.mutate({ id: vendor.id, vendorName: editVendorName.trim() });
+                                          }
+                                          if (e.key === "Escape") {
+                                            setEditVendorId(null);
+                                          }
+                                        }}
+                                        className="max-w-xs h-8"
+                                        autoFocus
+                                      />
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-8 w-8 p-0"
+                                        onClick={() => {
+                                          if (editVendorName.trim()) {
+                                            updateVendorMutation.mutate({ id: vendor.id, vendorName: editVendorName.trim() });
+                                          }
+                                        }}
+                                      >
+                                        <Check className="w-3 h-3" />
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <span className="text-sm font-medium">{vendor.vendorName}</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <Badge
+                                    variant={vendor.isActive ? "default" : "secondary"}
+                                    className={cn(
+                                      "cursor-pointer text-xs",
+                                      vendor.isActive ? "bg-green-600/20 text-green-400 hover:bg-green-600/30" : ""
+                                    )}
+                                    onClick={() => toggleVendorMutation.mutate({ id: vendor.id, isActive: vendor.isActive ? 0 : 1 })}
+                                  >
+                                    {vendor.isActive ? "Active" : "Hidden"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex gap-1 justify-end">
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-7 w-7 p-0"
+                                      onClick={() => {
+                                        setEditVendorId(vendor.id);
+                                        setEditVendorName(vendor.vendorName);
+                                      }}
+                                    >
+                                      <Edit className="w-3 h-3" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                                      onClick={() => {
+                                        if (confirm(`Remove "${vendor.vendorName}" from ${systemType}?`)) {
+                                          deleteVendorMutation.mutate({ id: vendor.id });
+                                        }
+                                      }}
+                                    >
+                                      <AlertCircle className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {/* Audit Log Section */}
+            <Card className="mt-8">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <History className="w-5 h-5" />
+                  Change History
+                </CardTitle>
+                <CardDescription>Recent changes to vendor picklists</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {!vendorAuditLogs || vendorAuditLogs.length === 0 ? (
+                  <p className="text-muted-foreground text-sm py-4 text-center">No changes recorded yet.</p>
+                ) : (
+                  <div className="rounded-md border max-h-[400px] overflow-y-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-36">Date</TableHead>
+                          <TableHead className="w-28">Action</TableHead>
+                          <TableHead>System Type</TableHead>
+                          <TableHead>Details</TableHead>
+                          <TableHead className="w-48">Changed By</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {vendorAuditLogs.map((log) => {
+                          const actionLabel: Record<string, string> = {
+                            add: 'Added',
+                            update: 'Renamed',
+                            toggle: 'Toggled',
+                            delete: 'Deleted',
+                            add_system_type: 'New Type',
+                            seed_defaults: 'Seeded',
+                          };
+                          const actionColor: Record<string, string> = {
+                            add: 'text-green-400',
+                            update: 'text-blue-400',
+                            toggle: 'text-yellow-400',
+                            delete: 'text-red-400',
+                            add_system_type: 'text-purple-400',
+                            seed_defaults: 'text-muted-foreground',
+                          };
+
+                          let details = '';
+                          if (log.action === 'add') {
+                            details = `Added "${log.vendorName}"`;
+                          } else if (log.action === 'update') {
+                            details = `"${log.previousValue}" → "${log.newValue}"`;
+                          } else if (log.action === 'toggle') {
+                            details = `"${log.vendorName}" ${log.newValue === 'active' ? 'activated' : 'deactivated'}`;
+                          } else if (log.action === 'delete') {
+                            details = `Removed "${log.vendorName}"`;
+                          } else if (log.action === 'add_system_type') {
+                            try {
+                              const vendors = JSON.parse(log.newValue || '[]');
+                              details = `Added ${vendors.length} vendors: ${vendors.join(', ')}`;
+                            } catch {
+                              details = log.newValue || '';
+                            }
+                          } else if (log.action === 'seed_defaults') {
+                            try {
+                              const types = JSON.parse(log.newValue || '[]');
+                              details = `Seeded ${types.length} system types`;
+                            } catch {
+                              details = 'Seeded default vendors';
+                            }
+                          }
+
+                          return (
+                            <TableRow key={log.id}>
+                              <TableCell className="text-xs text-muted-foreground">
+                                {new Date(log.performedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}{' '}
+                                {new Date(log.performedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                              </TableCell>
+                              <TableCell>
+                                <span className={cn('text-xs font-medium', actionColor[log.action] || 'text-muted-foreground')}>
+                                  {actionLabel[log.action] || log.action}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-sm">{log.systemType}</TableCell>
+                              <TableCell className="text-sm max-w-[300px] truncate" title={details}>{details}</TableCell>
+                              <TableCell className="text-xs text-muted-foreground">{log.performedBy}</TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
     </div>
   );
 }
-
-// ─── HL7 Layout ───────────────────────────────────────────────────────────────
 
 /** HL7 connectivity fields shown per-org in the card layout. */
 const HL7_ORDERS_FIELDS = [

@@ -2,7 +2,6 @@ import { useState, useCallback, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -12,15 +11,20 @@ import type { IntegrationSystem } from './IntegrationWorkflows';
 
 export interface ConnectivityRow {
   id: string;
-  ip: string;
-  port: string;
-  aeTitle: string;
   trafficType: string;
   sourceSystem: string;
   destinationSystem: string;
+  sourceIp: string;
+  sourcePort: string;
+  destIp: string;
+  destPort: string;
+  aeTitle: string;
   envTest: boolean;
   envProd: boolean;
   notes: string;
+  // Legacy fields for backward compat during migration
+  ip?: string;
+  port?: string;
 }
 
 interface ConnectivityTableProps {
@@ -29,34 +33,30 @@ interface ConnectivityTableProps {
   systems?: IntegrationSystem[];
 }
 
-// Pre-canned traffic types — common in radiology/PACS integrations
+// Pre-canned traffic types — HL7 and DICOM traffic for radiology/PACS integrations
 const DEFAULT_TRAFFIC_TYPES = [
-  'Orders (ORM)',
-  'Images (C-STORE)',
-  'Priors (C-FIND/C-MOVE)',
-  'Reports (ORU)',
-  'ADT',
-  'Query/Retrieve',
-  'Dose Reports',
-  'Tech Sheets',
-  'Worklist (MWL)',
-  'MPPS',
-  'Storage Commitment',
+  // HL7 message types
+  'HL7 - Orders (ORM)',
+  'HL7 - Results (ORU)',
+  'HL7 - ADT',
+  // DICOM traffic types
+  'DICOM - C-STORE (Images)',
+  'DICOM - C-FIND/C-MOVE (Query/Retrieve)',
 ] as const;
 
-// Common systems that always appear as suggestions
+// Common systems that always appear as suggestions (alphabetical)
 const COMMON_SYSTEMS = [
-  'New Lantern PACS',
-  'Epic Radiant',
-  'Epic',
   'Cerner',
-  'GE PACS',
-  'Fuji Synapse',
-  'Sectra',
-  'Nuance PowerScribe',
-  'Mirth Connect',
-  'Rhapsody',
   'Cloverleaf',
+  'Epic',
+  'Epic Radiant',
+  'Fuji Synapse',
+  'GE PACS',
+  'Mirth Connect',
+  'New Lantern PACS',
+  'Nuance PowerScribe',
+  'Rhapsody',
+  'Sectra',
 ] as const;
 
 function makeId() {
@@ -66,16 +66,33 @@ function makeId() {
 function emptyRow(): ConnectivityRow {
   return {
     id: makeId(),
-    ip: '',
-    port: '',
-    aeTitle: '',
     trafficType: '',
     sourceSystem: '',
     destinationSystem: '',
+    sourceIp: '',
+    sourcePort: '',
+    destIp: '',
+    destPort: '',
+    aeTitle: '',
     envTest: false,
     envProd: false,
     notes: '',
   };
+}
+
+/** Migrate legacy rows that had single ip/port to new sourceIp/sourcePort */
+function migrateRow(r: ConnectivityRow): ConnectivityRow {
+  if (r.sourceIp !== undefined && r.sourceIp !== '') return r;
+  if (r.ip || r.port) {
+    return {
+      ...r,
+      sourceIp: r.ip || '',
+      sourcePort: r.port || '',
+      destIp: r.destIp || '',
+      destPort: r.destPort || '',
+    };
+  }
+  return { ...r, sourceIp: r.sourceIp || '', sourcePort: r.sourcePort || '', destIp: r.destIp || '', destPort: r.destPort || '' };
 }
 
 // ── Combobox for system selection ────────────────────────────────────────────
@@ -93,12 +110,12 @@ function SystemCombobox({
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
 
-  // Merge common systems + org systems, deduplicate
+  // Merge common systems + org systems, deduplicate, sort alphabetically
   const allSystems = useMemo(() => {
     const set = new Set<string>();
     systems.forEach(s => { if (s) set.add(s); });
     COMMON_SYSTEMS.forEach(s => set.add(s));
-    return Array.from(set).sort();
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [systems]);
 
   const filtered = allSystems.filter(s =>
@@ -210,7 +227,7 @@ function TrafficTypeCombobox({
           <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-[220px] p-0" align="start">
+      <PopoverContent className="w-[260px] p-0" align="start">
         <Command>
           <CommandInput
             placeholder="Search or type new..."
@@ -322,18 +339,20 @@ function ImportDialog({
         <div className="space-y-3">
           <div className="text-xs text-muted-foreground space-y-1">
             <p className="font-medium">Accepted formats:</p>
-            <p><strong>JSON:</strong> Array of objects with keys: ip, port, aeTitle, trafficType, sourceSystem, destinationSystem, environment (test/prod/both), notes</p>
-            <p><strong>CSV:</strong> Header row with columns: IP Address, Port, AE Title, Traffic Type, Source System, Destination System, Environment, Notes</p>
+            <p><strong>JSON:</strong> Array of objects with keys: trafficType, sourceSystem, destinationSystem, sourceIp, sourcePort, destIp, destPort, aeTitle, environment (test/prod/both), notes</p>
+            <p><strong>CSV:</strong> Header row with columns: Traffic Type, Source System, Destination System, Source IP, Source Port, Dest IP, Dest Port, AE Title, Environment, Notes</p>
           </div>
           <div className="rounded-md border bg-muted/20 p-2 text-xs font-mono text-muted-foreground overflow-x-auto">
             <pre>{`[
   {
-    "ip": "10.1.2.3",
-    "port": "104",
-    "aeTitle": "NL_PACS",
-    "trafficType": "Images (C-STORE)",
+    "trafficType": "DICOM - C-STORE (Images)",
     "sourceSystem": "CT Scanner",
     "destinationSystem": "New Lantern PACS",
+    "sourceIp": "10.1.2.3",
+    "sourcePort": "104",
+    "destIp": "10.1.2.50",
+    "destPort": "11112",
+    "aeTitle": "NL_PACS",
     "environment": "both"
   }
 ]`}</pre>
@@ -394,12 +413,14 @@ function mapImportRow(obj: any): ConnectivityRow {
   const env = (obj.environment || obj.env || '').toLowerCase().trim();
   return {
     id: makeId(),
-    ip: obj.ip || obj.ipaddress || obj.ipAddress || obj['ip address'] || '',
-    port: String(obj.port || ''),
-    aeTitle: obj.aeTitle || obj.aetitle || obj['ae title'] || obj.ae_title || '',
     trafficType: obj.trafficType || obj.traffictype || obj['traffic type'] || obj.traffic_type || obj.type || '',
     sourceSystem: obj.sourceSystem || obj.sourcesystem || obj['source system'] || obj.source_system || obj.source || '',
     destinationSystem: obj.destinationSystem || obj.destinationsystem || obj['destination system'] || obj.destination_system || obj.destination || '',
+    sourceIp: obj.sourceIp || obj.sourceip || obj['source ip'] || obj.source_ip || obj.ip || obj.ipaddress || obj.ipAddress || obj['ip address'] || '',
+    sourcePort: String(obj.sourcePort || obj.sourceport || obj['source port'] || obj.source_port || obj.port || ''),
+    destIp: obj.destIp || obj.destip || obj['dest ip'] || obj.dest_ip || obj.destinationIp || obj.destinationip || obj['destination ip'] || '',
+    destPort: String(obj.destPort || obj.destport || obj['dest port'] || obj.dest_port || obj.destinationPort || obj.destinationport || obj['destination port'] || ''),
+    aeTitle: obj.aeTitle || obj.aetitle || obj['ae title'] || obj.ae_title || '',
     envTest: env === 'test' || env === 'both' || obj.envTest === true || obj.test === true,
     envProd: env === 'production' || env === 'prod' || env === 'both' || obj.envProd === true || obj.prod === true || obj.production === true,
     notes: obj.notes || '',
@@ -409,12 +430,14 @@ function mapImportRow(obj: any): ConnectivityRow {
 // ── Export helpers ────────────────────────────────────────────────────────────
 function exportJSON(rows: ConnectivityRow[]) {
   const data = rows.map(r => ({
-    ip: r.ip,
-    port: r.port,
-    aeTitle: r.aeTitle,
     trafficType: r.trafficType,
     sourceSystem: r.sourceSystem,
     destinationSystem: r.destinationSystem,
+    sourceIp: r.sourceIp,
+    sourcePort: r.sourcePort,
+    destIp: r.destIp,
+    destPort: r.destPort,
+    aeTitle: r.aeTitle,
     environment: r.envTest && r.envProd ? 'both' : r.envTest ? 'test' : r.envProd ? 'production' : '',
     notes: r.notes,
   }));
@@ -423,11 +446,11 @@ function exportJSON(rows: ConnectivityRow[]) {
 }
 
 function exportCSV(rows: ConnectivityRow[]) {
-  const headers = ['IP Address', 'Port', 'AE Title', 'Traffic Type', 'Source System', 'Destination System', 'Environment', 'Notes'];
+  const headers = ['Traffic Type', 'Source System', 'Destination System', 'Source IP', 'Source Port', 'Dest IP', 'Dest Port', 'AE Title', 'Environment', 'Notes'];
   const csvRows = [headers.join(',')];
   rows.forEach(r => {
     const env = r.envTest && r.envProd ? 'Both' : r.envTest ? 'Test' : r.envProd ? 'Production' : '';
-    csvRows.push([r.ip, r.port, r.aeTitle, r.trafficType, r.sourceSystem, r.destinationSystem, env, r.notes].map(v => `"${(v || '').replace(/"/g, '""')}"`).join(','));
+    csvRows.push([r.trafficType, r.sourceSystem, r.destinationSystem, r.sourceIp, r.sourcePort, r.destIp, r.destPort, r.aeTitle, env, r.notes].map(v => `"${(v || '').replace(/"/g, '""')}"`).join(','));
   });
   const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
   downloadBlob(blob, 'connectivity-endpoints.csv');
@@ -445,14 +468,24 @@ function downloadBlob(blob: Blob, filename: string) {
 }
 
 // ── Main Component ───────────────────────────────────────────────────────────
-export function ConnectivityTable({ rows, onChange, systems = [] }: ConnectivityTableProps) {
+export function ConnectivityTable({ rows: rawRows, onChange, systems = [] }: ConnectivityTableProps) {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
 
-  // Build system names list from org's systems inventory
+  // Migrate legacy rows on first render
+  const rows = useMemo(() => rawRows.map(migrateRow), [rawRows]);
+
+  // Build system names list from org's systems inventory + all systems used in rows
   const systemNames = useMemo(() => {
-    return systems.filter(s => s.name).map(s => s.name);
-  }, [systems]);
+    const names = new Set<string>();
+    systems.filter(s => s.name).forEach(s => names.add(s.name));
+    // Also collect systems from existing rows so they appear in the picklist
+    rows.forEach(r => {
+      if (r.sourceSystem) names.add(r.sourceSystem);
+      if (r.destinationSystem) names.add(r.destinationSystem);
+    });
+    return Array.from(names);
+  }, [systems, rows]);
 
   // Collect any custom traffic types from existing rows
   const customTrafficTypes = useMemo(() => {
@@ -487,7 +520,7 @@ export function ConnectivityTable({ rows, onChange, systems = [] }: Connectivity
     onChange([...rows, ...imported]);
   }, [rows, onChange]);
 
-  const filledRows = rows.filter(r => r.ip || r.port || r.sourceSystem || r.destinationSystem);
+  const filledRows = rows.filter(r => r.sourceIp || r.destIp || r.sourceSystem || r.destinationSystem || r.trafficType);
 
   return (
     <div className="space-y-4">
@@ -527,43 +560,97 @@ export function ConnectivityTable({ rows, onChange, systems = [] }: Connectivity
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/30 border-b border-border">
-              <th className="px-3 py-2.5 text-left font-medium text-muted-foreground w-[180px]">IP Address</th>
-              <th className="px-3 py-2.5 text-left font-medium text-muted-foreground w-[100px]">Port</th>
-              <th className="px-3 py-2.5 text-left font-medium text-muted-foreground w-[100px]">AE Title</th>
               <th className="px-3 py-2.5 text-left font-medium text-muted-foreground w-[180px]">Traffic Type</th>
-              <th className="px-3 py-2.5 text-left font-medium text-muted-foreground">Source System</th>
-              <th className="px-3 py-2.5 text-left font-medium text-muted-foreground">Destination System</th>
-              <th className="px-3 py-2.5 text-center font-medium text-muted-foreground w-[110px]">Environment</th>
-              <th className="px-3 py-2.5 text-right font-medium text-muted-foreground w-[80px]">Actions</th>
+              <th className="px-3 py-2.5 text-left font-medium text-muted-foreground w-[160px]">Source System</th>
+              <th className="px-3 py-2.5 text-left font-medium text-muted-foreground w-[160px]">Destination System</th>
+              <th className="px-3 py-2.5 text-left font-medium text-muted-foreground" colSpan={2}>
+                <div className="flex items-center gap-4">
+                  <span className="w-[140px]">Source IP</span>
+                  <span className="w-[70px]">Port</span>
+                </div>
+              </th>
+              <th className="px-3 py-2.5 text-left font-medium text-muted-foreground" colSpan={2}>
+                <div className="flex items-center gap-4">
+                  <span className="w-[140px]">Dest IP</span>
+                  <span className="w-[70px]">Port</span>
+                </div>
+              </th>
+              <th className="px-3 py-2.5 text-left font-medium text-muted-foreground w-[90px]">AE Title</th>
+              <th className="px-3 py-2.5 text-center font-medium text-muted-foreground w-[120px]">Env</th>
+              <th className="px-3 py-2.5 text-right font-medium text-muted-foreground w-[70px]">Actions</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-3 py-8 text-center text-muted-foreground">
+                <td colSpan={10} className="px-3 py-8 text-center text-muted-foreground">
                   No endpoints configured yet. Click "Add Endpoint" or "Import" to get started.
                 </td>
               </tr>
             )}
             {rows.map((row, idx) => (
               <tr key={row.id} className="border-b border-border/50 hover:bg-muted/10 transition-colors">
-                {/* IP Address — wider */}
+                {/* Traffic Type */}
                 <td className="px-2 py-1.5">
-                  <Input
-                    value={row.ip}
-                    onChange={(e) => updateField(idx, 'ip', e.target.value)}
-                    placeholder="10.1.2.3"
-                    className="h-8 text-sm bg-transparent border-border/50 focus:border-primary"
+                  <TrafficTypeCombobox
+                    value={row.trafficType}
+                    onChange={(v) => updateField(idx, 'trafficType', v)}
+                    customTypes={customTrafficTypes}
                   />
                 </td>
-                {/* Port — wider */}
+                {/* Source System */}
                 <td className="px-2 py-1.5">
-                  <Input
-                    value={row.port}
-                    onChange={(e) => updateField(idx, 'port', e.target.value)}
-                    placeholder="104"
-                    className="h-8 text-sm bg-transparent border-border/50 focus:border-primary"
+                  <SystemCombobox
+                    value={row.sourceSystem}
+                    onChange={(v) => updateField(idx, 'sourceSystem', v)}
+                    systems={systemNames}
+                    placeholder="Select source"
                   />
+                </td>
+                {/* Destination System */}
+                <td className="px-2 py-1.5">
+                  <SystemCombobox
+                    value={row.destinationSystem}
+                    onChange={(v) => updateField(idx, 'destinationSystem', v)}
+                    systems={systemNames}
+                    placeholder="Select destination"
+                  />
+                </td>
+                {/* Source IP */}
+                <td className="px-2 py-1.5" colSpan={2}>
+                  <div className="flex items-center gap-1">
+                    <Input
+                      value={row.sourceIp}
+                      onChange={(e) => updateField(idx, 'sourceIp', e.target.value)}
+                      placeholder="10.1.2.3"
+                      className="h-8 text-sm bg-transparent border-border/50 focus:border-primary w-[140px]"
+                    />
+                    <span className="text-muted-foreground text-xs">:</span>
+                    <Input
+                      value={row.sourcePort}
+                      onChange={(e) => updateField(idx, 'sourcePort', e.target.value)}
+                      placeholder="104"
+                      className="h-8 text-sm bg-transparent border-border/50 focus:border-primary w-[70px]"
+                    />
+                  </div>
+                </td>
+                {/* Dest IP */}
+                <td className="px-2 py-1.5" colSpan={2}>
+                  <div className="flex items-center gap-1">
+                    <Input
+                      value={row.destIp}
+                      onChange={(e) => updateField(idx, 'destIp', e.target.value)}
+                      placeholder="10.1.2.50"
+                      className="h-8 text-sm bg-transparent border-border/50 focus:border-primary w-[140px]"
+                    />
+                    <span className="text-muted-foreground text-xs">:</span>
+                    <Input
+                      value={row.destPort}
+                      onChange={(e) => updateField(idx, 'destPort', e.target.value)}
+                      placeholder="11112"
+                      className="h-8 text-sm bg-transparent border-border/50 focus:border-primary w-[70px]"
+                    />
+                  </div>
                 </td>
                 {/* AE Title */}
                 <td className="px-2 py-1.5">
@@ -574,33 +661,7 @@ export function ConnectivityTable({ rows, onChange, systems = [] }: Connectivity
                     className="h-8 text-xs bg-transparent border-border/50 focus:border-primary"
                   />
                 </td>
-                {/* Traffic Type — combobox with custom add */}
-                <td className="px-2 py-1.5">
-                  <TrafficTypeCombobox
-                    value={row.trafficType}
-                    onChange={(v) => updateField(idx, 'trafficType', v)}
-                    customTypes={customTrafficTypes}
-                  />
-                </td>
-                {/* Source System — combobox from systems inventory */}
-                <td className="px-2 py-1.5">
-                  <SystemCombobox
-                    value={row.sourceSystem}
-                    onChange={(v) => updateField(idx, 'sourceSystem', v)}
-                    systems={systemNames}
-                    placeholder="Select source"
-                  />
-                </td>
-                {/* Destination System — combobox from systems inventory */}
-                <td className="px-2 py-1.5">
-                  <SystemCombobox
-                    value={row.destinationSystem}
-                    onChange={(v) => updateField(idx, 'destinationSystem', v)}
-                    systems={systemNames}
-                    placeholder="Select destination"
-                  />
-                </td>
-                {/* Environment — checkboxes */}
+                {/* Environment — checkboxes: Test=yellow, Prod=green */}
                 <td className="px-2 py-1.5">
                   <div className="flex items-center justify-center gap-3">
                     <label className="flex items-center gap-1.5 cursor-pointer">
@@ -608,14 +669,14 @@ export function ConnectivityTable({ rows, onChange, systems = [] }: Connectivity
                         checked={row.envTest}
                         onCheckedChange={(checked) => updateField(idx, 'envTest', !!checked)}
                       />
-                      <span className="text-xs text-yellow-400">Test</span>
+                      <span className={cn("text-xs font-medium", row.envTest ? "text-yellow-400" : "text-muted-foreground")}>Test</span>
                     </label>
                     <label className="flex items-center gap-1.5 cursor-pointer">
                       <Checkbox
                         checked={row.envProd}
                         onCheckedChange={(checked) => updateField(idx, 'envProd', !!checked)}
                       />
-                      <span className="text-xs text-red-400">Prod</span>
+                      <span className={cn("text-xs font-medium", row.envProd ? "text-green-400" : "text-muted-foreground")}>Prod</span>
                     </label>
                   </div>
                 </td>
@@ -656,10 +717,11 @@ export function ConnectivityTable({ rows, onChange, systems = [] }: Connectivity
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-muted-foreground">#{idx + 1}</span>
+                {row.trafficType && <span className="text-xs font-medium text-primary">{row.trafficType}</span>}
                 {(row.envTest || row.envProd) && (
                   <div className="flex gap-1">
-                    {row.envTest && <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-yellow-500/20 text-yellow-300 border border-yellow-500/40">Test</span>}
-                    {row.envProd && <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-500/20 text-red-300 border border-red-500/40">Prod</span>}
+                    {row.envTest && <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-yellow-500/20 text-yellow-400 border border-yellow-500/40">Test</span>}
+                    {row.envProd && <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-500/20 text-green-400 border border-green-500/40">Prod</span>}
                   </div>
                 )}
               </div>
@@ -679,61 +741,70 @@ export function ConnectivityTable({ rows, onChange, systems = [] }: Connectivity
               </div>
             </div>
 
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Traffic Type</label>
+              <TrafficTypeCombobox
+                value={row.trafficType}
+                onChange={(v) => updateField(idx, 'trafficType', v)}
+                customTypes={customTrafficTypes}
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">IP Address</label>
-                <Input value={row.ip} onChange={(e) => updateField(idx, 'ip', e.target.value)} placeholder="10.1.2.3" className="h-8 text-sm" />
+                <label className="text-xs text-muted-foreground">Source System</label>
+                <SystemCombobox
+                  value={row.sourceSystem}
+                  onChange={(v) => updateField(idx, 'sourceSystem', v)}
+                  systems={systemNames}
+                  placeholder="Select source"
+                />
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">Port</label>
-                <Input value={row.port} onChange={(e) => updateField(idx, 'port', e.target.value)} placeholder="104" className="h-8 text-sm" />
+                <label className="text-xs text-muted-foreground">Destination System</label>
+                <SystemCombobox
+                  value={row.destinationSystem}
+                  onChange={(v) => updateField(idx, 'destinationSystem', v)}
+                  systems={systemNames}
+                  placeholder="Select dest"
+                />
               </div>
             </div>
 
-            {(expandedRow === row.id || !row.ip) && (
+            {(expandedRow === row.id || !row.sourceIp) && (
               <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Source IP : Port</label>
+                    <div className="flex items-center gap-1">
+                      <Input value={row.sourceIp} onChange={(e) => updateField(idx, 'sourceIp', e.target.value)} placeholder="10.1.2.3" className="h-8 text-sm" />
+                      <span className="text-muted-foreground text-xs">:</span>
+                      <Input value={row.sourcePort} onChange={(e) => updateField(idx, 'sourcePort', e.target.value)} placeholder="104" className="h-8 text-sm w-20" />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Dest IP : Port</label>
+                    <div className="flex items-center gap-1">
+                      <Input value={row.destIp} onChange={(e) => updateField(idx, 'destIp', e.target.value)} placeholder="10.1.2.50" className="h-8 text-sm" />
+                      <span className="text-muted-foreground text-xs">:</span>
+                      <Input value={row.destPort} onChange={(e) => updateField(idx, 'destPort', e.target.value)} placeholder="11112" className="h-8 text-sm w-20" />
+                    </div>
+                  </div>
+                </div>
                 <div className="space-y-1">
                   <label className="text-xs text-muted-foreground">AE Title</label>
                   <Input value={row.aeTitle} onChange={(e) => updateField(idx, 'aeTitle', e.target.value)} placeholder="AE_TITLE" className="h-8 text-xs" />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">Traffic Type</label>
-                  <TrafficTypeCombobox
-                    value={row.trafficType}
-                    onChange={(v) => updateField(idx, 'trafficType', v)}
-                    customTypes={customTrafficTypes}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Source System</label>
-                    <SystemCombobox
-                      value={row.sourceSystem}
-                      onChange={(v) => updateField(idx, 'sourceSystem', v)}
-                      systems={systemNames}
-                      placeholder="Select source"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Destination System</label>
-                    <SystemCombobox
-                      value={row.destinationSystem}
-                      onChange={(v) => updateField(idx, 'destinationSystem', v)}
-                      systems={systemNames}
-                      placeholder="Select dest"
-                    />
-                  </div>
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs text-muted-foreground">Environment</label>
                   <div className="flex items-center gap-4 pt-1">
                     <label className="flex items-center gap-1.5 cursor-pointer">
                       <Checkbox checked={row.envTest} onCheckedChange={(checked) => updateField(idx, 'envTest', !!checked)} />
-                      <span className="text-xs text-yellow-400">Test</span>
+                      <span className={cn("text-xs font-medium", row.envTest ? "text-yellow-400" : "text-muted-foreground")}>Test</span>
                     </label>
                     <label className="flex items-center gap-1.5 cursor-pointer">
                       <Checkbox checked={row.envProd} onCheckedChange={(checked) => updateField(idx, 'envProd', !!checked)} />
-                      <span className="text-xs text-red-400">Prod</span>
+                      <span className={cn("text-xs font-medium", row.envProd ? "text-green-400" : "text-muted-foreground")}>Prod</span>
                     </label>
                   </div>
                 </div>

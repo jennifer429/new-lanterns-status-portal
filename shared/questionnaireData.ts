@@ -1,7 +1,10 @@
 /**
  * Radiology One New Site Onboarding Questionnaire
- * 4 sections: Organization Info, Integration Workflows, Connectivity, HL7 & DICOM Data
- * Note: Architecture/Systems inventory is now part of Integration Workflows
+ * 6 sections: Organization Info, Architecture, Integration Workflows, Connectivity, Configuration Files, HL7 & DICOM Data
+ * Architecture section: diagram upload + systems inventory (stacked layout)
+ * Integration Workflows section: workflow descriptions (orders, images, priors, reports, etc.)
+ * Connectivity section: VPN form + editable endpoint table
+ * Configuration Files section: procedure codes, user list, sample reports, provider directory
  * Note: Router = Integration 3rd Party Router for all overlay situations
  */
 
@@ -57,8 +60,8 @@ export const questionnaireSections: Section[] = [
   {
     id: 'architecture',
     type: 'architecture-overview',
-    title: 'Integration Workflows',
-    description: 'Define your systems and how data flows between them',
+    title: 'Architecture',
+    description: 'Upload your architecture diagram and define the systems in your environment',
     questions: [
       { id: 'ARCH.diagram', text: 'Architecture Diagram', type: 'upload', notes: 'Accepted formats: PNG, JPG, PDF' },
       { id: 'ARCH.systems', text: 'Systems in Your Environment', type: 'systems-list' },
@@ -85,7 +88,7 @@ export const questionnaireSections: Section[] = [
   {
     id: 'connectivity',
     title: 'Connectivity',
-    description: 'VPN setup, network endpoints, and required configuration file uploads (IMPORTANT: Please de-identify all files before uploading)',
+    description: 'VPN setup and network endpoints',
     type: 'connectivity-table',
     questions: [
       // D.1 moved here from HL7 & DICOM section
@@ -99,7 +102,13 @@ export const questionnaireSections: Section[] = [
         templateFileName: 'VPN Form Template',
       },
       // Old E.2-E.6.1 endpoint textareas replaced by connectivity table (rendered in UI component)
-      // Configuration File Uploads
+    ],
+  },
+  {
+    id: 'config-files',
+    title: 'Configuration Files',
+    description: 'Upload procedure codes, user lists, sample reports, and provider directory (IMPORTANT: Please de-identify all files before uploading)',
+    questions: [
       { id: 'CF.1', text: 'Procedure code list: Please upload your list of all procedure codes with modality that you will be sending in the order message.', type: 'upload-download', notes: 'Required: Procedure code, Description, Modality. Optional: CPT, Body part, Subspecialty', templateFileName: 'Procedure Code List Template' },
       { id: 'CF.2', text: 'User list: Please upload a file of all users and their roles.', type: 'upload-download', notes: 'Required: User email, User name, Role (Admin/PACS Admin/Tech)', templateFileName: 'User List Template' },
       { id: 'CF.3', text: 'Sample ORU report: Please upload a sample ORU report showing the expected format we will send to you', type: 'upload' },
@@ -118,7 +127,7 @@ export const questionnaireSections: Section[] = [
       { id: 'D.3', text: 'Expected modalities', type: 'multi-select', options: ['CT', 'MRI', 'X-Ray', 'Ultrasound', 'Nuclear Medicine', 'Mammography'] },
       // D.7 (Historic Reports method) moved to Integration Workflows → Historic Results block
       // D.8 (Tech sheets input method) moved to Integration Workflows → Tech Sheets block
-      { id: 'D.9', text: 'Are there DICOM SR or other data sources for auto-populating fields?', type: 'textarea', placeholder: 'List DICOM SR sources' },
+      { id: 'D.9', text: 'Are there DICOM SR or other data sources for auto-populating fields? Also, will your HL7 messages include tokens/segments carrying clinical data such as medications (RXA/RXE), patient history (AL1 for allergies, DG1 for diagnoses), or other clinical context? If so, please describe which segments and what data they contain.', type: 'textarea', placeholder: 'List DICOM SR sources and describe any HL7 segments carrying clinical data (e.g., RXA for medications, AL1 for allergies, DG1 for diagnoses, OBX for clinical observations)' },
       { id: 'D.10', text: 'What are the HL7 priority values in your orders (OBR:27.1) and what do they mean?', type: 'textarea', placeholder: 'Example: S=Stat, R=Routine' },
       { id: 'D.11', text: 'What patient identifier do you use for matching (e.g. MRN) and is it in PID:3.1?', type: 'textarea', placeholder: 'Document patient identifier field' },
       { id: 'D.12', text: 'Is the patient identifier in your order the same as in prior reports and comparison images?', type: 'textarea', placeholder: 'Yes/No and explain any differences' },
