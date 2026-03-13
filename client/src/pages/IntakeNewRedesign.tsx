@@ -80,7 +80,7 @@ interface SystemEntry { id: string; name: string; type: string; description: str
 
 interface ArchitectureOverviewProps {
   slug: string;
-  diagramFiles: Array<{ id: number; fileName: string; fileUrl: string; createdAt?: string | Date | null }>;
+  diagramFiles: Array<{ id: number; fileName: string; fileUrl: string; mimeType?: string | null; createdAt?: string | Date | null }>;
   isDiagramUploading: boolean;
   onDiagramUpload: (file: File) => void;
   onDiagramDelete: (fileId: number) => void;
@@ -140,8 +140,18 @@ function ArchitectureOverview({
 
   const deleteSystem = (id: string) => saveSystems(systems.filter(s => s.id !== id));
 
-  const latestDiagram = diagramFiles[diagramFiles.length - 1];
-  const isImage = latestDiagram ? /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(latestDiagram.fileName) : false;
+  // allUploadedFiles is ordered DESC — index 0 is the newest file
+  const latestDiagram = diagramFiles[0];
+  const isImage = latestDiagram
+    ? (latestDiagram.mimeType?.startsWith('image/') ?? /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(latestDiagram.fileName))
+    : false;
+  const [imgError, setImgError] = useState(false);
+  // Reset error state when a new file is uploaded
+  const lastFileId = useRef<number | undefined>(undefined);
+  if (latestDiagram?.id !== lastFileId.current) {
+    lastFileId.current = latestDiagram?.id;
+    if (imgError) setImgError(false);
+  }
   const uploadedDate = latestDiagram?.createdAt
     ? new Date(latestDiagram.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : null;
@@ -161,13 +171,25 @@ function ArchitectureOverview({
           <>
             {/* Diagram preview */}
             <div className="rounded-lg overflow-hidden border border-border/40 bg-muted/20 flex items-center justify-center min-h-40">
-              {isImage ? (
-                <img src={latestDiagram.fileUrl} alt={latestDiagram.fileName} className="w-full object-contain max-h-72" />
+              {isImage && !imgError ? (
+                <a href={latestDiagram.fileUrl} target="_blank" rel="noopener noreferrer" className="w-full">
+                  <img
+                    src={latestDiagram.fileUrl}
+                    alt={latestDiagram.fileName}
+                    className="w-full object-contain max-h-72"
+                    onError={() => setImgError(true)}
+                  />
+                </a>
               ) : (
-                <div className="flex flex-col items-center gap-2 p-8 text-muted-foreground">
+                <a
+                  href={latestDiagram.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-col items-center gap-2 p-8 text-muted-foreground hover:text-purple-400 transition-colors"
+                >
                   <FileText className="w-10 h-10" />
-                  <span className="text-sm">{latestDiagram.fileName}</span>
-                </div>
+                  <span className="text-sm">Click to view {latestDiagram.fileName}</span>
+                </a>
               )}
             </div>
             {/* File info + replace */}
