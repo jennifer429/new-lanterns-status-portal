@@ -81,15 +81,15 @@ const SYSTEM_TYPE_COLORS: Record<string, string> = {
 
 // Vendor/product options per system type
 const VENDOR_OPTIONS: Record<string, string[]> = {
-  'PACS':             ['Cerner', 'Merge', 'Philips', 'GE', 'Fujifilm', 'Sectra', 'Agfa', 'Renown PACS', 'Other'],
-  'VNA':              ['Merge', 'Hyland', 'Philips', 'GE', 'Fujifilm', 'Umbra', 'Other'],
-  'Router':           ['Laurel Bridge', 'Merge', 'Silverback', 'Mercure', 'DCM4J proxy', 'Other'],
-  'EHR':              ['Epic', 'Cerner', 'Meditech', 'Athena', 'Other'],
-  'RIS':              ['Epic', 'Cerner', 'Meditech', 'Abbadox', 'Other'],
-  'Integration Engine': ['Cloverleaf', 'Rhapsody', 'Mirth Connect', 'MetInformatics', 'Other'],
-  'AI':               ['Viz.AI', 'Aidoc', 'Nuance', 'CADstream', 'iCAD', 'Arterys', 'Zebra Medical', 'Other'],
-  'Modality':         ['GE', 'Siemens', 'Philips', 'Canon', 'Hologic', 'Other'],
-  'Other':            ['PowerScribe', 'Fluency', 'Abbadox', 'DataFirst', 'Other'],
+  'PACS':             ['Agfa', 'Carestream', 'Cerner', 'Fujifilm Synapse', 'GE Centricity', 'Horos', 'Infinitt', 'McKesson', 'Merge', 'Philips IntelliSpace', 'Sectra', 'Siemens syngo.plaza', 'Visage', 'Other'],
+  'VNA':              ['Agfa', 'Fujifilm', 'GE', 'Hyland', 'Merge', 'Philips', 'Umbra', 'Other'],
+  'Router':           ['DCM4J proxy', 'Laurel Bridge', 'Mercure', 'Merge', 'Silverback', 'Other'],
+  'EHR':              ['AllScripts', 'Athena', 'Cerner', 'eClinicalWorks', 'Epic', 'Meditech', 'NextGen', 'Other'],
+  'RIS':              ['Abbadox', 'Agfa', 'Cerner', 'Epic', 'Fujifilm', 'Meditech', 'Sectra', 'Other'],
+  'Integration Engine': ['Cloverleaf', 'MetInformatics', 'Mirth Connect', 'Rhapsody', 'Other'],
+  'AI':               ['Aidoc', 'Arterys', 'Bayer (Calantic)', 'CADstream', 'Enlitic', 'HeartFlow', 'iCAD', 'Koios', 'Lunit', 'Nuance', 'Qure.ai', 'RapidAI', 'Viz.AI', 'Zebra Medical', 'Other'],
+  'Modality':         ['Canon', 'Fujifilm', 'GE', 'Hologic', 'Philips', 'Siemens', 'Other'],
+  'Other':            ['Abbadox', 'DataFirst', 'Fluency', 'Google Cloud DCM', 'Nuance PowerScribe', 'Other'],
 };
 
 // Default system rows that are always shown (pre-loaded)

@@ -2019,3 +2019,6 @@
 - [x] Users can add custom rows with customizable type and vendor
 - [x] Import/export buttons for systems data (JSON)
 - [x] Import/export buttons for architecture diagram
+
+## Vendor Dropdown Additions (Mar 13, 2026)
+- [x] Add Fuji, Agfa, Sectra and other common radiology vendors to system type dropdowns
