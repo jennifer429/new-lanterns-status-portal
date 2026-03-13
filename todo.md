@@ -1932,3 +1932,14 @@
 - [x] Add pre-canned list of common traffic types with ability to add custom ones
 - [x] Add export functionality (CSV/JSON) for connectivity table
 - [x] Add import functionality with AI-friendly structured format and column mapping
+
+## Diagram Display & Dropdown Fix (Mar 12, 2026)
+- [x] Fix architecture diagram to display large at top of Integration Workflows when uploaded
+- [x] Fix broken image rendering (URL encoding fix already applied)
+- [x] Fix glitchy Systems Involved multi-select dropdown (rewrote with Popover/Command)
+- [x] Update traffic types in ConnectivityTable to HL7/DICOM traffic only
+- [x] Make Source System, Destination System, and Systems in Environment a shared alphabetical picklist anyone can add to
+- [x] Reorder columns: Traffic Type → Source System → Dest System → Source IP/Port → Dest IP/Port → AE Title → Test/Prod → Actions
+- [x] Split single IP/Port into Source IP/Port and Destination IP/Port
+- [x] Fix colors: Prod = green, Test = yellow
+- [x] Add D.9 question about HL7 tokens/segments for clinical data (medications, history, allergies, etc.)

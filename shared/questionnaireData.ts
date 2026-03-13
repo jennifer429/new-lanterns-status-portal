@@ -118,7 +118,7 @@ export const questionnaireSections: Section[] = [
       { id: 'D.3', text: 'Expected modalities', type: 'multi-select', options: ['CT', 'MRI', 'X-Ray', 'Ultrasound', 'Nuclear Medicine', 'Mammography'] },
       // D.7 (Historic Reports method) moved to Integration Workflows → Historic Results block
       // D.8 (Tech sheets input method) moved to Integration Workflows → Tech Sheets block
-      { id: 'D.9', text: 'Are there DICOM SR or other data sources for auto-populating fields?', type: 'textarea', placeholder: 'List DICOM SR sources' },
+      { id: 'D.9', text: 'Are there DICOM SR or other data sources for auto-populating fields? Also, will your HL7 messages include tokens/segments carrying clinical data such as medications (RXA/RXE), patient history (AL1 for allergies, DG1 for diagnoses), or other clinical context? If so, please describe which segments and what data they contain.', type: 'textarea', placeholder: 'List DICOM SR sources and describe any HL7 segments carrying clinical data (e.g., RXA for medications, AL1 for allergies, DG1 for diagnoses, OBX for clinical observations)' },
       { id: 'D.10', text: 'What are the HL7 priority values in your orders (OBR:27.1) and what do they mean?', type: 'textarea', placeholder: 'Example: S=Stat, R=Routine' },
       { id: 'D.11', text: 'What patient identifier do you use for matching (e.g. MRN) and is it in PID:3.1?', type: 'textarea', placeholder: 'Document patient identifier field' },
       { id: 'D.12', text: 'Is the patient identifier in your order the same as in prior reports and comparison images?', type: 'textarea', placeholder: 'Yes/No and explain any differences' },

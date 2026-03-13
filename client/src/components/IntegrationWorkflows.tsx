@@ -3,7 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trash2, Plus, Upload, FileText, Loader2, CheckCircle2, ArrowLeft, ChevronRight, X, CloudUpload } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Trash2, Plus, Upload, FileText, Loader2, CheckCircle2, ArrowLeft, ChevronRight, X, CloudUpload, ChevronsUpDown } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 
@@ -35,56 +37,91 @@ interface SystemsMultiSelectProps {
 
 function SystemsMultiSelect({ selectedNames, allSystems, onChange }: SystemsMultiSelectProps) {
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
   const available = allSystems.filter(s => s.name && !selectedNames.includes(s.name));
   const selected = selectedNames
     .map(n => allSystems.find(s => s.name === n))
     .filter((s): s is IntegrationSystem => !!s);
 
+  const filtered = available.filter(s =>
+    s.name.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
-    <div className="relative">
-      <div
-        className="min-h-9 flex flex-wrap gap-1.5 items-center px-3 py-1.5 rounded-md border border-input bg-background cursor-pointer"
-        onClick={() => available.length > 0 && setOpen(o => !o)}
-      >
-        {selected.map(sys => (
-          <span
-            key={sys.name}
-            className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium', TYPE_COLORS[sys.type] || TYPE_COLORS['Other'])}
-          >
-            {sys.name}
-            <button
-              onClick={(e) => { e.stopPropagation(); onChange(selectedNames.filter(n => n !== sys.name)); }}
-              className="hover:opacity-70"
-            >
-              <X className="w-3 h-3" />
-            </button>
-          </span>
-        ))}
-        {selected.length === 0 && (
-          <span className="text-sm text-muted-foreground">
-            {allSystems.filter(s => s.name).length > 0 ? 'Select systems...' : 'Add systems above first'}
-          </span>
-        )}
-        {available.length > 0 && selected.length > 0 && (
-          <span className="text-xs text-muted-foreground">Add system...</span>
-        )}
-      </div>
-      {open && available.length > 0 && (
-        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-card border rounded-md shadow-lg py-1">
-          {available.map(sys => (
-            <button
+    <div className="space-y-2">
+      {/* Selected tags */}
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {selected.map(sys => (
+            <span
               key={sys.name}
-              className="w-full text-left text-sm px-3 py-2 hover:bg-muted transition-colors flex items-center gap-2"
-              onClick={() => { onChange([...selectedNames, sys.name]); setOpen(false); }}
+              className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium', TYPE_COLORS[sys.type] || TYPE_COLORS['Other'])}
             >
-              <span className={cn('text-xs px-1.5 py-0.5 rounded-full font-medium', TYPE_COLORS[sys.type] || TYPE_COLORS['Other'])}>
-                {sys.type || '?'}
-              </span>
               {sys.name}
-            </button>
+              <button
+                onClick={() => onChange(selectedNames.filter(n => n !== sys.name))}
+                className="hover:opacity-70"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
           ))}
         </div>
       )}
+      {/* Popover-based dropdown */}
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            className={cn(
+              'flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 text-sm',
+              'hover:bg-muted/20 focus:outline-none focus:ring-1 focus:ring-primary/50',
+              !available.length && 'opacity-50 cursor-not-allowed'
+            )}
+            disabled={!available.length && !allSystems.filter(s => s.name).length}
+          >
+            <span className="text-muted-foreground">
+              {allSystems.filter(s => s.name).length > 0
+                ? available.length > 0
+                  ? 'Select systems...'
+                  : 'All systems selected'
+                : 'Add systems above first'}
+            </span>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[280px] p-0" align="start">
+          <Command>
+            <CommandInput
+              placeholder="Search systems..."
+              value={search}
+              onValueChange={setSearch}
+            />
+            <CommandList>
+              <CommandEmpty className="py-3 text-center text-xs text-muted-foreground">
+                No matching systems
+              </CommandEmpty>
+              <CommandGroup>
+                {filtered.map(sys => (
+                  <CommandItem
+                    key={sys.name}
+                    value={sys.name}
+                    onSelect={() => {
+                      onChange([...selectedNames, sys.name]);
+                      setSearch('');
+                      // Keep open so user can select multiple
+                    }}
+                  >
+                    <span className={cn('text-xs px-1.5 py-0.5 rounded-full font-medium mr-2', TYPE_COLORS[sys.type] || TYPE_COLORS['Other'])}>
+                      {sys.type || '?'}
+                    </span>
+                    {sys.name}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }
@@ -269,73 +306,72 @@ export function IntegrationWorkflows({ values, onChange, organizationId, onBack,
 
       <hr className="border-border" />
 
-      {/* Top two-column: diagram | systems */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-        {/* Architecture Diagram */}
-        <div className="rounded-xl border bg-card p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-base">Architecture Diagram</h3>
-            {diagramUrl && (
-              <span className="text-xs font-semibold text-green-500 uppercase tracking-wider">Uploaded</span>
-            )}
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Upload a network or workflow diagram showing how orders, images, priors, and reports move through your systems.
-          </p>
-          <input
-            ref={diagramInputRef}
-            type="file"
-            accept=".png,.jpg,.jpeg,.pdf"
-            className="hidden"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleDiagramFile(f); e.target.value = ''; }}
-          />
-          {!diagramUrl ? (
-            <div
-              className={cn(
-                'border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors',
-                isDragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40 hover:bg-muted/20',
-              )}
-              onClick={() => diagramInputRef.current?.click()}
-              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-              onDragLeave={() => setIsDragging(false)}
-              onDrop={(e) => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f) handleDiagramFile(f); }}
-            >
-              {isUploadingDiagram
-                ? <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-                : <CloudUpload className="w-8 h-8 text-muted-foreground" />
-              }
-              <div className="text-center">
-                <p className="text-sm font-medium">Drop file here or click to upload</p>
-                <p className="text-xs text-muted-foreground">PNG, JPG, PDF accepted</p>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {isImageDiagram ? (
-                <a href={diagramUrl} target="_blank" rel="noopener noreferrer" className="block rounded-lg overflow-hidden border hover:border-primary/50 transition-colors">
-                  <img src={diagramUrl} alt="Architecture diagram" className="w-full object-contain max-h-[400px]" />
-                </a>
-              ) : (
-                <div className="flex items-center gap-3 p-4 rounded-lg border bg-muted/20">
-                  <FileText className="w-8 h-8 text-muted-foreground flex-shrink-0" />
-                  <a href={diagramUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline text-sm">View PDF</a>
-                </div>
-              )}
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">{diagramFilename}</p>
-                  {diagramUploadedAt && <p className="text-xs text-muted-foreground">Uploaded: {diagramUploadedAt}</p>}
-                </div>
-                <Button variant="outline" size="sm" onClick={() => diagramInputRef.current?.click()} disabled={isUploadingDiagram} className="gap-1.5 flex-shrink-0">
-                  {isUploadingDiagram ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                  Replace
-                </Button>
-              </div>
-            </div>
+      {/* Architecture Diagram — full width, prominent when uploaded */}
+      <div className="rounded-xl border bg-card p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-lg">Architecture Diagram</h3>
+          {diagramUrl && (
+            <span className="text-xs font-semibold text-green-500 uppercase tracking-wider">Uploaded</span>
           )}
         </div>
+        <p className="text-sm text-muted-foreground">
+          Upload a network or workflow diagram showing how orders, images, priors, and reports move through your systems.
+        </p>
+        <input
+          ref={diagramInputRef}
+          type="file"
+          accept=".png,.jpg,.jpeg,.pdf"
+          className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleDiagramFile(f); e.target.value = ''; }}
+        />
+        {!diagramUrl ? (
+          <div
+            className={cn(
+              'border-2 border-dashed rounded-xl p-12 flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors',
+              isDragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40 hover:bg-muted/20',
+            )}
+            onClick={() => diagramInputRef.current?.click()}
+            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={(e) => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f) handleDiagramFile(f); }}
+          >
+            {isUploadingDiagram
+              ? <Loader2 className="w-10 h-10 animate-spin text-muted-foreground" />
+              : <CloudUpload className="w-10 h-10 text-muted-foreground" />
+            }
+            <div className="text-center">
+              <p className="text-sm font-medium">Drop file here or click to upload</p>
+              <p className="text-xs text-muted-foreground">PNG, JPG, PDF accepted</p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {isImageDiagram ? (
+              <a href={diagramUrl} target="_blank" rel="noopener noreferrer" className="block rounded-lg overflow-hidden border border-border/50 hover:border-primary/50 transition-colors bg-black/20">
+                <img src={diagramUrl} alt="Architecture diagram" className="w-full object-contain" style={{ minHeight: '300px', maxHeight: '70vh' }} />
+              </a>
+            ) : (
+              <div className="flex items-center gap-3 p-6 rounded-lg border bg-muted/20">
+                <FileText className="w-10 h-10 text-muted-foreground flex-shrink-0" />
+                <a href={diagramUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline text-base">View PDF Document</a>
+              </div>
+            )}
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">{diagramFilename}</p>
+                {diagramUploadedAt && <p className="text-xs text-muted-foreground">Uploaded: {diagramUploadedAt}</p>}
+              </div>
+              <Button variant="outline" size="sm" onClick={() => diagramInputRef.current?.click()} disabled={isUploadingDiagram} className="gap-1.5 flex-shrink-0">
+                {isUploadingDiagram ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                Replace
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
 
+      {/* Systems Table — now full width below diagram */}
+      <div className="space-y-0">
         {/* Systems Table */}
         <div className="rounded-xl border bg-card p-5 space-y-4">
           <div className="flex items-center justify-between">
