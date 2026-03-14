@@ -3151,9 +3151,7 @@ const MATRIX_SECTIONS: { title: string; rows: { label: string; questionId: strin
       { label: "# Sites",        questionId: "H.1",  fromQuestionnaire: true },
       { label: "Site Names",     questionId: "H.2",  fromQuestionnaire: true },
       { label: "Modalities",     questionId: "D.3",  fromQuestionnaire: true },
-      { label: "Studies / Day",  questionId: "meta.studies_per_day" },
-      { label: "Reading Group",  questionId: "meta.reading_group" },
-      { label: "Status",         questionId: "meta.prod_status" },
+      { label: "Studies / Day",  questionId: "D.4",  fromQuestionnaire: true },
     ],
   },
   {

@@ -125,6 +125,7 @@ export const questionnaireSections: Section[] = [
       // D.1 moved to Connectivity section
       { id: 'D.2', text: 'Requested go-live date', type: 'date', placeholder: 'MM/DD/YYYY' },
       { id: 'D.3', text: 'Expected modalities', type: 'multi-select', options: ['CT', 'MRI', 'X-Ray', 'Ultrasound', 'Nuclear Medicine', 'Mammography'] },
+      { id: 'D.4', text: 'Approximate daily study volume (studies per day)', type: 'text', placeholder: 'e.g., 150' },
       // D.7 (Historic Reports method) moved to Integration Workflows → Historic Results block
       // D.8 (Tech sheets input method) moved to Integration Workflows → Tech Sheets block
       { id: 'D.9', text: 'Are there DICOM SR or other data sources for auto-populating fields? Also, will your HL7 messages include tokens/segments carrying clinical data such as medications (RXA/RXE), patient history (AL1 for allergies, DG1 for diagnoses), or other clinical context? If so, please describe which segments and what data they contain.', type: 'textarea', placeholder: 'List DICOM SR sources and describe any HL7 segments carrying clinical data (e.g., RXA for medications, AL1 for allergies, DG1 for diagnoses, OBX for clinical observations)' },
