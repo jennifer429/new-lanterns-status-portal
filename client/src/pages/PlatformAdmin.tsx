@@ -3247,6 +3247,23 @@ function fmtDate(d?: Date | string | null) {
   return new Date(d).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }
 
+/** If a stored value is a JSON array, render it as a comma-separated list; otherwise return as-is. */
+function formatCellDisplay(raw: string): string {
+  if (!raw) return "";
+  const trimmed = raw.trim();
+  if (trimmed.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed.map((v: unknown) => String(v)).join(", ");
+      }
+    } catch {
+      // fall through
+    }
+  }
+  return raw;
+}
+
 /** Single editable cell — click to edit, hover shows copy + audit tooltip */
 function MatrixCell({
   orgId, questionId, initialValue, audit, isEmail, isPhone, isStatus, isGotcha,
@@ -3321,7 +3338,7 @@ function MatrixCell({
         ) : isPhone && saved ? (
           <a href={`tel:${saved}`} onClick={e => e.stopPropagation()} className="hover:underline">{saved}</a>
         ) : (
-          <span className="font-mono text-sm">{saved || "—"}</span>
+          <span className="font-mono text-sm">{formatCellDisplay(saved) || "—"}</span>
         )}
         <Edit className="w-2.5 h-2.5 text-muted-foreground/30 opacity-0 group-hover:opacity-100 shrink-0" />
       </span>
