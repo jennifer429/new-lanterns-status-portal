@@ -20,6 +20,7 @@ import {
   FileText,
   CheckSquare,
   CalendarCheck,
+  XSquare,
 } from "lucide-react";
 import { useRoute, Link } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -487,6 +488,29 @@ export default function Validation() {
     });
   }
 
+  function bulkUncheckPhase(pIdx: number) {
+    phases[pIdx].tests.forEach((_, tIdx) => {
+      const key = testKey(pIdx, tIdx);
+      const current = getMerged(key);
+      if (current.status === "Pass") {
+        const merged = {
+          ...current,
+          status: "Not Tested",
+          testedDate: "",
+        };
+        setLocalOverrides((prev) => ({ ...prev, [key]: merged }));
+        updateMutation.mutate({
+          organizationSlug: slug,
+          testKey: key,
+          status: "Not Tested" as any,
+          signOff: merged.signOff || undefined,
+          notes: merged.notes || undefined,
+          testedDate: undefined,
+        });
+      }
+    });
+  }
+
   // Computed stats
   const allKeys = phases.flatMap((p, pIdx) => p.tests.map((_, tIdx) => testKey(pIdx, tIdx)));
   const total = allKeys.length;
@@ -591,6 +615,19 @@ export default function Validation() {
                         >
                           <CheckSquare className="w-3.5 h-3.5" />
                           Mark All Complete
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); bulkUncheckPhase(pIdx); }}
+                          disabled={phaseCompleted === 0}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                            phaseCompleted === 0
+                              ? "bg-muted/30 text-muted-foreground/40 cursor-not-allowed"
+                              : "bg-destructive/15 text-destructive hover:bg-destructive/25 cursor-pointer"
+                          )}
+                        >
+                          <XSquare className="w-3.5 h-3.5" />
+                          Mark All Incomplete
                         </button>
                         <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-muted/20 text-foreground">
                           <CalendarCheck className="w-3.5 h-3.5 text-primary" />

@@ -2084,3 +2084,6 @@
 ## Bulk Actions on Testing Checklist (Mar 13, 2026)
 - [x] Add "Mark All Complete" button per phase to bulk-check all tests in that phase
 - [x] Add "Set All Dates" date picker per phase to bulk-update dates for all tests in that phase
+
+## Mark All Incomplete Button (Mar 14, 2026)
+- [x] Add "Mark All Incomplete" button per phase as inverse of "Mark All Complete" for re-validation (clears status and date, disabled when no tests are checked)
