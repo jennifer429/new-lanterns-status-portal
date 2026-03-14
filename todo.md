@@ -2080,3 +2080,7 @@
 - [x] Show related questionnaire answers beside each test via expandable "Show related answers" toggle
 - [x] Clicking a linked answer navigates to questionnaire section with question highlighted (deep link with ?section=&q=)
 - [x] Added id attributes to question containers in IntakeNewRedesign for scroll-to-question support
+
+## Bulk Actions on Testing Checklist (Mar 13, 2026)
+- [x] Add "Mark All Complete" button per phase to bulk-check all tests in that phase
+- [x] Add "Set All Dates" date picker per phase to bulk-update dates for all tests in that phase

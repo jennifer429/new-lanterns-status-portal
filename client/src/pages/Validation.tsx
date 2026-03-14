@@ -18,6 +18,8 @@ import {
   MessageSquare,
   ExternalLink,
   FileText,
+  CheckSquare,
+  CalendarCheck,
 } from "lucide-react";
 import { useRoute, Link } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -442,6 +444,49 @@ export default function Validation() {
     });
   }
 
+  // ── Bulk actions per phase ──────────────────────────────────────────────────
+
+  function bulkCheckPhase(pIdx: number) {
+    const today = todayStr();
+    phases[pIdx].tests.forEach((_, tIdx) => {
+      const key = testKey(pIdx, tIdx);
+      const current = getMerged(key);
+      if (current.status !== "Pass") {
+        const merged = {
+          ...current,
+          status: "Pass",
+          testedDate: current.testedDate || today,
+        };
+        setLocalOverrides((prev) => ({ ...prev, [key]: merged }));
+        updateMutation.mutate({
+          organizationSlug: slug,
+          testKey: key,
+          status: "Pass" as any,
+          signOff: merged.signOff || undefined,
+          notes: merged.notes || undefined,
+          testedDate: merged.testedDate || undefined,
+        });
+      }
+    });
+  }
+
+  function bulkDatePhase(pIdx: number, date: string) {
+    phases[pIdx].tests.forEach((_, tIdx) => {
+      const key = testKey(pIdx, tIdx);
+      const current = getMerged(key);
+      const merged = { ...current, testedDate: date };
+      setLocalOverrides((prev) => ({ ...prev, [key]: merged }));
+      updateMutation.mutate({
+        organizationSlug: slug,
+        testKey: key,
+        status: merged.status as any,
+        signOff: merged.signOff || undefined,
+        notes: merged.notes || undefined,
+        testedDate: date || undefined,
+      });
+    });
+  }
+
   // Computed stats
   const allKeys = phases.flatMap((p, pIdx) => p.tests.map((_, tIdx) => testKey(pIdx, tIdx)));
   const total = allKeys.length;
@@ -530,6 +575,35 @@ export default function Validation() {
                         {phaseCompleted}/{phaseTotal} Complete
                       </Badge>
                     </button>
+
+                    {/* Bulk action buttons — visible when expanded */}
+                    {!isCollapsed && (
+                      <div className="flex items-center gap-2 px-5 py-2 border-b border-border/30 bg-muted/15">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); bulkCheckPhase(pIdx); }}
+                          disabled={allDone}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                            allDone
+                              ? "bg-muted/30 text-muted-foreground/40 cursor-not-allowed"
+                              : "bg-primary/15 text-primary hover:bg-primary/25 cursor-pointer"
+                          )}
+                        >
+                          <CheckSquare className="w-3.5 h-3.5" />
+                          Mark All Complete
+                        </button>
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-muted/20 text-foreground">
+                          <CalendarCheck className="w-3.5 h-3.5 text-primary" />
+                          <span>Set All Dates:</span>
+                          <input
+                            type="date"
+                            defaultValue={todayStr()}
+                            onChange={(e) => { if (e.target.value) bulkDatePhase(pIdx, e.target.value); }}
+                            className="bg-transparent border border-border/40 rounded px-1.5 py-0.5 text-xs text-foreground focus:outline-none focus:border-primary/60 [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
+                          />
+                        </div>
+                      </div>
+                    )}
 
                     {/* Collapsible content */}
                     {!isCollapsed && (
