@@ -3157,8 +3157,9 @@ const MATRIX_SECTIONS: { title: string; rows: { label: string; questionId: strin
   {
     title: "Contacts",
     rows: [
-      { label: "Admin Contact",  questionId: "A.1",  fromQuestionnaire: true },
-      { label: "IT Contact",     questionId: "A.2",  fromQuestionnaire: true },
+      { label: "Admin Contact",       questionId: "A.1",  fromQuestionnaire: true },
+      { label: "IT Contact",          questionId: "A.2",  fromQuestionnaire: true },
+      { label: "Prod Support Contact", questionId: "meta.prod_support_contact" },
     ],
   },
   {
