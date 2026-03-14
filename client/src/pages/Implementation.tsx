@@ -81,7 +81,18 @@ const SECTION_DEFS: SectionDef[] = [
     ],
   },
   {
-    id: "testing",
+    id: "training",
+    title: "Training & Go-Live Preparation",
+    duration: "3–5 days",
+    tasks: [
+      { id: "train:admin",         title: "Admin Training — system administration, user management, configuration changes" },
+      { id: "train:tech",          title: "Tech Training — modality workflow, image QC, worklist operations" },
+      { id: "train:users",         title: "User Setup — all accounts provisioned, roles assigned, logins verified", intakeLink: "/intake?section=connectivity", intakeLinkLabel: "User List (CF.2)" },
+      { id: "train:downtime",      title: "Downtime Workflow — team trained on downtime procedures (paper backup, rerouting, recovery)", intakeLink: "/intake?section=org-info", intakeLinkLabel: "Downtime Plans (L.11)" },
+      { id: "train:troubleshoot",  title: "Troubleshooting Workflows — escalation paths, common issues, support contacts documented", intakeLink: "/intake?section=org-info", intakeLinkLabel: "Issue Escalation (L.10)" },
+    ],
+  },
+  {
     title: "End-to-End Testing",
     duration: "5–7 days",
     tasks: [
