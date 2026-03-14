@@ -204,6 +204,21 @@ const phases: Phase[] = [
           { questionId: "L.8", label: "Go-Live Support", sectionId: "org-info" },
         ],
       },
+      {
+        name: "Study Merge",
+        description: "Merge two separate studies into one — verify combined images, updated worklist entry, and correct report association",
+        relatedQuestions: [
+          { questionId: "IW.images_description", label: "Images Workflow", sectionId: "integration-workflows" },
+        ],
+      },
+      {
+        name: "Study Split",
+        description: "Break apart a merged or incorrectly combined study — verify images route to correct separate orders and reports follow",
+        relatedQuestions: [
+          { questionId: "IW.images_description", label: "Images Workflow", sectionId: "integration-workflows" },
+          { questionId: "IW.orders_description", label: "Orders Workflow", sectionId: "integration-workflows" },
+        ],
+      },
     ],
   },
 ];
