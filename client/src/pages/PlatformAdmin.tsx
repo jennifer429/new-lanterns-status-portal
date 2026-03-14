@@ -3176,14 +3176,6 @@ const MATRIX_SECTIONS: { title: string; rows: { label: string; questionId: strin
     rows: [
       { label: "Test Endpoints",    questionId: "E.2",   fromQuestionnaire: true },
       { label: "Prod Endpoints",    questionId: "E.2.1", fromQuestionnaire: true },
-      { label: "Image Source",      questionId: "meta.dicom_image_source" },
-      { label: "Org AE Title",      questionId: "meta.dicom_org_ae_title" },
-      { label: "Org IP",            questionId: "meta.dicom_org_ip" },
-      { label: "Org Port",          questionId: "meta.dicom_org_port" },
-      { label: "Silverback IP",     questionId: "meta.dicom_sb_ip" },
-      { label: "Silverback Port",   questionId: "meta.dicom_sb_port" },
-      { label: "NL IP",             questionId: "meta.dicom_nl_ip" },
-      { label: "NL Port",           questionId: "meta.dicom_nl_port" },
     ],
   },
   {
