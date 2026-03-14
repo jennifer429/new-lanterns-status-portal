@@ -960,7 +960,7 @@ export default function PlatformAdmin() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Connectivity Dashboard
+              Connectivity Matrix
               {activeTab === "prod-dashboard" && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
               )}
@@ -3449,6 +3449,18 @@ type ConnectivityOrg = { id: number; name: string; slug: string; partnerName?: s
 function ConnectivityMatrix({ orgs }: { orgs: ConnectivityOrg[] }) {
   const utils = trpc.useUtils();
   const { data: allResponses = [], isLoading } = trpc.admin.getAllOrgResponses.useQuery();
+  const { data: allFiles = [] } = trpc.admin.getAllFiles.useQuery();
+  // Build map: orgId → first ARCH.diagram fileUrl
+  const archDiagramByOrg = useMemo(() => {
+    const map: Record<number, string> = {};
+    for (const f of allFiles) {
+      if (f.questionId === "ARCH.diagram" && f.organizationId && !map[f.organizationId]) {
+        map[f.organizationId] = f.fileUrl;
+      }
+    }
+    return map;
+  }, [allFiles]);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   // Org visibility filter
   const [visibleOrgIds, setVisibleOrgIds] = useState<Set<number>>(() => new Set(orgs.map(o => o.id)));
@@ -3460,7 +3472,9 @@ function ConnectivityMatrix({ orgs }: { orgs: ConnectivityOrg[] }) {
   const filteredOrgs = orgs.filter(o => visibleOrgIds.has(o.id));
 
   // Collapsed sections state
-  const [collapsedSections, setCollapsedSections] = useState<Set<number>>(new Set());
+  const [collapsedSections, setCollapsedSections] = useState<Set<number>>(
+    () => new Set(MATRIX_SECTIONS.map((_, i) => i))
+  );
   const toggleSection = (si: number) => setCollapsedSections(prev => {
     const next = new Set(prev);
     if (next.has(si)) { next.delete(si); } else { next.add(si); }
@@ -3536,7 +3550,7 @@ function ConnectivityMatrix({ orgs }: { orgs: ConnectivityOrg[] }) {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold">Production Connectivity Matrix</h2>
+          <h2 className="text-2xl font-bold">Connectivity Matrix</h2>
           <p className="text-sm text-muted-foreground mt-1">
             Live data — click any cell to edit, hover to copy or view audit history.
           </p>
@@ -3691,6 +3705,19 @@ function ConnectivityMatrix({ orgs }: { orgs: ConnectivityOrg[] }) {
                   <th key={org.id} className="text-left py-3 px-4 min-w-[10rem] border-r border-border last:border-r-0 bg-card">
                     <span className="font-bold block leading-tight">{org.name}</span>
                     {org.partnerName && <span className="text-xs font-normal text-muted-foreground">{org.partnerName}</span>}
+                    {archDiagramByOrg[org.id] && (
+                      <button
+                        onClick={() => setLightboxUrl(archDiagramByOrg[org.id])}
+                        className="mt-1.5 block w-16 h-10 rounded overflow-hidden border border-border hover:border-primary transition-colors focus:outline-none"
+                        title="View architecture diagram"
+                      >
+                        <img
+                          src={archDiagramByOrg[org.id]}
+                          alt="Architecture"
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
+                    )}
                   </th>
                 ))}
               </tr>
@@ -3760,6 +3787,22 @@ function ConnectivityMatrix({ orgs }: { orgs: ConnectivityOrg[] }) {
           </div>
         </div>
       )}
+
+      {/* Architecture diagram lightbox */}
+      <Dialog open={!!lightboxUrl} onOpenChange={open => { if (!open) setLightboxUrl(null); }}>
+        <DialogContent className="max-w-5xl w-full p-2 bg-background">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Architecture Diagram</DialogTitle>
+          </DialogHeader>
+          {lightboxUrl && (
+            <img
+              src={lightboxUrl}
+              alt="Architecture diagram"
+              className="w-full h-auto max-h-[85vh] object-contain rounded"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
