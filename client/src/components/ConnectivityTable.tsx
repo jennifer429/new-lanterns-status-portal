@@ -18,13 +18,15 @@ export interface ConnectivityRow {
   sourcePort: string;
   destIp: string;
   destPort: string;
-  aeTitle: string;
+  sourceAeTitle: string;
+  destAeTitle: string;
   envTest: boolean;
   envProd: boolean;
   notes: string;
   // Legacy fields for backward compat during migration
   ip?: string;
   port?: string;
+  aeTitle?: string;
 }
 
 interface ConnectivityTableProps {
@@ -73,26 +75,26 @@ function emptyRow(): ConnectivityRow {
     sourcePort: '',
     destIp: '',
     destPort: '',
-    aeTitle: '',
+    sourceAeTitle: '',
+    destAeTitle: '',
     envTest: false,
     envProd: false,
     notes: '',
   };
 }
 
-/** Migrate legacy rows that had single ip/port to new sourceIp/sourcePort */
+/** Migrate legacy rows: single ip/port → sourceIp/sourcePort; single aeTitle → destAeTitle */
 function migrateRow(r: ConnectivityRow): ConnectivityRow {
-  if (r.sourceIp !== undefined && r.sourceIp !== '') return r;
-  if (r.ip || r.port) {
-    return {
-      ...r,
-      sourceIp: r.ip || '',
-      sourcePort: r.port || '',
-      destIp: r.destIp || '',
-      destPort: r.destPort || '',
-    };
-  }
-  return { ...r, sourceIp: r.sourceIp || '', sourcePort: r.sourcePort || '', destIp: r.destIp || '', destPort: r.destPort || '' };
+  const base: ConnectivityRow = {
+    ...r,
+    sourceIp: r.sourceIp || r.ip || '',
+    sourcePort: r.sourcePort || r.port || '',
+    destIp: r.destIp || '',
+    destPort: r.destPort || '',
+    sourceAeTitle: r.sourceAeTitle || '',
+    destAeTitle: r.destAeTitle || r.aeTitle || '',
+  };
+  return base;
 }
 
 // ── Combobox for system selection ────────────────────────────────────────────
@@ -339,8 +341,8 @@ function ImportDialog({
         <div className="space-y-3">
           <div className="text-xs text-muted-foreground space-y-1">
             <p className="font-medium">Accepted formats:</p>
-            <p><strong>JSON:</strong> Array of objects with keys: trafficType, sourceSystem, destinationSystem, sourceIp, sourcePort, destIp, destPort, aeTitle, environment (test/prod/both), notes</p>
-            <p><strong>CSV:</strong> Header row with columns: Traffic Type, Source System, Destination System, Source IP, Source Port, Dest IP, Dest Port, AE Title, Environment, Notes</p>
+            <p><strong>JSON:</strong> Array of objects with keys: trafficType, sourceSystem, destinationSystem, sourceIp, sourcePort, destIp, destPort, sourceAeTitle, destAeTitle, environment (test/prod/both), notes</p>
+            <p><strong>CSV:</strong> Header row with columns: Traffic Type, Source System, Destination System, Source IP, Source Port, Dest IP, Dest Port, Source AE Title, Dest AE Title, Environment, Notes</p>
           </div>
           <div className="rounded-md border bg-muted/20 p-2 text-xs font-mono text-muted-foreground overflow-x-auto">
             <pre>{`[
@@ -352,7 +354,8 @@ function ImportDialog({
     "sourcePort": "104",
     "destIp": "10.1.2.50",
     "destPort": "11112",
-    "aeTitle": "NL_PACS",
+    "sourceAeTitle": "CT_SCANNER",
+    "destAeTitle": "NL_PACS",
     "environment": "both"
   }
 ]`}</pre>
@@ -411,6 +414,8 @@ function parseCSV(text: string): ConnectivityRow[] {
 // ── Map imported data to ConnectivityRow ──────────────────────────────────────
 function mapImportRow(obj: any): ConnectivityRow {
   const env = (obj.environment || obj.env || '').toLowerCase().trim();
+  // Support legacy single aeTitle by falling back to destAeTitle
+  const legacyAeTitle = obj.aeTitle || obj.aetitle || obj['ae title'] || obj.ae_title || '';
   return {
     id: makeId(),
     trafficType: obj.trafficType || obj.traffictype || obj['traffic type'] || obj.traffic_type || obj.type || '',
@@ -420,7 +425,8 @@ function mapImportRow(obj: any): ConnectivityRow {
     sourcePort: String(obj.sourcePort || obj.sourceport || obj['source port'] || obj.source_port || obj.port || ''),
     destIp: obj.destIp || obj.destip || obj['dest ip'] || obj.dest_ip || obj.destinationIp || obj.destinationip || obj['destination ip'] || '',
     destPort: String(obj.destPort || obj.destport || obj['dest port'] || obj.dest_port || obj.destinationPort || obj.destinationport || obj['destination port'] || ''),
-    aeTitle: obj.aeTitle || obj.aetitle || obj['ae title'] || obj.ae_title || '',
+    sourceAeTitle: obj.sourceAeTitle || obj.sourceaetitle || obj['source ae title'] || obj['source ae'] || obj.srcAeTitle || obj.srcaetitle || obj['src ae title'] || '',
+    destAeTitle: obj.destAeTitle || obj.destaetitle || obj['dest ae title'] || obj['dest ae'] || obj.dstAeTitle || obj.dstaetitle || obj['dst ae title'] || legacyAeTitle,
     envTest: env === 'test' || env === 'both' || obj.envTest === true || obj.test === true,
     envProd: env === 'production' || env === 'prod' || env === 'both' || obj.envProd === true || obj.prod === true || obj.production === true,
     notes: obj.notes || '',
@@ -437,7 +443,8 @@ function exportJSON(rows: ConnectivityRow[]) {
     sourcePort: r.sourcePort,
     destIp: r.destIp,
     destPort: r.destPort,
-    aeTitle: r.aeTitle,
+    sourceAeTitle: r.sourceAeTitle,
+    destAeTitle: r.destAeTitle,
     environment: r.envTest && r.envProd ? 'both' : r.envTest ? 'test' : r.envProd ? 'production' : '',
     notes: r.notes,
   }));
@@ -446,11 +453,11 @@ function exportJSON(rows: ConnectivityRow[]) {
 }
 
 function exportCSV(rows: ConnectivityRow[]) {
-  const headers = ['Traffic Type', 'Source System', 'Destination System', 'Source IP', 'Source Port', 'Dest IP', 'Dest Port', 'AE Title', 'Environment', 'Notes'];
+  const headers = ['Traffic Type', 'Source System', 'Destination System', 'Source IP', 'Source Port', 'Dest IP', 'Dest Port', 'Source AE Title', 'Dest AE Title', 'Environment', 'Notes'];
   const csvRows = [headers.join(',')];
   rows.forEach(r => {
     const env = r.envTest && r.envProd ? 'Both' : r.envTest ? 'Test' : r.envProd ? 'Production' : '';
-    csvRows.push([r.trafficType, r.sourceSystem, r.destinationSystem, r.sourceIp, r.sourcePort, r.destIp, r.destPort, r.aeTitle, env, r.notes].map(v => `"${(v || '').replace(/"/g, '""')}"`).join(','));
+    csvRows.push([r.trafficType, r.sourceSystem, r.destinationSystem, r.sourceIp, r.sourcePort, r.destIp, r.destPort, r.sourceAeTitle, r.destAeTitle, env, r.notes].map(v => `"${(v || '').replace(/"/g, '""')}"`).join(','));
   });
   const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
   downloadBlob(blob, 'connectivity-endpoints.csv');
@@ -575,7 +582,8 @@ export function ConnectivityTable({ rows: rawRows, onChange, systems = [] }: Con
                   <span className="w-[70px]">Port</span>
                 </div>
               </th>
-              <th className="px-3 py-2.5 text-left font-medium text-muted-foreground w-[90px]">AE Title</th>
+              <th className="px-3 py-2.5 text-left font-medium text-muted-foreground w-[80px]">Src AE</th>
+              <th className="px-3 py-2.5 text-left font-medium text-muted-foreground w-[80px]">Dest AE</th>
               <th className="px-3 py-2.5 text-center font-medium text-muted-foreground w-[120px]">Env</th>
               <th className="px-3 py-2.5 text-right font-medium text-muted-foreground w-[70px]">Actions</th>
             </tr>
@@ -583,7 +591,7 @@ export function ConnectivityTable({ rows: rawRows, onChange, systems = [] }: Con
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={10} className="px-3 py-8 text-center text-muted-foreground">
+                <td colSpan={11} className="px-3 py-8 text-center text-muted-foreground">
                   No endpoints configured yet. Click "Add Endpoint" or "Import" to get started.
                 </td>
               </tr>
@@ -652,12 +660,21 @@ export function ConnectivityTable({ rows: rawRows, onChange, systems = [] }: Con
                     />
                   </div>
                 </td>
-                {/* AE Title */}
+                {/* Source AE Title */}
                 <td className="px-2 py-1.5">
                   <Input
-                    value={row.aeTitle}
-                    onChange={(e) => updateField(idx, 'aeTitle', e.target.value)}
-                    placeholder="AE_TITLE"
+                    value={row.sourceAeTitle}
+                    onChange={(e) => updateField(idx, 'sourceAeTitle', e.target.value)}
+                    placeholder="SRC_AE"
+                    className="h-8 text-xs bg-transparent border-border/50 focus:border-primary"
+                  />
+                </td>
+                {/* Dest AE Title */}
+                <td className="px-2 py-1.5">
+                  <Input
+                    value={row.destAeTitle}
+                    onChange={(e) => updateField(idx, 'destAeTitle', e.target.value)}
+                    placeholder="DEST_AE"
                     className="h-8 text-xs bg-transparent border-border/50 focus:border-primary"
                   />
                 </td>
@@ -791,9 +808,15 @@ export function ConnectivityTable({ rows: rawRows, onChange, systems = [] }: Con
                     </div>
                   </div>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">AE Title</label>
-                  <Input value={row.aeTitle} onChange={(e) => updateField(idx, 'aeTitle', e.target.value)} placeholder="AE_TITLE" className="h-8 text-xs" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Source AE Title</label>
+                    <Input value={row.sourceAeTitle} onChange={(e) => updateField(idx, 'sourceAeTitle', e.target.value)} placeholder="SRC_AE" className="h-8 text-xs" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Dest AE Title</label>
+                    <Input value={row.destAeTitle} onChange={(e) => updateField(idx, 'destAeTitle', e.target.value)} placeholder="DEST_AE" className="h-8 text-xs" />
+                  </div>
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs text-muted-foreground">Environment</label>
