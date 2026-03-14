@@ -531,7 +531,12 @@ export default function IntakeNewRedesign() {
   const [, setLocation] = useLocation();
   const [responses, setResponses] = useState<Record<string, any>>({});
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
-  const [currentSection, setCurrentSection] = useState<string>("org-info");
+  const [currentSection, setCurrentSection] = useState<string>(() => {
+    // Honor ?section= query param for deep-linking from Implementation page
+    const params = new URLSearchParams(window.location.search);
+    const s = params.get("section");
+    return s && questionnaireSections.find(sec => sec.id === s) ? s : "org-info";
+  });
   const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
   const [unansweredQuestions, setUnansweredQuestions] = useState<Set<string>>(new Set());
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -616,26 +621,25 @@ export default function IntakeNewRedesign() {
     }
   }, [existingResponses]);
 
-  // Handle deep-link query params (?section=xxx&q=yyy) from validation page
+  // Auto-navigate to first incomplete section ONLY on first load (skipped when ?section= is present)
+  // Handle deep-link query params (?section=xxx&q=yyy) from Implementation/Validation pages
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sectionParam = params.get('section');
     const questionParam = params.get('q');
-    
+
     if (sectionParam) {
-      // Validate the section exists
       const validSection = questionnaireSections.find(s => s.id === sectionParam);
       if (validSection) {
-        setCurrentSection(sectionParam);
-        hasNavigatedRef.current = true; // Skip auto-navigate
-        
+        // Section already set synchronously by useState initializer; just block auto-navigate
+        hasNavigatedRef.current = true;
+
         // If a specific question is targeted, scroll to it after render
         if (questionParam) {
           setTimeout(() => {
             const el = document.getElementById(`question-${questionParam}`);
             if (el) {
               el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              // Briefly highlight the question
               el.classList.add('ring-2', 'ring-primary', 'ring-offset-2', 'ring-offset-background', 'rounded-lg');
               setTimeout(() => {
                 el.classList.remove('ring-2', 'ring-primary', 'ring-offset-2', 'ring-offset-background', 'rounded-lg');
@@ -646,11 +650,10 @@ export default function IntakeNewRedesign() {
       }
     }
   }, []); // Run once on mount
-
-  // Auto-navigate to first incomplete section ONLY on first load
   useEffect(() => {
-    // Skip if already navigated or responses not loaded yet
-    if (hasNavigatedRef.current || Object.keys(responses).length === 0) return;
+    // Skip if already navigated, responses not loaded, or explicit section param given
+    const urlSection = new URLSearchParams(window.location.search).get("section");
+    if (hasNavigatedRef.current || Object.keys(responses).length === 0 || urlSection) return;
     
     // Find first section that is not 100% complete
     const firstIncompleteSection = questionnaireSections.find(section => {
