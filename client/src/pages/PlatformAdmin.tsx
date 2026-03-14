@@ -3193,6 +3193,18 @@ const MATRIX_SECTIONS: { title: string; rows: { label: string; questionId: strin
     ],
   },
   {
+    title: "Endpoints",
+    rows: [
+      { label: "Org IP",            questionId: "meta.ep_org_ip" },
+      { label: "Org DICOM Port",    questionId: "meta.ep_org_dicom_port" },
+      { label: "Org HL7 Port",      questionId: "meta.ep_org_hl7_port" },
+      { label: "NL IP",             questionId: "meta.ep_nl_ip" },
+      { label: "NL DICOM Port",     questionId: "meta.ep_nl_dicom_port" },
+      { label: "NL HL7 Port",       questionId: "meta.ep_nl_hl7_port" },
+      { label: "Silverback IP",     questionId: "meta.ep_sb_ip" },
+    ],
+  },
+  {
     title: "Known Gotchas / Exceptions",
     rows: [
       { label: "Accession Format",  questionId: "meta.accession_format" },
