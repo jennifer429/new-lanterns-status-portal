@@ -91,6 +91,24 @@ const SECTION_DEFS: SectionDef[] = [
       { id: "test:signoff", title: "Go-Live Readiness Sign-Off",               intakeLink: "/validation", intakeLinkLabel: "Validation Checklist" },
     ],
   },
+  {
+    id: "prod-validation",
+    title: "Production Data Validation (2 Weeks)",
+    duration: "14 days minimum",
+    tasks: [
+      { id: "prod:start",       title: "Begin live production data flow into New Lantern" },
+      { id: "prod:data-quality", title: "Data quality review — verify study/report completeness and accuracy" },
+      { id: "prod:timeliness",  title: "Timeliness audit — confirm studies and reports flow within agreed SLAs" },
+      { id: "prod:normal-wf",   title: "Normal workflow sign-off — standard order → image → report cycle validated" },
+      { id: "prod:stat",        title: "Outlier: STAT & priority routing verified end-to-end" },
+      { id: "prod:addendum",    title: "Outlier: Addendum and correction workflow validated" },
+      { id: "prod:cancel",      title: "Outlier: Order cancellation and worklist removal confirmed" },
+      { id: "prod:downtime",    title: "Outlier: Downtime/reconnect — queued studies process correctly",   intakeLink: "/intake?section=org-info", intakeLinkLabel: "Downtime Plans (L.11)" },
+      { id: "prod:volume",      title: "Volume & load — performance confirmed at full production volume" },
+      { id: "prod:adjustments", title: "Document & remediate all issues found during validation period" },
+      { id: "prod:golive",      title: "2-week validation complete — approved for full go-live" },
+    ],
+  },
 ];
 
 // ── Inline editable owner field ───────────────────────────────────────────────
