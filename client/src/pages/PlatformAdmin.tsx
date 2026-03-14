@@ -3183,12 +3183,6 @@ const MATRIX_SECTIONS: { title: string; rows: { label: string; questionId: strin
     rows: [
       { label: "Test Environment",  questionId: "E.3",   fromQuestionnaire: true },
       { label: "Prod Environment",  questionId: "E.3.1", fromQuestionnaire: true },
-      { label: "Org HL7 IP",        questionId: "meta.hl7_ord_org_ip" },
-      { label: "Org HL7 Port",      questionId: "meta.hl7_ord_org_port" },
-      { label: "Silverback IP",     questionId: "meta.hl7_ord_sb_ip" },
-      { label: "Silverback Port",   questionId: "meta.hl7_ord_sb_port" },
-      { label: "NL IP",             questionId: "meta.hl7_ord_nl_ip" },
-      { label: "NL Port",           questionId: "meta.hl7_ord_nl_port" },
     ],
   },
   {
@@ -3196,12 +3190,6 @@ const MATRIX_SECTIONS: { title: string; rows: { label: string; questionId: strin
     rows: [
       { label: "Test Environment",  questionId: "E.5",   fromQuestionnaire: true },
       { label: "Prod Environment",  questionId: "E.5.1", fromQuestionnaire: true },
-      { label: "NL IP",             questionId: "meta.hl7_res_nl_ip" },
-      { label: "NL Port",           questionId: "meta.hl7_res_nl_port" },
-      { label: "Silverback IP",     questionId: "meta.hl7_res_sb_ip" },
-      { label: "Silverback Port",   questionId: "meta.hl7_res_sb_port" },
-      { label: "Org IP",            questionId: "meta.hl7_res_org_ip" },
-      { label: "Org Port",          questionId: "meta.hl7_res_org_port" },
     ],
   },
   {
