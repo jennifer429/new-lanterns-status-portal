@@ -2087,3 +2087,15 @@
 
 ## Mark All Incomplete Button (Mar 14, 2026)
 - [x] Add "Mark All Incomplete" button per phase as inverse of "Mark All Complete" for re-validation (clears status and date, disabled when no tests are checked)
+
+## Org Site Dashboard Redesign (Mar 14, 2026)
+- [x] Redesign Home page as rich command-center dashboard
+- [x] Add overall progress hero with SVG progress ring (weighted: Q 40%, Testing 30%, Impl 30%)
+- [x] Three workflow phase cards with progress bars, dots, and Start/Continue/View buttons
+- [x] Architecture Diagram collapsible section with image preview, download, and remove
+- [x] Questionnaire Sections breakdown with per-section progress bars and counts
+- [x] Testing Checklist summary with progress ring
+- [x] Implementation Checklist summary with progress ring
+- [x] Specifications section showing all uploaded NL specs
+- [x] All sections collapsible for clean view
+- [x] Stats sidebar with file count, active phase badge, diagram status
