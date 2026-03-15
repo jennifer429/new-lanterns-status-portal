@@ -2080,3 +2080,22 @@
 - [x] Show related questionnaire answers beside each test via expandable "Show related answers" toggle
 - [x] Clicking a linked answer navigates to questionnaire section with question highlighted (deep link with ?section=&q=)
 - [x] Added id attributes to question containers in IntakeNewRedesign for scroll-to-question support
+
+## Bulk Actions on Testing Checklist (Mar 13, 2026)
+- [x] Add "Mark All Complete" button per phase to bulk-check all tests in that phase
+- [x] Add "Set All Dates" date picker per phase to bulk-update dates for all tests in that phase
+
+## Mark All Incomplete Button (Mar 14, 2026)
+- [x] Add "Mark All Incomplete" button per phase as inverse of "Mark All Complete" for re-validation (clears status and date, disabled when no tests are checked)
+
+## Org Site Dashboard Redesign (Mar 14, 2026)
+- [x] Redesign Home page as rich command-center dashboard
+- [x] Add overall progress hero with SVG progress ring (weighted: Q 40%, Testing 30%, Impl 30%)
+- [x] Three workflow phase cards with progress bars, dots, and Start/Continue/View buttons
+- [x] Architecture Diagram collapsible section with image preview, download, and remove
+- [x] Questionnaire Sections breakdown with per-section progress bars and counts
+- [x] Testing Checklist summary with progress ring
+- [x] Implementation Checklist summary with progress ring
+- [x] Specifications section showing all uploaded NL specs
+- [x] All sections collapsible for clean view
+- [x] Stats sidebar with file count, active phase badge, diagram status
