@@ -29,12 +29,13 @@ export const implementationRouter = router({
         .from(taskCompletion)
         .where(eq(taskCompletion.organizationId, org.id));
 
-      const taskMap: Record<string, { completed: boolean; completedAt: Date | null; owner: string | null; notes: string | null }> = {};
+      const taskMap: Record<string, { completed: boolean; completedAt: Date | null; owner: string | null; targetDate: string | null; notes: string | null }> = {};
       for (const row of rows) {
         taskMap[row.taskId] = {
           completed: row.completed === 1,
           completedAt: row.completedAt ?? null,
-          owner: row.completedBy ?? null,   // reuse completedBy column for free-form owner
+          owner: row.completedBy ?? null,
+          targetDate: row.targetDate ?? null,
           notes: row.notes ?? null,
         };
       }
@@ -52,6 +53,7 @@ export const implementationRouter = router({
         sectionName: z.string(),
         completed: z.boolean(),
         owner: z.string().optional(),
+        targetDate: z.string().optional(),
         notes: z.string().optional(),
       })
     )
@@ -82,6 +84,7 @@ export const implementationRouter = router({
         completed: input.completed ? 1 : 0,
         completedAt: input.completed ? new Date() : null,
         completedBy: input.owner ?? null,
+        targetDate: input.targetDate ?? null,
         notes: input.notes ?? null,
         sectionName: input.sectionName,
       };
