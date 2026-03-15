@@ -1070,7 +1070,7 @@ export default function PlatformAdmin() {
                         <span>Questionnaire</span>
                       </TableHead>
                       <TableHead className="text-center text-sm w-[200px]">
-                        <span>Testing</span>
+                        <span>Validation Checklist</span>
                       </TableHead>
                       <TableHead className="text-center text-sm w-[200px]">
                         <span>Task List</span>
@@ -1098,7 +1098,7 @@ export default function PlatformAdmin() {
                         const questionnaireComplete = sectionsComplete === totalSections;
                         // Determine questionnaire button label
                         const qLabel = sectionsComplete === 0 ? "Start" : questionnaireComplete ? "View" : "Continue";
-                        // Testing: 4 phases, placeholder 0 complete for now
+                        // Validation Checklist: 4 phases, placeholder 0 complete for now
                         const testingTotal = 4;
                         const testingComplete = 0;
                         const testingLabel = testingComplete === 0 ? "Start" : testingComplete === testingTotal ? "View" : "Continue";
@@ -1148,7 +1148,7 @@ export default function PlatformAdmin() {
                                 </div>
                               </button>
                             </TableCell>
-                            {/* Testing — consistent status display */}
+                            {/* Validation Checklist — consistent status display */}
                             <TableCell className="text-center">
                               <button
                                 onClick={() => setLocation(`/org/${org.slug}/validation`)}
