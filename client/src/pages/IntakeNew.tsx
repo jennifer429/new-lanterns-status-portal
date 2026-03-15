@@ -621,7 +621,7 @@ export default function IntakeNew() {
             {/* Left: Section Cards */}
             <div className="space-y-4">
               <div>
-                <h2 className="text-xl font-semibold mb-2">Implementation Checklist</h2>
+                <h2 className="text-xl font-semibold mb-2">Task List</h2>
                 <p className="text-sm text-muted-foreground">Complete all sections to proceed with go-live</p>
               </div>
 

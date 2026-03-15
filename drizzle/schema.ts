@@ -103,6 +103,7 @@ export const taskCompletion = mysqlTable("taskCompletion", {
   completed: int("completed").default(0).notNull(), // 0 or 1 (boolean)
   completedAt: timestamp("completedAt"),
   completedBy: varchar("completedBy", { length: 255 }),
+  targetDate: varchar("targetDate", { length: 20 }), // YYYY-MM-DD target/due date
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

@@ -960,7 +960,7 @@ export default function PlatformAdmin() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Connectivity Dashboard
+              Connectivity Matrix
               {activeTab === "prod-dashboard" && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
               )}
@@ -1070,10 +1070,10 @@ export default function PlatformAdmin() {
                         <span>Questionnaire</span>
                       </TableHead>
                       <TableHead className="text-center text-sm w-[200px]">
-                        <span>Testing</span>
+                        <span>Validation Checklist</span>
                       </TableHead>
                       <TableHead className="text-center text-sm w-[200px]">
-                        <span>Implementation</span>
+                        <span>Task List</span>
                       </TableHead>
                       <TableHead className="text-center text-sm w-[70px]">Files</TableHead>
                       <TableHead className="text-center text-sm w-[70px]">Users</TableHead>
@@ -1098,7 +1098,7 @@ export default function PlatformAdmin() {
                         const questionnaireComplete = sectionsComplete === totalSections;
                         // Determine questionnaire button label
                         const qLabel = sectionsComplete === 0 ? "Start" : questionnaireComplete ? "View" : "Continue";
-                        // Testing: 4 phases, placeholder 0 complete for now
+                        // Validation Checklist: 4 phases, placeholder 0 complete for now
                         const testingTotal = 4;
                         const testingComplete = 0;
                         const testingLabel = testingComplete === 0 ? "Start" : testingComplete === testingTotal ? "View" : "Continue";
@@ -1148,7 +1148,7 @@ export default function PlatformAdmin() {
                                 </div>
                               </button>
                             </TableCell>
-                            {/* Testing — consistent status display */}
+                            {/* Validation Checklist — consistent status display */}
                             <TableCell className="text-center">
                               <button
                                 onClick={() => setLocation(`/org/${org.slug}/validation`)}
@@ -3151,19 +3151,15 @@ const MATRIX_SECTIONS: { title: string; rows: { label: string; questionId: strin
       { label: "# Sites",        questionId: "H.1",  fromQuestionnaire: true },
       { label: "Site Names",     questionId: "H.2",  fromQuestionnaire: true },
       { label: "Modalities",     questionId: "D.3",  fromQuestionnaire: true },
-      { label: "Studies / Day",  questionId: "meta.studies_per_day" },
-      { label: "Reading Group",  questionId: "meta.reading_group" },
-      { label: "Status",         questionId: "meta.prod_status" },
+      { label: "Studies / Day",  questionId: "D.4",  fromQuestionnaire: true },
     ],
   },
   {
     title: "Contacts",
     rows: [
-      { label: "Admin Contact",  questionId: "A.1",  fromQuestionnaire: true },
-      { label: "IT Contact",     questionId: "A.2",  fromQuestionnaire: true },
-      { label: "IT Name",        questionId: "meta.it_contact_name" },
-      { label: "IT Email",       questionId: "meta.it_contact_email", isEmail: true },
-      { label: "IT Phone",       questionId: "meta.it_contact_phone", isPhone: true },
+      { label: "Admin Contact",       questionId: "A.1",  fromQuestionnaire: true },
+      { label: "IT Contact",          questionId: "A.2",  fromQuestionnaire: true },
+      { label: "Prod Support Contact", questionId: "meta.prod_support_contact" },
     ],
   },
   {
@@ -3180,14 +3176,6 @@ const MATRIX_SECTIONS: { title: string; rows: { label: string; questionId: strin
     rows: [
       { label: "Test Endpoints",    questionId: "E.2",   fromQuestionnaire: true },
       { label: "Prod Endpoints",    questionId: "E.2.1", fromQuestionnaire: true },
-      { label: "Image Source",      questionId: "meta.dicom_image_source" },
-      { label: "Org AE Title",      questionId: "meta.dicom_org_ae_title" },
-      { label: "Org IP",            questionId: "meta.dicom_org_ip" },
-      { label: "Org Port",          questionId: "meta.dicom_org_port" },
-      { label: "Silverback IP",     questionId: "meta.dicom_sb_ip" },
-      { label: "Silverback Port",   questionId: "meta.dicom_sb_port" },
-      { label: "NL IP",             questionId: "meta.dicom_nl_ip" },
-      { label: "NL Port",           questionId: "meta.dicom_nl_port" },
     ],
   },
   {
@@ -3195,12 +3183,6 @@ const MATRIX_SECTIONS: { title: string; rows: { label: string; questionId: strin
     rows: [
       { label: "Test Environment",  questionId: "E.3",   fromQuestionnaire: true },
       { label: "Prod Environment",  questionId: "E.3.1", fromQuestionnaire: true },
-      { label: "Org HL7 IP",        questionId: "meta.hl7_ord_org_ip" },
-      { label: "Org HL7 Port",      questionId: "meta.hl7_ord_org_port" },
-      { label: "Silverback IP",     questionId: "meta.hl7_ord_sb_ip" },
-      { label: "Silverback Port",   questionId: "meta.hl7_ord_sb_port" },
-      { label: "NL IP",             questionId: "meta.hl7_ord_nl_ip" },
-      { label: "NL Port",           questionId: "meta.hl7_ord_nl_port" },
     ],
   },
   {
@@ -3208,12 +3190,18 @@ const MATRIX_SECTIONS: { title: string; rows: { label: string; questionId: strin
     rows: [
       { label: "Test Environment",  questionId: "E.5",   fromQuestionnaire: true },
       { label: "Prod Environment",  questionId: "E.5.1", fromQuestionnaire: true },
-      { label: "NL IP",             questionId: "meta.hl7_res_nl_ip" },
-      { label: "NL Port",           questionId: "meta.hl7_res_nl_port" },
-      { label: "Silverback IP",     questionId: "meta.hl7_res_sb_ip" },
-      { label: "Silverback Port",   questionId: "meta.hl7_res_sb_port" },
-      { label: "Org IP",            questionId: "meta.hl7_res_org_ip" },
-      { label: "Org Port",          questionId: "meta.hl7_res_org_port" },
+    ],
+  },
+  {
+    title: "Endpoints",
+    rows: [
+      { label: "Org IP",            questionId: "meta.ep_org_ip" },
+      { label: "Org DICOM Port",    questionId: "meta.ep_org_dicom_port" },
+      { label: "Org HL7 Port",      questionId: "meta.ep_org_hl7_port" },
+      { label: "NL IP",             questionId: "meta.ep_nl_ip" },
+      { label: "NL DICOM Port",     questionId: "meta.ep_nl_dicom_port" },
+      { label: "NL HL7 Port",       questionId: "meta.ep_nl_hl7_port" },
+      { label: "Silverback IP",     questionId: "meta.ep_sb_ip" },
     ],
   },
   {
@@ -3245,6 +3233,23 @@ type AuditMeta = { updatedBy?: string | null; updatedAt?: Date | string | null; 
 function fmtDate(d?: Date | string | null) {
   if (!d) return null;
   return new Date(d).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+}
+
+/** If a stored value is a JSON array, render it as a comma-separated list; otherwise return as-is. */
+function formatCellDisplay(raw: string): string {
+  if (!raw) return "";
+  const trimmed = raw.trim();
+  if (trimmed.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed.map((v: unknown) => String(v)).join(", ");
+      }
+    } catch {
+      // fall through
+    }
+  }
+  return raw;
 }
 
 /** Single editable cell — click to edit, hover shows copy + audit tooltip */
@@ -3321,7 +3326,7 @@ function MatrixCell({
         ) : isPhone && saved ? (
           <a href={`tel:${saved}`} onClick={e => e.stopPropagation()} className="hover:underline">{saved}</a>
         ) : (
-          <span className="font-mono text-sm">{saved || "—"}</span>
+          <span className="font-mono text-sm">{formatCellDisplay(saved) || "—"}</span>
         )}
         <Edit className="w-2.5 h-2.5 text-muted-foreground/30 opacity-0 group-hover:opacity-100 shrink-0" />
       </span>
@@ -3449,6 +3454,18 @@ type ConnectivityOrg = { id: number; name: string; slug: string; partnerName?: s
 function ConnectivityMatrix({ orgs }: { orgs: ConnectivityOrg[] }) {
   const utils = trpc.useUtils();
   const { data: allResponses = [], isLoading } = trpc.admin.getAllOrgResponses.useQuery();
+  const { data: allFiles = [] } = trpc.admin.getAllFiles.useQuery();
+  // Build map: orgId → first ARCH.diagram fileUrl
+  const archDiagramByOrg = useMemo(() => {
+    const map: Record<number, string> = {};
+    for (const f of allFiles) {
+      if (f.questionId === "ARCH.diagram" && f.organizationId && !map[f.organizationId]) {
+        map[f.organizationId] = f.fileUrl;
+      }
+    }
+    return map;
+  }, [allFiles]);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   // Org visibility filter
   const [visibleOrgIds, setVisibleOrgIds] = useState<Set<number>>(() => new Set(orgs.map(o => o.id)));
@@ -3460,7 +3477,9 @@ function ConnectivityMatrix({ orgs }: { orgs: ConnectivityOrg[] }) {
   const filteredOrgs = orgs.filter(o => visibleOrgIds.has(o.id));
 
   // Collapsed sections state
-  const [collapsedSections, setCollapsedSections] = useState<Set<number>>(new Set());
+  const [collapsedSections, setCollapsedSections] = useState<Set<number>>(
+    () => new Set(MATRIX_SECTIONS.map((_, i) => i))
+  );
   const toggleSection = (si: number) => setCollapsedSections(prev => {
     const next = new Set(prev);
     if (next.has(si)) { next.delete(si); } else { next.add(si); }
@@ -3536,7 +3555,7 @@ function ConnectivityMatrix({ orgs }: { orgs: ConnectivityOrg[] }) {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold">Production Connectivity Matrix</h2>
+          <h2 className="text-2xl font-bold">Connectivity Matrix</h2>
           <p className="text-sm text-muted-foreground mt-1">
             Live data — click any cell to edit, hover to copy or view audit history.
           </p>
@@ -3691,6 +3710,19 @@ function ConnectivityMatrix({ orgs }: { orgs: ConnectivityOrg[] }) {
                   <th key={org.id} className="text-left py-3 px-4 min-w-[10rem] border-r border-border last:border-r-0 bg-card">
                     <span className="font-bold block leading-tight">{org.name}</span>
                     {org.partnerName && <span className="text-xs font-normal text-muted-foreground">{org.partnerName}</span>}
+                    {archDiagramByOrg[org.id] && (
+                      <button
+                        onClick={() => setLightboxUrl(archDiagramByOrg[org.id])}
+                        className="mt-1.5 block w-16 h-10 rounded overflow-hidden border border-border hover:border-primary transition-colors focus:outline-none"
+                        title="View architecture diagram"
+                      >
+                        <img
+                          src={archDiagramByOrg[org.id]}
+                          alt="Architecture"
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
+                    )}
                   </th>
                 ))}
               </tr>
@@ -3760,6 +3792,22 @@ function ConnectivityMatrix({ orgs }: { orgs: ConnectivityOrg[] }) {
           </div>
         </div>
       )}
+
+      {/* Architecture diagram lightbox */}
+      <Dialog open={!!lightboxUrl} onOpenChange={open => { if (!open) setLightboxUrl(null); }}>
+        <DialogContent className="max-w-5xl w-full p-2 bg-background">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Architecture Diagram</DialogTitle>
+          </DialogHeader>
+          {lightboxUrl && (
+            <img
+              src={lightboxUrl}
+              alt="Architecture diagram"
+              className="w-full h-auto max-h-[85vh] object-contain rounded"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

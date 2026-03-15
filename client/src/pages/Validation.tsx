@@ -207,6 +207,81 @@ const phases: Phase[] = [
           { questionId: "L.8", label: "Go-Live Support", sectionId: "org-info" },
         ],
       },
+      {
+        name: "Reschedule a Study",
+        description: "Reschedule an existing order — verify worklist updates, prior linkage follows new appointment, and original order is closed",
+        relatedQuestions: [
+          { questionId: "IW.orders_description", label: "Orders Workflow", sectionId: "integration-workflows" },
+          { questionId: "G.3", label: "ORC-1 Values", sectionId: "hl7-dicom" },
+        ],
+      },
+      {
+        name: "Cancel a Study",
+        description: "Cancel a scheduled study — verify removal from worklist, cancellation message delivered to EHR, and no orphaned images",
+        relatedQuestions: [
+          { questionId: "IW.orders_description", label: "Orders Workflow", sectionId: "integration-workflows" },
+          { questionId: "G.3", label: "ORC-1 Values", sectionId: "hl7-dicom" },
+          { questionId: "G.4", label: "ORC-5 Values", sectionId: "hl7-dicom" },
+        ],
+      },
+      {
+        name: "End-to-End Study Completion",
+        description: "Perform a full study: order placed → patient checked in → images acquired → tech QC → radiologist reads → report signed → report delivered to EHR",
+        relatedQuestions: [
+          { questionId: "IW.orders_description", label: "Orders Workflow", sectionId: "integration-workflows" },
+          { questionId: "IW.images_description", label: "Images Workflow", sectionId: "integration-workflows" },
+          { questionId: "IW.reports_description", label: "Reports Workflow", sectionId: "integration-workflows" },
+          { questionId: "CF.1", label: "Procedure Codes", sectionId: "connectivity" },
+        ],
+      },
+      {
+        name: "Addendum Workflow",
+        description: "Add an addendum to a signed report — verify addendum appended (not overwritten), versioned ORU sent to EHR, and referring provider notified",
+        relatedQuestions: [
+          { questionId: "IW.reports_description", label: "Reports Workflow", sectionId: "integration-workflows" },
+          { questionId: "CF.3", label: "Sample ORU", sectionId: "connectivity" },
+        ],
+      },
+      {
+        name: "CT Dose & Tech Sheet Integration",
+        description: "Verify CT dose data (RDSR/DICOM SR) populates tech sheet fields and flows into report templates correctly; confirm dose values match modality output",
+        relatedQuestions: [
+          { questionId: "D.9", label: "DICOM SR / Clinical Data", sectionId: "hl7-dicom" },
+          { questionId: "IW.images_description", label: "Images Workflow", sectionId: "integration-workflows" },
+          { questionId: "ARCH.systems", label: "Systems Inventory", sectionId: "architecture" },
+        ],
+      },
+      {
+        name: "BI-RADS Custom Report Insertion",
+        description: "Verify BI-RADS structured reporting inserts correctly into mammography reports — category, recommendation, and laterality fields map to template",
+        relatedQuestions: [
+          { questionId: "IW.reports_description", label: "Reports Workflow", sectionId: "integration-workflows" },
+          { questionId: "CF.3", label: "Sample ORU", sectionId: "connectivity" },
+        ],
+      },
+      {
+        name: "Lung-RADS / Lung CA Mapping",
+        description: "Verify Lung-RADS structured reporting populates correctly — nodule size, category, and follow-up recommendation insert into lung screening report templates",
+        relatedQuestions: [
+          { questionId: "IW.reports_description", label: "Reports Workflow", sectionId: "integration-workflows" },
+          { questionId: "CF.3", label: "Sample ORU", sectionId: "connectivity" },
+        ],
+      },
+      {
+        name: "Study Merge",
+        description: "Merge two separate studies into one — verify combined images, updated worklist entry, and correct report association",
+        relatedQuestions: [
+          { questionId: "IW.images_description", label: "Images Workflow", sectionId: "integration-workflows" },
+        ],
+      },
+      {
+        name: "Study Split",
+        description: "Break apart a merged or incorrectly combined study — verify images route to correct separate orders and reports follow",
+        relatedQuestions: [
+          { questionId: "IW.images_description", label: "Images Workflow", sectionId: "integration-workflows" },
+          { questionId: "IW.orders_description", label: "Orders Workflow", sectionId: "integration-workflows" },
+        ],
+      },
     ],
   },
 ];
