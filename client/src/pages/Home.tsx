@@ -17,12 +17,8 @@ import {
   ArrowRight,
   Pencil,
   BookOpen,
-  ShieldCheck,
-  Wrench,
   Network,
   Image as ImageIcon,
-  AlertTriangle,
-  Clock,
   ChevronDown,
   ChevronRight,
   Trash2,
@@ -35,38 +31,6 @@ import { questionnaireSections } from "@shared/questionnaireData";
 import { calculateProgress } from "@shared/progressCalculation";
 import { PhiDisclaimer } from "@/components/PhiDisclaimer";
 
-// ── Mock checklist data (summary stats only) ────────────────────────────────
-const implementationTasks = [
-  { title: "VPN Tunnel Configuration", status: "Complete" },
-  { title: "Firewall Rules & Port Openings", status: "Complete" },
-  { title: "DICOM Endpoint Testing (Test Env)", status: "Complete" },
-  { title: "DICOM Endpoint Testing (Production)", status: "In Progress" },
-  { title: "ORM Interface Configuration", status: "Complete" },
-  { title: "ORU Interface Configuration", status: "In Progress" },
-  { title: "ADT Interface Configuration", status: "Not Started" },
-  { title: "HL7 Message Validation", status: "Not Started" },
-  { title: "Procedure Code Mapping", status: "Complete" },
-  { title: "User Account Provisioning", status: "Not Started" },
-  { title: "Worklist Configuration", status: "Not Started" },
-  { title: "Report Template Configuration", status: "Not Started" },
-  { title: "Full Order-to-Report Workflow Test", status: "Not Started" },
-  { title: "Go-Live Readiness Sign-Off", status: "Not Started" },
-];
-
-const validationTests = [
-  { name: "VPN Tunnel Connectivity", status: "Pass" },
-  { name: "DICOM Echo Test (C-ECHO)", status: "Pass" },
-  { name: "HL7 Port Connectivity", status: "Pass" },
-  { name: "ORM New Order (NW)", status: "Pass" },
-  { name: "ORM Cancel Order (CA)", status: "Pass" },
-  { name: "ORU Report Delivery", status: "Fail" },
-  { name: "ADT Patient Update", status: "Not Tested" },
-  { name: "DICOM Store from Modality", status: "Not Tested" },
-  { name: "Prior Image Query/Retrieve", status: "Not Tested" },
-  { name: "End-to-End Order Workflow", status: "Not Tested" },
-  { name: "Radiologist Reading Workflow", status: "Not Tested" },
-  { name: "Report Distribution", status: "Not Tested" },
-];
 
 // ── Collapsible Section ─────────────────────────────────────────────────────
 function CollapsibleSection({
@@ -182,14 +146,6 @@ export default function Home() {
     total: stats.total,
   }));
 
-  // Implementation checklist stats
-  const implCompleted = implementationTasks.filter((t) => t.status === "Complete").length;
-  const implTotal = implementationTasks.length;
-
-  // Validation stats
-  const valPassed = validationTests.filter((t) => t.status === "Pass").length;
-  const valFailed = validationTests.filter((t) => t.status === "Fail").length;
-  const valTotal = validationTests.length;
 
   if (orgLoading) {
     return (
@@ -396,102 +352,6 @@ export default function Home() {
             </Link>
           </CardContent>
         </CollapsibleSection>
-
-        {/* ── Validation Checklist ── */}
-        <Card className="border-border/50">
-          <div className="px-5 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <ShieldCheck className="w-5 h-5 text-primary" />
-              <h3 className="text-base font-semibold">Validation Checklist</h3>
-            </div>
-            <div className="flex items-center gap-2">
-              {valFailed > 0 && (
-                <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-xs">{valFailed} Failed</Badge>
-              )}
-              {(() => {
-                const notTested = validationTests.filter(t => t.status === "Not Tested").length;
-                return (
-                  <>
-                    <Badge variant="outline" className="text-xs bg-green-500/10 text-green-400 border-green-500/30">{valPassed} Passed</Badge>
-                    {notTested > 0 && <Badge variant="outline" className="text-xs text-muted-foreground">{notTested} Pending</Badge>}
-                  </>
-                );
-              })()}
-            </div>
-          </div>
-          <div className="px-5 pb-4">
-            <div className="flex gap-1 mb-3">
-              {validationTests.map((test, i) => (
-                <div
-                  key={i}
-                  title={test.name}
-                  className={`h-2 flex-1 rounded-sm ${
-                    test.status === "Pass" ? "bg-green-500" :
-                    test.status === "Fail" ? "bg-red-400" :
-                    "bg-muted-foreground/20"
-                  }`}
-                />
-              ))}
-            </div>
-            <p className="text-xs text-muted-foreground mb-3">
-              {valPassed} of {valTotal} tests passed{valFailed > 0 ? ` · ${valFailed} failed` : ""}
-            </p>
-            <Link href={`/org/${orgSlug}/validation`}>
-              <Button size="sm" variant="outline" className="w-full">
-                <ExternalLink className="w-4 h-4 mr-2" />
-                Open Validation Checklist
-              </Button>
-            </Link>
-          </div>
-        </Card>
-
-        {/* ── Implementation Checklist ── */}
-        <Card className="border-border/50">
-          <div className="px-5 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Wrench className="w-5 h-5 text-primary" />
-              <h3 className="text-base font-semibold">Implementation Checklist</h3>
-            </div>
-            <Badge
-              variant="outline"
-              className={`text-xs ${implCompleted === implTotal ? "border-green-500/40 text-green-400" : "border-border text-muted-foreground"}`}
-            >
-              {implCompleted}/{implTotal} Tasks
-            </Badge>
-          </div>
-          <div className="px-5 pb-4">
-            <div className="w-full bg-muted/30 rounded-full h-2 mb-3">
-              <div
-                className="bg-primary h-2 rounded-full transition-all"
-                style={{ width: `${implTotal > 0 ? Math.round((implCompleted / implTotal) * 100) : 0}%` }}
-              />
-            </div>
-            {(() => {
-              const inProgress = implementationTasks.filter(t => t.status === "In Progress");
-              const blocked = implementationTasks.filter(t => t.status === "Blocked");
-              const highlights = [...blocked, ...inProgress].slice(0, 3);
-              return highlights.length > 0 ? (
-                <div className="space-y-1 mb-3">
-                  {highlights.map((task, i) => (
-                    <div key={i} className="flex items-center gap-2 text-xs">
-                      {task.status === "Blocked"
-                        ? <AlertTriangle className="w-3 h-3 text-red-400 shrink-0" />
-                        : <Clock className="w-3 h-3 text-amber-400 shrink-0" />
-                      }
-                      <span className="text-muted-foreground truncate">{task.title}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : null;
-            })()}
-            <Link href={`/org/${orgSlug}/implement`}>
-              <Button size="sm" variant="outline" className="w-full">
-                <ExternalLink className="w-4 h-4 mr-2" />
-                Open Implementation Checklist
-              </Button>
-            </Link>
-          </div>
-        </Card>
 
         {/* ── Specifications ── */}
         {specs.length > 0 && (
