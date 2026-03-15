@@ -1,5 +1,5 @@
 /**
- * Implementation Checklist Page
+ * Task List Page
  * DB-backed per organization. Checkboxes auto-populate completion date.
  * Owner is a free-form text field. Each task has a comment and links to
  * the relevant intake question / validation page. Sections are collapsible.
@@ -227,7 +227,7 @@ export default function Implementation() {
           <div className="flex items-center gap-3">
             <img src="/images/flame-icon.png" alt="New Lantern" className="h-8 w-8" />
             <div>
-              <h1 className="text-xl font-bold text-foreground">Implementation Checklist</h1>
+              <h1 className="text-xl font-bold text-foreground">Task List</h1>
               <p className="text-sm text-muted-foreground">PACS Onboarding</p>
             </div>
           </div>

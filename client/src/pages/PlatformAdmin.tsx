@@ -1073,7 +1073,7 @@ export default function PlatformAdmin() {
                         <span>Testing</span>
                       </TableHead>
                       <TableHead className="text-center text-sm w-[200px]">
-                        <span>Implementation</span>
+                        <span>Task List</span>
                       </TableHead>
                       <TableHead className="text-center text-sm w-[70px]">Files</TableHead>
                       <TableHead className="text-center text-sm w-[70px]">Users</TableHead>

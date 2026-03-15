@@ -1,7 +1,7 @@
 /**
  * Site Dashboard — the main landing page for a specific organization
  * Shows: Architecture Diagram, Connectivity Info (Notion placeholder),
- * Implementation Questionnaire status, Validation Checklist, Implementation Checklist
+ * Implementation Questionnaire status, Validation Checklist, Task List
  */
 
 import { Button } from "@/components/ui/button";
