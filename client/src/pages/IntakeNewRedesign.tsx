@@ -350,17 +350,17 @@ function ArchitectureOverview({
 
       {/* ── Systems in Your Environment (full width below diagram) ── */}
       <div className="rounded-xl border border-border/60 bg-card/60 p-5 flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-base">Systems in Your Environment</h3>
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="font-semibold text-base flex-1 min-w-0">Systems in Your Environment</h3>
+          <div className="flex items-center gap-1 shrink-0">
             {systems.length > 0 && (
-              <span className="text-xs font-semibold tracking-wide text-green-400 uppercase mr-2">Populated</span>
+              <span className="text-xs font-semibold tracking-wide text-green-400 uppercase mr-1">Populated</span>
             )}
             <Button size="sm" variant="ghost" onClick={exportSystems} className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground" title="Export systems">
-              <FileDown className="w-3.5 h-3.5" /> Export
+              <FileDown className="w-3.5 h-3.5" /><span className="hidden sm:inline">Export</span>
             </Button>
             <Button size="sm" variant="ghost" onClick={() => systemsImportRef.current?.click()} className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground" title="Import systems">
-              <Import className="w-3.5 h-3.5" /> Import
+              <Import className="w-3.5 h-3.5" /><span className="hidden sm:inline">Import</span>
             </Button>
             <input ref={systemsImportRef} type="file" accept=".json" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) importSystems(f); e.target.value = ''; }} />
           </div>
@@ -404,24 +404,26 @@ function ArchitectureOverview({
             const current = getSystemForType(row.type);
             const vendors = vendorOptions[row.type] || VENDOR_OPTIONS[row.type] || [];
             return (
-              <div key={row.type} className="py-3 flex items-center gap-3">
-                <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded border w-[130px] text-center ${SYSTEM_TYPE_COLORS[row.type] || SYSTEM_TYPE_COLORS['Other']}`}>{row.label}</span>
-                <select
-                  value={current?.name || ''}
-                  onChange={e => {
-                    if (e.target.value) setDefaultRowVendor(row.type, e.target.value);
-                    else clearDefaultRow(row.type);
-                  }}
-                  className="flex-1 h-8 text-sm rounded-md border border-input bg-background/50 px-2 text-foreground"
-                >
-                  <option value="">Select {row.label}...</option>
-                  {vendors.map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
-                {current && (
-                  <button onClick={() => clearDefaultRow(row.type)} className="text-muted-foreground hover:text-red-400 shrink-0" title="Clear">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
+              <div key={row.type} className="py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded border self-start sm:w-[130px] sm:text-center ${SYSTEM_TYPE_COLORS[row.type] || SYSTEM_TYPE_COLORS['Other']}`}>{row.label}</span>
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <select
+                    value={current?.name || ''}
+                    onChange={e => {
+                      if (e.target.value) setDefaultRowVendor(row.type, e.target.value);
+                      else clearDefaultRow(row.type);
+                    }}
+                    className="flex-1 h-8 text-sm rounded-md border border-input bg-background/50 px-2 text-foreground"
+                  >
+                    <option value="">Select {row.label}...</option>
+                    {vendors.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                  {current && (
+                    <button onClick={() => clearDefaultRow(row.type)} className="text-muted-foreground hover:text-red-400 shrink-0" title="Clear">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })}
