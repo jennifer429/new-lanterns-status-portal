@@ -6,6 +6,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ConnectivityTable, type ConnectivityRow } from "@/components/ConnectivityTable";
 import { Badge } from "@/components/ui/badge";
 import {
   ClipboardList,
@@ -34,7 +35,7 @@ import {
 } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { questionnaireSections } from "@shared/questionnaireData";
 import { calculateProgress } from "@shared/progressCalculation";
 import { PhiDisclaimer } from "@/components/PhiDisclaimer";
@@ -308,12 +309,66 @@ export default function Home() {
   // Fetch New Lantern specifications
   const { data: specs = [] } = trpc.admin.getSpecifications.useQuery();
 
-  // Fetch connectivity rows from Notion
+  // Connectivity — live Notion-backed state
   const { data: connectivityData, isLoading: connectivityLoading } =
     trpc.connectivity.getForOrg.useQuery(
       { organizationSlug: orgSlug, organizationName: organization?.name },
       { enabled: !!orgSlug }
     );
+
+  const [connRows, setConnRows] = useState<ConnectivityRow[]>([]);
+  // IDs that exist as Notion pages (vs newly-added local rows)
+  const notionPageIds = useRef<Set<string>>(new Set());
+  const [connSaving, setConnSaving] = useState(false);
+
+  useEffect(() => {
+    if (connectivityData?.rows) {
+      setConnRows(connectivityData.rows as ConnectivityRow[]);
+      notionPageIds.current = new Set(connectivityData.rows.map(r => r.id));
+    }
+  }, [connectivityData]);
+
+  const createRowMutation = trpc.connectivity.createRow.useMutation();
+  const updateRowMutation = trpc.connectivity.updateRow.useMutation();
+  const archiveRowMutation = trpc.connectivity.archiveRow.useMutation();
+
+  const handleConnChange = async (newRows: ConnectivityRow[]) => {
+    const oldIds = new Set(connRows.map(r => r.id));
+    const newIds = new Set(newRows.map(r => r.id));
+    setConnRows(newRows); // optimistic
+    if (!connectivityData?.configured || !organization?.name) return;
+    setConnSaving(true);
+    try {
+      // Deletions
+      for (const row of connRows) {
+        if (!newIds.has(row.id) && notionPageIds.current.has(row.id)) {
+          archiveRowMutation.mutate({ pageId: row.id });
+          notionPageIds.current.delete(row.id);
+        }
+      }
+      // Additions & updates
+      for (const row of newRows) {
+        if (!oldIds.has(row.id)) {
+          // New row — create in Notion, swap in real page ID
+          createRowMutation.mutate(
+            { organizationName: organization.name, row },
+            { onSuccess: ({ pageId }) => {
+                notionPageIds.current.add(pageId);
+                setConnRows(prev => prev.map(r => r.id === row.id ? { ...r, id: pageId } : r));
+              }
+            }
+          );
+        } else if (notionPageIds.current.has(row.id)) {
+          const old = connRows.find(r => r.id === row.id);
+          if (JSON.stringify(old) !== JSON.stringify(row)) {
+            updateRowMutation.mutate({ pageId: row.id, organizationName: organization.name, row });
+          }
+        }
+      }
+    } finally {
+      setConnSaving(false);
+    }
+  };
 
   // Delete file mutation
   const utils = trpc.useUtils();
@@ -668,99 +723,46 @@ export default function Home() {
           </CardContent>
         </CollapsibleSection>
 
-        {/* ── Connectivity Info (Notion) ── */}
+        {/* ── Connectivity (live Notion) ── */}
         <CollapsibleSection
           title="Connectivity"
           icon={<Network className="w-5 h-5 text-primary" />}
           badge={
-            connectivityData?.rows.length ? (
-              <Badge variant="outline" className="text-xs border-green-500/40 text-green-400">
-                {connectivityData.rows.length} {connectivityData.rows.length === 1 ? "connection" : "connections"}
+            connectivityLoading ? (
+              <Badge variant="outline" className="text-xs text-muted-foreground gap-1">
+                <Loader2 className="w-3 h-3 animate-spin" /> Loading…
+              </Badge>
+            ) : connRows.length ? (
+              <Badge variant="outline" className={cn("text-xs gap-1", connSaving ? "text-muted-foreground" : "border-green-500/40 text-green-400")}>
+                {connSaving && <Loader2 className="w-3 h-3 animate-spin" />}
+                {connRows.length} {connRows.length === 1 ? "connection" : "connections"}
               </Badge>
             ) : (
-              <Badge variant="outline" className="text-xs text-muted-foreground">
-                Notion
-              </Badge>
+              <Badge variant="outline" className="text-xs text-muted-foreground">Notion</Badge>
             )
           }
           defaultOpen={false}
         >
-          <CardContent className="p-5">
-            {connectivityLoading ? (
-              <div className="flex items-center justify-center py-10 gap-2 text-muted-foreground">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-sm">Loading from Notion…</span>
-              </div>
-            ) : connectivityData?.error ? (
-              <div className="flex items-center gap-3 py-6 px-4 rounded-lg bg-destructive/10 border border-destructive/20">
+          <CardContent className="p-0">
+            {connectivityData?.error ? (
+              <div className="flex items-center gap-3 py-6 px-5 rounded-b-xl bg-destructive/10 border-t border-destructive/20">
                 <AlertCircle className="w-4 h-4 text-destructive shrink-0" />
                 <p className="text-sm text-destructive">Notion error: {connectivityData.error}</p>
               </div>
             ) : !connectivityData?.configured ? (
-              <div className="flex flex-col items-center justify-center py-10 gap-3 border-2 border-dashed border-border/40 rounded-xl bg-muted/10">
-                <div className="w-14 h-14 rounded-2xl bg-muted/50 border border-border/50 flex items-center justify-center">
-                  <Network className="w-6 h-6 text-muted-foreground/50" />
-                </div>
+              <div className="flex flex-col items-center justify-center py-10 gap-3 mx-5 my-5 border-2 border-dashed border-border/40 rounded-xl bg-muted/10">
+                <Network className="w-7 h-7 text-muted-foreground/40" />
                 <div className="text-center">
-                  <p className="text-sm font-medium text-foreground">Notion API key not configured</p>
-                  <p className="text-xs text-muted-foreground mt-0.5 max-w-xs">Set NOTION_API_KEY in your environment to pull live connectivity data</p>
-                </div>
-              </div>
-            ) : connectivityData.rows.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 gap-3 border-2 border-dashed border-border/40 rounded-xl bg-muted/10">
-                <div className="w-14 h-14 rounded-2xl bg-muted/50 border border-border/50 flex items-center justify-center">
-                  <Network className="w-6 h-6 text-muted-foreground/50" />
-                </div>
-                <div className="text-center">
-                  <p className="text-sm font-medium text-foreground">No connections found for this site</p>
-                  <p className="text-xs text-muted-foreground mt-0.5 max-w-xs">Add rows to your Notion connectivity database tagged with this site's name</p>
+                  <p className="text-sm font-medium">Notion API key not configured</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Set NOTION_API_KEY to enable live connectivity editing</p>
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col divide-y divide-border/30">
-                {connectivityData.rows.map(row => (
-                  <div key={row.id} className="py-3 first:pt-0 last:pb-0">
-                    {/* Type badge + systems */}
-                    <div className="flex flex-wrap items-start gap-2 mb-1.5">
-                      {row.trafficType && (
-                        <span className={cn(
-                          "shrink-0 text-xs font-semibold px-2 py-0.5 rounded border",
-                          row.trafficType.startsWith("DICOM")
-                            ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
-                            : row.trafficType.startsWith("HL7")
-                              ? "bg-blue-500/20 text-blue-300 border-blue-500/30"
-                              : "bg-muted/40 text-muted-foreground border-border/50"
-                        )}>
-                          {row.trafficType}
-                        </span>
-                      )}
-                      <div className="flex items-center gap-1.5 flex-wrap text-sm">
-                        {row.sourceSystem && <span className="font-medium">{row.sourceSystem}</span>}
-                        {(row.sourceSystem || row.destinationSystem) && (
-                          <span className="text-muted-foreground">→</span>
-                        )}
-                        {row.destinationSystem && <span className="font-medium">{row.destinationSystem}</span>}
-                      </div>
-                      <div className="ml-auto flex items-center gap-1 shrink-0">
-                        {row.envTest && <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">Test</span>}
-                        {row.envProd && <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/30">Prod</span>}
-                      </div>
-                    </div>
-                    {/* IPs, ports, AE titles */}
-                    <div className="flex flex-wrap gap-x-6 gap-y-0.5 pl-0.5 text-xs text-muted-foreground">
-                      {(row.sourceIp || row.sourcePort) && (
-                        <span>Src: {[row.sourceIp, row.sourcePort].filter(Boolean).join(":")}</span>
-                      )}
-                      {(row.destIp || row.destPort) && (
-                        <span>Dst: {[row.destIp, row.destPort].filter(Boolean).join(":")}</span>
-                      )}
-                      {row.sourceAeTitle && <span>Src AE: {row.sourceAeTitle}</span>}
-                      {row.destAeTitle && <span>Dst AE: {row.destAeTitle}</span>}
-                      {row.notes && <span className="italic text-muted-foreground/70">{row.notes}</span>}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <ConnectivityTable
+                rows={connRows}
+                systems={(() => { try { const r = existingResponses?.find((r: any) => r.questionId === 'ARCH.systems'); return r?.response ? JSON.parse(r.response) : []; } catch { return []; } })()}
+                onChange={handleConnChange}
+              />
             )}
           </CardContent>
         </CollapsibleSection>

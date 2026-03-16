@@ -577,80 +577,70 @@ export default function IntakeNewRedesign() {
     { enabled: !!slug }
   );
 
-  // Notion connectivity — import & sync
-  const { refetch: fetchNotionRows, isFetching: notionImporting } =
-    trpc.connectivity.getForOrg.useQuery(
-      { organizationSlug: slug || "", organizationName: org?.name },
-      { enabled: false, staleTime: 0 }
-    );
+  // Notion connectivity — live read/write
+  const { data: notionConnData } = trpc.connectivity.getForOrg.useQuery(
+    { organizationSlug: slug || "", organizationName: org?.name },
+    { enabled: !!slug && !!org }
+  );
 
-  const notionSyncMutation = trpc.connectivity.syncToNotion.useMutation({
-    onSuccess: (result) => {
-      if (result.ok) {
-        const msg = `Synced to Notion: ${result.created} created, ${result.updated} updated`;
-        toast.success(result.errors?.length ? msg + ` (${result.errors.length} errors)` : msg);
-      } else {
-        toast.error(`Notion sync failed: ${result.error}`);
-      }
-    },
-    onError: (err) => toast.error(`Notion sync error: ${err.message}`),
-  });
+  const [connRows, setConnRows] = useState<ConnectivityRow[]>([]);
+  const notionPageIds = useRef<Set<string>>(new Set());
 
-  const handleImportFromNotion = async () => {
-    const result = await fetchNotionRows();
-    if (!result.data?.configured) {
-      toast.error("Notion API key not configured on the server");
-      return;
-    }
-    const notionRows: ConnectivityRow[] = (result.data?.rows ?? []).map(r => ({
-      id: r.id,
-      trafficType: r.trafficType,
-      sourceSystem: r.sourceSystem,
-      destinationSystem: r.destinationSystem,
-      sourceIp: r.sourceIp,
-      sourcePort: r.sourcePort,
-      destIp: r.destIp,
-      destPort: r.destPort,
-      sourceAeTitle: r.sourceAeTitle,
-      destAeTitle: r.destAeTitle,
-      envTest: r.envTest,
-      envProd: r.envProd,
-      notes: r.notes,
-    }));
-    if (notionRows.length === 0) {
-      toast.info("No connectivity rows found in Notion for this site");
-      return;
-    }
-    setResponses(prev => ({ ...prev, 'CONN.endpoints': notionRows }));
-    if (slug && user?.email) {
-      saveMutation.mutate({
-        organizationSlug: slug,
-        questionId: 'CONN.endpoints',
-        response: JSON.stringify(notionRows),
-        userEmail: user.email,
-      });
-    }
-    toast.success(`Imported ${notionRows.length} rows from Notion`);
-  };
-
-  const handleSyncToNotion = () => {
-    if (!slug || !org?.name) return;
-    const currentRows: ConnectivityRow[] = (() => {
+  // Seed from Notion on load; fall back to local DB if Notion has no rows
+  useEffect(() => {
+    if (notionConnData?.rows && notionConnData.rows.length > 0) {
+      setConnRows(notionConnData.rows as ConnectivityRow[]);
+      notionPageIds.current = new Set(notionConnData.rows.map(r => r.id));
+    } else if (notionConnData !== undefined) {
+      // Notion configured but empty — fall back to local DB data
       try {
         const v = responses['CONN.endpoints'];
-        if (!v) return [];
-        return typeof v === 'string' ? JSON.parse(v) : v;
-      } catch { return []; }
-    })();
-    if (currentRows.length === 0) {
-      toast.info("No connectivity rows to sync");
-      return;
+        if (v) setConnRows(typeof v === 'string' ? JSON.parse(v) : v);
+      } catch { /* ignore */ }
     }
-    notionSyncMutation.mutate({
-      organizationSlug: slug,
-      organizationName: org.name,
-      rows: currentRows,
-    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notionConnData]);
+
+  const createConnRow = trpc.connectivity.createRow.useMutation();
+  const updateConnRow = trpc.connectivity.updateRow.useMutation();
+  const archiveConnRow = trpc.connectivity.archiveRow.useMutation();
+
+  const handleConnChange = async (newRows: ConnectivityRow[]) => {
+    const oldIds = new Set(connRows.map(r => r.id));
+    const newIds = new Set(newRows.map(r => r.id));
+    setConnRows(newRows); // optimistic
+
+    // Always keep local DB in sync as backup
+    if (slug && user?.email) {
+      saveMutation.mutate({ organizationSlug: slug, questionId: 'CONN.endpoints', response: JSON.stringify(newRows), userEmail: user.email });
+    }
+
+    // Write-through to Notion if configured
+    if (!notionConnData?.configured || !org?.name) return;
+
+    for (const row of connRows) {
+      if (!newIds.has(row.id) && notionPageIds.current.has(row.id)) {
+        archiveConnRow.mutate({ pageId: row.id });
+        notionPageIds.current.delete(row.id);
+      }
+    }
+    for (const row of newRows) {
+      if (!oldIds.has(row.id)) {
+        createConnRow.mutate(
+          { organizationName: org.name, row },
+          { onSuccess: ({ pageId }) => {
+              notionPageIds.current.add(pageId);
+              setConnRows(prev => prev.map(r => r.id === row.id ? { ...r, id: pageId } : r));
+            }
+          }
+        );
+      } else if (notionPageIds.current.has(row.id)) {
+        const old = connRows.find(r => r.id === row.id);
+        if (JSON.stringify(old) !== JSON.stringify(row)) {
+          updateConnRow.mutate({ pageId: row.id, organizationName: org.name, row });
+        }
+      }
+    }
   };
 
   // Fetch partner templates from database
@@ -1662,50 +1652,14 @@ export default function IntakeNewRedesign() {
 
                   {/* Endpoint Table */}
                   <div className="space-y-3">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div>
-                        <h3 className="text-lg font-semibold">Network Endpoints</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Add each network endpoint that will carry traffic between your systems and New Lantern. Include DICOM, HL7, and any other connections for both test and production environments.
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0 pt-0.5">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 text-xs gap-1.5 border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/10"
-                          onClick={handleImportFromNotion}
-                          disabled={notionImporting}
-                          title="Replace table with rows from Notion"
-                        >
-                          {notionImporting
-                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            : <RefreshCw className="w-3.5 h-3.5" />}
-                          Import from Notion
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 text-xs gap-1.5 border-green-500/40 text-green-400 hover:bg-green-500/10"
-                          onClick={handleSyncToNotion}
-                          disabled={notionSyncMutation.isPending}
-                          title="Push current rows back to Notion"
-                        >
-                          {notionSyncMutation.isPending
-                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            : <Upload className="w-3.5 h-3.5" />}
-                          Sync to Notion
-                        </Button>
-                      </div>
+                    <div>
+                      <h3 className="text-lg font-semibold">Network Endpoints</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Add each network endpoint that will carry traffic between your systems and New Lantern. Include DICOM, HL7, and any other connections for both test and production environments.
+                      </p>
                     </div>
                     <ConnectivityTable
-                      rows={(() => {
-                        try {
-                          const v = responses['CONN.endpoints'];
-                          if (!v) return [];
-                          return typeof v === 'string' ? JSON.parse(v) : v;
-                        } catch { return []; }
-                      })()}
+                      rows={connRows}
                       systems={(() => {
                         try {
                           const v = responses['ARCH.systems'];
@@ -1713,17 +1667,7 @@ export default function IntakeNewRedesign() {
                           return typeof v === 'string' ? JSON.parse(v) : v;
                         } catch { return []; }
                       })()}
-                      onChange={(rows) => {
-                        setResponses(prev => ({ ...prev, ['CONN.endpoints']: rows }));
-                        if (slug && user?.email) {
-                          saveMutation.mutate({
-                            organizationSlug: slug,
-                            questionId: 'CONN.endpoints',
-                            response: JSON.stringify(rows),
-                            userEmail: user.email,
-                          });
-                        }
-                      }}
+                      onChange={handleConnChange}
                     />
                   </div>
 

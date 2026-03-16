@@ -141,6 +141,23 @@ function rowKey(trafficType: string, sourceSystem: string, destinationSystem: st
   return [trafficType, sourceSystem, destinationSystem].map(normalise).join("|");
 }
 
+// ── Schema cache (5 min TTL) ──────────────────────────────────────────────────
+
+let _schemaCache: { data: any; ts: number } | null = null;
+
+async function getCachedSchema(client: any, dbId: string) {
+  const now = Date.now();
+  if (_schemaCache && now - _schemaCache.ts < 5 * 60 * 1000) return _schemaCache.data;
+  const schema = await client.databases.retrieve({ database_id: dbId });
+  _schemaCache = { data: schema, ts: now };
+  return schema;
+}
+
+async function getSchemaMap(client: any, dbId: string) {
+  const schema = await getCachedSchema(client, dbId);
+  return buildSchemaMap(schema);
+}
+
 // ── Router ────────────────────────────────────────────────────────────────────
 
 const ConnectivityRowSchema = z.object({
@@ -310,5 +327,42 @@ export const connectivityRouter = router({
         console.error("Notion sync error:", error?.message ?? error);
         return { ok: false, error: String(error?.message ?? "Unknown error") };
       }
+    }),
+
+  /** Create a new Notion page for one connectivity row. Returns the new Notion page ID. */
+  createRow: publicProcedure
+    .input(z.object({ organizationName: z.string(), row: ConnectivityRowSchema }))
+    .mutation(async ({ input }) => {
+      const client = getNotionClient();
+      if (!client || !ENV.notionConnectivityDbId) throw new Error("Notion not configured");
+      const { schemaMap, titlePropName } = await getSchemaMap(client, ENV.notionConnectivityDbId);
+      const properties = buildRowProperties(input.row, schemaMap, titlePropName, input.organizationName);
+      const page = await client.pages.create({
+        parent: { database_id: ENV.notionConnectivityDbId },
+        properties,
+      });
+      return { pageId: page.id };
+    }),
+
+  /** Update an existing Notion page for one connectivity row. */
+  updateRow: publicProcedure
+    .input(z.object({ pageId: z.string(), organizationName: z.string(), row: ConnectivityRowSchema }))
+    .mutation(async ({ input }) => {
+      const client = getNotionClient();
+      if (!client || !ENV.notionConnectivityDbId) throw new Error("Notion not configured");
+      const { schemaMap, titlePropName } = await getSchemaMap(client, ENV.notionConnectivityDbId);
+      const properties = buildRowProperties(input.row, schemaMap, titlePropName, input.organizationName);
+      await client.pages.update({ page_id: input.pageId, properties });
+      return { ok: true };
+    }),
+
+  /** Archive (soft-delete) a Notion page. */
+  archiveRow: publicProcedure
+    .input(z.object({ pageId: z.string() }))
+    .mutation(async ({ input }) => {
+      const client = getNotionClient();
+      if (!client) throw new Error("Notion not configured");
+      await client.pages.update({ page_id: input.pageId, archived: true });
+      return { ok: true };
     }),
 });
