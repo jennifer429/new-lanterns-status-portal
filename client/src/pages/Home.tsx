@@ -29,6 +29,8 @@ import {
   Activity,
   BarChart3,
   ArrowUpRight,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -305,6 +307,13 @@ export default function Home() {
 
   // Fetch New Lantern specifications
   const { data: specs = [] } = trpc.admin.getSpecifications.useQuery();
+
+  // Fetch connectivity rows from Notion
+  const { data: connectivityData, isLoading: connectivityLoading } =
+    trpc.connectivity.getForOrg.useQuery(
+      { organizationSlug: orgSlug, organizationName: organization?.name },
+      { enabled: !!orgSlug }
+    );
 
   // Delete file mutation
   const utils = trpc.useUtils();
@@ -659,30 +668,100 @@ export default function Home() {
           </CardContent>
         </CollapsibleSection>
 
-        {/* ── Connectivity Info (Notion placeholder) ── */}
+        {/* ── Connectivity Info (Notion) ── */}
         <CollapsibleSection
-          title="Connectivity Info"
+          title="Connectivity"
           icon={<Network className="w-5 h-5 text-primary" />}
           badge={
-            <Badge
-              variant="outline"
-              className="text-xs text-muted-foreground"
-            >
-              Notion Database
-            </Badge>
+            connectivityData?.rows.length ? (
+              <Badge variant="outline" className="text-xs border-green-500/40 text-green-400">
+                {connectivityData.rows.length} {connectivityData.rows.length === 1 ? "connection" : "connections"}
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-xs text-muted-foreground">
+                Notion
+              </Badge>
+            )
           }
           defaultOpen={false}
         >
           <CardContent className="p-5">
-            <div className="flex flex-col items-center justify-center py-10 gap-3 border-2 border-dashed border-border/40 rounded-xl bg-muted/10">
-              <div className="w-14 h-14 rounded-2xl bg-muted/50 border border-border/50 flex items-center justify-center">
-                <Network className="w-6 h-6 text-muted-foreground/50" />
+            {connectivityLoading ? (
+              <div className="flex items-center justify-center py-10 gap-2 text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-sm">Loading from Notion…</span>
               </div>
-              <div className="text-center">
-                <p className="text-sm font-medium text-foreground">Notion integration coming soon</p>
-                <p className="text-xs text-muted-foreground mt-0.5 max-w-xs">AE Titles, IPs, and ports for this site will appear here once connected</p>
+            ) : connectivityData?.error ? (
+              <div className="flex items-center gap-3 py-6 px-4 rounded-lg bg-destructive/10 border border-destructive/20">
+                <AlertCircle className="w-4 h-4 text-destructive shrink-0" />
+                <p className="text-sm text-destructive">Notion error: {connectivityData.error}</p>
               </div>
-            </div>
+            ) : !connectivityData?.configured ? (
+              <div className="flex flex-col items-center justify-center py-10 gap-3 border-2 border-dashed border-border/40 rounded-xl bg-muted/10">
+                <div className="w-14 h-14 rounded-2xl bg-muted/50 border border-border/50 flex items-center justify-center">
+                  <Network className="w-6 h-6 text-muted-foreground/50" />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-medium text-foreground">Notion API key not configured</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 max-w-xs">Set NOTION_API_KEY in your environment to pull live connectivity data</p>
+                </div>
+              </div>
+            ) : connectivityData.rows.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 gap-3 border-2 border-dashed border-border/40 rounded-xl bg-muted/10">
+                <div className="w-14 h-14 rounded-2xl bg-muted/50 border border-border/50 flex items-center justify-center">
+                  <Network className="w-6 h-6 text-muted-foreground/50" />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-medium text-foreground">No connections found for this site</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 max-w-xs">Add rows to your Notion connectivity database tagged with this site's name</p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col divide-y divide-border/30">
+                {connectivityData.rows.map(row => (
+                  <div key={row.id} className="py-3 first:pt-0 last:pb-0">
+                    {/* Type badge + systems */}
+                    <div className="flex flex-wrap items-start gap-2 mb-1.5">
+                      {row.trafficType && (
+                        <span className={cn(
+                          "shrink-0 text-xs font-semibold px-2 py-0.5 rounded border",
+                          row.trafficType.startsWith("DICOM")
+                            ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
+                            : row.trafficType.startsWith("HL7")
+                              ? "bg-blue-500/20 text-blue-300 border-blue-500/30"
+                              : "bg-muted/40 text-muted-foreground border-border/50"
+                        )}>
+                          {row.trafficType}
+                        </span>
+                      )}
+                      <div className="flex items-center gap-1.5 flex-wrap text-sm">
+                        {row.sourceSystem && <span className="font-medium">{row.sourceSystem}</span>}
+                        {(row.sourceSystem || row.destinationSystem) && (
+                          <span className="text-muted-foreground">→</span>
+                        )}
+                        {row.destinationSystem && <span className="font-medium">{row.destinationSystem}</span>}
+                      </div>
+                      <div className="ml-auto flex items-center gap-1 shrink-0">
+                        {row.envTest && <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">Test</span>}
+                        {row.envProd && <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/30">Prod</span>}
+                      </div>
+                    </div>
+                    {/* IPs, ports, AE titles */}
+                    <div className="flex flex-wrap gap-x-6 gap-y-0.5 pl-0.5 text-xs text-muted-foreground">
+                      {(row.sourceIp || row.sourcePort) && (
+                        <span>Src: {[row.sourceIp, row.sourcePort].filter(Boolean).join(":")}</span>
+                      )}
+                      {(row.destIp || row.destPort) && (
+                        <span>Dst: {[row.destIp, row.destPort].filter(Boolean).join(":")}</span>
+                      )}
+                      {row.sourceAeTitle && <span>Src AE: {row.sourceAeTitle}</span>}
+                      {row.destAeTitle && <span>Dst AE: {row.destAeTitle}</span>}
+                      {row.notes && <span className="italic text-muted-foreground/70">{row.notes}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </CollapsibleSection>
 
