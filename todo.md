@@ -2114,3 +2114,6 @@
 - [x] Smooth scroll behavior globally
 - [x] Better font weight imports for typographic range
 - [x] Glass-effect header with backdrop-blur
+
+## Remove Repetitive Sections from Org Dashboard (Mar 15, 2026)
+- [x] Remove Questionnaire Sections, Testing Checklist, and Implementation Checklist collapsible sections from bottom of Org Dashboard (duplicates workflow cards above)
