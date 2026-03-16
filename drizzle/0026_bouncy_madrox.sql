@@ -1,0 +1,1 @@
+ALTER TABLE `taskCompletion` ADD `targetDate` varchar(20);

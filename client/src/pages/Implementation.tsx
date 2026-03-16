@@ -17,6 +17,9 @@ import {
   ChevronRight,
   MessageSquare,
   ExternalLink,
+  CheckSquare,
+  XSquare,
+  CalendarCheck,
 } from "lucide-react";
 import { useRoute, Link } from "wouter";
 import { cn } from "@/lib/utils";
@@ -244,15 +247,77 @@ export default function Implementation() {
     return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
   }
 
+  function todayStr() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  // ── Bulk actions per section ──────────────────────────────────────────────────
+
+  function bulkCompleteSection(section: SectionDef) {
+    const today = todayStr();
+    section.tasks.forEach(task => {
+      const current = getMerged(task.id);
+      if (!current.completed) {
+        const merged = { ...current, completed: true, completedAt: new Date(), targetDate: current.targetDate || today };
+        setLocalOverrides(prev => ({ ...prev, [task.id]: merged }));
+        updateTask.mutate({
+          organizationSlug: slug,
+          taskId: task.id,
+          sectionName: section.title,
+          completed: true,
+          owner: merged.owner || undefined,
+          targetDate: merged.targetDate || undefined,
+          notes: merged.notes || undefined,
+        });
+      }
+    });
+  }
+
+  function bulkResetSection(section: SectionDef) {
+    section.tasks.forEach(task => {
+      const current = getMerged(task.id);
+      if (current.completed) {
+        const merged = { ...current, completed: false, completedAt: null };
+        setLocalOverrides(prev => ({ ...prev, [task.id]: merged }));
+        updateTask.mutate({
+          organizationSlug: slug,
+          taskId: task.id,
+          sectionName: section.title,
+          completed: false,
+          owner: merged.owner || undefined,
+          targetDate: merged.targetDate || undefined,
+          notes: merged.notes || undefined,
+        });
+      }
+    });
+  }
+
+  function bulkSetDateSection(section: SectionDef, date: string) {
+    section.tasks.forEach(task => {
+      const current = getMerged(task.id);
+      const merged = { ...current, targetDate: date };
+      setLocalOverrides(prev => ({ ...prev, [task.id]: merged }));
+      updateTask.mutate({
+        organizationSlug: slug,
+        taskId: task.id,
+        sectionName: section.title,
+        completed: merged.completed,
+        owner: merged.owner || undefined,
+        targetDate: date || undefined,
+        notes: merged.notes || undefined,
+      });
+    });
+  }
+
   const allTaskIds = SECTION_DEFS.flatMap(s => s.tasks.map(t => t.id));
   const total = allTaskIds.length;
   const completed = allTaskIds.filter(id => getMerged(id).completed).length;
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background animate-page-in">
       {/* Header */}
-      <header className="border-b border-border/50 bg-card/80 backdrop-blur-md sticky top-0 z-30">
+      <header className="header-glass sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src="/images/flame-icon.png" alt="New Lantern" className="h-8 w-8" />
@@ -261,7 +326,7 @@ export default function Implementation() {
               <p className="text-sm text-muted-foreground">PACS Onboarding</p>
             </div>
           </div>
-          <Link href={`/org/${slug}`} className="text-sm text-foreground hover:text-primary transition-colors">
+          <Link href={`/org/${slug}`} className="text-sm text-foreground hover:text-primary transition-colors font-medium">
             Back to Dashboard
           </Link>
         </div>
@@ -297,7 +362,7 @@ export default function Implementation() {
                 const isCollapsed = !!collapsedSections[section.id];
 
                 return (
-                  <Card key={section.id} className="border-border/50 overflow-hidden">
+                  <Card key={section.id} className="card-elevated overflow-hidden">
                     {/* Collapsible header */}
                     <button
                       onClick={() => setCollapsedSections(prev => ({ ...prev, [section.id]: !isCollapsed }))}
@@ -318,9 +383,9 @@ export default function Implementation() {
                       <Badge
                         variant="outline"
                         className={cn(
-                          "text-xs",
+                          "text-xs font-semibold",
                           allDone
-                            ? "border-green-500/40 text-green-400"
+                            ? "border-emerald-500/40 text-emerald-400"
                             : sectionCompleted > 0
                               ? "border-primary/40 text-primary"
                               : "border-border text-foreground"
@@ -329,6 +394,51 @@ export default function Implementation() {
                         {sectionCompleted}/{sectionTotal} Complete
                       </Badge>
                     </button>
+
+                    {/* Bulk action toolbar — visible when expanded */}
+                    {!isCollapsed && (
+                      <div className="flex flex-wrap items-center gap-3 px-5 py-2.5 border-b border-border/20 bg-muted/10">
+                        <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mr-1">Actions</span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); bulkCompleteSection(section); }}
+                          disabled={allDone}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 text-xs transition-colors",
+                            allDone
+                              ? "text-muted-foreground/30 cursor-not-allowed"
+                              : "text-primary hover:text-primary/80 cursor-pointer"
+                          )}
+                        >
+                          <CheckSquare className="w-3.5 h-3.5" />
+                          Complete All
+                        </button>
+                        <span className="text-border">|</span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); bulkResetSection(section); }}
+                          disabled={sectionCompleted === 0}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 text-xs transition-colors",
+                            sectionCompleted === 0
+                              ? "text-muted-foreground/30 cursor-not-allowed"
+                              : "text-muted-foreground hover:text-foreground cursor-pointer"
+                          )}
+                        >
+                          <XSquare className="w-3.5 h-3.5" />
+                          Reset All
+                        </button>
+                        <span className="text-border">|</span>
+                        <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <CalendarCheck className="w-3.5 h-3.5" />
+                          <span>Set dates:</span>
+                          <input
+                            type="date"
+                            defaultValue={todayStr()}
+                            onChange={(e) => { if (e.target.value) bulkSetDateSection(section, e.target.value); }}
+                            className="bg-transparent border-b border-border/40 px-1 py-0.5 text-xs text-foreground focus:outline-none focus:border-primary/60 [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
+                          />
+                        </div>
+                      </div>
+                    )}
 
                     {/* Collapsible content */}
                     <div className={`collapsible-body ${!isCollapsed ? "open" : ""}`}><div>
@@ -479,7 +589,7 @@ export default function Implementation() {
 
             {/* Right sidebar */}
             <div className="space-y-6">
-              <Card className="border-border/50 sticky top-8">
+              <Card className="card-elevated sticky top-20">
                 <CardContent className="p-5 space-y-6">
                   <h3 className="font-bold text-base text-foreground">Task Summary</h3>
 

@@ -2099,3 +2099,28 @@
 - [x] Specifications section showing all uploaded NL specs
 - [x] All sections collapsible for clean view
 - [x] Stats sidebar with file count, active phase badge, diagram status
+
+## Visual Professionalism Polish (Mar 15, 2026)
+- [x] Consistent card elevation with subtle shadow and purple glow
+- [x] Refined color palette — unified 3-shade purple system with warm grays
+- [x] Better table styling — alternating row tints, rounded containers, larger row height
+- [x] Typography hierarchy — clear size/weight scale (28/20/16/14/12)
+- [x] Status badge redesign — pill badges with subtle gradients and icons
+- [x] Divider lines between major sections with proper spacing
+- [x] Logo and header refinement — taller height, gradient bottom border
+- [x] Progress indicator refinement — bordered mini-circles instead of plain dots
+- [x] Hover states everywhere — cards, buttons, table rows with consistent transitions
+- [x] Page transitions — subtle fade-in on mount
+- [x] Smooth scroll behavior globally
+- [x] Better font weight imports for typographic range
+- [x] Glass-effect header with backdrop-blur
+
+## Remove Repetitive Sections from Org Dashboard (Mar 15, 2026)
+- [x] Remove Questionnaire Sections, Testing Checklist, and Implementation Checklist collapsible sections from bottom of Org Dashboard (duplicates workflow cards above)
+
+## Testing & Task List Refinements (Mar 15, 2026)
+- [x] Refine Testing Checklist bulk actions (Mark All Complete/Incomplete, Set All Dates) for more professional appearance
+- [x] Add date fields and bulk actions to the Task List page for consistency with Testing Checklist
+- [x] Rename "Implementation" to "Task List" on Platform Admin dashboard column header
+- [x] Rename "Implementation" to "Task List" on Org Dashboard workflow card (title + subtitle)
+- [x] Rename "Task List" page header to "Task List"

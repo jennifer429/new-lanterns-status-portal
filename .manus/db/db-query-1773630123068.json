@@ -1,0 +1,70 @@
+{
+  "query": "SELECT email, role, name, passwordHash IS NOT NULL as has_password FROM users LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT email, role, name, passwordHash IS NOT NULL as has_password FROM users LIMIT 10;",
+  "rows": [
+    {
+      "email": "jennifer@newlantern.ai",
+      "role": "admin",
+      "name": "Jennifer",
+      "has_password": "1"
+    },
+    {
+      "email": "dsuida@mhc.net",
+      "role": "user",
+      "name": "Doug Suida",
+      "has_password": "1"
+    },
+    {
+      "email": "lgenwright@mhc.net",
+      "role": "user",
+      "name": "Lorrin Genwright",
+      "has_password": "0"
+    },
+    {
+      "email": "dharrison@mhc.net",
+      "role": "user",
+      "name": "Drew Harrison",
+      "has_password": "0"
+    },
+    {
+      "email": "ashley.morgan@radiologyone.com",
+      "role": "admin",
+      "name": "Ashley Morgan",
+      "has_password": "1"
+    },
+    {
+      "email": "kevin.kadakia@radiologyone.com",
+      "role": "admin",
+      "name": "Kevin Kadakia",
+      "has_password": "1"
+    },
+    {
+      "email": "kathy.rangel@mercyone.org",
+      "role": "user",
+      "name": "Kathaleen Rangel",
+      "has_password": "0"
+    },
+    {
+      "email": "kolin.w.huth@mercyone.org",
+      "role": "user",
+      "name": "Kolin Huth",
+      "has_password": "0"
+    },
+    {
+      "email": "shonna.simpson@baycare.org",
+      "role": "user",
+      "name": "Shonna Simpson",
+      "has_password": "0"
+    },
+    {
+      "email": "christopher.parisi@baycare.org",
+      "role": "user",
+      "name": "Christopher Parisi",
+      "has_password": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "email\trole\tname\thas_password\njennifer@newlantern.ai\tadmin\tJennifer\t1\ndsuida@mhc.net\tuser\tDoug Suida\t1\nlgenwright@mhc.net\tuser\tLorrin Genwright\t0\ndharrison@mhc.net\tuser\tDrew Harrison\t0\nashley.morgan@radiologyone.com\tadmin\tAshley Morgan\t1\nkevin.kadakia@radiologyone.com\tadmin\tKevin Kadakia\t1\nkathy.rangel@mercyone.org\tuser\tKathaleen Rangel\t0\nkolin.w.huth@mercyone.org\tuser\tKolin Huth\t0\nshonna.simpson@baycare.org\tuser\tShonna Simpson\t0\nchristopher.parisi@baycare.org\tuser\tChristopher Parisi\t0\n",
+  "stderr": "",
+  "execution_time_ms": 374
+}

@@ -593,9 +593,9 @@ export default function Validation() {
   const completePct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background animate-page-in">
       {/* Header */}
-      <header className="border-b border-border/50 bg-card/80 backdrop-blur-md sticky top-0 z-30">
+      <header className="header-glass sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src="/images/flame-icon.png" alt="New Lantern" className="h-8 w-8" />
@@ -604,7 +604,7 @@ export default function Validation() {
               <p className="text-sm text-muted-foreground">PACS Onboarding</p>
             </div>
           </div>
-          <Link href={`/org/${slug}`} className="text-sm text-foreground hover:text-primary transition-colors">
+          <Link href={`/org/${slug}`} className="text-sm text-foreground hover:text-primary transition-colors font-medium">
             Back to Dashboard
           </Link>
         </div>
@@ -641,7 +641,7 @@ export default function Validation() {
                 const allDone = phaseCompleted === phaseTotal;
 
                 return (
-                  <Card key={pIdx} className="border-border/50 overflow-hidden">
+                  <Card key={pIdx} className="card-elevated overflow-hidden">
                     {/* Collapsible section header */}
                     <button
                       onClick={() => togglePhase(pIdx)}
@@ -663,9 +663,9 @@ export default function Validation() {
                       <Badge
                         variant="outline"
                         className={cn(
-                          "text-xs",
+                          "text-xs font-semibold",
                           allDone
-                            ? "border-green-500/40 text-green-400"
+                            ? "border-emerald-500/40 text-emerald-400"
                             : phaseCompleted > 0
                               ? "border-primary/40 text-primary"
                               : "border-border text-foreground"
@@ -675,43 +675,46 @@ export default function Validation() {
                       </Badge>
                     </button>
 
-                    {/* Bulk action buttons + content — animated collapse */}
-                    <div className={`collapsible-body ${!isCollapsed ? "open" : ""}`}><div>
-                    <div className="flex items-center gap-2 px-5 py-2 border-b border-border/30 bg-muted/15">
+                    {/* Bulk action toolbar — visible when expanded */}
+                    {!isCollapsed && (
+                      <div className="flex flex-wrap items-center gap-3 px-5 py-2.5 border-b border-border/20 bg-muted/10">
+                        <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mr-1">Actions</span>
                         <button
                           onClick={(e) => { e.stopPropagation(); bulkCheckPhase(pIdx); }}
                           disabled={allDone}
                           className={cn(
-                            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                            "inline-flex items-center gap-1.5 text-xs transition-colors",
                             allDone
-                              ? "bg-muted/30 text-muted-foreground/40 cursor-not-allowed"
-                              : "bg-primary/15 text-primary hover:bg-primary/25 cursor-pointer"
+                              ? "text-muted-foreground/30 cursor-not-allowed"
+                              : "text-primary hover:text-primary/80 cursor-pointer"
                           )}
                         >
                           <CheckSquare className="w-3.5 h-3.5" />
-                          Mark All Complete
+                          Complete All
                         </button>
+                        <span className="text-border">|</span>
                         <button
                           onClick={(e) => { e.stopPropagation(); bulkUncheckPhase(pIdx); }}
                           disabled={phaseCompleted === 0}
                           className={cn(
-                            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                            "inline-flex items-center gap-1.5 text-xs transition-colors",
                             phaseCompleted === 0
-                              ? "bg-muted/30 text-muted-foreground/40 cursor-not-allowed"
-                              : "bg-destructive/15 text-destructive hover:bg-destructive/25 cursor-pointer"
+                              ? "text-muted-foreground/30 cursor-not-allowed"
+                              : "text-muted-foreground hover:text-foreground cursor-pointer"
                           )}
                         >
                           <XSquare className="w-3.5 h-3.5" />
-                          Mark All Incomplete
+                          Reset All
                         </button>
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-muted/20 text-foreground">
-                          <CalendarCheck className="w-3.5 h-3.5 text-primary" />
-                          <span>Set All Dates:</span>
+                        <span className="text-border">|</span>
+                        <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <CalendarCheck className="w-3.5 h-3.5" />
+                          <span>Set dates:</span>
                           <input
                             type="date"
                             defaultValue={todayStr()}
                             onChange={(e) => { if (e.target.value) bulkDatePhase(pIdx, e.target.value); }}
-                            className="bg-transparent border border-border/40 rounded px-1.5 py-0.5 text-xs text-foreground focus:outline-none focus:border-primary/60 [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
+                            className="bg-transparent border-b border-border/40 px-1 py-0.5 text-xs text-foreground focus:outline-none focus:border-primary/60 [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
                           />
                         </div>
                       </div>
@@ -847,7 +850,7 @@ export default function Validation() {
                           );
                         })}
                       </CardContent>
-                    </div></div>
+                    )}
                   </Card>
                 );
               })}
@@ -855,7 +858,7 @@ export default function Validation() {
 
             {/* Right sidebar */}
             <div className="space-y-6">
-              <Card className="border-border/50 sticky top-8">
+              <Card className="card-elevated sticky top-20">
                 <CardContent className="p-5 space-y-6">
                   <h3 className="font-bold text-base text-foreground">Testing Summary</h3>
 

@@ -1462,7 +1462,7 @@ export default function IntakeNewRedesign() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col bg-transparent">
         {/* Header */}
-        <header className="border-b border-purple-500/20 bg-black/40 backdrop-blur-sm">
+        <header className="border-b border-purple-500/20 bg-black/40 backdrop-blur-md sticky top-0 z-30">
           <div className="px-4 md:px-8 py-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <button
