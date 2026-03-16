@@ -25,6 +25,8 @@ import {
 import { useRoute, Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
+import { buildCSV, downloadCSV, parseCSV, readFileAsText, csvFilename } from "@/lib/csv";
+import { Download, Upload } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -452,8 +454,11 @@ export default function Validation() {
     onSuccess: () => utils.validation.getResults.invalidate({ organizationSlug: slug }),
   });
 
+  // CSV import file ref
+  const csvInputRef = useRef<HTMLInputElement>(null);
+
   // Local optimistic state
-  const [localOverrides, setLocalOverrides] = useState<Record<string, { status?: string; signOff?: string; notes?: string; testedDate?: string }>>({});
+  const [localOverrides, setLocalOverrides] = useState<Record<string, { status?: string; signOff?: string; notes?: string; testedDate?: string }>>({}); const [importStatus, setImportStatus] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({});
   const [collapsedPhases, setCollapsedPhases] = useState<Record<number, boolean>>({});
   // Track which tests have their related questions expanded
@@ -586,6 +591,102 @@ export default function Validation() {
     });
   }
 
+  // ── CSV Export ──────────────────────────────────────────────────────────────
+
+  function handleExportCSV() {
+    const headers = ["Phase", "Test Name", "Description", "Status", "Date Tested", "Sign-Off", "Notes"];
+    const rows: string[][] = [];
+    phases.forEach((phase, pIdx) => {
+      phase.tests.forEach((test, tIdx) => {
+        const key = testKey(pIdx, tIdx);
+        const merged = getMerged(key);
+        rows.push([
+          `Phase ${pIdx + 1}: ${phase.title}`,
+          test.name,
+          test.description,
+          merged.status === "Pass" ? "Tested" : "Not Tested",
+          merged.testedDate || "",
+          merged.signOff || "",
+          merged.notes || "",
+        ]);
+      });
+    });
+    const csv = buildCSV(headers, rows);
+    downloadCSV(csv, csvFilename(slug, "Testing_Checklist"));
+  }
+
+  // ── CSV Import ──────────────────────────────────────────────────────────────
+
+  async function handleImportCSV(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await readFileAsText(file);
+      const records = parseCSV(text);
+      if (records.length === 0) {
+        setImportStatus({ message: "CSV file is empty or invalid.", type: "error" });
+        return;
+      }
+
+      let matched = 0;
+      let skipped = 0;
+
+      for (const record of records) {
+        const testName = record["Test Name"]?.trim();
+        if (!testName) { skipped++; continue; }
+
+        // Find matching test by name
+        let foundPIdx = -1;
+        let foundTIdx = -1;
+        phases.forEach((phase, pIdx) => {
+          phase.tests.forEach((test, tIdx) => {
+            if (test.name.toLowerCase() === testName.toLowerCase()) {
+              foundPIdx = pIdx;
+              foundTIdx = tIdx;
+            }
+          });
+        });
+
+        if (foundPIdx === -1) { skipped++; continue; }
+
+        const key = testKey(foundPIdx, foundTIdx);
+        const current = getMerged(key);
+
+        const statusRaw = (record["Status"] || "").trim().toLowerCase();
+        const newStatus = (statusRaw === "tested" || statusRaw === "pass") ? "Pass" : "Not Tested";
+        const newDate = record["Date Tested"]?.trim() || current.testedDate || "";
+        const newSignOff = record["Sign-Off"]?.trim() || current.signOff || "";
+        const newNotes = record["Notes"]?.trim() || current.notes || "";
+
+        const merged = {
+          status: newStatus,
+          testedDate: newDate,
+          signOff: newSignOff,
+          notes: newNotes,
+        };
+
+        setLocalOverrides((prev) => ({ ...prev, [key]: merged }));
+        updateMutation.mutate({
+          organizationSlug: slug,
+          testKey: key,
+          status: newStatus as any,
+          signOff: newSignOff || undefined,
+          notes: newNotes || undefined,
+          testedDate: newDate || undefined,
+        });
+        matched++;
+      }
+
+      setImportStatus({ message: `Imported ${matched} test(s). ${skipped > 0 ? `${skipped} row(s) skipped (no match).` : ""}`, type: "success" });
+      setTimeout(() => setImportStatus(null), 5000);
+    } catch (err) {
+      setImportStatus({ message: "Failed to parse CSV file.", type: "error" });
+      setTimeout(() => setImportStatus(null), 5000);
+    }
+    // Reset file input so same file can be re-imported
+    if (csvInputRef.current) csvInputRef.current.value = "";
+  }
+
   // Computed stats
   const allKeys = phases.flatMap((p, pIdx) => p.tests.map((_, tIdx) => testKey(pIdx, tIdx)));
   const total = allKeys.length;
@@ -604,11 +705,54 @@ export default function Validation() {
               <p className="text-sm text-muted-foreground">PACS Onboarding</p>
             </div>
           </div>
-          <Link href={`/org/${slug}`} className="text-sm text-foreground hover:text-primary transition-colors font-medium">
-            Back to Dashboard
-          </Link>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleExportCSV}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-foreground bg-muted/40 border border-border/40 rounded-md hover:bg-muted/60 hover:border-primary/30 transition-all"
+              title="Export testing checklist as CSV"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Export CSV
+            </button>
+            <button
+              onClick={() => csvInputRef.current?.click()}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-foreground bg-muted/40 border border-border/40 rounded-md hover:bg-muted/60 hover:border-primary/30 transition-all"
+              title="Import testing data from CSV"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              Import CSV
+            </button>
+            <input
+              ref={csvInputRef}
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={handleImportCSV}
+            />
+            <Link href={`/org/${slug}`} className="text-sm text-foreground hover:text-primary transition-colors font-medium">
+              Back to Dashboard
+            </Link>
+          </div>
         </div>
       </header>
+
+      {/* Import status banner */}
+      {importStatus && (
+        <div className={cn(
+          "max-w-7xl mx-auto px-6 mt-4",
+        )}>
+          <div className={cn(
+            "px-4 py-3 rounded-lg text-sm font-medium flex items-center gap-2 border",
+            importStatus.type === "success"
+              ? "bg-green-500/10 text-green-400 border-green-500/30"
+              : "bg-red-500/10 text-red-400 border-red-500/30"
+          )}>
+            {importStatus.type === "success" ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
+            {importStatus.message}
+            <button onClick={() => setImportStatus(null)} className="ml-auto text-xs opacity-60 hover:opacity-100">Dismiss</button>
+          </div>
+        </div>
+      )}
 
       {/* Main content */}
       <div className="max-w-7xl mx-auto px-6 py-8">

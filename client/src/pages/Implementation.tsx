@@ -24,6 +24,8 @@ import {
 import { useRoute, Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
+import { buildCSV, downloadCSV, parseCSV, readFileAsText, csvFilename } from "@/lib/csv";
+import { Download, Upload } from "lucide-react";
 
 // ── Static task definitions ────────────────────────────────────────────────────
 
@@ -202,6 +204,10 @@ export default function Implementation() {
     onSuccess: () => utils.implementation.getTasks.invalidate({ organizationSlug: slug }),
   });
 
+  // CSV import file ref
+  const csvInputRef = useRef<HTMLInputElement>(null);
+  const [importStatus, setImportStatus] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
   const [localOverrides, setLocalOverrides] = useState<Record<string, {
     completed?: boolean;
     completedAt?: Date | null;
@@ -309,6 +315,108 @@ export default function Implementation() {
     });
   }
 
+  // ── CSV Export ──────────────────────────────────────────────────────────────
+
+  function handleExportCSV() {
+    const headers = ["Phase", "Task ID", "Task Name", "Description", "Status", "Owner", "Target Date", "Completed Date", "Notes"];
+    const rows: string[][] = [];
+    SECTION_DEFS.forEach((section, sIdx) => {
+      section.tasks.forEach((task) => {
+        const merged = getMerged(task.id);
+        rows.push([
+          `Phase ${sIdx + 1}: ${section.title}`,
+          task.id,
+          task.title,
+          task.description || "",
+          merged.completed ? "Complete" : "Not Started",
+          merged.owner || "",
+          merged.targetDate || "",
+          merged.completedAt ? new Date(merged.completedAt).toISOString().slice(0, 10) : "",
+          merged.notes || "",
+        ]);
+      });
+    });
+    const csv = buildCSV(headers, rows);
+    downloadCSV(csv, csvFilename(slug, "Task_List"));
+  }
+
+  // ── CSV Import ──────────────────────────────────────────────────────────────
+
+  async function handleImportCSV(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await readFileAsText(file);
+      const records = parseCSV(text);
+      if (records.length === 0) {
+        setImportStatus({ message: "CSV file is empty or invalid.", type: "error" });
+        return;
+      }
+
+      let matched = 0;
+      let skipped = 0;
+
+      for (const record of records) {
+        // Match by Task ID first, then by Task Name
+        const taskId = record["Task ID"]?.trim();
+        const taskName = record["Task Name"]?.trim();
+
+        let foundTask: TaskDef | null = null;
+        let foundSection: SectionDef | null = null;
+
+        if (taskId) {
+          for (const section of SECTION_DEFS) {
+            const t = section.tasks.find(t => t.id === taskId);
+            if (t) { foundTask = t; foundSection = section; break; }
+          }
+        }
+        if (!foundTask && taskName) {
+          for (const section of SECTION_DEFS) {
+            const t = section.tasks.find(t => t.title.toLowerCase() === taskName.toLowerCase());
+            if (t) { foundTask = t; foundSection = section; break; }
+          }
+        }
+
+        if (!foundTask || !foundSection) { skipped++; continue; }
+
+        const current = getMerged(foundTask.id);
+        const statusRaw = (record["Status"] || "").trim().toLowerCase();
+        const newCompleted = (statusRaw === "complete" || statusRaw === "completed" || statusRaw === "done");
+        const newOwner = record["Owner"]?.trim() || current.owner || "";
+        const newTargetDate = record["Target Date"]?.trim() || current.targetDate || "";
+        const newNotes = record["Notes"]?.trim() || current.notes || "";
+
+        const merged = {
+          ...current,
+          completed: newCompleted,
+          completedAt: newCompleted ? (current.completedAt || new Date()) : null,
+          owner: newOwner,
+          targetDate: newTargetDate,
+          notes: newNotes,
+        };
+
+        setLocalOverrides(prev => ({ ...prev, [foundTask!.id]: merged }));
+        updateTask.mutate({
+          organizationSlug: slug,
+          taskId: foundTask.id,
+          sectionName: foundSection.title,
+          completed: newCompleted,
+          owner: newOwner || undefined,
+          targetDate: newTargetDate || undefined,
+          notes: newNotes || undefined,
+        });
+        matched++;
+      }
+
+      setImportStatus({ message: `Imported ${matched} task(s). ${skipped > 0 ? `${skipped} row(s) skipped (no match).` : ""}`, type: "success" });
+      setTimeout(() => setImportStatus(null), 5000);
+    } catch (err) {
+      setImportStatus({ message: "Failed to parse CSV file.", type: "error" });
+      setTimeout(() => setImportStatus(null), 5000);
+    }
+    if (csvInputRef.current) csvInputRef.current.value = "";
+  }
+
   const allTaskIds = SECTION_DEFS.flatMap(s => s.tasks.map(t => t.id));
   const total = allTaskIds.length;
   const completed = allTaskIds.filter(id => getMerged(id).completed).length;
@@ -326,11 +434,52 @@ export default function Implementation() {
               <p className="text-sm text-muted-foreground">PACS Onboarding</p>
             </div>
           </div>
-          <Link href={`/org/${slug}`} className="text-sm text-foreground hover:text-primary transition-colors font-medium">
-            Back to Dashboard
-          </Link>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleExportCSV}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-foreground bg-muted/40 border border-border/40 rounded-md hover:bg-muted/60 hover:border-primary/30 transition-all"
+              title="Export task list as CSV"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Export CSV
+            </button>
+            <button
+              onClick={() => csvInputRef.current?.click()}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-foreground bg-muted/40 border border-border/40 rounded-md hover:bg-muted/60 hover:border-primary/30 transition-all"
+              title="Import task data from CSV"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              Import CSV
+            </button>
+            <input
+              ref={csvInputRef}
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={handleImportCSV}
+            />
+            <Link href={`/org/${slug}`} className="text-sm text-foreground hover:text-primary transition-colors font-medium">
+              Back to Dashboard
+            </Link>
+          </div>
         </div>
       </header>
+
+      {/* Import status banner */}
+      {importStatus && (
+        <div className="max-w-7xl mx-auto px-6 mt-4">
+          <div className={cn(
+            "px-4 py-3 rounded-lg text-sm font-medium flex items-center gap-2 border",
+            importStatus.type === "success"
+              ? "bg-green-500/10 text-green-400 border-green-500/30"
+              : "bg-red-500/10 text-red-400 border-red-500/30"
+          )}>
+            {importStatus.type === "success" ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
+            {importStatus.message}
+            <button onClick={() => setImportStatus(null)} className="ml-auto text-xs opacity-60 hover:opacity-100">Dismiss</button>
+          </div>
+        </div>
+      )}
 
       {/* Main content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
