@@ -250,9 +250,9 @@ export default function Implementation() {
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background animate-page-in">
       {/* Header */}
-      <header className="border-b border-border/50 bg-card">
+      <header className="header-glass sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src="/images/flame-icon.png" alt="New Lantern" className="h-8 w-8" />
@@ -261,7 +261,7 @@ export default function Implementation() {
               <p className="text-sm text-muted-foreground">PACS Onboarding</p>
             </div>
           </div>
-          <Link href={`/org/${slug}`} className="text-sm text-foreground hover:text-primary transition-colors">
+          <Link href={`/org/${slug}`} className="text-sm text-foreground hover:text-primary transition-colors font-medium">
             Back to Dashboard
           </Link>
         </div>
@@ -297,7 +297,7 @@ export default function Implementation() {
                 const isCollapsed = !!collapsedSections[section.id];
 
                 return (
-                  <Card key={section.id} className="border-border/50 overflow-hidden">
+                  <Card key={section.id} className="card-elevated overflow-hidden">
                     {/* Collapsible header */}
                     <button
                       onClick={() => setCollapsedSections(prev => ({ ...prev, [section.id]: !isCollapsed }))}
@@ -318,9 +318,9 @@ export default function Implementation() {
                       <Badge
                         variant="outline"
                         className={cn(
-                          "text-xs",
+                          "text-xs font-semibold",
                           allDone
-                            ? "border-green-500/40 text-green-400"
+                            ? "border-emerald-500/40 text-emerald-400"
                             : sectionCompleted > 0
                               ? "border-primary/40 text-primary"
                               : "border-border text-foreground"
@@ -479,7 +479,7 @@ export default function Implementation() {
 
             {/* Right sidebar */}
             <div className="space-y-6">
-              <Card className="border-border/50 sticky top-8">
+              <Card className="card-elevated sticky top-20">
                 <CardContent className="p-5 space-y-6">
                   <h3 className="font-bold text-base text-foreground">Task Summary</h3>
 

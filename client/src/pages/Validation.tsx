@@ -593,9 +593,9 @@ export default function Validation() {
   const completePct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background animate-page-in">
       {/* Header */}
-      <header className="border-b border-border/50 bg-card">
+      <header className="header-glass sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src="/images/flame-icon.png" alt="New Lantern" className="h-8 w-8" />
@@ -604,7 +604,7 @@ export default function Validation() {
               <p className="text-sm text-muted-foreground">PACS Onboarding</p>
             </div>
           </div>
-          <Link href={`/org/${slug}`} className="text-sm text-foreground hover:text-primary transition-colors">
+          <Link href={`/org/${slug}`} className="text-sm text-foreground hover:text-primary transition-colors font-medium">
             Back to Dashboard
           </Link>
         </div>
@@ -641,7 +641,7 @@ export default function Validation() {
                 const allDone = phaseCompleted === phaseTotal;
 
                 return (
-                  <Card key={pIdx} className="border-border/50 overflow-hidden">
+                  <Card key={pIdx} className="card-elevated overflow-hidden">
                     {/* Collapsible section header */}
                     <button
                       onClick={() => togglePhase(pIdx)}
@@ -663,9 +663,9 @@ export default function Validation() {
                       <Badge
                         variant="outline"
                         className={cn(
-                          "text-xs",
+                          "text-xs font-semibold",
                           allDone
-                            ? "border-green-500/40 text-green-400"
+                            ? "border-emerald-500/40 text-emerald-400"
                             : phaseCompleted > 0
                               ? "border-primary/40 text-primary"
                               : "border-border text-foreground"
@@ -858,7 +858,7 @@ export default function Validation() {
 
             {/* Right sidebar */}
             <div className="space-y-6">
-              <Card className="border-border/50 sticky top-8">
+              <Card className="card-elevated sticky top-20">
                 <CardContent className="p-5 space-y-6">
                   <h3 className="font-bold text-base text-foreground">Testing Summary</h3>
 

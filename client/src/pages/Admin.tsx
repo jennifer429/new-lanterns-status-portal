@@ -49,9 +49,9 @@ export default function Admin() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-950 via-slate-900 to-purple-950">
+    <div className="min-h-screen bg-gradient-to-br from-purple-950 via-slate-900 to-purple-950 animate-page-in">
       {/* Header */}
-      <header className="border-b border-purple-500/20 bg-black/20 backdrop-blur-sm">
+      <header className="border-b border-purple-500/20 bg-black/30 backdrop-blur-md sticky top-0 z-50">
         <div className="container py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">

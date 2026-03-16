@@ -8,6 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   ClipboardList,
   FileText,
   CheckCircle2,
@@ -21,14 +26,12 @@ import {
   Wrench,
   Network,
   Image as ImageIcon,
-  AlertTriangle,
   Clock,
   ChevronDown,
-  ChevronRight,
   Trash2,
   Activity,
-  BarChart3,
   ArrowUpRight,
+  Sparkles,
 } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -38,7 +41,7 @@ import { calculateProgress } from "@shared/progressCalculation";
 import { PhiDisclaimer } from "@/components/PhiDisclaimer";
 import { cn } from "@/lib/utils";
 
-// ── Collapsible Section ─────────────────────────────────────────────────────
+// ── Collapsible Section (with smooth Radix animation) ──────────────────────
 function CollapsibleSection({
   title,
   icon,
@@ -54,26 +57,30 @@ function CollapsibleSection({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <Card className="border-border/50 overflow-hidden">
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full px-5 py-4 flex items-center justify-between hover:bg-muted/30 transition-colors"
-      >
-        <div className="flex items-center gap-3">
-          {icon}
-          <h3 className="text-base font-semibold">{title}</h3>
-        </div>
-        <div className="flex items-center gap-3">
-          {badge}
-          {open ? (
-            <ChevronDown className="w-5 h-5 text-muted-foreground" />
-          ) : (
-            <ChevronRight className="w-5 h-5 text-muted-foreground" />
-          )}
-        </div>
-      </button>
-      {open && <div className="border-t border-border/40">{children}</div>}
-    </Card>
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <Card className="card-elevated overflow-hidden">
+        <CollapsibleTrigger asChild>
+          <button className="w-full px-5 py-4 flex items-center justify-between hover:bg-accent/50 transition-colors">
+            <div className="flex items-center gap-3">
+              {icon}
+              <span className="text-base font-semibold tracking-tight">{title}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              {badge}
+              <ChevronDown
+                className={cn(
+                  "w-5 h-5 text-muted-foreground transition-transform duration-200",
+                  open && "rotate-180"
+                )}
+              />
+            </div>
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="border-t border-border/40">{children}</div>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
   );
 }
 
@@ -109,6 +116,7 @@ function ProgressRing({
           fill="none"
           stroke="oklch(0.3 0.01 260)"
           strokeWidth={stroke}
+          opacity={0.3}
         />
         <circle
           cx={size / 2}
@@ -121,10 +129,11 @@ function ProgressRing({
           strokeDashoffset={offset}
           strokeLinecap="round"
           className="transition-all duration-700 ease-out"
+          style={{ filter: `drop-shadow(0 0 4px ${color})` }}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-lg font-bold">{value}%</span>
+        <span className="text-lg font-bold tracking-tight">{value}%</span>
         {label && (
           <span className="text-[10px] text-muted-foreground">{label}</span>
         )}
@@ -155,36 +164,45 @@ function WorkflowPhaseCard({
 }) {
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
   const isDone = completed === total && total > 0;
-  const label =
-    isDone ? "View" : completed > 0 ? "Continue" : "Start";
+  const label = isDone ? "View" : completed > 0 ? "Continue" : "Start";
 
   return (
     <Link href={href}>
       <Card
         className={cn(
-          "relative overflow-hidden transition-all cursor-pointer group",
-          isActive && "border-primary/50 shadow-lg shadow-primary/5",
-          isLocked && "opacity-50 pointer-events-none",
-          !isLocked && "hover:border-primary/40 hover:shadow-md"
+          "card-elevated card-clickable relative overflow-hidden cursor-pointer group",
+          isActive && "border-primary/50",
+          isLocked && "opacity-40 pointer-events-none",
         )}
       >
-        <CardContent className="p-5">
+        {/* Subtle gradient accent at top */}
+        <div
+          className={cn(
+            "absolute top-0 left-0 right-0 h-1 rounded-t-lg",
+            isDone
+              ? "bg-gradient-to-r from-emerald-500 to-emerald-400"
+              : isActive
+                ? "bg-gradient-to-r from-primary to-primary/60"
+                : "bg-gradient-to-r from-muted-foreground/20 to-muted-foreground/10"
+          )}
+        />
+        <CardContent className="p-5 pt-6">
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3">
               <div
                 className={cn(
-                  "p-2 rounded-lg",
+                  "p-2.5 rounded-xl transition-colors",
                   isDone
-                    ? "bg-green-500/15 text-green-400"
+                    ? "bg-emerald-500/15 text-emerald-400"
                     : isActive
                       ? "bg-primary/15 text-primary"
-                      : "bg-muted/50 text-muted-foreground"
+                      : "bg-muted text-muted-foreground"
                 )}
               >
                 {icon}
               </div>
               <div>
-                <h3 className="text-sm font-semibold">{title}</h3>
+                <h3 className="text-sm font-bold tracking-tight">{title}</h3>
                 {subtitle && (
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {subtitle}
@@ -203,8 +221,8 @@ function WorkflowPhaseCard({
               </span>
               <span
                 className={cn(
-                  "font-medium",
-                  isDone ? "text-green-400" : "text-foreground"
+                  "font-semibold",
+                  isDone ? "text-emerald-400" : "text-foreground"
                 )}
               >
                 {pct}%
@@ -215,9 +233,9 @@ function WorkflowPhaseCard({
                 className={cn(
                   "h-full rounded-full transition-all duration-500",
                   isDone
-                    ? "bg-green-500"
+                    ? "bg-gradient-to-r from-emerald-500 to-emerald-400"
                     : pct > 0
-                      ? "bg-primary"
+                      ? "bg-gradient-to-r from-primary to-primary/70"
                       : "bg-transparent"
                 )}
                 style={{ width: `${pct}%` }}
@@ -226,17 +244,17 @@ function WorkflowPhaseCard({
           </div>
 
           {/* Progress dots */}
-          <div className="flex items-center gap-1 mb-3">
+          <div className="flex items-center gap-1.5 mb-4">
             {Array.from({ length: total }, (_, i) => (
               <div
                 key={i}
                 className={cn(
-                  "w-2 h-2 rounded-full transition-colors",
+                  "progress-dot",
                   i < completed
                     ? isDone
-                      ? "bg-green-500"
-                      : "bg-primary"
-                    : "bg-muted-foreground/20"
+                      ? "progress-dot-complete"
+                      : "progress-dot-filled"
+                    : "progress-dot-empty"
                 )}
               />
             ))}
@@ -247,8 +265,10 @@ function WorkflowPhaseCard({
             size="sm"
             variant={isDone ? "outline" : "default"}
             className={cn(
-              "w-full text-xs",
-              isDone && "border-green-500/30 text-green-400 hover:bg-green-500/10"
+              "w-full text-xs font-semibold",
+              isDone
+                ? "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+                : "badge-status-start"
             )}
           >
             {isDone ? (
@@ -371,7 +391,7 @@ export default function Home() {
   // Validation stats from real data
   const valResults = validationData || {};
   const valEntries = Object.values(valResults) as any[];
-  const valTotal = 18; // Total validation tests defined in Validation.tsx
+  const valTotal = 18;
   const valCompleted = valEntries.filter(
     (v: any) => v.status === "Pass"
   ).length;
@@ -379,7 +399,7 @@ export default function Home() {
   // Implementation stats from real data
   const implResults = implementationData || {};
   const implEntries = Object.values(implResults) as any[];
-  const implTotal = 14; // Total implementation tasks defined in Implementation.tsx
+  const implTotal = 14;
   const implCompleted = implEntries.filter(
     (v: any) => v.status === "complete"
   ).length;
@@ -398,9 +418,9 @@ export default function Home() {
   if (orgLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
+        <div className="text-center space-y-3">
+          <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent mx-auto" />
+          <p className="text-sm text-muted-foreground">Loading dashboard...</p>
         </div>
       </div>
     );
@@ -410,10 +430,10 @@ export default function Home() {
   const partnerName = organization?.clientName || "";
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border/50 bg-card">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-background animate-page-in">
+      {/* ── Glass Header ── */}
+      <header className="header-glass sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
               src="/images/new-lantern-logo.png"
@@ -422,7 +442,7 @@ export default function Home() {
             />
           </div>
           <div className="text-right">
-            <div className="text-sm font-medium">{orgName}</div>
+            <div className="text-sm font-semibold tracking-tight">{orgName}</div>
             {partnerName && (
               <div className="text-xs text-muted-foreground">{partnerName}</div>
             )}
@@ -433,20 +453,22 @@ export default function Home() {
       <PhiDisclaimer />
 
       {/* Dashboard Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-5">
         {/* ── Hero: Overall Progress ── */}
-        <Card className="border-border/50 overflow-hidden">
+        <Card className="card-elevated overflow-hidden">
+          {/* Top accent gradient */}
+          <div className="h-1 bg-gradient-to-r from-primary via-primary/60 to-emerald-500/40" />
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row items-center gap-6">
               {/* Progress Ring */}
-              <ProgressRing value={overallPct} size={100} stroke={8} />
+              <ProgressRing value={overallPct} size={110} stroke={8} />
 
               {/* Stats */}
               <div className="flex-1 text-center md:text-left">
-                <h2 className="text-xl font-bold mb-1">
+                <h2 className="text-xl font-bold tracking-tight mb-1">
                   Implementation Progress
                 </h2>
-                <p className="text-sm text-muted-foreground mb-4">
+                <p className="text-sm text-muted-foreground mb-5">
                   {overallPct === 100
                     ? "All phases complete — ready for go-live."
                     : overallPct > 0
@@ -454,31 +476,34 @@ export default function Home() {
                       : "Get started by filling out the questionnaire."}
                 </p>
 
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="text-center p-3 rounded-lg bg-muted/20 border border-border/30">
-                    <div className="text-lg font-bold text-primary">
-                      {completedSections}/{totalSections}
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { label: "Questionnaire", value: `${completedSections}/${totalSections}`, done: qDone },
+                    { label: "Tests Passed", value: `${valCompleted}/${valTotal}`, done: vDone },
+                    { label: "Tasks Done", value: `${implCompleted}/${implTotal}`, done: implCompleted === implTotal && implTotal > 0 },
+                  ].map((stat) => (
+                    <div
+                      key={stat.label}
+                      className={cn(
+                        "text-center p-3 rounded-xl border transition-colors",
+                        stat.done
+                          ? "bg-emerald-500/10 border-emerald-500/20"
+                          : "bg-muted/20 border-border/30"
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "text-lg font-bold tracking-tight",
+                          stat.done ? "text-emerald-400" : "text-primary"
+                        )}
+                      >
+                        {stat.value}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5 font-medium">
+                        {stat.label}
+                      </div>
                     </div>
-                    <div className="text-[11px] text-muted-foreground mt-0.5">
-                      Questionnaire
-                    </div>
-                  </div>
-                  <div className="text-center p-3 rounded-lg bg-muted/20 border border-border/30">
-                    <div className="text-lg font-bold text-primary">
-                      {valCompleted}/{valTotal}
-                    </div>
-                    <div className="text-[11px] text-muted-foreground mt-0.5">
-                      Tests Passed
-                    </div>
-                  </div>
-                  <div className="text-center p-3 rounded-lg bg-muted/20 border border-border/30">
-                    <div className="text-lg font-bold text-primary">
-                      {implCompleted}/{implTotal}
-                    </div>
-                    <div className="text-[11px] text-muted-foreground mt-0.5">
-                      Tasks Done
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
 
@@ -487,14 +512,21 @@ export default function Home() {
                 <div className="flex items-center gap-2 text-sm">
                   <FileText className="w-4 h-4 text-muted-foreground" />
                   <span className="text-muted-foreground">Files:</span>
-                  <span className="font-medium">{allFiles.length}</span>
+                  <span className="font-semibold">{allFiles.length}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Activity className="w-4 h-4 text-muted-foreground" />
                   <span className="text-muted-foreground">Phase:</span>
                   <Badge
                     variant="outline"
-                    className="text-xs border-primary/40 text-primary"
+                    className={cn(
+                      "text-xs font-semibold",
+                      activePhase === "questionnaire"
+                        ? "border-primary/40 text-primary"
+                        : activePhase === "testing"
+                          ? "border-amber-500/40 text-amber-400"
+                          : "border-emerald-500/40 text-emerald-400"
+                    )}
                   >
                     {activePhase === "questionnaire"
                       ? "Questionnaire"
@@ -507,7 +539,7 @@ export default function Home() {
                   <div className="flex items-center gap-2 text-sm">
                     <ImageIcon className="w-4 h-4 text-muted-foreground" />
                     <span className="text-muted-foreground">Diagram:</span>
-                    <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">
+                    <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-xs font-semibold">
                       Uploaded
                     </Badge>
                   </div>
@@ -551,13 +583,15 @@ export default function Home() {
           />
         </div>
 
+        <div className="section-divider" />
+
         {/* ── Architecture Diagram ── */}
         <CollapsibleSection
           title="Architecture Diagram"
           icon={<ImageIcon className="w-5 h-5 text-primary" />}
           badge={
             diagramFiles.length > 0 ? (
-              <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">
+              <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-xs font-semibold">
                 Uploaded
               </Badge>
             ) : (
@@ -581,26 +615,26 @@ export default function Home() {
                   return (
                     <div key={file.id}>
                       {isImage ? (
-                        <div className="border border-border/50 rounded-lg overflow-hidden bg-muted/10">
+                        <div className="border border-border/50 rounded-xl overflow-hidden bg-muted/10">
                           <img
                             src={file.fileUrl}
                             alt={file.fileName}
                             className="w-full max-h-[600px] object-contain"
                           />
-                          <div className="flex items-center justify-between px-4 py-2 bg-muted/20 border-t border-border/30">
+                          <div className="flex items-center justify-between px-4 py-2.5 bg-muted/20 border-t border-border/30">
                             <span className="text-sm text-muted-foreground">
                               {file.fileName}
                             </span>
                             <div className="flex items-center gap-2">
                               <a href={file.fileUrl} download={file.fileName}>
-                                <Button size="sm" variant="ghost">
+                                <Button size="sm" variant="ghost" className="text-xs">
                                   <Download className="w-4 h-4 mr-1" /> Download
                                 </Button>
                               </a>
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
                                 onClick={() => handleRemoveDiagram(file.id)}
                               >
                                 <Trash2 className="w-4 h-4 mr-1" /> Remove
@@ -609,7 +643,7 @@ export default function Home() {
                           </div>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-between p-4 border border-border/50 rounded-lg bg-muted/10">
+                        <div className="flex items-center justify-between p-4 border border-border/50 rounded-xl bg-muted/10">
                           <div className="flex items-center gap-3">
                             <FileText className="w-5 h-5 text-muted-foreground" />
                             <span className="text-sm font-medium">
@@ -618,14 +652,14 @@ export default function Home() {
                           </div>
                           <div className="flex items-center gap-2">
                             <a href={file.fileUrl} download={file.fileName}>
-                              <Button size="sm" variant="ghost">
+                              <Button size="sm" variant="ghost" className="text-xs">
                                 <Download className="w-4 h-4 mr-1" /> Download
                               </Button>
                             </a>
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                              className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
                               onClick={() => handleRemoveDiagram(file.id)}
                             >
                               <Trash2 className="w-4 h-4 mr-1" /> Remove
@@ -638,13 +672,20 @@ export default function Home() {
                 })}
               </div>
             ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                <ImageIcon className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p className="text-sm">No architecture diagram uploaded yet</p>
+              <div className="text-center py-14 border-2 border-dashed border-border/40 rounded-xl">
+                <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-muted/30 flex items-center justify-center">
+                  <ImageIcon className="w-7 h-7 text-muted-foreground/40" />
+                </div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">
+                  No architecture diagram uploaded yet
+                </p>
+                <p className="text-xs text-muted-foreground/70 mb-4">
+                  Upload your network diagram in the Questionnaire
+                </p>
                 <Link href={`/org/${orgSlug}/intake`}>
-                  <Button size="sm" variant="outline" className="mt-3">
+                  <Button size="sm" variant="outline" className="text-xs">
                     <ArrowRight className="w-4 h-4 mr-2" />
-                    Go to Questionnaire to Upload
+                    Go to Questionnaire
                   </Button>
                 </Link>
               </div>
@@ -667,12 +708,14 @@ export default function Home() {
           defaultOpen={false}
         >
           <CardContent className="p-5">
-            <div className="text-center py-12 border-2 border-dashed border-border/50 rounded-lg">
-              <Network className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-30" />
+            <div className="text-center py-14 border-2 border-dashed border-border/40 rounded-xl">
+              <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-muted/30 flex items-center justify-center">
+                <Network className="w-7 h-7 text-muted-foreground/40" />
+              </div>
               <p className="text-sm font-medium text-muted-foreground mb-1">
                 Notion Database Integration
               </p>
-              <p className="text-xs text-muted-foreground max-w-md mx-auto">
+              <p className="text-xs text-muted-foreground/70 max-w-md mx-auto">
                 This section will display connectivity data (AE Titles, IPs,
                 Ports, Systems) from your Notion database, filtered for this
                 site. Configuration coming soon.
@@ -680,6 +723,8 @@ export default function Home() {
             </div>
           </CardContent>
         </CollapsibleSection>
+
+        <div className="section-divider" />
 
         {/* ── Questionnaire Breakdown ── */}
         <CollapsibleSection
@@ -689,9 +734,9 @@ export default function Home() {
             <Badge
               variant="outline"
               className={cn(
-                "text-xs",
+                "text-xs font-semibold",
                 completedSections === totalSections && totalSections > 0
-                  ? "border-green-500/40 text-green-400"
+                  ? "border-emerald-500/40 text-emerald-400"
                   : "border-border text-muted-foreground"
               )}
             >
@@ -701,29 +746,31 @@ export default function Home() {
           defaultOpen={false}
         >
           <CardContent className="p-5">
-            <div className="space-y-2 mb-5">
+            <div className="space-y-1.5 mb-5">
               {sectionProgress.map((section, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between py-2.5 px-3 rounded-lg bg-muted/20 hover:bg-muted/30 transition-colors"
+                  className="flex items-center justify-between py-3 px-4 rounded-xl hover:bg-accent/50 transition-colors"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     {section.isComplete ? (
-                      <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
+                      <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
                     ) : section.completed > 0 ? (
                       <Clock className="w-5 h-5 text-amber-400 shrink-0" />
                     ) : (
-                      <Circle className="w-5 h-5 text-muted-foreground/40 shrink-0" />
+                      <Circle className="w-5 h-5 text-muted-foreground/30 shrink-0" />
                     )}
-                    <span className="text-sm truncate">{section.name}</span>
+                    <span className="text-sm font-medium truncate">{section.name}</span>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
                     {/* Mini progress bar */}
-                    <div className="w-16 h-1.5 bg-muted/40 rounded-full overflow-hidden hidden sm:block">
+                    <div className="w-20 h-1.5 bg-muted/40 rounded-full overflow-hidden hidden sm:block">
                       <div
                         className={cn(
-                          "h-full rounded-full",
-                          section.isComplete ? "bg-green-500" : "bg-primary"
+                          "h-full rounded-full transition-all duration-500",
+                          section.isComplete
+                            ? "bg-gradient-to-r from-emerald-500 to-emerald-400"
+                            : "bg-gradient-to-r from-primary to-primary/70"
                         )}
                         style={{
                           width: `${section.total > 0 ? (section.completed / section.total) * 100 : 0}%`,
@@ -732,9 +779,9 @@ export default function Home() {
                     </div>
                     <span
                       className={cn(
-                        "text-xs font-medium",
+                        "text-xs font-semibold tabular-nums",
                         section.isComplete
-                          ? "text-green-400"
+                          ? "text-emerald-400"
                           : "text-muted-foreground"
                       )}
                     >
@@ -773,9 +820,9 @@ export default function Home() {
             <Badge
               variant="outline"
               className={cn(
-                "text-xs",
+                "text-xs font-semibold",
                 valCompleted === valTotal && valTotal > 0
-                  ? "border-green-500/40 text-green-400"
+                  ? "border-emerald-500/40 text-emerald-400"
                   : "border-border text-muted-foreground"
               )}
             >
@@ -785,7 +832,7 @@ export default function Home() {
           defaultOpen={false}
         >
           <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-4">
                 <ProgressRing
                   value={
@@ -797,7 +844,7 @@ export default function Home() {
                   stroke={5}
                 />
                 <div>
-                  <p className="text-sm font-medium">
+                  <p className="text-sm font-semibold">
                     {valCompleted} of {valTotal} tests completed
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
@@ -824,9 +871,9 @@ export default function Home() {
             <Badge
               variant="outline"
               className={cn(
-                "text-xs",
+                "text-xs font-semibold",
                 implCompleted === implTotal && implTotal > 0
-                  ? "border-green-500/40 text-green-400"
+                  ? "border-emerald-500/40 text-emerald-400"
                   : "border-border text-muted-foreground"
               )}
             >
@@ -836,7 +883,7 @@ export default function Home() {
           defaultOpen={false}
         >
           <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-4">
                 <ProgressRing
                   value={
@@ -848,7 +895,7 @@ export default function Home() {
                   stroke={5}
                 />
                 <div>
-                  <p className="text-sm font-medium">
+                  <p className="text-sm font-semibold">
                     {implCompleted} of {implTotal} tasks completed
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
@@ -869,51 +916,59 @@ export default function Home() {
 
         {/* ── Specifications ── */}
         {specs.length > 0 && (
-          <CollapsibleSection
-            title="New Lantern Specifications"
-            icon={<BookOpen className="w-5 h-5 text-primary" />}
-            badge={
-              <Badge
-                variant="outline"
-                className="text-xs text-muted-foreground"
-              >
-                {specs.length} docs
-              </Badge>
-            }
-            defaultOpen={false}
-          >
-            <CardContent className="p-5">
-              <div className="space-y-2">
-                {specs.map((spec: any) => (
-                  <a
-                    key={spec.id}
-                    href={spec.fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:bg-muted/50 transition-colors group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Download className="w-4 h-4 text-primary group-hover:text-primary/80" />
-                      <div>
-                        <div className="text-sm font-medium">{spec.title}</div>
-                        {spec.description && (
-                          <div className="text-xs text-muted-foreground">
-                            {spec.description}
-                          </div>
-                        )}
+          <>
+            <div className="section-divider" />
+            <CollapsibleSection
+              title="New Lantern Specifications"
+              icon={<BookOpen className="w-5 h-5 text-primary" />}
+              badge={
+                <Badge
+                  variant="outline"
+                  className="text-xs text-muted-foreground font-semibold"
+                >
+                  {specs.length} docs
+                </Badge>
+              }
+              defaultOpen={false}
+            >
+              <CardContent className="p-5">
+                <div className="space-y-2">
+                  {specs.map((spec: any) => (
+                    <a
+                      key={spec.id}
+                      href={spec.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between p-3.5 rounded-xl border border-border/50 hover:bg-accent/50 hover:border-border transition-all group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary/15 transition-colors">
+                          <Download className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-semibold">{spec.title}</div>
+                          {spec.description && (
+                            <div className="text-xs text-muted-foreground mt-0.5">
+                              {spec.description}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    {spec.category && (
-                      <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                        {spec.category}
-                      </span>
-                    )}
-                  </a>
-                ))}
-              </div>
-            </CardContent>
-          </CollapsibleSection>
+                      {spec.category && (
+                        <span className="text-xs bg-primary/10 text-primary px-2.5 py-1 rounded-lg font-medium">
+                          {spec.category}
+                        </span>
+                      )}
+                    </a>
+                  ))}
+                </div>
+              </CardContent>
+            </CollapsibleSection>
+          </>
         )}
+
+        {/* Bottom spacer */}
+        <div className="h-8" />
       </div>
     </div>
   );

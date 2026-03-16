@@ -888,9 +888,9 @@ export default function PlatformAdmin() {
   const headerSubtitle = isPlatformAdmin ? "New Lantern - All Partners" : `Manage your organizations`;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background animate-page-in">
       {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm">
+      <header className="header-glass sticky top-0 z-50">
         <div className="container py-3 sm:py-6">
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-2 sm:gap-4 shrink-0">
@@ -1059,24 +1059,24 @@ export default function PlatformAdmin() {
             </div>
             
             {/* Workflow Launcher Table */}
-            <Card>
+            <Card className="card-elevated overflow-hidden">
               <CardContent className="p-0">
                 <Table>
                   <TableHeader>
                     <TableRow className="hover:bg-transparent">
-                      <TableHead className="w-[200px] text-sm">Organization</TableHead>
-                      {isPlatformAdmin && <TableHead className="w-[140px] text-sm">Partner</TableHead>}
-                      <TableHead className="text-center text-sm w-[200px]">
+                      <TableHead className="w-[200px] text-sm font-semibold">Organization</TableHead>
+                      {isPlatformAdmin && <TableHead className="w-[140px] text-sm font-semibold">Partner</TableHead>}
+                      <TableHead className="text-center text-sm w-[200px] font-semibold">
                         <span>Questionnaire</span>
                       </TableHead>
-                      <TableHead className="text-center text-sm w-[200px]">
+                      <TableHead className="text-center text-sm w-[200px] font-semibold">
                         <span>Validation Checklist</span>
                       </TableHead>
-                      <TableHead className="text-center text-sm w-[200px]">
+                      <TableHead className="text-center text-sm w-[200px] font-semibold">
                         <span>Task List</span>
                       </TableHead>
-                      <TableHead className="text-center text-sm w-[70px]">Files</TableHead>
-                      <TableHead className="text-center text-sm w-[70px]">Users</TableHead>
+                      <TableHead className="text-center text-sm w-[70px] font-semibold">Files</TableHead>
+                      <TableHead className="text-center text-sm w-[70px] font-semibold">Users</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1113,7 +1113,7 @@ export default function PlatformAdmin() {
                             <TableCell>
                               <button
                                 onClick={() => setLocation(`/org/${org.slug}`)}
-                                className="text-left font-semibold text-sm text-primary hover:underline"
+                                className="text-left font-semibold text-sm text-primary hover:underline hover:text-primary/80 transition-colors"
                               >
                                 {org.name}
                               </button>
@@ -1130,10 +1130,10 @@ export default function PlatformAdmin() {
                                 className="inline-flex flex-col items-center gap-1.5 cursor-pointer hover:bg-muted/40 rounded-lg px-3 py-2 transition-colors w-full"
                               >
                                 <span className={cn(
-                                  "text-sm font-semibold px-3 py-1 rounded-full transition-colors",
-                                  qLabel === "Start" && "bg-primary text-primary-foreground",
-                                  qLabel === "Continue" && "bg-primary/20 text-primary",
-                                  qLabel === "View" && "bg-green-500/20 text-green-400"
+                                  "text-xs font-bold px-3 py-1 rounded-full transition-all",
+                                  qLabel === "Start" && "badge-status-start",
+                                  qLabel === "Continue" && "bg-primary/20 text-primary border border-primary/30",
+                                  qLabel === "View" && "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
                                 )}>
                                   {qLabel}
                                 </span>
@@ -1141,8 +1141,8 @@ export default function PlatformAdmin() {
                                 <div className="flex gap-1">
                                   {Array.from({ length: totalSections }).map((_, i) => (
                                     <span key={i} className={cn(
-                                      "w-3 h-3 rounded-full inline-block",
-                                      i < sectionsComplete ? "bg-primary" : "bg-muted-foreground/20 border border-muted-foreground/30"
+                                      "progress-dot",
+                                      i < sectionsComplete ? "progress-dot-filled" : "progress-dot-empty"
                                     )} />
                                   ))}
                                 </div>
@@ -1155,10 +1155,10 @@ export default function PlatformAdmin() {
                                 className="inline-flex flex-col items-center gap-1.5 cursor-pointer hover:bg-muted/40 rounded-lg px-3 py-2 transition-colors w-full"
                               >
                                 <span className={cn(
-                                  "text-sm font-semibold px-3 py-1 rounded-full transition-colors",
-                                  testingLabel === "Start" && "bg-primary text-primary-foreground",
-                                  testingLabel === "Continue" && "bg-primary/20 text-primary",
-                                  testingLabel === "View" && "bg-green-500/20 text-green-400"
+                                  "text-xs font-bold px-3 py-1 rounded-full transition-all",
+                                  testingLabel === "Start" && "badge-status-start",
+                                  testingLabel === "Continue" && "bg-primary/20 text-primary border border-primary/30",
+                                  testingLabel === "View" && "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
                                 )}>
                                   {testingLabel}
                                 </span>
@@ -1166,8 +1166,8 @@ export default function PlatformAdmin() {
                                 <div className="flex gap-1">
                                   {Array.from({ length: testingTotal }).map((_, i) => (
                                     <span key={i} className={cn(
-                                      "w-3 h-3 rounded-full inline-block",
-                                      i < testingComplete ? "bg-primary" : "bg-muted-foreground/20 border border-muted-foreground/30"
+                                      "progress-dot",
+                                      i < testingComplete ? "progress-dot-filled" : "progress-dot-empty"
                                     )} />
                                   ))}
                                 </div>
@@ -1180,10 +1180,10 @@ export default function PlatformAdmin() {
                                 className="inline-flex flex-col items-center gap-1.5 cursor-pointer hover:bg-muted/40 rounded-lg px-3 py-2 transition-colors w-full"
                               >
                                 <span className={cn(
-                                  "text-sm font-semibold px-3 py-1 rounded-full transition-colors",
-                                  implLabel === "Start" && "bg-primary text-primary-foreground",
-                                  implLabel === "Continue" && "bg-primary/20 text-primary",
-                                  implLabel === "View" && "bg-green-500/20 text-green-400"
+                                  "text-xs font-bold px-3 py-1 rounded-full transition-all",
+                                  implLabel === "Start" && "badge-status-start",
+                                  implLabel === "Continue" && "bg-primary/20 text-primary border border-primary/30",
+                                  implLabel === "View" && "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
                                 )}>
                                   {implLabel}
                                 </span>
@@ -1191,8 +1191,8 @@ export default function PlatformAdmin() {
                                 <div className="flex gap-1">
                                   {Array.from({ length: implTotal }).map((_, i) => (
                                     <span key={i} className={cn(
-                                      "w-3 h-3 rounded-full inline-block",
-                                      i < implComplete ? "bg-primary" : "bg-muted-foreground/20 border border-muted-foreground/30"
+                                      "progress-dot",
+                                      i < implComplete ? "progress-dot-filled" : "progress-dot-empty"
                                     )} />
                                   ))}
                                 </div>

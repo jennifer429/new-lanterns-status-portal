@@ -2099,3 +2099,18 @@
 - [x] Specifications section showing all uploaded NL specs
 - [x] All sections collapsible for clean view
 - [x] Stats sidebar with file count, active phase badge, diagram status
+
+## Visual Professionalism Polish (Mar 15, 2026)
+- [x] Consistent card elevation with subtle shadow and purple glow
+- [x] Refined color palette — unified 3-shade purple system with warm grays
+- [x] Better table styling — alternating row tints, rounded containers, larger row height
+- [x] Typography hierarchy — clear size/weight scale (28/20/16/14/12)
+- [x] Status badge redesign — pill badges with subtle gradients and icons
+- [x] Divider lines between major sections with proper spacing
+- [x] Logo and header refinement — taller height, gradient bottom border
+- [x] Progress indicator refinement — bordered mini-circles instead of plain dots
+- [x] Hover states everywhere — cards, buttons, table rows with consistent transitions
+- [x] Page transitions — subtle fade-in on mount
+- [x] Smooth scroll behavior globally
+- [x] Better font weight imports for typographic range
+- [x] Glass-effect header with backdrop-blur

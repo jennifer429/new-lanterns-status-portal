@@ -91,9 +91,9 @@ export default function ManageUsers({ partnerName }: ManageUsersProps) {
   const backUrl = partnerName ? `/org/${partnerName}/admin` : "/org/admin";
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background animate-page-in">
       {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm">
+      <header className="header-glass sticky top-0 z-50">
         <div className="container py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
