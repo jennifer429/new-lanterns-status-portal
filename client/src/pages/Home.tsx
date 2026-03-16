@@ -472,7 +472,7 @@ export default function Home() {
                   {overallPct === 100
                     ? "All phases complete — ready for go-live."
                     : overallPct > 0
-                      ? `Currently in ${activePhase === "questionnaire" ? "Questionnaire" : activePhase === "testing" ? "Testing" : "Implementation"} phase.`
+                      ? `Currently in ${activePhase === "questionnaire" ? "Questionnaire" : activePhase === "testing" ? "Testing" : "Task List"} phase.`
                       : "Get started by filling out the questionnaire."}
                 </p>
 
@@ -532,7 +532,7 @@ export default function Home() {
                       ? "Questionnaire"
                       : activePhase === "testing"
                         ? "Testing"
-                        : "Implementation"}
+                        : "Task List"}
                   </Badge>
                 </div>
                 {diagramFiles.length > 0 && (
@@ -572,7 +572,7 @@ export default function Home() {
             isLocked={false}
           />
           <WorkflowPhaseCard
-            title="Implementation"
+            title="Task List"
             subtitle="Build & deploy"
             icon={<Wrench className="w-5 h-5" />}
             completed={implCompleted}

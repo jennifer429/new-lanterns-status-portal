@@ -104,7 +104,7 @@ export default function Tasks() {
               <img src="/images/flame-icon.png" alt="New Lantern" className="h-8 w-8" />
               <div>
                 <h1 className="text-xl font-bold text-foreground">Action Items</h1>
-                <p className="text-xs text-muted-foreground">Implementation Tasks</p>
+                <p className="text-xs text-muted-foreground">Task List</p>
               </div>
             </div>
             <Button variant="outline" size="sm" asChild>

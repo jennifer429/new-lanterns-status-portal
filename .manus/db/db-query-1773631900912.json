@@ -1,0 +1,13 @@
+{
+  "query": "SELECT column_name FROM information_schema.columns WHERE table_name = 'users' AND column_name LIKE '%pass%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT column_name FROM information_schema.columns WHERE table_name = 'users' AND column_name LIKE '%pass%';",
+  "rows": [
+    {
+      "column_name": "passwordHash"
+    }
+  ],
+  "messages": [],
+  "stdout": "column_name\npasswordHash\n",
+  "stderr": "",
+  "execution_time_ms": 365
+}

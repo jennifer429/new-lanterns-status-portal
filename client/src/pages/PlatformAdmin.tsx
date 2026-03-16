@@ -973,7 +973,7 @@ export default function PlatformAdmin() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Implementation Dashboard
+              Task List Dashboard
               {activeTab === "impl-dashboard" && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
               )}
@@ -1052,7 +1052,7 @@ export default function PlatformAdmin() {
         {activeTab === "impl-dashboard" && (
           <>
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold">Implementation Dashboard</h2>
+              <h2 className="text-2xl font-bold">Task List Dashboard</h2>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span>{activeOrgs.length} active organizations</span>
               </div>
@@ -1102,7 +1102,7 @@ export default function PlatformAdmin() {
                         const testingTotal = 4;
                         const testingComplete = 0;
                         const testingLabel = testingComplete === 0 ? "Start" : testingComplete === testingTotal ? "View" : "Continue";
-                        // Implementation: 5 sections, placeholder 0 complete for now
+                        // Task List: 5 sections, placeholder 0 complete for now
                         const implTotal = 5;
                         const implComplete = 0;
                         const implLabel = implComplete === 0 ? "Start" : implComplete === implTotal ? "View" : "Continue";
@@ -1173,7 +1173,7 @@ export default function PlatformAdmin() {
                                 </div>
                               </button>
                             </TableCell>
-                            {/* Implementation — consistent status display */}
+                            {/* Task List — consistent status display */}
                             <TableCell className="text-center">
                               <button
                                 onClick={() => setLocation(`/org/${org.slug}/implement`)}

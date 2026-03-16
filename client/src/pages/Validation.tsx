@@ -675,43 +675,46 @@ export default function Validation() {
                       </Badge>
                     </button>
 
-                    {/* Bulk action buttons — visible when expanded */}
+                    {/* Bulk action toolbar — visible when expanded */}
                     {!isCollapsed && (
-                      <div className="flex items-center gap-2 px-5 py-2 border-b border-border/30 bg-muted/15">
+                      <div className="flex flex-wrap items-center gap-3 px-5 py-2.5 border-b border-border/20 bg-muted/10">
+                        <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mr-1">Actions</span>
                         <button
                           onClick={(e) => { e.stopPropagation(); bulkCheckPhase(pIdx); }}
                           disabled={allDone}
                           className={cn(
-                            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                            "inline-flex items-center gap-1.5 text-xs transition-colors",
                             allDone
-                              ? "bg-muted/30 text-muted-foreground/40 cursor-not-allowed"
-                              : "bg-primary/15 text-primary hover:bg-primary/25 cursor-pointer"
+                              ? "text-muted-foreground/30 cursor-not-allowed"
+                              : "text-primary hover:text-primary/80 cursor-pointer"
                           )}
                         >
                           <CheckSquare className="w-3.5 h-3.5" />
-                          Mark All Complete
+                          Complete All
                         </button>
+                        <span className="text-border">|</span>
                         <button
                           onClick={(e) => { e.stopPropagation(); bulkUncheckPhase(pIdx); }}
                           disabled={phaseCompleted === 0}
                           className={cn(
-                            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                            "inline-flex items-center gap-1.5 text-xs transition-colors",
                             phaseCompleted === 0
-                              ? "bg-muted/30 text-muted-foreground/40 cursor-not-allowed"
-                              : "bg-destructive/15 text-destructive hover:bg-destructive/25 cursor-pointer"
+                              ? "text-muted-foreground/30 cursor-not-allowed"
+                              : "text-muted-foreground hover:text-foreground cursor-pointer"
                           )}
                         >
                           <XSquare className="w-3.5 h-3.5" />
-                          Mark All Incomplete
+                          Reset All
                         </button>
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-muted/20 text-foreground">
-                          <CalendarCheck className="w-3.5 h-3.5 text-primary" />
-                          <span>Set All Dates:</span>
+                        <span className="text-border">|</span>
+                        <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <CalendarCheck className="w-3.5 h-3.5" />
+                          <span>Set dates:</span>
                           <input
                             type="date"
                             defaultValue={todayStr()}
                             onChange={(e) => { if (e.target.value) bulkDatePhase(pIdx, e.target.value); }}
-                            className="bg-transparent border border-border/40 rounded px-1.5 py-0.5 text-xs text-foreground focus:outline-none focus:border-primary/60 [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
+                            className="bg-transparent border-b border-border/40 px-1 py-0.5 text-xs text-foreground focus:outline-none focus:border-primary/60 [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
                           />
                         </div>
                       </div>

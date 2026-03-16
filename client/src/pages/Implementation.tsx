@@ -17,6 +17,9 @@ import {
   ChevronRight,
   MessageSquare,
   ExternalLink,
+  CheckSquare,
+  XSquare,
+  CalendarCheck,
 } from "lucide-react";
 import { useRoute, Link } from "wouter";
 import { cn } from "@/lib/utils";
@@ -244,6 +247,68 @@ export default function Implementation() {
     return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
   }
 
+  function todayStr() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  // ── Bulk actions per section ──────────────────────────────────────────────────
+
+  function bulkCompleteSection(section: SectionDef) {
+    const today = todayStr();
+    section.tasks.forEach(task => {
+      const current = getMerged(task.id);
+      if (!current.completed) {
+        const merged = { ...current, completed: true, completedAt: new Date(), targetDate: current.targetDate || today };
+        setLocalOverrides(prev => ({ ...prev, [task.id]: merged }));
+        updateTask.mutate({
+          organizationSlug: slug,
+          taskId: task.id,
+          sectionName: section.title,
+          completed: true,
+          owner: merged.owner || undefined,
+          targetDate: merged.targetDate || undefined,
+          notes: merged.notes || undefined,
+        });
+      }
+    });
+  }
+
+  function bulkResetSection(section: SectionDef) {
+    section.tasks.forEach(task => {
+      const current = getMerged(task.id);
+      if (current.completed) {
+        const merged = { ...current, completed: false, completedAt: null };
+        setLocalOverrides(prev => ({ ...prev, [task.id]: merged }));
+        updateTask.mutate({
+          organizationSlug: slug,
+          taskId: task.id,
+          sectionName: section.title,
+          completed: false,
+          owner: merged.owner || undefined,
+          targetDate: merged.targetDate || undefined,
+          notes: merged.notes || undefined,
+        });
+      }
+    });
+  }
+
+  function bulkSetDateSection(section: SectionDef, date: string) {
+    section.tasks.forEach(task => {
+      const current = getMerged(task.id);
+      const merged = { ...current, targetDate: date };
+      setLocalOverrides(prev => ({ ...prev, [task.id]: merged }));
+      updateTask.mutate({
+        organizationSlug: slug,
+        taskId: task.id,
+        sectionName: section.title,
+        completed: merged.completed,
+        owner: merged.owner || undefined,
+        targetDate: date || undefined,
+        notes: merged.notes || undefined,
+      });
+    });
+  }
+
   const allTaskIds = SECTION_DEFS.flatMap(s => s.tasks.map(t => t.id));
   const total = allTaskIds.length;
   const completed = allTaskIds.filter(id => getMerged(id).completed).length;
@@ -329,6 +394,51 @@ export default function Implementation() {
                         {sectionCompleted}/{sectionTotal} Complete
                       </Badge>
                     </button>
+
+                    {/* Bulk action toolbar — visible when expanded */}
+                    {!isCollapsed && (
+                      <div className="flex flex-wrap items-center gap-3 px-5 py-2.5 border-b border-border/20 bg-muted/10">
+                        <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mr-1">Actions</span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); bulkCompleteSection(section); }}
+                          disabled={allDone}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 text-xs transition-colors",
+                            allDone
+                              ? "text-muted-foreground/30 cursor-not-allowed"
+                              : "text-primary hover:text-primary/80 cursor-pointer"
+                          )}
+                        >
+                          <CheckSquare className="w-3.5 h-3.5" />
+                          Complete All
+                        </button>
+                        <span className="text-border">|</span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); bulkResetSection(section); }}
+                          disabled={sectionCompleted === 0}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 text-xs transition-colors",
+                            sectionCompleted === 0
+                              ? "text-muted-foreground/30 cursor-not-allowed"
+                              : "text-muted-foreground hover:text-foreground cursor-pointer"
+                          )}
+                        >
+                          <XSquare className="w-3.5 h-3.5" />
+                          Reset All
+                        </button>
+                        <span className="text-border">|</span>
+                        <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <CalendarCheck className="w-3.5 h-3.5" />
+                          <span>Set dates:</span>
+                          <input
+                            type="date"
+                            defaultValue={todayStr()}
+                            onChange={(e) => { if (e.target.value) bulkSetDateSection(section, e.target.value); }}
+                            className="bg-transparent border-b border-border/40 px-1 py-0.5 text-xs text-foreground focus:outline-none focus:border-primary/60 [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
+                          />
+                        </div>
+                      </div>
+                    )}
 
                     {/* Collapsible content */}
                     {!isCollapsed && (

@@ -2117,3 +2117,10 @@
 
 ## Remove Repetitive Sections from Org Dashboard (Mar 15, 2026)
 - [x] Remove Questionnaire Sections, Testing Checklist, and Implementation Checklist collapsible sections from bottom of Org Dashboard (duplicates workflow cards above)
+
+## Testing & Task List Refinements (Mar 15, 2026)
+- [x] Refine Testing Checklist bulk actions (Mark All Complete/Incomplete, Set All Dates) for more professional appearance
+- [x] Add date fields and bulk actions to the Task List page for consistency with Testing Checklist
+- [x] Rename "Implementation" to "Task List" on Platform Admin dashboard column header
+- [x] Rename "Implementation" to "Task List" on Org Dashboard workflow card (title + subtitle)
+- [x] Rename "Task List" page header to "Task List"
