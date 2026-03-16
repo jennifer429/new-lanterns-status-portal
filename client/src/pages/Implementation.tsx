@@ -252,7 +252,7 @@ export default function Implementation() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border/50 bg-card">
+      <header className="border-b border-border/50 bg-card/80 backdrop-blur-md sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src="/images/flame-icon.png" alt="New Lantern" className="h-8 w-8" />
@@ -331,7 +331,7 @@ export default function Implementation() {
                     </button>
 
                     {/* Collapsible content */}
-                    {!isCollapsed && (
+                    <div className={`collapsible-body ${!isCollapsed ? "open" : ""}`}><div>
                       <CardContent className="p-0">
                         {/* Column headers */}
                         <div className="hidden md:grid grid-cols-[40px_1fr_120px_110px_110px_auto] gap-3 px-5 py-2 text-xs text-muted-foreground uppercase tracking-wider border-b border-border/20 bg-muted/10">
@@ -471,7 +471,7 @@ export default function Implementation() {
                           );
                         })}
                       </CardContent>
-                    )}
+                    </div></div>
                   </Card>
                 );
               })}

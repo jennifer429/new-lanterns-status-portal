@@ -142,6 +142,23 @@
   }
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
+/* Animated collapsible panels using grid-template-rows trick */
+.collapsible-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 220ms ease-in-out;
+}
+.collapsible-body.open {
+  grid-template-rows: 1fr;
+}
+.collapsible-body > * {
+  overflow: hidden;
+}
+
 @layer components {
   /**
    * Custom container utility that centers content and adds responsive padding.

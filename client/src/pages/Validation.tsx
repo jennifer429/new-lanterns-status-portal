@@ -595,7 +595,7 @@ export default function Validation() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border/50 bg-card">
+      <header className="border-b border-border/50 bg-card/80 backdrop-blur-md sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src="/images/flame-icon.png" alt="New Lantern" className="h-8 w-8" />
@@ -675,9 +675,9 @@ export default function Validation() {
                       </Badge>
                     </button>
 
-                    {/* Bulk action buttons — visible when expanded */}
-                    {!isCollapsed && (
-                      <div className="flex items-center gap-2 px-5 py-2 border-b border-border/30 bg-muted/15">
+                    {/* Bulk action buttons + content — animated collapse */}
+                    <div className={`collapsible-body ${!isCollapsed ? "open" : ""}`}><div>
+                    <div className="flex items-center gap-2 px-5 py-2 border-b border-border/30 bg-muted/15">
                         <button
                           onClick={(e) => { e.stopPropagation(); bulkCheckPhase(pIdx); }}
                           disabled={allDone}
@@ -715,11 +715,8 @@ export default function Validation() {
                           />
                         </div>
                       </div>
-                    )}
 
-                    {/* Collapsible content */}
-                    {!isCollapsed && (
-                      <CardContent className="p-0">
+                    <CardContent className="p-0">
                         {/* Column headers */}
                         <div className="hidden md:grid grid-cols-[40px_1fr_100px_140px_auto] gap-3 px-5 py-2 text-xs text-muted-foreground uppercase tracking-wider border-b border-border/20 bg-muted/10">
                           <div className="text-center">Done</div>
@@ -850,7 +847,7 @@ export default function Validation() {
                           );
                         })}
                       </CardContent>
-                    )}
+                    </div></div>
                   </Card>
                 );
               })}

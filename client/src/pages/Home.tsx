@@ -72,7 +72,9 @@ function CollapsibleSection({
           )}
         </div>
       </button>
-      {open && <div className="border-t border-border/40">{children}</div>}
+      <div className={`collapsible-body ${open ? "open" : ""}`}>
+        <div><div className="border-t border-border/40">{children}</div></div>
+      </div>
     </Card>
   );
 }
@@ -412,7 +414,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border/50 bg-card">
+      <header className="border-b border-border/50 bg-card/80 backdrop-blur-md sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
@@ -638,13 +640,18 @@ export default function Home() {
                 })}
               </div>
             ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                <ImageIcon className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p className="text-sm">No architecture diagram uploaded yet</p>
+              <div className="flex flex-col items-center justify-center py-14 gap-3">
+                <div className="w-16 h-16 rounded-2xl bg-muted/40 border border-border/50 flex items-center justify-center">
+                  <ImageIcon className="w-7 h-7 text-muted-foreground/50" />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-medium text-foreground">No diagram uploaded yet</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Upload your architecture diagram in the questionnaire</p>
+                </div>
                 <Link href={`/org/${orgSlug}/intake`}>
-                  <Button size="sm" variant="outline" className="mt-3">
-                    <ArrowRight className="w-4 h-4 mr-2" />
-                    Go to Questionnaire to Upload
+                  <Button size="sm" variant="outline" className="mt-1 gap-1.5">
+                    <ArrowRight className="w-3.5 h-3.5" />
+                    Open Questionnaire
                   </Button>
                 </Link>
               </div>
@@ -667,16 +674,14 @@ export default function Home() {
           defaultOpen={false}
         >
           <CardContent className="p-5">
-            <div className="text-center py-12 border-2 border-dashed border-border/50 rounded-lg">
-              <Network className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-30" />
-              <p className="text-sm font-medium text-muted-foreground mb-1">
-                Notion Database Integration
-              </p>
-              <p className="text-xs text-muted-foreground max-w-md mx-auto">
-                This section will display connectivity data (AE Titles, IPs,
-                Ports, Systems) from your Notion database, filtered for this
-                site. Configuration coming soon.
-              </p>
+            <div className="flex flex-col items-center justify-center py-10 gap-3 border-2 border-dashed border-border/40 rounded-xl bg-muted/10">
+              <div className="w-14 h-14 rounded-2xl bg-muted/50 border border-border/50 flex items-center justify-center">
+                <Network className="w-6 h-6 text-muted-foreground/50" />
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-medium text-foreground">Notion integration coming soon</p>
+                <p className="text-xs text-muted-foreground mt-0.5 max-w-xs">AE Titles, IPs, and ports for this site will appear here once connected</p>
+              </div>
             </div>
           </CardContent>
         </CollapsibleSection>
