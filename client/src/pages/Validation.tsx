@@ -10,6 +10,16 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   CheckCircle2,
   Circle,
   ShieldCheck,
@@ -21,10 +31,12 @@ import {
   CheckSquare,
   CalendarCheck,
   XSquare,
+  Square,
 } from "lucide-react";
 import { useRoute, Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
+import { UserMenu } from "@/components/UserMenu";
 import { buildCSV, downloadCSV, parseCSV, readFileAsText, csvFilename } from "@/lib/csv";
 import { Download, Upload } from "lucide-react";
 
@@ -461,8 +473,47 @@ export default function Validation() {
   const [localOverrides, setLocalOverrides] = useState<Record<string, { status?: string; signOff?: string; notes?: string; testedDate?: string }>>({}); const [importStatus, setImportStatus] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({});
   const [collapsedPhases, setCollapsedPhases] = useState<Record<number, boolean>>({});
-  // Track which tests have their related questions expanded
   const [expandedRelated, setExpandedRelated] = useState<Record<string, boolean>>({});
+  const [resetTargetPhase, setResetTargetPhase] = useState<number | null>(null);
+  const [selectedTestKeys, setSelectedTestKeys] = useState<Set<string>>(new Set());
+
+  function toggleTestSelection(key: string) {
+    setSelectedTestKeys(prev => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  }
+
+  function toggleSelectAllInPhase(pIdx: number) {
+    const keys = phases[pIdx].tests.map((_, tIdx) => testKey(pIdx, tIdx));
+    const allSelected = keys.every(k => selectedTestKeys.has(k));
+    setSelectedTestKeys(prev => {
+      const next = new Set(prev);
+      if (allSelected) {
+        keys.forEach(k => next.delete(k));
+      } else {
+        keys.forEach(k => next.add(k));
+      }
+      return next;
+    });
+  }
+
+  function bulkSetDateSelected(date: string) {
+    selectedTestKeys.forEach(key => {
+      const current = getMerged(key);
+      const merged = { ...current, testedDate: date };
+      setLocalOverrides(prev => ({ ...prev, [key]: merged }));
+      updateMutation.mutate({
+        organizationSlug: slug,
+        testKey: key,
+        status: merged.status as any,
+        signOff: merged.signOff || undefined,
+        notes: merged.notes || undefined,
+        testedDate: date,
+      });
+    });
+  }
 
   function togglePhase(pIdx: number) {
     setCollapsedPhases(prev => ({ ...prev, [pIdx]: !prev[pIdx] }));
@@ -732,6 +783,7 @@ export default function Validation() {
             <Link href={`/org/${slug}`} className="text-sm text-foreground hover:text-primary transition-colors font-medium">
               Back to Dashboard
             </Link>
+            <UserMenu />
           </div>
         </div>
       </header>
@@ -820,7 +872,7 @@ export default function Validation() {
                     </button>
 
                     {/* Bulk action toolbar — visible when expanded */}
-                    {!isCollapsed && (
+                    {!isCollapsed && (<>
                       <div className="flex flex-wrap items-center gap-3 px-5 py-2.5 border-b border-border/20 bg-muted/10">
                         <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mr-1">Actions</span>
                         <button
@@ -838,37 +890,67 @@ export default function Validation() {
                         </button>
                         <span className="text-border">|</span>
                         <button
-                          onClick={(e) => { e.stopPropagation(); bulkUncheckPhase(pIdx); }}
+                          onClick={(e) => { e.stopPropagation(); setResetTargetPhase(pIdx); }}
                           disabled={phaseCompleted === 0}
                           className={cn(
                             "inline-flex items-center gap-1.5 text-xs transition-colors",
                             phaseCompleted === 0
                               ? "text-muted-foreground/30 cursor-not-allowed"
-                              : "text-muted-foreground hover:text-foreground cursor-pointer"
+                              : "text-destructive/70 hover:text-destructive cursor-pointer"
                           )}
                         >
                           <XSquare className="w-3.5 h-3.5" />
                           Reset All
                         </button>
                         <span className="text-border">|</span>
-                        <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <CalendarCheck className="w-3.5 h-3.5" />
-                          <span>Set dates:</span>
-                          <input
-                            type="date"
-                            defaultValue={todayStr()}
-                            onChange={(e) => { if (e.target.value) bulkDatePhase(pIdx, e.target.value); }}
-                            className="bg-transparent border-b border-border/40 px-1 py-0.5 text-xs text-foreground focus:outline-none focus:border-primary/60 [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
-                          />
-                        </div>
+                        {/* Select-all toggle */}
+                        {(() => {
+                          const phaseKeys = phases[pIdx].tests.map((_, tIdx) => testKey(pIdx, tIdx));
+                          const allSelected = phaseKeys.length > 0 && phaseKeys.every(k => selectedTestKeys.has(k));
+                          const selectedInPhase = phaseKeys.filter(k => selectedTestKeys.has(k));
+                          return (
+                            <>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); toggleSelectAllInPhase(pIdx); }}
+                                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                              >
+                                <Square className="w-3.5 h-3.5" />
+                                {allSelected ? "Deselect All" : "Select All"}
+                              </button>
+                              <span className="text-border">|</span>
+                              <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <CalendarCheck className="w-3.5 h-3.5" />
+                                {selectedInPhase.length > 0 ? (
+                                  <>
+                                    <span className="text-primary font-medium">Backdate {selectedInPhase.length} selected:</span>
+                                    <input
+                                      type="date"
+                                      defaultValue={todayStr()}
+                                      onChange={(e) => { if (e.target.value) bulkSetDateSelected(e.target.value); }}
+                                      className="bg-transparent border-b border-primary/60 px-1 py-0.5 text-xs text-foreground focus:outline-none focus:border-primary [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
+                                    />
+                                  </>
+                                ) : (
+                                  <>
+                                    <span>Set all dates:</span>
+                                    <input
+                                      type="date"
+                                      defaultValue={todayStr()}
+                                      onChange={(e) => { if (e.target.value) bulkDatePhase(pIdx, e.target.value); }}
+                                      className="bg-transparent border-b border-border/40 px-1 py-0.5 text-xs text-foreground focus:outline-none focus:border-primary/60 [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
+                                    />
+                                  </>
+                                )}
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
-                    )}
 
-                    {/* Collapsible content */}
-                    {!isCollapsed && (
-                      <CardContent className="p-0">
+                    <CardContent className="p-0">
                         {/* Column headers */}
-                        <div className="hidden md:grid grid-cols-[40px_1fr_100px_140px_auto] gap-3 px-5 py-2 text-xs text-muted-foreground uppercase tracking-wider border-b border-border/20 bg-muted/10">
+                        <div className="hidden md:grid grid-cols-[24px_40px_1fr_100px_140px_auto] gap-3 px-5 py-2 text-xs text-muted-foreground uppercase tracking-wider border-b border-border/20 bg-muted/10">
+                          <div />
                           <div className="text-center">Done</div>
                           <div>Test</div>
                           <div>Date</div>
@@ -883,12 +965,26 @@ export default function Validation() {
                           const notesOpen = !!expandedNotes[key];
                           const relatedOpen = !!expandedRelated[key];
                           const hasRelated = test.relatedQuestions && test.relatedQuestions.length > 0;
+                          const isSelected = selectedTestKeys.has(key);
 
                           return (
-                            <div key={tIdx} className={tIdx < phase.tests.length - 1 ? "border-b border-border/20" : ""}>
+                            <div key={tIdx} className={cn(tIdx < phase.tests.length - 1 ? "border-b border-border/20" : "", isSelected && "bg-primary/5")}>
                               {/* Main row */}
-                              <div className="grid grid-cols-1 md:grid-cols-[40px_1fr_100px_140px_auto] gap-3 items-start px-5 py-3">
-                                {/* Checkbox */}
+                              <div className="grid grid-cols-1 md:grid-cols-[24px_40px_1fr_100px_140px_auto] gap-3 items-start px-5 py-3">
+                                {/* Row selection checkbox */}
+                                <div className="hidden md:flex items-center justify-center pt-1">
+                                  <button
+                                    onClick={() => toggleTestSelection(key)}
+                                    className="focus:outline-none text-muted-foreground/40 hover:text-primary/70 transition-colors"
+                                    title="Select row"
+                                  >
+                                    {isSelected
+                                      ? <CheckSquare className="w-3.5 h-3.5 text-primary" />
+                                      : <Square className="w-3.5 h-3.5" />
+                                    }
+                                  </button>
+                                </div>
+                                {/* Done Checkbox */}
                                 <div className="flex justify-center pt-0.5">
                                   <button
                                     onClick={() => toggleTested(pIdx, tIdx)}
@@ -997,7 +1093,7 @@ export default function Validation() {
                           );
                         })}
                       </CardContent>
-                    )}
+                    </>)}
                   </Card>
                 );
               })}
@@ -1081,6 +1177,30 @@ export default function Validation() {
           </div>
         )}
       </div>
+
+      {/* Reset All confirmation dialog */}
+      <AlertDialog open={resetTargetPhase !== null} onOpenChange={(open) => { if (!open) setResetTargetPhase(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Reset all tests in "{resetTargetPhase !== null ? phases[resetTargetPhase]?.title : ""}"?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will mark all {resetTargetPhase !== null ? phases[resetTargetPhase]?.tests.length : 0} tests as not tested and clear their dates.
+              Sign-off names and notes will be preserved. This cannot be undone automatically.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => { if (resetTargetPhase !== null) { bulkUncheckPhase(resetTargetPhase); setResetTargetPhase(null); } }}
+            >
+              Reset All
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

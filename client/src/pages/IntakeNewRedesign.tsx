@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Download, Upload, CheckCircle2, Circle, LogOut, FileText, Shield, FileUp, Network, ClipboardCheck, Star, X, File, CloudUpload, Trash2, Paperclip, FileIcon, Menu, Pencil, Plus, RefreshCw, Import, FileDown, FileUp as FileUpIcon } from "lucide-react";
+import { Loader2, Download, Upload, CheckCircle2, Circle, LogOut, FileText, Shield, FileUp, Network, ClipboardCheck, Star, X, File, CloudUpload, Trash2, Paperclip, FileIcon, Menu, Pencil, Plus, RefreshCw, Import, FileDown, FileUp as FileUpIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import { WorkflowDiagram } from "@/components/WorkflowDiagram";
 import { IntegrationWorkflows } from "@/components/IntegrationWorkflows";
 import { ConnectivityTable, type ConnectivityRow } from "@/components/ConnectivityTable";
+import { UserMenu } from "@/components/UserMenu";
 
 // Section icons mapping
 const sectionIcons: Record<string, any> = {
@@ -527,6 +528,71 @@ function SystemEditRow({
   );
 }
 
+// Local-state wrappers so typing doesn't re-render the whole page.
+// They update global state only on blur.
+function LocalInput({
+  value,
+  onCommit,
+  placeholder,
+  className,
+  type = "text",
+}: {
+  value: string;
+  onCommit: (val: string) => void;
+  placeholder?: string;
+  className?: string;
+  type?: string;
+}) {
+  const [local, setLocal] = useState(value);
+  const committed = useRef(value);
+  useEffect(() => {
+    if (value !== committed.current) {
+      committed.current = value;
+      setLocal(value);
+    }
+  }, [value]);
+  return (
+    <Input
+      type={type}
+      value={local}
+      onChange={(e) => setLocal(e.target.value)}
+      onBlur={() => { committed.current = local; onCommit(local); }}
+      placeholder={placeholder}
+      className={className}
+    />
+  );
+}
+
+function LocalTextarea({
+  value,
+  onCommit,
+  placeholder,
+  className,
+}: {
+  value: string;
+  onCommit: (val: string) => void;
+  placeholder?: string;
+  className?: string;
+}) {
+  const [local, setLocal] = useState(value);
+  const committed = useRef(value);
+  useEffect(() => {
+    if (value !== committed.current) {
+      committed.current = value;
+      setLocal(value);
+    }
+  }, [value]);
+  return (
+    <Textarea
+      value={local}
+      onChange={(e) => setLocal(e.target.value)}
+      onBlur={() => { committed.current = local; onCommit(local); }}
+      placeholder={placeholder}
+      className={className}
+    />
+  );
+}
+
 export default function IntakeNewRedesign() {
   const [, params] = useRoute("/org/:slug/intake");
   const slug = params?.slug;
@@ -551,7 +617,6 @@ export default function IntakeNewRedesign() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hasNavigatedRef = useRef(false); // Track if we've already auto-navigated
   const { user } = useAuth();
-  const logoutMutation = trpc.auth.logout.useMutation();
 
   // Fetch organization
   const { data: org } = trpc.organizations.getBySlug.useQuery(
@@ -576,6 +641,72 @@ export default function IntakeNewRedesign() {
     { organizationSlug: slug || "" },
     { enabled: !!slug }
   );
+
+  // Notion connectivity — live read/write
+  const { data: notionConnData } = trpc.connectivity.getForOrg.useQuery(
+    { organizationSlug: slug || "", organizationName: org?.name },
+    { enabled: !!slug && !!org }
+  );
+
+  const [connRows, setConnRows] = useState<ConnectivityRow[]>([]);
+  const notionPageIds = useRef<Set<string>>(new Set());
+
+  // Seed from Notion on load; fall back to local DB if Notion has no rows
+  useEffect(() => {
+    if (notionConnData?.rows && notionConnData.rows.length > 0) {
+      setConnRows(notionConnData.rows as ConnectivityRow[]);
+      notionPageIds.current = new Set(notionConnData.rows.map(r => r.id));
+    } else if (notionConnData !== undefined) {
+      // Notion configured but empty — fall back to local DB data
+      try {
+        const v = responses['CONN.endpoints'];
+        if (v) setConnRows(typeof v === 'string' ? JSON.parse(v) : v);
+      } catch { /* ignore */ }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notionConnData]);
+
+  const createConnRow = trpc.connectivity.createRow.useMutation();
+  const updateConnRow = trpc.connectivity.updateRow.useMutation();
+  const archiveConnRow = trpc.connectivity.archiveRow.useMutation();
+
+  const handleConnChange = async (newRows: ConnectivityRow[]) => {
+    const oldIds = new Set(connRows.map(r => r.id));
+    const newIds = new Set(newRows.map(r => r.id));
+    setConnRows(newRows); // optimistic
+
+    // Always keep local DB in sync as backup
+    if (slug && user?.email) {
+      saveMutation.mutate({ organizationSlug: slug, questionId: 'CONN.endpoints', response: JSON.stringify(newRows), userEmail: user.email });
+    }
+
+    // Write-through to Notion if configured
+    if (!notionConnData?.configured || !org?.name) return;
+
+    for (const row of connRows) {
+      if (!newIds.has(row.id) && notionPageIds.current.has(row.id)) {
+        archiveConnRow.mutate({ pageId: row.id });
+        notionPageIds.current.delete(row.id);
+      }
+    }
+    for (const row of newRows) {
+      if (!oldIds.has(row.id)) {
+        createConnRow.mutate(
+          { organizationName: org.name, row },
+          { onSuccess: ({ pageId }) => {
+              notionPageIds.current.add(pageId);
+              setConnRows(prev => prev.map(r => r.id === row.id ? { ...r, id: pageId } : r));
+            }
+          }
+        );
+      } else if (notionPageIds.current.has(row.id)) {
+        const old = connRows.find(r => r.id === row.id);
+        if (JSON.stringify(old) !== JSON.stringify(row)) {
+          updateConnRow.mutate({ pageId: row.id, organizationName: org.name, row });
+        }
+      }
+    }
+  };
 
   // Fetch partner templates from database
   const { data: dbTemplates = [] } = trpc.intake.getTemplatesForOrg.useQuery(
@@ -1045,9 +1176,9 @@ export default function IntakeNewRedesign() {
     switch (question.type) {
       case 'text':
         return (
-          <Input
+          <LocalInput
             value={value || ''}
-            onChange={(e) => setResponses(prev => ({ ...prev, [question.id]: e.target.value }))}
+            onCommit={(val) => setResponses(prev => ({ ...prev, [question.id]: val }))}
             placeholder={question.placeholder}
             className="!bg-white !text-black"
           />
@@ -1055,9 +1186,9 @@ export default function IntakeNewRedesign() {
 
       case 'textarea':
         return (
-          <Textarea
+          <LocalTextarea
             value={value || ''}
-            onChange={(e) => setResponses(prev => ({ ...prev, [question.id]: e.target.value }))}
+            onCommit={(val) => setResponses(prev => ({ ...prev, [question.id]: val }))}
             placeholder={question.placeholder}
             className="!bg-white !text-black min-h-[100px]"
           />
@@ -1082,10 +1213,10 @@ export default function IntakeNewRedesign() {
 
       case 'date':
         return (
-          <Input
+          <LocalInput
             type="date"
             value={value || ''}
-            onChange={(e) => setResponses(prev => ({ ...prev, [question.id]: e.target.value }))}
+            onCommit={(val) => setResponses(prev => ({ ...prev, [question.id]: val }))}
             className="!bg-white !text-black"
           />
         );
@@ -1249,9 +1380,9 @@ export default function IntakeNewRedesign() {
                       <td className="px-3 py-1.5 text-xs text-muted-foreground font-medium align-middle">{label}</td>
                       {(['name', 'phone', 'email'] as (keyof ContactRow)[]).map(field => (
                         <td key={field} className="px-2 py-1">
-                          <Input
+                          <LocalInput
                             value={row[field]}
-                            onChange={e => updateContact(key as ContactKey, field, e.target.value)}
+                            onCommit={(val) => updateContact(key as ContactKey, field, val)}
                             placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
                             className="h-8 text-sm !bg-white !text-black border-0 shadow-none focus-visible:ring-1 focus-visible:ring-primary/50"
                           />
@@ -1274,6 +1405,108 @@ export default function IntakeNewRedesign() {
   const currentSectionData = questionnaireSections.find(s => s.id === currentSection);
   const currentSectionIndex = questionnaireSections.findIndex(s => s.id === currentSection);
   const isLastSection = currentSectionIndex === questionnaireSections.length - 1;
+
+  const handleNext = async () => {
+    // Validate workflow sections
+    if (currentSectionData?.type === 'workflow') {
+      const configKey = currentSectionData.id + '_config';
+      const savedConfig = responses[configKey];
+      let isValid = false;
+      let errorMessage = 'Please select at least one workflow path';
+      if (savedConfig) {
+        try {
+          const config = typeof savedConfig === 'string' ? JSON.parse(savedConfig) : savedConfig;
+          const selectedPathKeys = Object.keys(config.paths || {}).filter(key => config.paths[key]);
+          if (selectedPathKeys.length === 0) {
+            errorMessage = 'Please select at least one workflow path';
+          } else {
+            const workflowsRequiringSystemNames = ['priors-workflow', 'reports-out-workflow'];
+            const requiresSystemNames = workflowsRequiringSystemNames.includes(currentSectionData.id);
+            if (requiresSystemNames) {
+              const pathToSystemKeyMap: Record<string, string> = {
+                'priorsPush': 'priorsPushSource',
+                'priorsQuery': 'priorsQuerySource',
+                'reportsToPortal': 'reportsPortalDestination',
+              };
+              const missingSystems = selectedPathKeys.filter(pathKey => {
+                const systemKey = pathToSystemKeyMap[pathKey];
+                if (!systemKey) return false;
+                const systemValue = config.systems?.[systemKey];
+                return !systemValue || systemValue.trim() === '';
+              });
+              if (missingSystems.length > 0) {
+                errorMessage = 'Please fill in system names for all selected workflow paths';
+              } else {
+                isValid = true;
+              }
+            } else {
+              isValid = true;
+            }
+          }
+        } catch (e) {
+          errorMessage = 'Invalid workflow configuration';
+        }
+      }
+      if (!isValid) {
+        toast.error(errorMessage);
+        return;
+      }
+      if (!isLastSection) {
+        setCurrentSection(questionnaireSections[currentSectionIndex + 1].id);
+      } else {
+        setShowFeedbackModal(true);
+      }
+      return;
+    }
+
+    // Check for unanswered questions in current section
+    const currentQuestions = currentSectionData?.questions || [];
+    const unanswered = currentQuestions
+      .filter(q => {
+        if (q.conditionalOn) {
+          const parentResponse = responses[q.conditionalOn.questionId];
+          if (parentResponse !== q.conditionalOn.value) return false;
+        }
+        if (q.type === 'upload' || q.type === 'upload-download') {
+          return !uploadedFilesMap.has(q.id) || uploadedFilesMap.get(q.id) === 0;
+        }
+        return !responses[q.id] || responses[q.id] === '';
+      })
+      .map(q => q.id);
+
+    if (unanswered.length > 0) {
+      setUnansweredQuestions(new Set(unanswered));
+      const firstUnanswered = document.querySelector(`[data-question-id="${unanswered[0]}"]`);
+      firstUnanswered?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    setUnansweredQuestions(new Set());
+
+    try {
+      setSaveStatus('saving');
+      const savePromises = Object.entries(responses).map(([questionId, value]) =>
+        saveMutation.mutateAsync({
+          organizationSlug: slug || '',
+          questionId,
+          response: typeof value === 'object' ? JSON.stringify(value) : String(value),
+          userEmail: user?.email || '',
+        })
+      );
+      await Promise.all(savePromises);
+      setSaveStatus('saved');
+    } catch (error) {
+      console.error('Failed to save responses:', error);
+      toast.error('Failed to save responses. Please try again.');
+      return;
+    }
+
+    if (!isLastSection) {
+      setCurrentSection(questionnaireSections[currentSectionIndex + 1].id);
+    } else {
+      setShowFeedbackModal(true);
+    }
+  };
 
   // Show loading until responses are loaded into state
   // This ensures calculateSectionProgress has data to work with
@@ -1426,43 +1659,7 @@ export default function IntakeNewRedesign() {
                 <Upload className="w-4 h-4" />
                 Import
               </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="h-10 px-4">
-                    <div className="text-sm font-medium">
-                      {user?.name || 'User'}
-                    </div>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  {/* Show admin links for admin users */}
-                  {user?.role === 'admin' && (
-                    <>
-                      <DropdownMenuItem onClick={() => {
-                        // Navigate to appropriate admin dashboard based on user's clientId
-                        if (user.clientId === null) {
-                          // New Lantern staff - go to Platform Admin
-                          setLocation('/org/admin');
-                        } else {
-                          // Partner admin - go to their partner admin page
-                          setLocation('/org/admin');
-                        }
-                      }}>
-                        <Shield className="w-4 h-4 mr-2" />
-                        Admin Dashboard
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                    </>
-                  )}
-                  <DropdownMenuItem onClick={() => {
-                    logoutMutation.mutate();
-                    setLocation('/login');
-                  }}>
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Sign Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <UserMenu />
             </div>
           </div>
         </header>
@@ -1489,7 +1686,7 @@ export default function IntakeNewRedesign() {
         </div>
 
         {/* Section Content */}
-        <div className="flex-1 overflow-y-auto p-3 md:p-8">
+        <div className="flex-1 overflow-y-auto p-3 pb-20 sm:pb-8 md:p-8">
           <Card className="max-w-6xl mx-auto bg-black/40 backdrop-blur-sm border-purple-500/20">
             <div className="p-4 md:p-8">
               {/* Integration Workflows section — renders its own header */}
@@ -1586,18 +1783,14 @@ export default function IntakeNewRedesign() {
 
                   {/* Endpoint Table */}
                   <div className="space-y-3">
-                    <h3 className="text-lg font-semibold">Network Endpoints</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Add each network endpoint that will carry traffic between your systems and New Lantern. Include DICOM, HL7, and any other connections for both test and production environments.
-                    </p>
+                    <div>
+                      <h3 className="text-lg font-semibold">Network Endpoints</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Add each network endpoint that will carry traffic between your systems and New Lantern. Include DICOM, HL7, and any other connections for both test and production environments.
+                      </p>
+                    </div>
                     <ConnectivityTable
-                      rows={(() => {
-                        try {
-                          const v = responses['CONN.endpoints'];
-                          if (!v) return [];
-                          return typeof v === 'string' ? JSON.parse(v) : v;
-                        } catch { return []; }
-                      })()}
+                      rows={connRows}
                       systems={(() => {
                         try {
                           const v = responses['ARCH.systems'];
@@ -1605,17 +1798,7 @@ export default function IntakeNewRedesign() {
                           return typeof v === 'string' ? JSON.parse(v) : v;
                         } catch { return []; }
                       })()}
-                      onChange={(rows) => {
-                        setResponses(prev => ({ ...prev, ['CONN.endpoints']: rows }));
-                        if (slug && user?.email) {
-                          saveMutation.mutate({
-                            organizationSlug: slug,
-                            questionId: 'CONN.endpoints',
-                            response: JSON.stringify(rows),
-                            userEmail: user.email,
-                          });
-                        }
-                      }}
+                      onChange={handleConnChange}
                     />
                   </div>
 
@@ -1745,138 +1928,7 @@ export default function IntakeNewRedesign() {
                 >
                   Back to Overview
                 </Button>
-                <Button
-                  onClick={async () => {
-                    // Validate workflow sections
-                    if (currentSectionData?.type === 'workflow') {
-                      const configKey = currentSectionData.id + '_config';
-                      const savedConfig = responses[configKey];
-                      
-                      let isValid = false;
-                      let errorMessage = 'Please select at least one workflow path';
-                      
-                      if (savedConfig) {
-                        try {
-                          const config = typeof savedConfig === 'string' ? JSON.parse(savedConfig) : savedConfig;
-                          const selectedPathKeys = Object.keys(config.paths || {}).filter(key => config.paths[key]);
-                          
-                          if (selectedPathKeys.length === 0) {
-                            errorMessage = 'Please select at least one workflow path';
-                          } else {
-                            // For workflows that require system names (priors, reports), check if they're filled
-                            // Orders and Images workflows have fixed systems, so they don't need system name validation
-                            const workflowsRequiringSystemNames = ['priors-workflow', 'reports-out-workflow'];
-                            const requiresSystemNames = workflowsRequiringSystemNames.includes(currentSectionData.id);
-                            
-                            if (requiresSystemNames) {
-                              // Map path keys to their corresponding system keys
-                              const pathToSystemKeyMap: Record<string, string> = {
-                                // Priors workflow
-                                'priorsPush': 'priorsPushSource',
-                                'priorsQuery': 'priorsQuerySource',
-                                // Reports workflow  
-                                'reportsToPortal': 'reportsPortalDestination',
-                              };
-                              
-                              const missingSystems = selectedPathKeys.filter(pathKey => {
-                                // If this path doesn't need a system name input, skip it
-                                const systemKey = pathToSystemKeyMap[pathKey];
-                                if (!systemKey) return false;
-                                
-                                const systemValue = config.systems?.[systemKey];
-                                return !systemValue || systemValue.trim() === '';
-                              });
-                              
-                              if (missingSystems.length > 0) {
-                                errorMessage = 'Please fill in system names for all selected workflow paths';
-                              } else {
-                                isValid = true;
-                              }
-                            } else {
-                              // Orders and Images workflows are valid if at least one path is selected
-                              isValid = true;
-                            }
-                          }
-                        } catch (e) {
-                          errorMessage = 'Invalid workflow configuration';
-                        }
-                      }
-                      
-                      if (!isValid) {
-                        toast.error(errorMessage);
-                        return;
-                      }
-                      
-                      // Workflow is valid, proceed to next section
-                      if (!isLastSection) {
-                        setCurrentSection(questionnaireSections[currentSectionIndex + 1].id);
-                      } else {
-                        setShowFeedbackModal(true);
-                      }
-                      return;
-                    }
-                    
-                    // Check for unanswered questions in current section
-                    const currentQuestions = currentSectionData?.questions || [];
-                    const unanswered = currentQuestions
-                      .filter(q => {
-                        // Skip conditional questions that aren't visible
-                        if (q.conditionalOn) {
-                          const parentResponse = responses[q.conditionalOn.questionId];
-                          if (parentResponse !== q.conditionalOn.value) {
-                            return false; // Don't validate hidden questions
-                          }
-                        }
-                        
-                        // For file upload questions (including upload-download), check if files are uploaded
-                        if (q.type === 'upload' || q.type === 'upload-download') {
-                          return !uploadedFilesMap.has(q.id) || uploadedFilesMap.get(q.id) === 0;
-                        }
-                        // For other questions, check responses
-                        return !responses[q.id] || responses[q.id] === '';
-                      })
-                      .map(q => q.id);
-                    
-                    if (unanswered.length > 0) {
-                      setUnansweredQuestions(new Set(unanswered));
-                      // Scroll to first unanswered question
-                      const firstUnanswered = document.querySelector(`[data-question-id="${unanswered[0]}"]`);
-                      firstUnanswered?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                      return;
-                    }
-                    
-                    // Clear validation flags
-                    setUnansweredQuestions(new Set());
-                    
-                    // IMPORTANT: Save all current responses to database before proceeding
-                    // This ensures responses are persisted even if auto-save hasn't completed
-                    try {
-                      setSaveStatus('saving');
-                      const savePromises = Object.entries(responses).map(([questionId, value]) => {
-                        return saveMutation.mutateAsync({
-                          organizationSlug: slug || '',
-                          questionId,
-                          response: typeof value === 'object' ? JSON.stringify(value) : String(value),
-                          userEmail: user?.email || '',
-                        });
-                      });
-                      
-                      await Promise.all(savePromises);
-                      setSaveStatus('saved');
-                    } catch (error) {
-                      console.error('Failed to save responses:', error);
-                      toast.error('Failed to save responses. Please try again.');
-                      return; // Don't proceed if save failed
-                    }
-                    
-                    if (!isLastSection) {
-                      setCurrentSection(questionnaireSections[currentSectionIndex + 1].id);
-                    } else {
-                      // Show feedback modal on completion
-                      setShowFeedbackModal(true);
-                    }
-                  }}
-                >
+                <Button onClick={handleNext}>
                   {isLastSection ? 'Complete' : 'Save & Continue'}
                 </Button>
               </div>
@@ -2005,6 +2057,32 @@ export default function IntakeNewRedesign() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Mobile sticky bottom nav — hidden on sm+ where sidebar + in-card nav are accessible */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-t border-border px-4 py-3 flex items-center justify-between sm:hidden">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={currentSectionIndex === 0}
+          onClick={() => setCurrentSection(questionnaireSections[currentSectionIndex - 1].id)}
+          className="gap-1"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          Prev
+        </Button>
+        <span className="text-xs text-muted-foreground font-medium">
+          {currentSectionIndex + 1} / {questionnaireSections.length}
+        </span>
+        <Button
+          size="sm"
+          disabled={isLastSection}
+          onClick={() => setCurrentSection(questionnaireSections[currentSectionIndex + 1].id)}
+          className="gap-1"
+        >
+          Next
+          <ChevronRight className="w-4 h-4" />
+        </Button>
+      </div>
     </div>
   );
 }

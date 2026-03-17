@@ -6,6 +6,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ConnectivityTable, type ConnectivityRow } from "@/components/ConnectivityTable";
 import { Badge } from "@/components/ui/badge";
 import {
   Collapsible,
@@ -31,14 +32,17 @@ import {
   Trash2,
   Activity,
   ArrowUpRight,
+  Loader2,
+  AlertCircle,
   Sparkles,
 } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { questionnaireSections } from "@shared/questionnaireData";
 import { calculateProgress } from "@shared/progressCalculation";
 import { PhiDisclaimer } from "@/components/PhiDisclaimer";
+import { UserMenu } from "@/components/UserMenu";
 import { cn } from "@/lib/utils";
 
 // ── Collapsible Section (with smooth Radix animation) ──────────────────────
@@ -324,6 +328,67 @@ export default function Home() {
   // Fetch New Lantern specifications
   const { data: specs = [] } = trpc.admin.getSpecifications.useQuery();
 
+  // Connectivity — live Notion-backed state
+  const { data: connectivityData, isLoading: connectivityLoading } =
+    trpc.connectivity.getForOrg.useQuery(
+      { organizationSlug: orgSlug, organizationName: organization?.name },
+      { enabled: !!orgSlug }
+    );
+
+  const [connRows, setConnRows] = useState<ConnectivityRow[]>([]);
+  // IDs that exist as Notion pages (vs newly-added local rows)
+  const notionPageIds = useRef<Set<string>>(new Set());
+  const [connSaving, setConnSaving] = useState(false);
+
+  useEffect(() => {
+    if (connectivityData?.rows) {
+      setConnRows(connectivityData.rows as ConnectivityRow[]);
+      notionPageIds.current = new Set(connectivityData.rows.map(r => r.id));
+    }
+  }, [connectivityData]);
+
+  const createRowMutation = trpc.connectivity.createRow.useMutation();
+  const updateRowMutation = trpc.connectivity.updateRow.useMutation();
+  const archiveRowMutation = trpc.connectivity.archiveRow.useMutation();
+
+  const handleConnChange = async (newRows: ConnectivityRow[]) => {
+    const oldIds = new Set(connRows.map(r => r.id));
+    const newIds = new Set(newRows.map(r => r.id));
+    setConnRows(newRows); // optimistic
+    if (!connectivityData?.configured || !organization?.name) return;
+    setConnSaving(true);
+    try {
+      // Deletions
+      for (const row of connRows) {
+        if (!newIds.has(row.id) && notionPageIds.current.has(row.id)) {
+          archiveRowMutation.mutate({ pageId: row.id });
+          notionPageIds.current.delete(row.id);
+        }
+      }
+      // Additions & updates
+      for (const row of newRows) {
+        if (!oldIds.has(row.id)) {
+          // New row — create in Notion, swap in real page ID
+          createRowMutation.mutate(
+            { organizationName: organization.name, row },
+            { onSuccess: ({ pageId }) => {
+                notionPageIds.current.add(pageId);
+                setConnRows(prev => prev.map(r => r.id === row.id ? { ...r, id: pageId } : r));
+              }
+            }
+          );
+        } else if (notionPageIds.current.has(row.id)) {
+          const old = connRows.find(r => r.id === row.id);
+          if (JSON.stringify(old) !== JSON.stringify(row)) {
+            updateRowMutation.mutate({ pageId: row.id, organizationName: organization.name, row });
+          }
+        }
+      }
+    } finally {
+      setConnSaving(false);
+    }
+  };
+
   // Delete file mutation
   const utils = trpc.useUtils();
   const deleteFileMutation = trpc.intake.deleteFile.useMutation({
@@ -441,11 +506,14 @@ export default function Home() {
               className="h-10"
             />
           </div>
-          <div className="text-right">
-            <div className="text-sm font-semibold tracking-tight">{orgName}</div>
-            {partnerName && (
-              <div className="text-xs text-muted-foreground">{partnerName}</div>
-            )}
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <div className="text-sm font-semibold tracking-tight">{orgName}</div>
+              {partnerName && (
+                <div className="text-xs text-muted-foreground">{partnerName}</div>
+              )}
+            </div>
+            <UserMenu />
           </div>
         </div>
       </header>
@@ -693,34 +761,47 @@ export default function Home() {
           </CardContent>
         </CollapsibleSection>
 
-        {/* ── Connectivity Info (Notion placeholder) ── */}
+        {/* ── Connectivity (live Notion) ── */}
         <CollapsibleSection
-          title="Connectivity Info"
+          title="Connectivity"
           icon={<Network className="w-5 h-5 text-primary" />}
           badge={
-            <Badge
-              variant="outline"
-              className="text-xs text-muted-foreground"
-            >
-              Notion Database
-            </Badge>
+            connectivityLoading ? (
+              <Badge variant="outline" className="text-xs text-muted-foreground gap-1">
+                <Loader2 className="w-3 h-3 animate-spin" /> Loading…
+              </Badge>
+            ) : connRows.length ? (
+              <Badge variant="outline" className={cn("text-xs gap-1", connSaving ? "text-muted-foreground" : "border-green-500/40 text-green-400")}>
+                {connSaving && <Loader2 className="w-3 h-3 animate-spin" />}
+                {connRows.length} {connRows.length === 1 ? "connection" : "connections"}
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-xs text-muted-foreground">Notion</Badge>
+            )
           }
           defaultOpen={false}
         >
-          <CardContent className="p-5">
-            <div className="text-center py-14 border-2 border-dashed border-border/40 rounded-xl">
-              <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-muted/30 flex items-center justify-center">
-                <Network className="w-7 h-7 text-muted-foreground/40" />
+          <CardContent className="p-0">
+            {connectivityData?.error ? (
+              <div className="flex items-center gap-3 py-6 px-5 rounded-b-xl bg-destructive/10 border-t border-destructive/20">
+                <AlertCircle className="w-4 h-4 text-destructive shrink-0" />
+                <p className="text-sm text-destructive">Notion error: {connectivityData.error}</p>
               </div>
-              <p className="text-sm font-medium text-muted-foreground mb-1">
-                Notion Database Integration
-              </p>
-              <p className="text-xs text-muted-foreground/70 max-w-md mx-auto">
-                This section will display connectivity data (AE Titles, IPs,
-                Ports, Systems) from your Notion database, filtered for this
-                site. Configuration coming soon.
-              </p>
-            </div>
+            ) : !connectivityData?.configured ? (
+              <div className="flex flex-col items-center justify-center py-10 gap-3 mx-5 my-5 border-2 border-dashed border-border/40 rounded-xl bg-muted/10">
+                <Network className="w-7 h-7 text-muted-foreground/40" />
+                <div className="text-center">
+                  <p className="text-sm font-medium">Notion API key not configured</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Set NOTION_API_KEY to enable live connectivity editing</p>
+                </div>
+              </div>
+            ) : (
+              <ConnectivityTable
+                rows={connRows}
+                systems={(() => { try { const r = existingResponses?.find((r: any) => r.questionId === 'ARCH.systems'); return r?.response ? JSON.parse(r.response) : []; } catch { return []; } })()}
+                onChange={handleConnChange}
+              />
+            )}
           </CardContent>
         </CollapsibleSection>
 

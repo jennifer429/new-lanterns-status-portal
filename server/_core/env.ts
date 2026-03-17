@@ -9,4 +9,5 @@ export const ENV = {
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
   notionApiKey: process.env.NOTION_API_KEY ?? "",
   notionDatabaseId: process.env.NOTION_DATABASE_ID ?? "",
+  notionConnectivityDbId: process.env.NOTION_CONNECTIVITY_DATABASE_ID ?? "3258571979e7805fb20adfe103fb7c6a",
 };
