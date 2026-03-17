@@ -193,7 +193,7 @@ export const connectivityRouter = router({
       }
 
       try {
-        const response = await client.databases.query({
+        const response = await (client as any).databases.query({
           database_id: ENV.notionConnectivityDbId,
           page_size: 100,
         });
@@ -201,7 +201,7 @@ export const connectivityRouter = router({
         const slugNorm = normalise(input.organizationSlug);
         const nameNorm = input.organizationName ? normalise(input.organizationName) : null;
 
-        const rows = response.results
+        const rows = (response.results as any[])
           .filter((page: any) => page.object === "page" && !page.archived)
           .map((page: any) => {
             const p = page.properties as Record<string, any>;
@@ -222,7 +222,7 @@ export const connectivityRouter = router({
               notes:             getStr(pick(p, ...FIELD_CANDIDATES.notes)),
             };
           })
-          .filter(row => {
+          .filter((row: any) => {
             if (!row.site) return true; // single-site DB — include all
             const siteNorm = normalise(row.site);
             return (
@@ -267,7 +267,7 @@ export const connectivityRouter = router({
         // 2. Fetch existing Notion pages for this org so we can match for updates
         const slugNorm = normalise(input.organizationSlug);
         const nameNorm = normalise(input.organizationName);
-        const existing = await client.databases.query({
+        const existing = await (client as any).databases.query({
           database_id: ENV.notionConnectivityDbId,
           page_size: 100,
         });
