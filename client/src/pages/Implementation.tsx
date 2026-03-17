@@ -24,6 +24,7 @@ import {
 import { useRoute, Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
+import { UserMenu } from "@/components/UserMenu";
 
 // ── Static task definitions ────────────────────────────────────────────────────
 
@@ -326,9 +327,12 @@ export default function Implementation() {
               <p className="text-sm text-muted-foreground">PACS Onboarding</p>
             </div>
           </div>
-          <Link href={`/org/${slug}`} className="text-sm text-foreground hover:text-primary transition-colors font-medium">
-            Back to Dashboard
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link href={`/org/${slug}`} className="text-sm text-foreground hover:text-primary transition-colors font-medium">
+              Back to Dashboard
+            </Link>
+            <UserMenu />
+          </div>
         </div>
       </header>
 

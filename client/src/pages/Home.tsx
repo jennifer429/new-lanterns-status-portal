@@ -42,6 +42,7 @@ import { useState, useEffect, useRef } from "react";
 import { questionnaireSections } from "@shared/questionnaireData";
 import { calculateProgress } from "@shared/progressCalculation";
 import { PhiDisclaimer } from "@/components/PhiDisclaimer";
+import { UserMenu } from "@/components/UserMenu";
 import { cn } from "@/lib/utils";
 
 // ── Collapsible Section (with smooth Radix animation) ──────────────────────
@@ -505,11 +506,14 @@ export default function Home() {
               className="h-10"
             />
           </div>
-          <div className="text-right">
-            <div className="text-sm font-semibold tracking-tight">{orgName}</div>
-            {partnerName && (
-              <div className="text-xs text-muted-foreground">{partnerName}</div>
-            )}
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <div className="text-sm font-semibold tracking-tight">{orgName}</div>
+              {partnerName && (
+                <div className="text-xs text-muted-foreground">{partnerName}</div>
+              )}
+            </div>
+            <UserMenu />
           </div>
         </div>
       </header>

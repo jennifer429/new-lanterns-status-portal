@@ -3,7 +3,7 @@
  */
 
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
 import { users, organizations, clients } from "../../drizzle/schema";
@@ -260,5 +260,40 @@ export const authRouter = router({
         success: true,
         message: "Password has been reset successfully. You can now log in with your new password.",
       };
+    }),
+
+  /**
+   * Change password for the currently logged-in user
+   */
+  changePassword: protectedProcedure
+    .input(
+      z.object({
+        currentPassword: z.string().min(1),
+        newPassword: z.string().min(6),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, ctx.user.id))
+        .limit(1);
+
+      if (!user?.passwordHash) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+      }
+
+      const isValid = await bcrypt.compare(input.currentPassword, user.passwordHash);
+      if (!isValid) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Current password is incorrect" });
+      }
+
+      const passwordHash = await bcrypt.hash(input.newPassword, 10);
+      await db.update(users).set({ passwordHash }).where(eq(users.id, ctx.user.id));
+
+      return { success: true };
     }),
 });

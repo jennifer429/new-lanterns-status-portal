@@ -25,6 +25,7 @@ import {
 import { useRoute, Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
+import { UserMenu } from "@/components/UserMenu";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -604,9 +605,12 @@ export default function Validation() {
               <p className="text-sm text-muted-foreground">PACS Onboarding</p>
             </div>
           </div>
-          <Link href={`/org/${slug}`} className="text-sm text-foreground hover:text-primary transition-colors font-medium">
-            Back to Dashboard
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link href={`/org/${slug}`} className="text-sm text-foreground hover:text-primary transition-colors font-medium">
+              Back to Dashboard
+            </Link>
+            <UserMenu />
+          </div>
         </div>
       </header>
 

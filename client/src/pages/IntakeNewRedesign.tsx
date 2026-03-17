@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import { WorkflowDiagram } from "@/components/WorkflowDiagram";
 import { IntegrationWorkflows } from "@/components/IntegrationWorkflows";
 import { ConnectivityTable, type ConnectivityRow } from "@/components/ConnectivityTable";
+import { UserMenu } from "@/components/UserMenu";
 
 // Section icons mapping
 const sectionIcons: Record<string, any> = {
@@ -1659,43 +1660,7 @@ export default function IntakeNewRedesign() {
                 <Upload className="w-4 h-4" />
                 Import
               </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="h-10 px-4">
-                    <div className="text-sm font-medium">
-                      {user?.name || 'User'}
-                    </div>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  {/* Show admin links for admin users */}
-                  {user?.role === 'admin' && (
-                    <>
-                      <DropdownMenuItem onClick={() => {
-                        // Navigate to appropriate admin dashboard based on user's clientId
-                        if (user.clientId === null) {
-                          // New Lantern staff - go to Platform Admin
-                          setLocation('/org/admin');
-                        } else {
-                          // Partner admin - go to their partner admin page
-                          setLocation('/org/admin');
-                        }
-                      }}>
-                        <Shield className="w-4 h-4 mr-2" />
-                        Admin Dashboard
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                    </>
-                  )}
-                  <DropdownMenuItem onClick={() => {
-                    logoutMutation.mutate();
-                    setLocation('/login');
-                  }}>
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Sign Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <UserMenu />
             </div>
           </div>
         </header>
