@@ -1,11 +1,9 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Trash2, Plus, CheckCircle2, Copy, ChevronDown, ChevronUp, Download, Upload, Check, ChevronsUpDown, PlusCircle } from 'lucide-react';
+import { Trash2, Plus, Copy, Download, Upload, Check, ChevronsUpDown, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { IntegrationSystem } from './IntegrationWorkflows';
 
@@ -23,7 +21,7 @@ export interface ConnectivityRow {
   envTest: boolean;
   envProd: boolean;
   notes: string;
-  // Legacy fields for backward compat during migration
+  // Legacy fields for backward compat
   ip?: string;
   port?: string;
   aeTitle?: string;
@@ -35,30 +33,18 @@ interface ConnectivityTableProps {
   systems?: IntegrationSystem[];
 }
 
-// Pre-canned traffic types — HL7 and DICOM traffic for radiology/PACS integrations
 const DEFAULT_TRAFFIC_TYPES = [
-  // HL7 message types
   'HL7 - Orders (ORM)',
   'HL7 - Results (ORU)',
   'HL7 - ADT',
-  // DICOM traffic types
   'DICOM - C-STORE (Images)',
   'DICOM - C-FIND/C-MOVE (Query/Retrieve)',
 ] as const;
 
-// Common systems that always appear as suggestions (alphabetical)
 const COMMON_SYSTEMS = [
-  'Cerner',
-  'Cloverleaf',
-  'Epic',
-  'Epic Radiant',
-  'Fuji Synapse',
-  'GE PACS',
-  'Mirth Connect',
-  'New Lantern PACS',
-  'Nuance PowerScribe',
-  'Rhapsody',
-  'Sectra',
+  'Cerner', 'Cloverleaf', 'Epic', 'Epic Radiant', 'Fuji Synapse',
+  'GE PACS', 'Mirth Connect', 'New Lantern PACS', 'Nuance PowerScribe',
+  'Rhapsody', 'Sectra',
 ] as const;
 
 function makeId() {
@@ -67,25 +53,14 @@ function makeId() {
 
 function emptyRow(): ConnectivityRow {
   return {
-    id: makeId(),
-    trafficType: '',
-    sourceSystem: '',
-    destinationSystem: '',
-    sourceIp: '',
-    sourcePort: '',
-    destIp: '',
-    destPort: '',
-    sourceAeTitle: '',
-    destAeTitle: '',
-    envTest: false,
-    envProd: false,
-    notes: '',
+    id: makeId(), trafficType: '', sourceSystem: '', destinationSystem: '',
+    sourceIp: '', sourcePort: '', destIp: '', destPort: '',
+    sourceAeTitle: '', destAeTitle: '', envTest: false, envProd: false, notes: '',
   };
 }
 
-/** Migrate legacy rows: single ip/port → sourceIp/sourcePort; single aeTitle → destAeTitle */
 function migrateRow(r: ConnectivityRow): ConnectivityRow {
-  const base: ConnectivityRow = {
+  return {
     ...r,
     sourceIp: r.sourceIp || r.ip || '',
     sourcePort: r.sourcePort || r.port || '',
@@ -94,91 +69,83 @@ function migrateRow(r: ConnectivityRow): ConnectivityRow {
     sourceAeTitle: r.sourceAeTitle || '',
     destAeTitle: r.destAeTitle || r.aeTitle || '',
   };
-  return base;
 }
 
-// ── Combobox for system selection ────────────────────────────────────────────
-function SystemCombobox({
-  value,
-  onChange,
-  systems,
-  placeholder,
+// ── Inline text cell — no chrome until focused ────────────────────────────────
+function InlineCell({
+  value, onChange, placeholder, className,
 }: {
   value: string;
   onChange: (v: string) => void;
-  systems: string[];
+  placeholder?: string;
+  className?: string;
+}) {
+  return (
+    <input
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      placeholder={placeholder}
+      className={cn(
+        'w-full bg-transparent border-none outline-none text-[11px] text-foreground',
+        'placeholder:text-muted-foreground/35 focus:bg-primary/5 rounded px-1 h-[22px]',
+        className
+      )}
+    />
+  );
+}
+
+// ── Combobox — inline-styled, no chrome until open ────────────────────────────
+function InlineCombobox({
+  value, onChange, options, placeholder, popoverWidth,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
   placeholder: string;
+  popoverWidth?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-
-  // Merge common systems + org systems, deduplicate, sort alphabetically
-  const allSystems = useMemo(() => {
-    const set = new Set<string>();
-    systems.forEach(s => { if (s) set.add(s); });
-    COMMON_SYSTEMS.forEach(s => set.add(s));
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [systems]);
-
-  const filtered = allSystems.filter(s =>
-    s.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const showAddCustom = search.trim() && !allSystems.some(s => s.toLowerCase() === search.trim().toLowerCase());
+  const filtered = options.filter(s => s.toLowerCase().includes(search.toLowerCase()));
+  const showAdd = search.trim() && !options.some(s => s.toLowerCase() === search.trim().toLowerCase());
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
           className={cn(
-            'flex h-8 w-full items-center justify-between rounded-md border border-border/50 bg-transparent px-2 text-xs',
-            'hover:bg-muted/20 focus:outline-none focus:ring-1 focus:ring-primary/50',
-            !value && 'text-muted-foreground'
+            'flex w-full items-center justify-between text-[11px] text-left',
+            'bg-transparent border-none outline-none rounded px-1 h-[22px]',
+            'hover:bg-primary/5 focus:bg-primary/5 transition-colors',
+            !value && 'text-muted-foreground/35'
           )}
         >
-          <span className="truncate">{value || placeholder}</span>
-          <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
+          <span className="truncate flex-1 leading-none">{value || placeholder}</span>
+          <ChevronsUpDown className="ml-0.5 h-2.5 w-2.5 shrink-0 text-muted-foreground/40" />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-[220px] p-0" align="start">
+      <PopoverContent className={cn('p-0', popoverWidth || 'w-[220px]')} align="start">
         <Command>
-          <CommandInput
-            placeholder="Search or type new..."
-            value={search}
-            onValueChange={setSearch}
-          />
+          <CommandInput placeholder="Search or type..." value={search} onValueChange={setSearch} />
           <CommandList>
             <CommandEmpty className="py-3 text-center text-xs text-muted-foreground">
-              {search.trim() ? 'No match found' : 'Type to search'}
+              {search.trim() ? 'No match' : 'Type to search'}
             </CommandEmpty>
             <CommandGroup>
-              {filtered.map(sys => (
-                <CommandItem
-                  key={sys}
-                  value={sys}
-                  onSelect={() => {
-                    onChange(sys);
-                    setOpen(false);
-                    setSearch('');
-                  }}
-                >
-                  <Check className={cn('mr-2 h-3.5 w-3.5', value === sys ? 'opacity-100' : 'opacity-0')} />
-                  <span className="text-xs">{sys}</span>
+              {filtered.map(opt => (
+                <CommandItem key={opt} value={opt}
+                  onSelect={() => { onChange(opt); setOpen(false); setSearch(''); }}>
+                  <Check className={cn('mr-2 h-3 w-3', value === opt ? 'opacity-100' : 'opacity-0')} />
+                  <span className="text-xs">{opt}</span>
                 </CommandItem>
               ))}
             </CommandGroup>
-            {showAddCustom && (
+            {showAdd && (
               <CommandGroup>
-                <CommandItem
-                  value={`__add__${search.trim()}`}
-                  onSelect={() => {
-                    onChange(search.trim());
-                    setOpen(false);
-                    setSearch('');
-                  }}
-                >
-                  <PlusCircle className="mr-2 h-3.5 w-3.5 text-primary" />
-                  <span className="text-xs">Add &ldquo;{search.trim()}&rdquo;</span>
+                <CommandItem value={`__add__${search.trim()}`}
+                  onSelect={() => { onChange(search.trim()); setOpen(false); setSearch(''); }}>
+                  <PlusCircle className="mr-2 h-3 w-3 text-primary" />
+                  <span className="text-xs">Add "{search.trim()}"</span>
                 </CommandItem>
               </CommandGroup>
             )}
@@ -189,144 +156,31 @@ function SystemCombobox({
   );
 }
 
-// ── Traffic Type Combobox with custom add ────────────────────────────────────
-function TrafficTypeCombobox({
-  value,
-  onChange,
-  customTypes,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  customTypes: string[];
-}) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState('');
-
-  const allTypes = useMemo(() => {
-    const set = new Set<string>();
-    DEFAULT_TRAFFIC_TYPES.forEach(t => set.add(t));
-    customTypes.forEach(t => { if (t) set.add(t); });
-    return Array.from(set);
-  }, [customTypes]);
-
-  const filtered = allTypes.filter(t =>
-    t.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const showAddCustom = search.trim() && !allTypes.some(t => t.toLowerCase() === search.trim().toLowerCase());
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          className={cn(
-            'flex h-8 w-full items-center justify-between rounded-md border border-border/50 bg-transparent px-2 text-xs',
-            'hover:bg-muted/20 focus:outline-none focus:ring-1 focus:ring-primary/50',
-            !value && 'text-muted-foreground'
-          )}
-        >
-          <span className="truncate">{value || 'Select type'}</span>
-          <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[260px] p-0" align="start">
-        <Command>
-          <CommandInput
-            placeholder="Search or type new..."
-            value={search}
-            onValueChange={setSearch}
-          />
-          <CommandList>
-            <CommandEmpty className="py-3 text-center text-xs text-muted-foreground">
-              {search.trim() ? 'No match found' : 'Type to search'}
-            </CommandEmpty>
-            <CommandGroup>
-              {filtered.map(t => (
-                <CommandItem
-                  key={t}
-                  value={t}
-                  onSelect={() => {
-                    onChange(t);
-                    setOpen(false);
-                    setSearch('');
-                  }}
-                >
-                  <Check className={cn('mr-2 h-3.5 w-3.5', value === t ? 'opacity-100' : 'opacity-0')} />
-                  <span className="text-xs">{t}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-            {showAddCustom && (
-              <CommandGroup>
-                <CommandItem
-                  value={`__add__${search.trim()}`}
-                  onSelect={() => {
-                    onChange(search.trim());
-                    setOpen(false);
-                    setSearch('');
-                  }}
-                >
-                  <PlusCircle className="mr-2 h-3.5 w-3.5 text-primary" />
-                  <span className="text-xs">Add &ldquo;{search.trim()}&rdquo;</span>
-                </CommandItem>
-              </CommandGroup>
-            )}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-// ── Import Dialog ────────────────────────────────────────────────────────────
-function ImportDialog({
-  open,
-  onOpenChange,
-  onImport,
-}: {
+// ── Import Dialog ─────────────────────────────────────────────────────────────
+function ImportDialog({ open, onOpenChange, onImport }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onImport: (rows: ConnectivityRow[]) => void;
 }) {
-  const [importText, setImportText] = useState('');
-  const [importError, setImportError] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [text, setText] = useState('');
+  const [error, setError] = useState('');
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const handleImportText = () => {
-    setImportError('');
+  const handleImport = () => {
+    setError('');
     try {
-      // Try JSON first
-      const parsed = JSON.parse(importText);
-      const rows = (Array.isArray(parsed) ? parsed : [parsed]).map(mapImportRow);
-      onImport(rows);
-      setImportText('');
-      onOpenChange(false);
+      const parsed = JSON.parse(text);
+      onImport((Array.isArray(parsed) ? parsed : [parsed]).map(mapImportRow));
+      setText(''); onOpenChange(false);
     } catch {
-      // Try CSV
       try {
-        const rows = parseCSV(importText);
-        if (rows.length === 0) {
-          setImportError('No valid rows found. Check your format.');
-          return;
-        }
-        onImport(rows);
-        setImportText('');
-        onOpenChange(false);
+        const rows = parseCSV(text);
+        if (!rows.length) { setError('No valid rows found.'); return; }
+        onImport(rows); setText(''); onOpenChange(false);
       } catch (e: any) {
-        setImportError(e.message || 'Invalid format. Use JSON array or CSV.');
+        setError(e.message || 'Invalid format — use JSON array or CSV.');
       }
     }
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setImportText(ev.target?.result as string || '');
-    };
-    reader.readAsText(file);
-    e.target.value = '';
   };
 
   return (
@@ -334,58 +188,36 @@ function ImportDialog({
       <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>Import Endpoints</DialogTitle>
-          <DialogDescription>
-            Paste JSON or CSV data below, or upload a file. AI tools can generate data in this format.
-          </DialogDescription>
+          <DialogDescription>Paste JSON or CSV, or upload a file.</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <div className="text-xs text-muted-foreground space-y-1">
-            <p className="font-medium">Accepted formats:</p>
-            <p><strong>JSON:</strong> Array of objects with keys: trafficType, sourceSystem, destinationSystem, sourceIp, sourcePort, destIp, destPort, sourceAeTitle, destAeTitle, environment (test/prod/both), notes</p>
-            <p><strong>CSV:</strong> Header row with columns: Traffic Type, Source System, Destination System, Source IP, Source Port, Dest IP, Dest Port, Source AE Title, Dest AE Title, Environment, Notes</p>
-          </div>
-          <div className="rounded-md border bg-muted/20 p-2 text-xs font-mono text-muted-foreground overflow-x-auto">
-            <pre>{`[
-  {
-    "trafficType": "DICOM - C-STORE (Images)",
-    "sourceSystem": "CT Scanner",
-    "destinationSystem": "New Lantern PACS",
-    "sourceIp": "10.1.2.3",
-    "sourcePort": "104",
-    "destIp": "10.1.2.50",
-    "destPort": "11112",
-    "sourceAeTitle": "CT_SCANNER",
-    "destAeTitle": "NL_PACS",
-    "environment": "both"
-  }
-]`}</pre>
+          <div className="rounded-md border bg-muted/20 p-2 text-[10px] font-mono text-muted-foreground overflow-x-auto">
+            <pre>{`[{ "trafficType": "DICOM - C-STORE (Images)", "sourceSystem": "CT Scanner",
+  "destinationSystem": "New Lantern PACS", "sourceIp": "10.1.2.3",
+  "sourcePort": "104", "destIp": "10.1.2.50", "destPort": "11112",
+  "environment": "both" }]`}</pre>
           </div>
           <textarea
-            value={importText}
-            onChange={(e) => setImportText(e.target.value)}
+            value={text} onChange={e => setText(e.target.value)}
             placeholder="Paste JSON or CSV here..."
-            className="w-full h-32 rounded-md border bg-background p-3 text-sm font-mono resize-y focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full h-28 rounded-md border bg-background p-3 text-sm font-mono resize-y focus:outline-none focus:ring-1 focus:ring-primary"
           />
-          {importError && (
-            <p className="text-xs text-red-400">{importError}</p>
-          )}
+          {error && <p className="text-xs text-red-400">{error}</p>}
           <div className="flex items-center gap-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".json,.csv,.txt"
-              className="hidden"
-              onChange={handleFileUpload}
-            />
-            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="gap-1.5">
+            <input ref={fileRef} type="file" accept=".json,.csv,.txt" className="hidden"
+              onChange={e => {
+                const f = e.target.files?.[0]; if (!f) return;
+                const r = new FileReader();
+                r.onload = ev => setText(ev.target?.result as string || '');
+                r.readAsText(f); e.target.value = '';
+              }} />
+            <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} className="gap-1.5">
               <Upload className="w-3.5 h-3.5" /> Upload File
             </Button>
             <div className="flex-1" />
-            <Button variant="outline" size="sm" onClick={() => { setImportText(''); onOpenChange(false); }}>
-              Cancel
-            </Button>
-            <Button size="sm" onClick={handleImportText} disabled={!importText.trim()} className="gap-1.5">
-              <Download className="w-3.5 h-3.5" /> Import
+            <Button variant="outline" size="sm" onClick={() => { setText(''); onOpenChange(false); }}>Cancel</Button>
+            <Button size="sm" onClick={handleImport} disabled={!text.trim()} className="gap-1.5">
+              Import
             </Button>
           </div>
         </div>
@@ -394,459 +226,341 @@ function ImportDialog({
   );
 }
 
-// ── CSV parsing helper ───────────────────────────────────────────────────────
+// ── CSV / JSON helpers ────────────────────────────────────────────────────────
 function parseCSV(text: string): ConnectivityRow[] {
   const lines = text.trim().split('\n').map(l => l.trim()).filter(Boolean);
-  if (lines.length < 2) throw new Error('CSV must have a header row and at least one data row.');
-
+  if (lines.length < 2) throw new Error('CSV needs a header row + at least one data row.');
   const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/[^a-z0-9]/g, ''));
-  const rows: ConnectivityRow[] = [];
-
-  for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(',').map(v => v.trim().replace(/^["']|["']$/g, ''));
+  return lines.slice(1).map(line => {
+    const values = line.split(',').map(v => v.trim().replace(/^["']|["']$/g, ''));
     const obj: Record<string, string> = {};
-    headers.forEach((h, idx) => { obj[h] = values[idx] || ''; });
-    rows.push(mapImportRow(obj));
-  }
-  return rows;
+    headers.forEach((h, i) => { obj[h] = values[i] || ''; });
+    return mapImportRow(obj);
+  });
 }
 
-// ── Map imported data to ConnectivityRow ──────────────────────────────────────
 function mapImportRow(obj: any): ConnectivityRow {
   const env = (obj.environment || obj.env || '').toLowerCase().trim();
-  // Support legacy single aeTitle by falling back to destAeTitle
-  const legacyAeTitle = obj.aeTitle || obj.aetitle || obj['ae title'] || obj.ae_title || '';
+  const legacyAe = obj.aeTitle || obj.aetitle || obj['ae title'] || obj.ae_title || '';
   return {
     id: makeId(),
-    trafficType: obj.trafficType || obj.traffictype || obj['traffic type'] || obj.traffic_type || obj.type || '',
-    sourceSystem: obj.sourceSystem || obj.sourcesystem || obj['source system'] || obj.source_system || obj.source || '',
-    destinationSystem: obj.destinationSystem || obj.destinationsystem || obj['destination system'] || obj.destination_system || obj.destination || '',
-    sourceIp: obj.sourceIp || obj.sourceip || obj['source ip'] || obj.source_ip || obj.ip || obj.ipaddress || obj.ipAddress || obj['ip address'] || '',
-    sourcePort: String(obj.sourcePort || obj.sourceport || obj['source port'] || obj.source_port || obj.port || ''),
-    destIp: obj.destIp || obj.destip || obj['dest ip'] || obj.dest_ip || obj.destinationIp || obj.destinationip || obj['destination ip'] || '',
-    destPort: String(obj.destPort || obj.destport || obj['dest port'] || obj.dest_port || obj.destinationPort || obj.destinationport || obj['destination port'] || ''),
-    sourceAeTitle: obj.sourceAeTitle || obj.sourceaetitle || obj['source ae title'] || obj['source ae'] || obj.srcAeTitle || obj.srcaetitle || obj['src ae title'] || '',
-    destAeTitle: obj.destAeTitle || obj.destaetitle || obj['dest ae title'] || obj['dest ae'] || obj.dstAeTitle || obj.dstaetitle || obj['dst ae title'] || legacyAeTitle,
+    trafficType:       obj.trafficType || obj.traffictype || obj['traffic type'] || obj.type || '',
+    sourceSystem:      obj.sourceSystem || obj.sourcesystem || obj['source system'] || obj.source || '',
+    destinationSystem: obj.destinationSystem || obj.destinationsystem || obj['destination system'] || obj.destination || '',
+    sourceIp:          obj.sourceIp || obj.sourceip || obj['source ip'] || obj.ip || '',
+    sourcePort:        String(obj.sourcePort || obj.sourceport || obj['source port'] || obj.port || ''),
+    destIp:            obj.destIp || obj.destip || obj['dest ip'] || obj.destinationIp || obj['destination ip'] || '',
+    destPort:          String(obj.destPort || obj.destport || obj['dest port'] || obj.destinationPort || ''),
+    sourceAeTitle:     obj.sourceAeTitle || obj.sourceaetitle || obj['source ae title'] || obj['source ae'] || '',
+    destAeTitle:       obj.destAeTitle || obj.destaetitle || obj['dest ae title'] || obj['dest ae'] || legacyAe,
     envTest: env === 'test' || env === 'both' || obj.envTest === true || obj.test === true,
-    envProd: env === 'production' || env === 'prod' || env === 'both' || obj.envProd === true || obj.prod === true || obj.production === true,
+    envProd: env === 'production' || env === 'prod' || env === 'both' || obj.envProd === true || obj.prod === true,
     notes: obj.notes || '',
   };
 }
 
-// ── Export helpers ────────────────────────────────────────────────────────────
+function exportCSV(rows: ConnectivityRow[]) {
+  const headers = ['Traffic Type','Source System','Destination System','Source IP','Source Port','Dest IP','Dest Port','Source AE Title','Dest AE Title','Environment','Notes'];
+  const csvRows = [headers.join(','), ...rows.map(r => {
+    const env = r.envTest && r.envProd ? 'Both' : r.envTest ? 'Test' : r.envProd ? 'Production' : '';
+    return [r.trafficType,r.sourceSystem,r.destinationSystem,r.sourceIp,r.sourcePort,r.destIp,r.destPort,r.sourceAeTitle,r.destAeTitle,env,r.notes]
+      .map(v => `"${(v||'').replace(/"/g,'""')}"`).join(',');
+  })];
+  dlBlob(new Blob([csvRows.join('\n')], { type: 'text/csv' }), 'connectivity-endpoints.csv');
+}
+
 function exportJSON(rows: ConnectivityRow[]) {
   const data = rows.map(r => ({
-    trafficType: r.trafficType,
-    sourceSystem: r.sourceSystem,
-    destinationSystem: r.destinationSystem,
-    sourceIp: r.sourceIp,
-    sourcePort: r.sourcePort,
-    destIp: r.destIp,
-    destPort: r.destPort,
-    sourceAeTitle: r.sourceAeTitle,
-    destAeTitle: r.destAeTitle,
+    trafficType: r.trafficType, sourceSystem: r.sourceSystem, destinationSystem: r.destinationSystem,
+    sourceIp: r.sourceIp, sourcePort: r.sourcePort, destIp: r.destIp, destPort: r.destPort,
+    sourceAeTitle: r.sourceAeTitle, destAeTitle: r.destAeTitle,
     environment: r.envTest && r.envProd ? 'both' : r.envTest ? 'test' : r.envProd ? 'production' : '',
     notes: r.notes,
   }));
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  downloadBlob(blob, 'connectivity-endpoints.json');
+  dlBlob(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), 'connectivity-endpoints.json');
 }
 
-function exportCSV(rows: ConnectivityRow[]) {
-  const headers = ['Traffic Type', 'Source System', 'Destination System', 'Source IP', 'Source Port', 'Dest IP', 'Dest Port', 'Source AE Title', 'Dest AE Title', 'Environment', 'Notes'];
-  const csvRows = [headers.join(',')];
-  rows.forEach(r => {
-    const env = r.envTest && r.envProd ? 'Both' : r.envTest ? 'Test' : r.envProd ? 'Production' : '';
-    csvRows.push([r.trafficType, r.sourceSystem, r.destinationSystem, r.sourceIp, r.sourcePort, r.destIp, r.destPort, r.sourceAeTitle, r.destAeTitle, env, r.notes].map(v => `"${(v || '').replace(/"/g, '""')}"`).join(','));
-  });
-  const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
-  downloadBlob(blob, 'connectivity-endpoints.csv');
-}
-
-function downloadBlob(blob: Blob, filename: string) {
+function dlBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
 }
 
-// ── Main Component ───────────────────────────────────────────────────────────
+// ── Main Component ────────────────────────────────────────────────────────────
 export function ConnectivityTable({ rows: rawRows, onChange, systems = [] }: ConnectivityTableProps) {
-  const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
-
-  // Migrate legacy rows on first render
   const rows = useMemo(() => rawRows.map(migrateRow), [rawRows]);
 
-  // Build system names list from org's systems inventory + all systems used in rows
   const systemNames = useMemo(() => {
-    const names = new Set<string>();
-    systems.filter(s => s.name).forEach(s => names.add(s.name));
-    // Also collect systems from existing rows so they appear in the picklist
+    const s = new Set<string>();
+    systems.filter(x => x.name).forEach(x => s.add(x.name));
+    COMMON_SYSTEMS.forEach(x => s.add(x));
     rows.forEach(r => {
-      if (r.sourceSystem) names.add(r.sourceSystem);
-      if (r.destinationSystem) names.add(r.destinationSystem);
+      if (r.sourceSystem) s.add(r.sourceSystem);
+      if (r.destinationSystem) s.add(r.destinationSystem);
     });
-    return Array.from(names);
+    return Array.from(s).sort((a, b) => a.localeCompare(b));
   }, [systems, rows]);
 
-  // Collect any custom traffic types from existing rows
-  const customTrafficTypes = useMemo(() => {
+  const trafficTypes = useMemo(() => {
     const defaults = new Set(DEFAULT_TRAFFIC_TYPES.map(t => t.toLowerCase()));
-    return rows
-      .map(r => r.trafficType)
-      .filter(t => t && !defaults.has(t.toLowerCase()));
+    const custom = rows.map(r => r.trafficType).filter(t => t && !defaults.has(t.toLowerCase()));
+    return [...DEFAULT_TRAFFIC_TYPES, ...custom];
   }, [rows]);
 
-  const addRow = useCallback(() => {
-    onChange([...rows, emptyRow()]);
+  const addRow    = useCallback(() => onChange([...rows, emptyRow()]), [rows, onChange]);
+  const dupRow    = useCallback((i: number) => {
+    const n = [...rows]; n.splice(i + 1, 0, { ...rows[i], id: makeId() }); onChange(n);
   }, [rows, onChange]);
+  const removeRow = useCallback((i: number) => onChange(rows.filter((_, j) => j !== i)), [rows, onChange]);
+  const setField  = useCallback((i: number, f: keyof ConnectivityRow, v: string | boolean) =>
+    onChange(rows.map((r, j) => j === i ? { ...r, [f]: v } : r)), [rows, onChange]);
+  const handleImport = useCallback((imported: ConnectivityRow[]) =>
+    onChange([...rows, ...imported]), [rows, onChange]);
 
-  const duplicateRow = useCallback((idx: number) => {
-    const source = rows[idx];
-    const newRow: ConnectivityRow = { ...source, id: makeId() };
-    const updated = [...rows];
-    updated.splice(idx + 1, 0, newRow);
-    onChange(updated);
-  }, [rows, onChange]);
-
-  const removeRow = useCallback((idx: number) => {
-    onChange(rows.filter((_, i) => i !== idx));
-  }, [rows, onChange]);
-
-  const updateField = useCallback((idx: number, field: keyof ConnectivityRow, value: string | boolean) => {
-    const updated = rows.map((r, i) => i === idx ? { ...r, [field]: value } : r);
-    onChange(updated);
-  }, [rows, onChange]);
-
-  const handleImport = useCallback((imported: ConnectivityRow[]) => {
-    onChange([...rows, ...imported]);
-  }, [rows, onChange]);
-
-  const filledRows = rows.filter(r => r.sourceIp || r.destIp || r.sourceSystem || r.destinationSystem || r.trafficType);
+  const filledCount = rows.filter(r =>
+    r.sourceIp || r.destIp || r.sourceSystem || r.destinationSystem || r.trafficType
+  ).length;
 
   return (
-    <div className="space-y-4">
-      {/* Header with summary + actions */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-2">
-          {filledRows.length > 0 && <CheckCircle2 className="w-4 h-4 text-green-500" />}
-          <span className="text-sm text-muted-foreground">
-            {filledRows.length} endpoint{filledRows.length !== 1 ? 's' : ''} configured
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => setImportOpen(true)} className="gap-1.5 text-xs">
-            <Upload className="w-3.5 h-3.5" /> Import
-          </Button>
-          {rows.length > 0 && (
-            <>
-              <Button size="sm" variant="outline" onClick={() => exportCSV(rows)} className="gap-1.5 text-xs">
-                <Download className="w-3.5 h-3.5" /> CSV
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => exportJSON(rows)} className="gap-1.5 text-xs">
-                <Download className="w-3.5 h-3.5" /> JSON
-              </Button>
-            </>
-          )}
-          <Button size="sm" variant="outline" onClick={addRow} className="gap-1.5">
-            <Plus className="w-4 h-4" /> Add Endpoint
-          </Button>
+    <div className="space-y-1.5">
+
+      {/* ── Toolbar ── */}
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] text-muted-foreground">
+          {filledCount > 0
+            ? `${filledCount} endpoint${filledCount !== 1 ? 's' : ''} · syncs to Notion`
+            : 'No endpoints yet'}
+        </span>
+        <div className="flex items-center gap-1">
+          <button onClick={() => setImportOpen(true)}
+            className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] text-muted-foreground hover:text-foreground border border-border/40 hover:border-border/70 transition-colors">
+            <Upload className="w-2.5 h-2.5" /> Import
+          </button>
+          {rows.length > 0 && <>
+            <button onClick={() => exportCSV(rows)}
+              className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] text-muted-foreground hover:text-foreground border border-border/40 hover:border-border/70 transition-colors">
+              <Download className="w-2.5 h-2.5" /> CSV
+            </button>
+            <button onClick={() => exportJSON(rows)}
+              className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] text-muted-foreground hover:text-foreground border border-border/40 hover:border-border/70 transition-colors">
+              <Download className="w-2.5 h-2.5" /> JSON
+            </button>
+          </>}
         </div>
       </div>
 
-      {/* Import Dialog */}
       <ImportDialog open={importOpen} onOpenChange={setImportOpen} onImport={handleImport} />
 
-      {/* Table — desktop */}
-      <div className="hidden lg:block overflow-x-auto rounded-lg border border-border">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-muted/30 border-b border-border">
-              <th className="px-3 py-2.5 text-left font-medium text-muted-foreground w-[180px]">Traffic Type</th>
-              <th className="px-3 py-2.5 text-left font-medium text-muted-foreground w-[160px]">Source System</th>
-              <th className="px-3 py-2.5 text-left font-medium text-muted-foreground w-[160px]">Destination System</th>
-              <th className="px-3 py-2.5 text-left font-medium text-muted-foreground" colSpan={2}>
-                <div className="flex items-center gap-4">
-                  <span className="w-[140px]">Source IP</span>
-                  <span className="w-[70px]">Port</span>
-                </div>
-              </th>
-              <th className="px-3 py-2.5 text-left font-medium text-muted-foreground" colSpan={2}>
-                <div className="flex items-center gap-4">
-                  <span className="w-[140px]">Dest IP</span>
-                  <span className="w-[70px]">Port</span>
-                </div>
-              </th>
-              <th className="px-3 py-2.5 text-left font-medium text-muted-foreground w-[80px]">Src AE</th>
-              <th className="px-3 py-2.5 text-left font-medium text-muted-foreground w-[80px]">Dest AE</th>
-              <th className="px-3 py-2.5 text-center font-medium text-muted-foreground w-[120px]">Env</th>
-              <th className="px-3 py-2.5 text-right font-medium text-muted-foreground w-[70px]">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={11} className="px-3 py-8 text-center text-muted-foreground">
-                  No endpoints configured yet. Click "Add Endpoint" or "Import" to get started.
-                </td>
+      {/* ── Desktop table (hidden on mobile) ── */}
+      <div className="hidden lg:block rounded-md border border-border/50 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse" style={{ tableLayout: 'fixed', minWidth: 940 }}>
+            <colgroup>
+              <col style={{ width: 150 }} />
+              <col style={{ width: 115 }} />
+              <col style={{ width: 115 }} />
+              <col style={{ width: 140 }} />
+              <col style={{ width: 140 }} />
+              <col style={{ width: 70 }} />
+              <col style={{ width: 70 }} />
+              <col style={{ width: 52 }} />
+              <col style={{ width: '100%' }} />
+              <col style={{ width: 40 }} />
+            </colgroup>
+
+            {/* ── Header ── */}
+            <thead>
+              <tr className="bg-muted/25 border-b border-border/50">
+                {[
+                  'Traffic Type', 'Source', 'Destination',
+                  'Source IP : Port', 'Dest IP : Port',
+                  'Src AE', 'Dst AE', 'Env', 'Notes', '',
+                ].map((h, i) => (
+                  <th key={i} className="text-left px-2 py-[5px] text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wide whitespace-nowrap select-none">
+                    {h}
+                  </th>
+                ))}
               </tr>
-            )}
-            {rows.map((row, idx) => (
-              <tr key={row.id} className="border-b border-border/50 hover:bg-muted/10 transition-colors">
-                {/* Traffic Type */}
-                <td className="px-2 py-1.5">
-                  <TrafficTypeCombobox
-                    value={row.trafficType}
-                    onChange={(v) => updateField(idx, 'trafficType', v)}
-                    customTypes={customTrafficTypes}
-                  />
-                </td>
-                {/* Source System */}
-                <td className="px-2 py-1.5">
-                  <SystemCombobox
-                    value={row.sourceSystem}
-                    onChange={(v) => updateField(idx, 'sourceSystem', v)}
-                    systems={systemNames}
-                    placeholder="Select source"
-                  />
-                </td>
-                {/* Destination System */}
-                <td className="px-2 py-1.5">
-                  <SystemCombobox
-                    value={row.destinationSystem}
-                    onChange={(v) => updateField(idx, 'destinationSystem', v)}
-                    systems={systemNames}
-                    placeholder="Select destination"
-                  />
-                </td>
-                {/* Source IP */}
-                <td className="px-2 py-1.5" colSpan={2}>
-                  <div className="flex items-center gap-1">
-                    <Input
-                      value={row.sourceIp}
-                      onChange={(e) => updateField(idx, 'sourceIp', e.target.value)}
-                      placeholder="10.1.2.3"
-                      className="h-8 text-sm bg-transparent border-border/50 focus:border-primary w-[140px]"
+            </thead>
+
+            <tbody>
+              {rows.length === 0 && (
+                <tr>
+                  <td colSpan={10} className="px-3 py-6 text-center text-[11px] text-muted-foreground/40 italic">
+                    No endpoints yet — click "+ New row" to add one, or use Import.
+                  </td>
+                </tr>
+              )}
+
+              {rows.map((row, idx) => (
+                <tr key={row.id}
+                  className="group border-b border-border/25 last:border-b-0 hover:bg-muted/8 transition-colors"
+                  style={{ height: 28 }}>
+
+                  {/* Traffic Type */}
+                  <td className="px-1 align-middle">
+                    <InlineCombobox
+                      value={row.trafficType} onChange={v => setField(idx, 'trafficType', v)}
+                      options={trafficTypes} placeholder="Type…" popoverWidth="w-[260px]"
                     />
-                    <span className="text-muted-foreground text-xs">:</span>
-                    <Input
-                      value={row.sourcePort}
-                      onChange={(e) => updateField(idx, 'sourcePort', e.target.value)}
-                      placeholder="104"
-                      className="h-8 text-sm bg-transparent border-border/50 focus:border-primary w-[70px]"
+                  </td>
+
+                  {/* Source System */}
+                  <td className="px-1 align-middle">
+                    <InlineCombobox
+                      value={row.sourceSystem} onChange={v => setField(idx, 'sourceSystem', v)}
+                      options={systemNames} placeholder="Source…"
                     />
-                  </div>
-                </td>
-                {/* Dest IP */}
-                <td className="px-2 py-1.5" colSpan={2}>
-                  <div className="flex items-center gap-1">
-                    <Input
-                      value={row.destIp}
-                      onChange={(e) => updateField(idx, 'destIp', e.target.value)}
-                      placeholder="10.1.2.50"
-                      className="h-8 text-sm bg-transparent border-border/50 focus:border-primary w-[140px]"
+                  </td>
+
+                  {/* Dest System */}
+                  <td className="px-1 align-middle">
+                    <InlineCombobox
+                      value={row.destinationSystem} onChange={v => setField(idx, 'destinationSystem', v)}
+                      options={systemNames} placeholder="Dest…"
                     />
-                    <span className="text-muted-foreground text-xs">:</span>
-                    <Input
-                      value={row.destPort}
-                      onChange={(e) => updateField(idx, 'destPort', e.target.value)}
-                      placeholder="11112"
-                      className="h-8 text-sm bg-transparent border-border/50 focus:border-primary w-[70px]"
-                    />
-                  </div>
-                </td>
-                {/* Source AE Title */}
-                <td className="px-2 py-1.5">
-                  <Input
-                    value={row.sourceAeTitle}
-                    onChange={(e) => updateField(idx, 'sourceAeTitle', e.target.value)}
-                    placeholder="SRC_AE"
-                    className="h-8 text-xs bg-transparent border-border/50 focus:border-primary"
-                  />
-                </td>
-                {/* Dest AE Title */}
-                <td className="px-2 py-1.5">
-                  <Input
-                    value={row.destAeTitle}
-                    onChange={(e) => updateField(idx, 'destAeTitle', e.target.value)}
-                    placeholder="DEST_AE"
-                    className="h-8 text-xs bg-transparent border-border/50 focus:border-primary"
-                  />
-                </td>
-                {/* Environment — checkboxes: Test=yellow, Prod=green */}
-                <td className="px-2 py-1.5">
-                  <div className="flex items-center justify-center gap-3">
-                    <label className="flex items-center gap-1.5 cursor-pointer">
-                      <Checkbox
-                        checked={row.envTest}
-                        onCheckedChange={(checked) => updateField(idx, 'envTest', !!checked)}
-                      />
-                      <span className={cn("text-xs font-medium", row.envTest ? "text-yellow-400" : "text-muted-foreground")}>Test</span>
-                    </label>
-                    <label className="flex items-center gap-1.5 cursor-pointer">
-                      <Checkbox
-                        checked={row.envProd}
-                        onCheckedChange={(checked) => updateField(idx, 'envProd', !!checked)}
-                      />
-                      <span className={cn("text-xs font-medium", row.envProd ? "text-green-400" : "text-muted-foreground")}>Prod</span>
-                    </label>
-                  </div>
-                </td>
-                {/* Actions */}
-                <td className="px-2 py-1.5">
-                  <div className="flex items-center gap-1 justify-end">
-                    <button
-                      onClick={() => duplicateRow(idx)}
-                      className="p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
-                      title="Duplicate row"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => removeRow(idx)}
-                      className="p-1 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors"
-                      title="Remove row"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  </td>
+
+                  {/* Source IP : Port */}
+                  <td className="px-1 align-middle">
+                    <div className="flex items-center gap-0.5">
+                      <InlineCell value={row.sourceIp} onChange={v => setField(idx, 'sourceIp', v)}
+                        placeholder="10.1.2.3" className="flex-1 min-w-0" />
+                      <span className="text-[10px] text-muted-foreground/30 shrink-0">:</span>
+                      <InlineCell value={row.sourcePort} onChange={v => setField(idx, 'sourcePort', v)}
+                        placeholder="104" className="w-9 shrink-0 text-right" />
+                    </div>
+                  </td>
+
+                  {/* Dest IP : Port */}
+                  <td className="px-1 align-middle">
+                    <div className="flex items-center gap-0.5">
+                      <InlineCell value={row.destIp} onChange={v => setField(idx, 'destIp', v)}
+                        placeholder="10.1.2.50" className="flex-1 min-w-0" />
+                      <span className="text-[10px] text-muted-foreground/30 shrink-0">:</span>
+                      <InlineCell value={row.destPort} onChange={v => setField(idx, 'destPort', v)}
+                        placeholder="11112" className="w-9 shrink-0 text-right" />
+                    </div>
+                  </td>
+
+                  {/* Src AE Title */}
+                  <td className="px-1 align-middle">
+                    <InlineCell value={row.sourceAeTitle} onChange={v => setField(idx, 'sourceAeTitle', v)}
+                      placeholder="SRC_AE" />
+                  </td>
+
+                  {/* Dst AE Title */}
+                  <td className="px-1 align-middle">
+                    <InlineCell value={row.destAeTitle} onChange={v => setField(idx, 'destAeTitle', v)}
+                      placeholder="DST_AE" />
+                  </td>
+
+                  {/* Env — T / P clickable badges */}
+                  <td className="px-1 align-middle">
+                    <div className="flex items-center gap-0.5">
+                      <button onClick={() => setField(idx, 'envTest', !row.envTest)}
+                        title={row.envTest ? 'Test (click to remove)' : 'Add test env'}
+                        className={cn(
+                          'px-[5px] rounded text-[10px] font-bold leading-[17px] border transition-colors',
+                          row.envTest
+                            ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/35 hover:bg-yellow-500/25'
+                            : 'text-muted-foreground/25 border-border/20 hover:text-muted-foreground/50 hover:border-border/40'
+                        )}>T</button>
+                      <button onClick={() => setField(idx, 'envProd', !row.envProd)}
+                        title={row.envProd ? 'Prod (click to remove)' : 'Add prod env'}
+                        className={cn(
+                          'px-[5px] rounded text-[10px] font-bold leading-[17px] border transition-colors',
+                          row.envProd
+                            ? 'bg-green-500/15 text-green-400 border-green-500/35 hover:bg-green-500/25'
+                            : 'text-muted-foreground/25 border-border/20 hover:text-muted-foreground/50 hover:border-border/40'
+                        )}>P</button>
+                    </div>
+                  </td>
+
+                  {/* Notes */}
+                  <td className="px-1 align-middle">
+                    <InlineCell value={row.notes} onChange={v => setField(idx, 'notes', v)} placeholder="Notes…" />
+                  </td>
+
+                  {/* Row actions — appear on hover */}
+                  <td className="px-1 align-middle">
+                    <div className="flex items-center gap-0.5 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => dupRow(idx)} title="Duplicate"
+                        className="p-0.5 rounded hover:bg-muted/60 text-muted-foreground/60 hover:text-foreground transition-colors">
+                        <Copy className="w-3 h-3" />
+                      </button>
+                      <button onClick={() => removeRow(idx)} title="Delete"
+                        className="p-0.5 rounded hover:bg-red-500/20 text-muted-foreground/60 hover:text-red-400 transition-colors">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Notion-style "+ New row" footer */}
+        <button onClick={addRow}
+          className="flex w-full items-center gap-1.5 px-3 py-[5px] text-[11px] text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted/10 transition-colors border-t border-border/30 select-none">
+          <Plus className="w-3 h-3" />
+          New row
+        </button>
       </div>
 
-      {/* Cards — mobile / tablet */}
-      <div className="lg:hidden space-y-3">
+      {/* ── Mobile cards ── */}
+      <div className="lg:hidden space-y-2">
         {rows.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground text-sm">
-            No endpoints configured yet. Tap "Add Endpoint" or "Import" to get started.
-          </div>
+          <p className="text-center py-6 text-[11px] text-muted-foreground/40 italic">
+            No endpoints yet.
+          </p>
         )}
         {rows.map((row, idx) => (
-          <div key={row.id} className="rounded-lg border border-border bg-card p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-muted-foreground">#{idx + 1}</span>
-                {row.trafficType && <span className="text-xs font-medium text-primary">{row.trafficType}</span>}
-                {(row.envTest || row.envProd) && (
-                  <div className="flex gap-1">
-                    {row.envTest && <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-yellow-500/20 text-yellow-400 border border-yellow-500/40">Test</span>}
-                    {row.envProd && <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-500/20 text-green-400 border border-green-500/40">Prod</span>}
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setExpandedRow(expandedRow === row.id ? null : row.id)}
-                  className="p-1 rounded hover:bg-muted/50 text-muted-foreground"
-                >
-                  {expandedRow === row.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                </button>
-                <button onClick={() => duplicateRow(idx)} className="p-1 rounded hover:bg-muted/50 text-muted-foreground">
-                  <Copy className="w-4 h-4" />
-                </button>
-                <button onClick={() => removeRow(idx)} className="p-1 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400">
-                  <Trash2 className="w-4 h-4" />
-                </button>
+          <div key={row.id} className="rounded border border-border/50 bg-card p-3 space-y-2 text-[11px]">
+            <div className="flex items-center justify-between gap-2">
+              <span className={cn('font-medium truncate', row.trafficType ? 'text-primary' : 'text-muted-foreground italic')}>
+                {row.trafficType || 'No type set'}
+              </span>
+              <div className="flex items-center gap-1 shrink-0">
+                <button onClick={() => setField(idx, 'envTest', !row.envTest)}
+                  className={cn('px-[5px] rounded text-[10px] font-bold leading-[17px] border transition-colors',
+                    row.envTest ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/35' : 'text-muted-foreground/30 border-border/20')}>T</button>
+                <button onClick={() => setField(idx, 'envProd', !row.envProd)}
+                  className={cn('px-[5px] rounded text-[10px] font-bold leading-[17px] border transition-colors',
+                    row.envProd ? 'bg-green-500/15 text-green-400 border-green-500/35' : 'text-muted-foreground/30 border-border/20')}>P</button>
+                <button onClick={() => dupRow(idx)} className="p-0.5 text-muted-foreground/60 hover:text-foreground"><Copy className="w-3 h-3" /></button>
+                <button onClick={() => removeRow(idx)} className="p-0.5 text-muted-foreground/60 hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
               </div>
             </div>
-
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Traffic Type</label>
-              <TrafficTypeCombobox
-                value={row.trafficType}
-                onChange={(v) => updateField(idx, 'trafficType', v)}
-                customTypes={customTrafficTypes}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">Source System</label>
-                <SystemCombobox
-                  value={row.sourceSystem}
-                  onChange={(v) => updateField(idx, 'sourceSystem', v)}
-                  systems={systemNames}
-                  placeholder="Select source"
-                />
+            <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+              <div className="space-y-0.5">
+                <div className="text-muted-foreground/60 text-[10px] uppercase tracking-wide">Source</div>
+                <InlineCombobox value={row.sourceSystem} onChange={v => setField(idx,'sourceSystem',v)} options={systemNames} placeholder="Source…" />
+                <InlineCell value={row.sourceIp} onChange={v => setField(idx,'sourceIp',v)} placeholder="IP" />
+                <InlineCell value={row.sourcePort} onChange={v => setField(idx,'sourcePort',v)} placeholder="Port" />
+                <InlineCell value={row.sourceAeTitle} onChange={v => setField(idx,'sourceAeTitle',v)} placeholder="AE Title" />
               </div>
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">Destination System</label>
-                <SystemCombobox
-                  value={row.destinationSystem}
-                  onChange={(v) => updateField(idx, 'destinationSystem', v)}
-                  systems={systemNames}
-                  placeholder="Select dest"
-                />
+              <div className="space-y-0.5">
+                <div className="text-muted-foreground/60 text-[10px] uppercase tracking-wide">Destination</div>
+                <InlineCombobox value={row.destinationSystem} onChange={v => setField(idx,'destinationSystem',v)} options={systemNames} placeholder="Dest…" />
+                <InlineCell value={row.destIp} onChange={v => setField(idx,'destIp',v)} placeholder="IP" />
+                <InlineCell value={row.destPort} onChange={v => setField(idx,'destPort',v)} placeholder="Port" />
+                <InlineCell value={row.destAeTitle} onChange={v => setField(idx,'destAeTitle',v)} placeholder="AE Title" />
               </div>
             </div>
-
-            {(expandedRow === row.id || !row.sourceIp) && (
-              <>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Source IP : Port</label>
-                    <div className="flex items-center gap-1">
-                      <Input value={row.sourceIp} onChange={(e) => updateField(idx, 'sourceIp', e.target.value)} placeholder="10.1.2.3" className="h-8 text-sm" />
-                      <span className="text-muted-foreground text-xs">:</span>
-                      <Input value={row.sourcePort} onChange={(e) => updateField(idx, 'sourcePort', e.target.value)} placeholder="104" className="h-8 text-sm w-20" />
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Dest IP : Port</label>
-                    <div className="flex items-center gap-1">
-                      <Input value={row.destIp} onChange={(e) => updateField(idx, 'destIp', e.target.value)} placeholder="10.1.2.50" className="h-8 text-sm" />
-                      <span className="text-muted-foreground text-xs">:</span>
-                      <Input value={row.destPort} onChange={(e) => updateField(idx, 'destPort', e.target.value)} placeholder="11112" className="h-8 text-sm w-20" />
-                    </div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Source AE Title</label>
-                    <Input value={row.sourceAeTitle} onChange={(e) => updateField(idx, 'sourceAeTitle', e.target.value)} placeholder="SRC_AE" className="h-8 text-xs" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Dest AE Title</label>
-                    <Input value={row.destAeTitle} onChange={(e) => updateField(idx, 'destAeTitle', e.target.value)} placeholder="DEST_AE" className="h-8 text-xs" />
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">Environment</label>
-                  <div className="flex items-center gap-4 pt-1">
-                    <label className="flex items-center gap-1.5 cursor-pointer">
-                      <Checkbox checked={row.envTest} onCheckedChange={(checked) => updateField(idx, 'envTest', !!checked)} />
-                      <span className={cn("text-xs font-medium", row.envTest ? "text-yellow-400" : "text-muted-foreground")}>Test</span>
-                    </label>
-                    <label className="flex items-center gap-1.5 cursor-pointer">
-                      <Checkbox checked={row.envProd} onCheckedChange={(checked) => updateField(idx, 'envProd', !!checked)} />
-                      <span className={cn("text-xs font-medium", row.envProd ? "text-green-400" : "text-muted-foreground")}>Prod</span>
-                    </label>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">Notes</label>
-                  <Input value={row.notes} onChange={(e) => updateField(idx, 'notes', e.target.value)} placeholder="Optional notes" className="h-8 text-xs" />
-                </div>
-              </>
-            )}
+            <InlineCell value={row.notes} onChange={v => setField(idx,'notes',v)} placeholder="Notes…" className="w-full" />
           </div>
         ))}
+        <button onClick={addRow}
+          className="flex w-full items-center justify-center gap-1.5 py-2 text-[11px] text-muted-foreground/50 border border-dashed border-border/40 rounded hover:border-primary/40 hover:text-foreground transition-colors">
+          <Plus className="w-3 h-3" /> New row
+        </button>
       </div>
 
-      {/* Quick-add row button at bottom */}
-      {rows.length > 0 && (
-        <Button size="sm" variant="ghost" onClick={addRow} className="w-full gap-1.5 text-muted-foreground hover:text-foreground border border-dashed border-border hover:border-primary/50">
-          <Plus className="w-4 h-4" /> Add another endpoint
-        </Button>
-      )}
     </div>
   );
 }

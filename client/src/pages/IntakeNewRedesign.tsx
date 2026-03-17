@@ -1782,13 +1782,8 @@ export default function IntakeNewRedesign() {
                   </div>
 
                   {/* Endpoint Table */}
-                  <div className="space-y-3">
-                    <div>
-                      <h3 className="text-lg font-semibold">Network Endpoints</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Add each network endpoint that will carry traffic between your systems and New Lantern. Include DICOM, HL7, and any other connections for both test and production environments.
-                      </p>
-                    </div>
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Network Endpoints</h3>
                     <ConnectivityTable
                       rows={connRows}
                       systems={(() => {
