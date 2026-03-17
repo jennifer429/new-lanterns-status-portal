@@ -1070,7 +1070,7 @@ export default function PlatformAdmin() {
                         <span>Questionnaire</span>
                       </TableHead>
                       <TableHead className="text-center text-sm w-[200px] font-semibold">
-                        <span>Validation Checklist</span>
+                        <span>Testing</span>
                       </TableHead>
                       <TableHead className="text-center text-sm w-[200px] font-semibold">
                         <span>Task List</span>

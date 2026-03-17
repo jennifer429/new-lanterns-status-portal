@@ -187,7 +187,7 @@ export default function Admin() {
 
                     {/* Overall Progress Panel */}
                     <div className="border-t border-purple-500/20 pt-3 mt-3">
-                      <h3 className="text-white font-semibold text-sm mb-1">Overall Progress</h3>
+                      <h3 className="text-white font-semibold text-sm mb-1">Questionnaire Progress</h3>
                       <p className="text-xs text-gray-400 mb-3">
                         {Object.values(org.sectionProgress || {}).filter((s: any) => s.completed === s.total && s.total > 0).length} of {questionnaireSections.length} sections complete
                       </p>
@@ -265,16 +265,36 @@ export default function Admin() {
                     </div>
 
 
-                    {/* Open Portal Button */}
-                    <Link href={`/org/${org.slug}/intake`}>
-                      <Button
-                        className="w-full bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white"
-                        size="sm"
-                      >
-                        <ExternalLink className="w-4 h-4 mr-2" />
-                        Open Portal
-                      </Button>
-                    </Link>
+                    {/* Phase Navigation Buttons */}
+                    <div className="grid grid-cols-3 gap-1.5">
+                      <Link href={`/org/${org.slug}/intake`}>
+                        <Button
+                          variant="outline"
+                          className="w-full border-purple-500/40 text-purple-300 hover:bg-purple-900/30 hover:text-purple-200"
+                          size="sm"
+                        >
+                          Questionnaire
+                        </Button>
+                      </Link>
+                      <Link href={`/org/${org.slug}/validation`}>
+                        <Button
+                          variant="outline"
+                          className="w-full border-purple-500/40 text-purple-300 hover:bg-purple-900/30 hover:text-purple-200"
+                          size="sm"
+                        >
+                          Testing
+                        </Button>
+                      </Link>
+                      <Link href={`/org/${org.slug}/implement`}>
+                        <Button
+                          variant="outline"
+                          className="w-full border-purple-500/40 text-purple-300 hover:bg-purple-900/30 hover:text-purple-200"
+                          size="sm"
+                        >
+                          Task List
+                        </Button>
+                      </Link>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
