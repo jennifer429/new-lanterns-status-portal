@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Download, Upload, CheckCircle2, Circle, LogOut, FileText, Shield, FileUp, Network, ClipboardCheck, Star, X, File, CloudUpload, Trash2, Paperclip, FileIcon, Menu, Pencil, Plus, RefreshCw, Import, FileDown, FileUp as FileUpIcon } from "lucide-react";
+import { Loader2, Download, Upload, CheckCircle2, Circle, LogOut, FileText, Shield, FileUp, Network, ClipboardCheck, Star, X, File, CloudUpload, Trash2, Paperclip, FileIcon, Menu, Pencil, Plus, RefreshCw, Import, FileDown, FileUp as FileUpIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -1406,6 +1406,108 @@ export default function IntakeNewRedesign() {
   const currentSectionIndex = questionnaireSections.findIndex(s => s.id === currentSection);
   const isLastSection = currentSectionIndex === questionnaireSections.length - 1;
 
+  const handleNext = async () => {
+    // Validate workflow sections
+    if (currentSectionData?.type === 'workflow') {
+      const configKey = currentSectionData.id + '_config';
+      const savedConfig = responses[configKey];
+      let isValid = false;
+      let errorMessage = 'Please select at least one workflow path';
+      if (savedConfig) {
+        try {
+          const config = typeof savedConfig === 'string' ? JSON.parse(savedConfig) : savedConfig;
+          const selectedPathKeys = Object.keys(config.paths || {}).filter(key => config.paths[key]);
+          if (selectedPathKeys.length === 0) {
+            errorMessage = 'Please select at least one workflow path';
+          } else {
+            const workflowsRequiringSystemNames = ['priors-workflow', 'reports-out-workflow'];
+            const requiresSystemNames = workflowsRequiringSystemNames.includes(currentSectionData.id);
+            if (requiresSystemNames) {
+              const pathToSystemKeyMap: Record<string, string> = {
+                'priorsPush': 'priorsPushSource',
+                'priorsQuery': 'priorsQuerySource',
+                'reportsToPortal': 'reportsPortalDestination',
+              };
+              const missingSystems = selectedPathKeys.filter(pathKey => {
+                const systemKey = pathToSystemKeyMap[pathKey];
+                if (!systemKey) return false;
+                const systemValue = config.systems?.[systemKey];
+                return !systemValue || systemValue.trim() === '';
+              });
+              if (missingSystems.length > 0) {
+                errorMessage = 'Please fill in system names for all selected workflow paths';
+              } else {
+                isValid = true;
+              }
+            } else {
+              isValid = true;
+            }
+          }
+        } catch (e) {
+          errorMessage = 'Invalid workflow configuration';
+        }
+      }
+      if (!isValid) {
+        toast.error(errorMessage);
+        return;
+      }
+      if (!isLastSection) {
+        setCurrentSection(questionnaireSections[currentSectionIndex + 1].id);
+      } else {
+        setShowFeedbackModal(true);
+      }
+      return;
+    }
+
+    // Check for unanswered questions in current section
+    const currentQuestions = currentSectionData?.questions || [];
+    const unanswered = currentQuestions
+      .filter(q => {
+        if (q.conditionalOn) {
+          const parentResponse = responses[q.conditionalOn.questionId];
+          if (parentResponse !== q.conditionalOn.value) return false;
+        }
+        if (q.type === 'upload' || q.type === 'upload-download') {
+          return !uploadedFilesMap.has(q.id) || uploadedFilesMap.get(q.id) === 0;
+        }
+        return !responses[q.id] || responses[q.id] === '';
+      })
+      .map(q => q.id);
+
+    if (unanswered.length > 0) {
+      setUnansweredQuestions(new Set(unanswered));
+      const firstUnanswered = document.querySelector(`[data-question-id="${unanswered[0]}"]`);
+      firstUnanswered?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    setUnansweredQuestions(new Set());
+
+    try {
+      setSaveStatus('saving');
+      const savePromises = Object.entries(responses).map(([questionId, value]) =>
+        saveMutation.mutateAsync({
+          organizationSlug: slug || '',
+          questionId,
+          response: typeof value === 'object' ? JSON.stringify(value) : String(value),
+          userEmail: user?.email || '',
+        })
+      );
+      await Promise.all(savePromises);
+      setSaveStatus('saved');
+    } catch (error) {
+      console.error('Failed to save responses:', error);
+      toast.error('Failed to save responses. Please try again.');
+      return;
+    }
+
+    if (!isLastSection) {
+      setCurrentSection(questionnaireSections[currentSectionIndex + 1].id);
+    } else {
+      setShowFeedbackModal(true);
+    }
+  };
+
   // Show loading until responses are loaded into state
   // This ensures calculateSectionProgress has data to work with
   if (orgLoading || existingResponses === undefined) {
@@ -1620,7 +1722,7 @@ export default function IntakeNewRedesign() {
         </div>
 
         {/* Section Content */}
-        <div className="flex-1 overflow-y-auto p-3 md:p-8">
+        <div className="flex-1 overflow-y-auto p-3 pb-20 sm:pb-8 md:p-8">
           <Card className="max-w-6xl mx-auto bg-black/40 backdrop-blur-sm border-purple-500/20">
             <div className="p-4 md:p-8">
               {/* Integration Workflows section — renders its own header */}
@@ -1862,138 +1964,7 @@ export default function IntakeNewRedesign() {
                 >
                   Back to Overview
                 </Button>
-                <Button
-                  onClick={async () => {
-                    // Validate workflow sections
-                    if (currentSectionData?.type === 'workflow') {
-                      const configKey = currentSectionData.id + '_config';
-                      const savedConfig = responses[configKey];
-                      
-                      let isValid = false;
-                      let errorMessage = 'Please select at least one workflow path';
-                      
-                      if (savedConfig) {
-                        try {
-                          const config = typeof savedConfig === 'string' ? JSON.parse(savedConfig) : savedConfig;
-                          const selectedPathKeys = Object.keys(config.paths || {}).filter(key => config.paths[key]);
-                          
-                          if (selectedPathKeys.length === 0) {
-                            errorMessage = 'Please select at least one workflow path';
-                          } else {
-                            // For workflows that require system names (priors, reports), check if they're filled
-                            // Orders and Images workflows have fixed systems, so they don't need system name validation
-                            const workflowsRequiringSystemNames = ['priors-workflow', 'reports-out-workflow'];
-                            const requiresSystemNames = workflowsRequiringSystemNames.includes(currentSectionData.id);
-                            
-                            if (requiresSystemNames) {
-                              // Map path keys to their corresponding system keys
-                              const pathToSystemKeyMap: Record<string, string> = {
-                                // Priors workflow
-                                'priorsPush': 'priorsPushSource',
-                                'priorsQuery': 'priorsQuerySource',
-                                // Reports workflow  
-                                'reportsToPortal': 'reportsPortalDestination',
-                              };
-                              
-                              const missingSystems = selectedPathKeys.filter(pathKey => {
-                                // If this path doesn't need a system name input, skip it
-                                const systemKey = pathToSystemKeyMap[pathKey];
-                                if (!systemKey) return false;
-                                
-                                const systemValue = config.systems?.[systemKey];
-                                return !systemValue || systemValue.trim() === '';
-                              });
-                              
-                              if (missingSystems.length > 0) {
-                                errorMessage = 'Please fill in system names for all selected workflow paths';
-                              } else {
-                                isValid = true;
-                              }
-                            } else {
-                              // Orders and Images workflows are valid if at least one path is selected
-                              isValid = true;
-                            }
-                          }
-                        } catch (e) {
-                          errorMessage = 'Invalid workflow configuration';
-                        }
-                      }
-                      
-                      if (!isValid) {
-                        toast.error(errorMessage);
-                        return;
-                      }
-                      
-                      // Workflow is valid, proceed to next section
-                      if (!isLastSection) {
-                        setCurrentSection(questionnaireSections[currentSectionIndex + 1].id);
-                      } else {
-                        setShowFeedbackModal(true);
-                      }
-                      return;
-                    }
-                    
-                    // Check for unanswered questions in current section
-                    const currentQuestions = currentSectionData?.questions || [];
-                    const unanswered = currentQuestions
-                      .filter(q => {
-                        // Skip conditional questions that aren't visible
-                        if (q.conditionalOn) {
-                          const parentResponse = responses[q.conditionalOn.questionId];
-                          if (parentResponse !== q.conditionalOn.value) {
-                            return false; // Don't validate hidden questions
-                          }
-                        }
-                        
-                        // For file upload questions (including upload-download), check if files are uploaded
-                        if (q.type === 'upload' || q.type === 'upload-download') {
-                          return !uploadedFilesMap.has(q.id) || uploadedFilesMap.get(q.id) === 0;
-                        }
-                        // For other questions, check responses
-                        return !responses[q.id] || responses[q.id] === '';
-                      })
-                      .map(q => q.id);
-                    
-                    if (unanswered.length > 0) {
-                      setUnansweredQuestions(new Set(unanswered));
-                      // Scroll to first unanswered question
-                      const firstUnanswered = document.querySelector(`[data-question-id="${unanswered[0]}"]`);
-                      firstUnanswered?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                      return;
-                    }
-                    
-                    // Clear validation flags
-                    setUnansweredQuestions(new Set());
-                    
-                    // IMPORTANT: Save all current responses to database before proceeding
-                    // This ensures responses are persisted even if auto-save hasn't completed
-                    try {
-                      setSaveStatus('saving');
-                      const savePromises = Object.entries(responses).map(([questionId, value]) => {
-                        return saveMutation.mutateAsync({
-                          organizationSlug: slug || '',
-                          questionId,
-                          response: typeof value === 'object' ? JSON.stringify(value) : String(value),
-                          userEmail: user?.email || '',
-                        });
-                      });
-                      
-                      await Promise.all(savePromises);
-                      setSaveStatus('saved');
-                    } catch (error) {
-                      console.error('Failed to save responses:', error);
-                      toast.error('Failed to save responses. Please try again.');
-                      return; // Don't proceed if save failed
-                    }
-                    
-                    if (!isLastSection) {
-                      setCurrentSection(questionnaireSections[currentSectionIndex + 1].id);
-                    } else {
-                      // Show feedback modal on completion
-                      setShowFeedbackModal(true);
-                    }
-                  }}
-                >
+                <Button onClick={handleNext}>
                   {isLastSection ? 'Complete' : 'Save & Continue'}
                 </Button>
               </div>
@@ -2122,6 +2093,32 @@ export default function IntakeNewRedesign() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Mobile sticky bottom nav — hidden on sm+ where sidebar + in-card nav are accessible */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-t border-border px-4 py-3 flex items-center justify-between sm:hidden">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={currentSectionIndex === 0}
+          onClick={() => setCurrentSection(questionnaireSections[currentSectionIndex - 1].id)}
+          className="gap-1"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          Prev
+        </Button>
+        <span className="text-xs text-muted-foreground font-medium">
+          {currentSectionIndex + 1} / {questionnaireSections.length}
+        </span>
+        <Button
+          size="sm"
+          disabled={isLastSection}
+          onClick={() => setCurrentSection(questionnaireSections[currentSectionIndex + 1].id)}
+          className="gap-1"
+        >
+          Next
+          <ChevronRight className="w-4 h-4" />
+        </Button>
+      </div>
     </div>
   );
 }
