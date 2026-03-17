@@ -527,6 +527,71 @@ function SystemEditRow({
   );
 }
 
+// Local-state wrappers so typing doesn't re-render the whole page.
+// They update global state only on blur.
+function LocalInput({
+  value,
+  onCommit,
+  placeholder,
+  className,
+  type = "text",
+}: {
+  value: string;
+  onCommit: (val: string) => void;
+  placeholder?: string;
+  className?: string;
+  type?: string;
+}) {
+  const [local, setLocal] = useState(value);
+  const committed = useRef(value);
+  useEffect(() => {
+    if (value !== committed.current) {
+      committed.current = value;
+      setLocal(value);
+    }
+  }, [value]);
+  return (
+    <Input
+      type={type}
+      value={local}
+      onChange={(e) => setLocal(e.target.value)}
+      onBlur={() => { committed.current = local; onCommit(local); }}
+      placeholder={placeholder}
+      className={className}
+    />
+  );
+}
+
+function LocalTextarea({
+  value,
+  onCommit,
+  placeholder,
+  className,
+}: {
+  value: string;
+  onCommit: (val: string) => void;
+  placeholder?: string;
+  className?: string;
+}) {
+  const [local, setLocal] = useState(value);
+  const committed = useRef(value);
+  useEffect(() => {
+    if (value !== committed.current) {
+      committed.current = value;
+      setLocal(value);
+    }
+  }, [value]);
+  return (
+    <Textarea
+      value={local}
+      onChange={(e) => setLocal(e.target.value)}
+      onBlur={() => { committed.current = local; onCommit(local); }}
+      placeholder={placeholder}
+      className={className}
+    />
+  );
+}
+
 export default function IntakeNewRedesign() {
   const [, params] = useRoute("/org/:slug/intake");
   const slug = params?.slug;
@@ -1111,9 +1176,9 @@ export default function IntakeNewRedesign() {
     switch (question.type) {
       case 'text':
         return (
-          <Input
+          <LocalInput
             value={value || ''}
-            onChange={(e) => setResponses(prev => ({ ...prev, [question.id]: e.target.value }))}
+            onCommit={(val) => setResponses(prev => ({ ...prev, [question.id]: val }))}
             placeholder={question.placeholder}
             className="!bg-white !text-black"
           />
@@ -1121,9 +1186,9 @@ export default function IntakeNewRedesign() {
 
       case 'textarea':
         return (
-          <Textarea
+          <LocalTextarea
             value={value || ''}
-            onChange={(e) => setResponses(prev => ({ ...prev, [question.id]: e.target.value }))}
+            onCommit={(val) => setResponses(prev => ({ ...prev, [question.id]: val }))}
             placeholder={question.placeholder}
             className="!bg-white !text-black min-h-[100px]"
           />
@@ -1148,10 +1213,10 @@ export default function IntakeNewRedesign() {
 
       case 'date':
         return (
-          <Input
+          <LocalInput
             type="date"
             value={value || ''}
-            onChange={(e) => setResponses(prev => ({ ...prev, [question.id]: e.target.value }))}
+            onCommit={(val) => setResponses(prev => ({ ...prev, [question.id]: val }))}
             className="!bg-white !text-black"
           />
         );
@@ -1315,9 +1380,9 @@ export default function IntakeNewRedesign() {
                       <td className="px-3 py-1.5 text-xs text-muted-foreground font-medium align-middle">{label}</td>
                       {(['name', 'phone', 'email'] as (keyof ContactRow)[]).map(field => (
                         <td key={field} className="px-2 py-1">
-                          <Input
+                          <LocalInput
                             value={row[field]}
-                            onChange={e => updateContact(key as ContactKey, field, e.target.value)}
+                            onCommit={(val) => updateContact(key as ContactKey, field, val)}
                             placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
                             className="h-8 text-sm !bg-white !text-black border-0 shadow-none focus-visible:ring-1 focus-visible:ring-primary/50"
                           />

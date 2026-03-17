@@ -676,7 +676,7 @@ export default function Validation() {
                     </button>
 
                     {/* Bulk action toolbar — visible when expanded */}
-                    {!isCollapsed && (
+                    {!isCollapsed && (<>
                       <div className="flex flex-wrap items-center gap-3 px-5 py-2.5 border-b border-border/20 bg-muted/10">
                         <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mr-1">Actions</span>
                         <button
@@ -850,7 +850,7 @@ export default function Validation() {
                           );
                         })}
                       </CardContent>
-                    )}
+                    </>)}
                   </Card>
                 );
               })}
