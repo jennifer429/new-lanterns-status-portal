@@ -5,40 +5,44 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import { questionnaireSections } from "@shared/questionnaireData";
 import { transformSectionProgress } from "@/lib/adminUtils";
 import { Link } from "wouter";
-import { ExternalLink, Building2, Calendar, CheckCircle2, Clock, Users, TrendingUp, Activity, FileText, Download, Trash2 } from "lucide-react";
+import { ExternalLink, Building2, Calendar, CheckCircle2, Clock, Users, TrendingUp, Activity, FileText, Download, Trash2, Search, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserManagement } from "@/components/UserManagement";
 import { FilesManagement } from "@/components/FilesManagement";
 import { OrganizationManagement } from "@/components/OrganizationManagement";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { LogOut, UserCircle } from "lucide-react";
 import { PhiDisclaimer } from "@/components/PhiDisclaimer";
+import { UserMenu } from "@/components/UserMenu";
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
+  const [orgSearch, setOrgSearch] = useState("");
   const { user } = useAuth();
   const { data: metrics, isLoading } = trpc.organizations.getMetrics.useQuery();
+  const { data: allClients = [] } = trpc.admin.getAllClients.useQuery();
   const logoutMutation = trpc.auth.logout.useMutation({
     onSuccess: () => {
       window.location.href = "/login";
     },
   });
 
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
+  const filteredMetrics = useMemo(() => {
+    if (!metrics) return [];
+    return metrics.filter((org) => {
+      const matchesPartner = selectedClientId === null || org.clientId === selectedClientId;
+      const matchesSearch = orgSearch.trim() === "" ||
+        org.name.toLowerCase().includes(orgSearch.trim().toLowerCase());
+      return matchesPartner && matchesSearch;
+    });
+  }, [metrics, selectedClientId, orgSearch]);
 
   if (isLoading) {
     return (
@@ -62,38 +66,7 @@ export default function Admin() {
               </div>
             </div>
             
-            {/* Profile Button */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="h-10 w-10 rounded-full bg-purple-600 border-purple-400 hover:bg-purple-500 text-white font-semibold"
-                >
-                  {user?.name ? getInitials(user.name) : "AD"}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 bg-black border-purple-500/30">
-                <div className="px-2 py-1.5">
-                  <p className="text-sm font-medium text-white">{user?.name || "Admin"}</p>
-                  <p className="text-xs text-gray-400">{user?.email || ""}</p>
-                </div>
-                <DropdownMenuSeparator className="bg-purple-500/20" />
-                <DropdownMenuItem
-                  className="text-gray-300 hover:text-white hover:bg-purple-600 cursor-pointer"
-                  onClick={() => alert("Edit profile coming soon")}
-                >
-                  <UserCircle className="mr-2 h-4 w-4" />
-                  Edit Profile
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="text-gray-300 hover:text-white hover:bg-purple-600 cursor-pointer"
-                  onClick={() => logoutMutation.mutate()}
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Logout
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <UserMenu />
           </div>
         </div>
       </header>
@@ -127,14 +100,87 @@ export default function Admin() {
           <TabsContent value="dashboard">
         <Card className="border-purple-500/20 bg-black/40 backdrop-blur-xl">
           <CardHeader>
-            <CardTitle className="text-white text-xl">Client Portals</CardTitle>
-            <CardDescription className="text-gray-300">
-              Access implementation portals for all active clients
-            </CardDescription>
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+              <div>
+                <CardTitle className="text-white text-xl">Client Portals</CardTitle>
+                <CardDescription className="text-gray-300">
+                  Access implementation portals for all active clients
+                </CardDescription>
+              </div>
+
+              {/* Filter controls */}
+              <div className="flex flex-col gap-2 min-w-0 sm:min-w-[320px]">
+                {/* Partner filter chips */}
+                {allClients.length > 1 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      onClick={() => setSelectedClientId(null)}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                        selectedClientId === null
+                          ? "bg-purple-600 text-white"
+                          : "bg-purple-900/40 text-purple-300 hover:bg-purple-800/50"
+                      }`}
+                    >
+                      All Partners
+                    </button>
+                    {allClients.map((client) => (
+                      <button
+                        key={client.id}
+                        onClick={() => setSelectedClientId(
+                          selectedClientId === client.id ? null : client.id
+                        )}
+                        className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                          selectedClientId === client.id
+                            ? "bg-purple-600 text-white"
+                            : "bg-purple-900/40 text-purple-300 hover:bg-purple-800/50"
+                        }`}
+                      >
+                        {client.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Org search */}
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-purple-400 pointer-events-none" />
+                  <Input
+                    placeholder="Search hospitals…"
+                    value={orgSearch}
+                    onChange={(e) => setOrgSearch(e.target.value)}
+                    className="pl-8 pr-8 h-8 text-xs bg-purple-900/20 border-purple-500/30 text-white placeholder:text-gray-500 focus-visible:ring-purple-500"
+                  />
+                  {orgSearch && (
+                    <button
+                      onClick={() => setOrgSearch("")}
+                      className="absolute right-2.5 top-2 text-gray-400 hover:text-white"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Active filter summary */}
+                {(selectedClientId !== null || orgSearch) && (
+                  <p className="text-xs text-purple-300">
+                    Showing {filteredMetrics.length} of {metrics?.length ?? 0} portals
+                    {selectedClientId !== null && (
+                      <> · Partner: <span className="font-semibold">{allClients.find(c => c.id === selectedClientId)?.name}</span></>
+                    )}
+                    <button
+                      onClick={() => { setSelectedClientId(null); setOrgSearch(""); }}
+                      className="ml-2 underline hover:no-underline"
+                    >
+                      Clear
+                    </button>
+                  </p>
+                )}
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {metrics?.map((org) => (
+              {filteredMetrics.map((org) => (
                 <Card
                   key={org.id}
                   className="border-purple-500/30 bg-purple-950/20 hover:bg-purple-950/40 transition-colors"
@@ -300,9 +346,9 @@ export default function Admin() {
               ))}
             </div>
 
-            {(!metrics || metrics.length === 0) && (
+            {filteredMetrics.length === 0 && (
               <div className="text-center py-12 text-gray-400">
-                No client portals found
+                {metrics?.length === 0 ? "No client portals found" : "No portals match the current filter"}
               </div>
             )}
           </CardContent>
