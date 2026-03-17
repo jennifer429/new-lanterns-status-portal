@@ -2124,3 +2124,13 @@
 - [x] Rename "Implementation" to "Task List" on Platform Admin dashboard column header
 - [x] Rename "Implementation" to "Task List" on Org Dashboard workflow card (title + subtitle)
 - [x] Rename "Task List" page header to "Task List"
+
+## CSV Export & Import for Progress Reports (Mar 15, 2026)
+- [x] Create shared CSV utility functions (escape, parse, download helper)
+- [x] Add CSV export button to Testing Checklist page (test name, phase, status, date tested, sign-off)
+- [x] Add CSV import button to Testing Checklist page (bulk update from uploaded CSV)
+- [x] Add CSV export button to Task List page (task name, phase, status, owner, target date, completed date)
+- [x] Add CSV import button to Task List page (bulk update from uploaded CSV)
+- [x] CSV import processes client-side and updates state directly (no server endpoint needed)
+- [x] Include organization name and export date in the CSV filename
+- [x] Write vitest tests for CSV utility functions
