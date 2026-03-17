@@ -10,6 +10,16 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   CheckCircle2,
   Circle,
   ListChecks,
@@ -20,6 +30,7 @@ import {
   CheckSquare,
   XSquare,
   CalendarCheck,
+  Square,
 } from "lucide-react";
 import { useRoute, Link } from "wouter";
 import { cn } from "@/lib/utils";
@@ -212,6 +223,49 @@ export default function Implementation() {
   }>>({});
   const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({});
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const [resetTargetSection, setResetTargetSection] = useState<typeof SECTION_DEFS[number] | null>(null);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+
+  function toggleTaskSelection(taskId: string) {
+    setSelectedTaskIds(prev => {
+      const next = new Set(prev);
+      next.has(taskId) ? next.delete(taskId) : next.add(taskId);
+      return next;
+    });
+  }
+
+  function toggleSelectAllInSection(section: typeof SECTION_DEFS[number]) {
+    const ids = section.tasks.map(t => t.id);
+    const allSelected = ids.every(id => selectedTaskIds.has(id));
+    setSelectedTaskIds(prev => {
+      const next = new Set(prev);
+      if (allSelected) {
+        ids.forEach(id => next.delete(id));
+      } else {
+        ids.forEach(id => next.add(id));
+      }
+      return next;
+    });
+  }
+
+  function bulkSetDateSelected(date: string) {
+    selectedTaskIds.forEach(taskId => {
+      const section = SECTION_DEFS.find(s => s.tasks.some(t => t.id === taskId));
+      if (!section) return;
+      const current = getMerged(taskId);
+      const merged = { ...current, targetDate: date };
+      setLocalOverrides(prev => ({ ...prev, [taskId]: merged }));
+      updateTask.mutate({
+        organizationSlug: slug,
+        taskId,
+        sectionName: section.title,
+        completed: merged.completed,
+        owner: merged.owner || undefined,
+        targetDate: date,
+        notes: merged.notes || undefined,
+      });
+    });
+  }
 
   function getMerged(taskId: string) {
     const s = taskMap[taskId];
@@ -400,55 +454,84 @@ export default function Implementation() {
                     </button>
 
                     {/* Bulk action toolbar — visible when expanded */}
-                    {!isCollapsed && (
-                      <div className="flex flex-wrap items-center gap-3 px-5 py-2.5 border-b border-border/20 bg-muted/10">
-                        <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mr-1">Actions</span>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); bulkCompleteSection(section); }}
-                          disabled={allDone}
-                          className={cn(
-                            "inline-flex items-center gap-1.5 text-xs transition-colors",
-                            allDone
-                              ? "text-muted-foreground/30 cursor-not-allowed"
-                              : "text-primary hover:text-primary/80 cursor-pointer"
-                          )}
-                        >
-                          <CheckSquare className="w-3.5 h-3.5" />
-                          Complete All
-                        </button>
-                        <span className="text-border">|</span>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); bulkResetSection(section); }}
-                          disabled={sectionCompleted === 0}
-                          className={cn(
-                            "inline-flex items-center gap-1.5 text-xs transition-colors",
-                            sectionCompleted === 0
-                              ? "text-muted-foreground/30 cursor-not-allowed"
-                              : "text-muted-foreground hover:text-foreground cursor-pointer"
-                          )}
-                        >
-                          <XSquare className="w-3.5 h-3.5" />
-                          Reset All
-                        </button>
-                        <span className="text-border">|</span>
-                        <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <CalendarCheck className="w-3.5 h-3.5" />
-                          <span>Set dates:</span>
-                          <input
-                            type="date"
-                            defaultValue={todayStr()}
-                            onChange={(e) => { if (e.target.value) bulkSetDateSection(section, e.target.value); }}
-                            className="bg-transparent border-b border-border/40 px-1 py-0.5 text-xs text-foreground focus:outline-none focus:border-primary/60 [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
-                          />
+                    {!isCollapsed && (() => {
+                      const sectionTaskIds = section.tasks.map(t => t.id);
+                      const selectedInSection = sectionTaskIds.filter(id => selectedTaskIds.has(id));
+                      const allSectionSelected = sectionTaskIds.length > 0 && sectionTaskIds.every(id => selectedTaskIds.has(id));
+                      return (
+                        <div className="flex flex-wrap items-center gap-3 px-5 py-2.5 border-b border-border/20 bg-muted/10">
+                          <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mr-1">Actions</span>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); bulkCompleteSection(section); }}
+                            disabled={allDone}
+                            className={cn(
+                              "inline-flex items-center gap-1.5 text-xs transition-colors",
+                              allDone
+                                ? "text-muted-foreground/30 cursor-not-allowed"
+                                : "text-primary hover:text-primary/80 cursor-pointer"
+                            )}
+                          >
+                            <CheckSquare className="w-3.5 h-3.5" />
+                            Mark All Done
+                          </button>
+                          <span className="text-border">|</span>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setResetTargetSection(section); }}
+                            disabled={sectionCompleted === 0}
+                            className={cn(
+                              "inline-flex items-center gap-1.5 text-xs transition-colors",
+                              sectionCompleted === 0
+                                ? "text-muted-foreground/30 cursor-not-allowed"
+                                : "text-destructive/70 hover:text-destructive cursor-pointer"
+                            )}
+                          >
+                            <XSquare className="w-3.5 h-3.5" />
+                            Reset All
+                          </button>
+                          <span className="text-border">|</span>
+                          {/* Select-all toggle */}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleSelectAllInSection(section); }}
+                            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                          >
+                            <Square className="w-3.5 h-3.5" />
+                            {allSectionSelected ? "Deselect All" : "Select All"}
+                          </button>
+                          <span className="text-border">|</span>
+                          <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <CalendarCheck className="w-3.5 h-3.5" />
+                            {selectedInSection.length > 0 ? (
+                              <>
+                                <span className="text-primary font-medium">Backdate {selectedInSection.length} selected:</span>
+                                <input
+                                  type="date"
+                                  defaultValue={todayStr()}
+                                  onChange={(e) => { if (e.target.value) bulkSetDateSelected(e.target.value); }}
+                                  className="bg-transparent border-b border-primary/60 px-1 py-0.5 text-xs text-foreground focus:outline-none focus:border-primary [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
+                                />
+                              </>
+                            ) : (
+                              <>
+                                <span>Set all dates:</span>
+                                <input
+                                  type="date"
+                                  defaultValue={todayStr()}
+                                  onChange={(e) => { if (e.target.value) bulkSetDateSection(section, e.target.value); }}
+                                  className="bg-transparent border-b border-border/40 px-1 py-0.5 text-xs text-foreground focus:outline-none focus:border-primary/60 [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
+                                />
+                              </>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
 
                     {/* Collapsible content */}
                     <div className={`collapsible-body ${!isCollapsed ? "open" : ""}`}><div>
                       <CardContent className="p-0">
                         {/* Column headers */}
-                        <div className="hidden md:grid grid-cols-[40px_1fr_120px_110px_110px_auto] gap-3 px-5 py-2 text-xs text-muted-foreground uppercase tracking-wider border-b border-border/20 bg-muted/10">
+                        <div className="hidden md:grid grid-cols-[24px_40px_1fr_120px_110px_110px_auto] gap-3 px-5 py-2 text-xs text-muted-foreground uppercase tracking-wider border-b border-border/20 bg-muted/10">
+                          <div />
                           <div className="text-center">Done</div>
                           <div>Task</div>
                           <div>Owner</div>
@@ -461,12 +544,26 @@ export default function Implementation() {
                           const { completed: done, completedAt, owner, targetDate, notes } = getMerged(task.id);
                           const notesOpen = !!expandedNotes[task.id];
                           const intakeHref = task.intakeLink ? `/org/${slug}${task.intakeLink}` : null;
+                          const isSelected = selectedTaskIds.has(task.id);
 
                           return (
-                            <div key={task.id} className={tIdx < section.tasks.length - 1 ? "border-b border-border/20" : ""}>
+                            <div key={task.id} className={cn(tIdx < section.tasks.length - 1 ? "border-b border-border/20" : "", isSelected && "bg-primary/5")}>
                               {/* Main row */}
-                              <div className="grid grid-cols-1 md:grid-cols-[40px_1fr_120px_110px_110px_auto] gap-3 items-start px-5 py-3">
-                                {/* Checkbox */}
+                              <div className="grid grid-cols-1 md:grid-cols-[24px_40px_1fr_120px_110px_110px_auto] gap-3 items-start px-5 py-3">
+                                {/* Row selection checkbox */}
+                                <div className="hidden md:flex items-center justify-center pt-1">
+                                  <button
+                                    onClick={() => toggleTaskSelection(task.id)}
+                                    className="focus:outline-none text-muted-foreground/40 hover:text-primary/70 transition-colors"
+                                    title="Select row"
+                                  >
+                                    {isSelected
+                                      ? <CheckSquare className="w-3.5 h-3.5 text-primary" />
+                                      : <Square className="w-3.5 h-3.5" />
+                                    }
+                                  </button>
+                                </div>
+                                {/* Done Checkbox */}
                                 <div className="flex justify-center pt-0.5">
                                   <button
                                     onClick={() => save(task.id, section.title, { completed: !done })}
@@ -667,6 +764,28 @@ export default function Implementation() {
           </div>
         )}
       </div>
+
+      {/* Reset All confirmation dialog */}
+      <AlertDialog open={!!resetTargetSection} onOpenChange={(open) => { if (!open) setResetTargetSection(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset all tasks in "{resetTargetSection?.title}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will mark all {resetTargetSection?.tasks.length} tasks as incomplete and clear their completion dates.
+              Target dates and notes will be preserved. This cannot be undone automatically.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => { if (resetTargetSection) { bulkResetSection(resetTargetSection); setResetTargetSection(null); } }}
+            >
+              Reset All
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

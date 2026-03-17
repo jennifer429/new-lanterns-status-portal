@@ -617,7 +617,6 @@ export default function IntakeNewRedesign() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hasNavigatedRef = useRef(false); // Track if we've already auto-navigated
   const { user } = useAuth();
-  const logoutMutation = trpc.auth.logout.useMutation();
 
   // Fetch organization
   const { data: org } = trpc.organizations.getBySlug.useQuery(
