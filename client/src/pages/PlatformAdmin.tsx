@@ -24,14 +24,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+
 import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp, AlertTriangle, AlertCircle, Info, Image, CheckSquare, BarChart3, Copy, Check, Clock, ChevronsUpDown, ChevronLeft, ChevronRight, Settings, ChevronDown, ListChecks, TestTube2, History } from "lucide-react";
 import { questionnaireSections } from "@shared/questionnaireData";
 import { TYPE_COLORS, type IntegrationSystem } from "@/components/IntegrationWorkflows";
@@ -1061,31 +1054,34 @@ export default function PlatformAdmin() {
             {/* Workflow Launcher Table */}
             <Card className="card-elevated overflow-hidden">
               <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent">
-                      <TableHead className="w-[200px] text-sm font-semibold">Organization</TableHead>
-                      {isPlatformAdmin && <TableHead className="w-[140px] text-sm font-semibold">Partner</TableHead>}
-                      <TableHead className="text-center text-sm w-[200px] font-semibold">
-                        <span>Questionnaire</span>
-                      </TableHead>
-                      <TableHead className="text-center text-sm w-[200px] font-semibold">
-                        <span>Testing</span>
-                      </TableHead>
-                      <TableHead className="text-center text-sm w-[200px] font-semibold">
-                        <span>Task List</span>
-                      </TableHead>
-                      <TableHead className="text-center text-sm w-[70px] font-semibold">Files</TableHead>
-                      <TableHead className="text-center text-sm w-[70px] font-semibold">Users</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <table className="w-full border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
+                  <colgroup>
+                    <col style={{ width: isPlatformAdmin ? '22%' : '28%' }} />
+                    {isPlatformAdmin && <col style={{ width: '12%' }} />}
+                    <col style={{ width: '18%' }} />
+                    <col style={{ width: '16%' }} />
+                    <col style={{ width: '16%' }} />
+                    <col style={{ width: '8%'  }} />
+                    <col style={{ width: '8%'  }} />
+                  </colgroup>
+                  <thead>
+                    <tr className="border-b border-border/40 bg-muted/20">
+                      <th className="text-left px-4 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Organization</th>
+                      {isPlatformAdmin && <th className="text-left px-3 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Partner</th>}
+                      <th className="text-center px-2 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Questionnaire</th>
+                      <th className="text-center px-2 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Testing</th>
+                      <th className="text-center px-2 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Task List</th>
+                      <th className="text-center px-2 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Files</th>
+                      <th className="text-center px-2 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Users</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                     {activeOrgs.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={isPlatformAdmin ? 7 : 6} className="text-center py-12 text-muted-foreground text-sm">
+                      <tr>
+                        <td colSpan={isPlatformAdmin ? 7 : 6} className="text-center py-10 text-muted-foreground text-xs italic">
                           No active organizations
-                        </TableCell>
-                      </TableRow>
+                        </td>
+                      </tr>
                     ) : (
                       activeOrgs.map(org => {
                         const orgMetrics = metricsMap[org.id];
@@ -1096,122 +1092,50 @@ export default function PlatformAdmin() {
                         const filesCount = orgMetrics?.files.length || 0;
                         const userCount = orgMetrics?.userCount || 0;
                         const questionnaireComplete = sectionsComplete === totalSections;
-                        // Determine questionnaire button label
                         const qLabel = sectionsComplete === 0 ? "Start" : questionnaireComplete ? "View" : "Continue";
-                        // Validation Checklist: 4 phases, placeholder 0 complete for now
                         const testingTotal = 4;
                         const testingComplete = 0;
                         const testingLabel = testingComplete === 0 ? "Start" : testingComplete === testingTotal ? "View" : "Continue";
-                        // Task List: 5 sections, placeholder 0 complete for now
                         const implTotal = 5;
                         const implComplete = 0;
                         const implLabel = implComplete === 0 ? "Start" : implComplete === implTotal ? "View" : "Continue";
 
+                        // Helper to render a compact workflow cell
+                        const WorkflowCell = ({ label, done, total, href }: { label: string; done: number; total: number; href: string }) => (
+                          <button onClick={() => setLocation(href)}
+                            className="flex items-center justify-center gap-1.5 w-full px-2 py-1 rounded hover:bg-muted/40 transition-colors group">
+                            <span className={cn(
+                              "shrink-0 px-1.5 py-0 rounded text-[10px] font-semibold leading-[18px] border",
+                              label === "Start"    && "badge-status-start",
+                              label === "Continue" && "bg-primary/20 text-primary border-primary/30",
+                              label === "View"     && "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                            )}>{label}</span>
+                            <span className="text-muted-foreground text-[10px] whitespace-nowrap">{done}/{total}</span>
+                          </button>
+                        );
+
                         return (
-                          <TableRow key={org.id} className="hover:bg-muted/30">
-                            {/* Org name → Site Dashboard */}
-                            <TableCell>
-                              <button
-                                onClick={() => setLocation(`/org/${org.slug}`)}
-                                className="text-left font-semibold text-sm text-primary hover:underline hover:text-primary/80 transition-colors"
-                              >
+                          <tr key={org.id} className="border-b border-border/20 hover:bg-muted/20 transition-colors">
+                            <td className="px-4 py-1.5">
+                              <button onClick={() => setLocation(`/org/${org.slug}`)}
+                                className="text-left text-xs font-semibold text-primary hover:underline hover:text-primary/80 transition-colors truncate w-full block">
                                 {org.name}
                               </button>
-                            </TableCell>
+                            </td>
                             {isPlatformAdmin && (
-                              <TableCell>
-                                <span className="text-sm text-foreground">{partnerName}</span>
-                              </TableCell>
+                              <td className="px-3 py-1.5 text-xs text-muted-foreground truncate">{partnerName}</td>
                             )}
-                            {/* Questionnaire — clickable workflow launcher */}
-                            <TableCell className="text-center">
-                              <button
-                                onClick={() => setLocation(`/org/${org.slug}/intake`)}
-                                className="inline-flex flex-col items-center gap-1.5 cursor-pointer hover:bg-muted/40 rounded-lg px-3 py-2 transition-colors w-full"
-                              >
-                                <span className={cn(
-                                  "text-xs font-bold px-3 py-1 rounded-full transition-all",
-                                  qLabel === "Start" && "badge-status-start",
-                                  qLabel === "Continue" && "bg-primary/20 text-primary border border-primary/30",
-                                  qLabel === "View" && "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
-                                )}>
-                                  {qLabel}
-                                </span>
-                                <span className="text-sm text-foreground">{sectionsComplete}/{totalSections} complete</span>
-                                <div className="flex gap-1">
-                                  {Array.from({ length: totalSections }).map((_, i) => (
-                                    <span key={i} className={cn(
-                                      "progress-dot",
-                                      i < sectionsComplete ? "progress-dot-filled" : "progress-dot-empty"
-                                    )} />
-                                  ))}
-                                </div>
-                              </button>
-                            </TableCell>
-                            {/* Validation Checklist — consistent status display */}
-                            <TableCell className="text-center">
-                              <button
-                                onClick={() => setLocation(`/org/${org.slug}/validation`)}
-                                className="inline-flex flex-col items-center gap-1.5 cursor-pointer hover:bg-muted/40 rounded-lg px-3 py-2 transition-colors w-full"
-                              >
-                                <span className={cn(
-                                  "text-xs font-bold px-3 py-1 rounded-full transition-all",
-                                  testingLabel === "Start" && "badge-status-start",
-                                  testingLabel === "Continue" && "bg-primary/20 text-primary border border-primary/30",
-                                  testingLabel === "View" && "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
-                                )}>
-                                  {testingLabel}
-                                </span>
-                                <span className="text-sm text-foreground">{testingComplete}/{testingTotal} complete</span>
-                                <div className="flex gap-1">
-                                  {Array.from({ length: testingTotal }).map((_, i) => (
-                                    <span key={i} className={cn(
-                                      "progress-dot",
-                                      i < testingComplete ? "progress-dot-filled" : "progress-dot-empty"
-                                    )} />
-                                  ))}
-                                </div>
-                              </button>
-                            </TableCell>
-                            {/* Task List — consistent status display */}
-                            <TableCell className="text-center">
-                              <button
-                                onClick={() => setLocation(`/org/${org.slug}/implement`)}
-                                className="inline-flex flex-col items-center gap-1.5 cursor-pointer hover:bg-muted/40 rounded-lg px-3 py-2 transition-colors w-full"
-                              >
-                                <span className={cn(
-                                  "text-xs font-bold px-3 py-1 rounded-full transition-all",
-                                  implLabel === "Start" && "badge-status-start",
-                                  implLabel === "Continue" && "bg-primary/20 text-primary border border-primary/30",
-                                  implLabel === "View" && "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
-                                )}>
-                                  {implLabel}
-                                </span>
-                                <span className="text-sm text-foreground">{implComplete}/{implTotal} complete</span>
-                                <div className="flex gap-1">
-                                  {Array.from({ length: implTotal }).map((_, i) => (
-                                    <span key={i} className={cn(
-                                      "progress-dot",
-                                      i < implComplete ? "progress-dot-filled" : "progress-dot-empty"
-                                    )} />
-                                  ))}
-                                </div>
-                              </button>
-                            </TableCell>
-                            {/* Files */}
-                            <TableCell className="text-center">
-                              <span className="text-sm text-foreground">{filesCount}</span>
-                            </TableCell>
-                            {/* Users */}
-                            <TableCell className="text-center">
-                              <span className="text-sm text-foreground">{userCount}</span>
-                            </TableCell>
-                          </TableRow>
+                            <td className="px-1 py-1"><WorkflowCell label={qLabel} done={sectionsComplete} total={totalSections} href={`/org/${org.slug}/intake`} /></td>
+                            <td className="px-1 py-1"><WorkflowCell label={testingLabel} done={testingComplete} total={testingTotal} href={`/org/${org.slug}/validation`} /></td>
+                            <td className="px-1 py-1"><WorkflowCell label={implLabel} done={implComplete} total={implTotal} href={`/org/${org.slug}/implement`} /></td>
+                            <td className="px-2 py-1.5 text-center text-xs text-muted-foreground">{filesCount}</td>
+                            <td className="px-2 py-1.5 text-center text-xs text-muted-foreground">{userCount}</td>
+                          </tr>
                         );
                       })
                     )}
-                  </TableBody>
-                </Table>
+                  </tbody>
+                </table>
               </CardContent>
             </Card>
           </>
@@ -1361,158 +1285,107 @@ export default function PlatformAdmin() {
               </div>
             </div>
 
-            <h3 className="text-lg font-semibold mb-4">Active Organizations ({activeOrgs.length})</h3>
-            <Card>
-              <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    {isPlatformAdmin && <TableHead>Partner</TableHead>}
-                    <TableHead>Status</TableHead>
-                    <TableHead>Users</TableHead>
-                    <TableHead>Completion</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+            <h3 className="text-sm font-semibold mb-2 text-muted-foreground uppercase tracking-wide">Active Organizations ({activeOrgs.length})</h3>
+            <Card className="overflow-hidden">
+              <table className="w-full border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
+                <colgroup>
+                  <col style={{ width: isPlatformAdmin ? '28%' : '35%' }} />
+                  {isPlatformAdmin && <col style={{ width: '15%' }} />}
+                  <col style={{ width: '10%' }} />
+                  <col style={{ width: '8%'  }} />
+                  <col style={{ width: '10%' }} />
+                  <col style={{ width: '29%' }} />
+                </colgroup>
+                <thead>
+                  <tr className="border-b border-border/30 bg-muted/15">
+                    {['Name', ...(isPlatformAdmin ? ['Partner'] : []), 'Status', 'Users', 'Done%', ''].map((h,i) => (
+                      <th key={i} className="text-left px-3 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
                   {activeOrgs.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={isPlatformAdmin ? 6 : 5} className="text-center py-8 text-muted-foreground">
-                        No active organizations
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    activeOrgs.map(org => {
-                      const orgMetrics = metricsMap[org.id];
-                      const partnerName = org.clientId ? clientMap[org.clientId] : "N/A";
-                      const completionPercent = orgMetrics?.completionPercent || 0;
-                      const userCount = orgMetrics?.userCount || 0;
-
-                      return (
-                        <TableRow key={org.id}>
-                          <TableCell className="font-medium">{org.name}</TableCell>
-                          {isPlatformAdmin && <TableCell>{partnerName}</TableCell>}
-                          <TableCell>
-                            <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
-                              Active
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{userCount}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <div className="text-sm font-medium">{completionPercent}%</div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setEditOrgId(org.id);
-                                  setEditOrgName(org.name);
-                                  setEditOrgSlug(org.slug);
-                                  setEditOrgClientId(org.clientId);
-                                  setIsEditOrgDialogOpen(true);
-                                }}
-                              >
-                                <Edit className="w-4 h-4 mr-1" />
-                                Edit
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  if (confirm(`Mark ${org.name} as complete?`)) {
-                                    markCompleteMutation.mutate({ organizationId: org.id });
-                                  }
-                                }}
-                                disabled={markCompleteMutation.isPending}
-                                className="bg-green-500/10 text-green-400 border-green-500/30 hover:bg-green-500/20"
-                              >
-                                <CheckCircle2 className="w-4 h-4 mr-1" />
-                                Mark Complete
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDeactivateOrg(org.id)}
-                                disabled={deactivateOrgMutation.isPending}
-                              >
-                                Deactivate
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-              </div>
+                    <tr><td colSpan={isPlatformAdmin ? 6 : 5} className="text-center py-8 text-xs text-muted-foreground italic">No active organizations</td></tr>
+                  ) : activeOrgs.map(org => {
+                    const orgMetrics = metricsMap[org.id];
+                    const partnerName = org.clientId ? clientMap[org.clientId] : "—";
+                    const completionPercent = orgMetrics?.completionPercent || 0;
+                    const userCount = orgMetrics?.userCount || 0;
+                    return (
+                      <tr key={org.id} className="border-b border-border/20 hover:bg-muted/20 transition-colors">
+                        <td className="px-3 py-1.5 font-medium truncate">{org.name}</td>
+                        {isPlatformAdmin && <td className="px-3 py-1.5 text-muted-foreground truncate">{partnerName}</td>}
+                        <td className="px-3 py-1.5"><span className="px-1.5 py-0 rounded text-[10px] font-semibold leading-5 bg-green-500/15 text-green-400 border border-green-500/30">Active</span></td>
+                        <td className="px-3 py-1.5 text-muted-foreground">{userCount}</td>
+                        <td className="px-3 py-1.5 text-muted-foreground">{completionPercent}%</td>
+                        <td className="px-2 py-1">
+                          <div className="flex items-center gap-1">
+                            <button onClick={() => { setEditOrgId(org.id); setEditOrgName(org.name); setEditOrgSlug(org.slug); setEditOrgClientId(org.clientId); setIsEditOrgDialogOpen(true); }}
+                              className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-border/40 hover:bg-muted/50 transition-colors">
+                              <Edit className="w-2.5 h-2.5" /> Edit
+                            </button>
+                            <button onClick={() => { if (confirm(`Mark ${org.name} as complete?`)) markCompleteMutation.mutate({ organizationId: org.id }); }} disabled={markCompleteMutation.isPending}
+                              className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-green-500/30 text-green-400 hover:bg-green-500/10 transition-colors">
+                              <CheckCircle2 className="w-2.5 h-2.5" /> Complete
+                            </button>
+                            <button onClick={() => handleDeactivateOrg(org.id)} disabled={deactivateOrgMutation.isPending}
+                              className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-border/40 text-muted-foreground hover:bg-muted/50 transition-colors">
+                              Deactivate
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </Card>
 
             {/* Completed Organizations Section */}
             {completedOrgs.length > 0 && (
               <>
-                <h3 className="text-lg font-semibold mt-8 mb-4">Completed Organizations ({completedOrgs.length})</h3>
-                <Card>
-                  <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        {isPlatformAdmin && <TableHead>Partner</TableHead>}
-                        <TableHead>Status</TableHead>
-                        <TableHead>Users</TableHead>
-                        <TableHead>Completion</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
+                <h3 className="text-sm font-semibold mt-6 mb-2 text-muted-foreground uppercase tracking-wide">Completed ({completedOrgs.length})</h3>
+                <Card className="overflow-hidden">
+                  <table className="w-full border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
+                    <colgroup>
+                      <col style={{ width: isPlatformAdmin ? '30%' : '38%' }} />
+                      {isPlatformAdmin && <col style={{ width: '18%' }} />}
+                      <col style={{ width: '12%' }} />
+                      <col style={{ width: '10%' }} />
+                      <col style={{ width: '12%' }} />
+                      <col style={{ width: '18%' }} />
+                    </colgroup>
+                    <thead>
+                      <tr className="border-b border-border/30 bg-muted/15">
+                        {['Name', ...(isPlatformAdmin ? ['Partner'] : []), 'Status', 'Users', 'Done%', ''].map((h,i) => (
+                          <th key={i} className="text-left px-3 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
                       {completedOrgs.map(org => {
                         const orgMetrics = metricsMap[org.id];
-                        const partnerName = org.clientId ? clientMap[org.clientId] : "N/A";
+                        const partnerName = org.clientId ? clientMap[org.clientId] : "—";
                         const completionPercent = orgMetrics?.completionPercent || 0;
                         const userCount = orgMetrics?.userCount || 0;
-                        
                         return (
-                          <TableRow key={org.id} className="opacity-75">
-                            <TableCell className="font-medium">{org.name}</TableCell>
-                            {isPlatformAdmin && <TableCell>{partnerName}</TableCell>}
-                            <TableCell>
-                              <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
-                                Completed
-                              </Badge>
-                            </TableCell>
-                            <TableCell>{userCount}</TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <div className="text-sm font-medium">{completionPercent}%</div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => {
-                                  if (confirm(`Reopen ${org.name}?`)) {
-                                    reopenOrgMutation.mutate({ organizationId: org.id });
-                                  }
-                                }}
-                                disabled={reopenOrgMutation.isPending}
-                              >
-                                <RotateCcw className="w-3 h-3 mr-1" />
-                                Reopen
-                              </Button>
-                            </TableCell>
-                          </TableRow>
+                          <tr key={org.id} className="border-b border-border/20 hover:bg-muted/20 transition-colors opacity-80">
+                            <td className="px-3 py-1.5 font-medium truncate">{org.name}</td>
+                            {isPlatformAdmin && <td className="px-3 py-1.5 text-muted-foreground truncate">{partnerName}</td>}
+                            <td className="px-3 py-1.5"><span className="px-1.5 py-0 rounded text-[10px] font-semibold leading-5 bg-blue-500/15 text-blue-400 border border-blue-500/30">Done</span></td>
+                            <td className="px-3 py-1.5 text-muted-foreground">{userCount}</td>
+                            <td className="px-3 py-1.5 text-muted-foreground">{completionPercent}%</td>
+                            <td className="px-2 py-1">
+                              <button onClick={() => { if (confirm(`Reopen ${org.name}?`)) reopenOrgMutation.mutate({ organizationId: org.id }); }} disabled={reopenOrgMutation.isPending}
+                                className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-border/40 hover:bg-muted/50 transition-colors">
+                                <RotateCcw className="w-2.5 h-2.5" /> Reopen
+                              </button>
+                            </td>
+                          </tr>
                         );
                       })}
-                    </TableBody>
-                  </Table>
-                  </div>
+                    </tbody>
+                  </table>
                 </Card>
               </>
             )}
@@ -1520,50 +1393,41 @@ export default function PlatformAdmin() {
             {/* Deactivated Organizations Section */}
             {inactiveOrgs.length > 0 && (
               <>
-                <h3 className="text-lg font-semibold mt-8 mb-4">Deactivated Organizations ({inactiveOrgs.length})</h3>
-                <Card>
-                  <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        {isPlatformAdmin && <TableHead>Partner</TableHead>}
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
+                <h3 className="text-sm font-semibold mt-6 mb-2 text-muted-foreground uppercase tracking-wide">Deactivated ({inactiveOrgs.length})</h3>
+                <Card className="overflow-hidden">
+                  <table className="w-full border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
+                    <colgroup>
+                      <col style={{ width: isPlatformAdmin ? '35%' : '45%' }} />
+                      {isPlatformAdmin && <col style={{ width: '20%' }} />}
+                      <col style={{ width: '15%' }} />
+                      <col style={{ width: '30%' }} />
+                    </colgroup>
+                    <thead>
+                      <tr className="border-b border-border/30 bg-muted/15">
+                        {['Name', ...(isPlatformAdmin ? ['Partner'] : []), 'Status', ''].map((h,i) => (
+                          <th key={i} className="text-left px-3 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
                       {inactiveOrgs.map(org => {
-                        const partnerName = org.clientId ? clientMap[org.clientId] : "N/A";
-                        
+                        const partnerName = org.clientId ? clientMap[org.clientId] : "—";
                         return (
-                          <TableRow key={org.id} className="opacity-60">
-                            <TableCell className="font-medium">{org.name}</TableCell>
-                            {isPlatformAdmin && <TableCell>{partnerName}</TableCell>}
-                            <TableCell>
-                              <Badge variant="secondary">Deactivated</Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => {
-                                  if (confirm(`Reactivate ${org.name}?`)) {
-                                    reactivateOrgMutation.mutate({ organizationId: org.id });
-                                  }
-                                }}
-                                disabled={reactivateOrgMutation.isPending}
-                              >
-                                <RotateCcw className="w-3 h-3 mr-1" />
-                                Reactivate
-                              </Button>
-                            </TableCell>
-                          </TableRow>
+                          <tr key={org.id} className="border-b border-border/20 hover:bg-muted/20 transition-colors opacity-60">
+                            <td className="px-3 py-1.5 font-medium truncate">{org.name}</td>
+                            {isPlatformAdmin && <td className="px-3 py-1.5 text-muted-foreground truncate">{partnerName}</td>}
+                            <td className="px-3 py-1.5"><span className="px-1.5 py-0 rounded text-[10px] font-semibold leading-5 bg-muted/40 text-muted-foreground border border-border/40">Inactive</span></td>
+                            <td className="px-2 py-1">
+                              <button onClick={() => { if (confirm(`Reactivate ${org.name}?`)) reactivateOrgMutation.mutate({ organizationId: org.id }); }} disabled={reactivateOrgMutation.isPending}
+                                className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-border/40 hover:bg-muted/50 transition-colors">
+                                <RotateCcw className="w-2.5 h-2.5" /> Reactivate
+                              </button>
+                            </td>
+                          </tr>
                         );
                       })}
-                    </TableBody>
-                  </Table>
-                  </div>
+                    </tbody>
+                  </table>
                 </Card>
               </>
             )}
@@ -1819,124 +1683,111 @@ export default function PlatformAdmin() {
             </Dialog>
 
             {/* Active Users Table */}
-            <Card className="mb-8">
-              <CardContent className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Active Users ({activeUsers.length})</h3>
-                <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Organization</TableHead>
-                      {isPlatformAdmin && <TableHead>Partner</TableHead>}
-                      {isPlatformAdmin && <TableHead>Client ID</TableHead>}
-                      <TableHead>Role</TableHead>
-                      <TableHead>Last Login</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {activeUsers.map(u => {
-                      const org = orgs?.find(o => o.id === u.organizationId);
-                      // For admins without org, use their direct clientId; for regular users, use org's clientId
-                      const userClientId = u.clientId || org?.clientId || null;
-                      const partner = userClientId ? clientMap[userClientId] : "N/A";
-                      
-                      return (
-                        <TableRow key={u.id}>
-                          <TableCell className="font-medium">{u.name}</TableCell>
-                          <TableCell>{u.email}</TableCell>
-                          <TableCell>{orgMap[u.organizationId || 0] || "N/A"}</TableCell>
-                          {isPlatformAdmin && <TableCell>{partner}</TableCell>}
-                          {isPlatformAdmin && <TableCell>{userClientId ?? "N/A"}</TableCell>}
-                          <TableCell>
-                            <Badge variant={u.role === "admin" ? "default" : "secondary"}>
-                              {u.role}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : "Never"}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => handleEditUser(u)}
-                              >
-                                <Edit className="w-3 h-3 mr-1" />
-                                Edit
-                              </Button>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => {
-                                  if (confirm(`Deactivate user ${u.name}?`)) {
-                                    deactivateUserMutation.mutate({ userId: u.id });
-                                  }
-                                }}
-                              >
-                                Deactivate
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-                </div>
-              </CardContent>
+            <Card className="mb-6 overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-border/30 bg-muted/10">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Active Users ({activeUsers.length})</h3>
+              </div>
+              <table className="w-full border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
+                <colgroup>
+                  <col style={{ width: isPlatformAdmin ? '14%' : '18%' }} />
+                  <col style={{ width: isPlatformAdmin ? '18%' : '25%' }} />
+                  <col style={{ width: isPlatformAdmin ? '14%' : '20%' }} />
+                  {isPlatformAdmin && <><col style={{ width: '10%' }} /><col style={{ width: '6%' }} /></>}
+                  <col style={{ width: '7%'  }} />
+                  <col style={{ width: isPlatformAdmin ? '14%' : '18%' }} />
+                  <col style={{ width: '13%' }} />
+                </colgroup>
+                <thead>
+                  <tr className="border-b border-border/30 bg-muted/15">
+                    {['Name','Email','Organization',...(isPlatformAdmin?['Partner','CID']:[]),'Role','Last Login',''].map((h,i) => (
+                      <th key={i} className="text-left px-3 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {activeUsers.map(u => {
+                    const org = orgs?.find(o => o.id === u.organizationId);
+                    const userClientId = u.clientId || org?.clientId || null;
+                    const partner = userClientId ? clientMap[userClientId] : "—";
+                    return (
+                      <tr key={u.id} className="border-b border-border/20 hover:bg-muted/20 transition-colors">
+                        <td className="px-3 py-1.5 font-medium truncate">{u.name}</td>
+                        <td className="px-3 py-1.5 text-muted-foreground truncate">{u.email}</td>
+                        <td className="px-3 py-1.5 text-muted-foreground truncate">{orgMap[u.organizationId || 0] || "—"}</td>
+                        {isPlatformAdmin && <td className="px-3 py-1.5 text-muted-foreground truncate">{partner}</td>}
+                        {isPlatformAdmin && <td className="px-3 py-1.5 text-muted-foreground">{userClientId ?? "—"}</td>}
+                        <td className="px-3 py-1.5">
+                          <span className={cn("px-1.5 py-0 rounded text-[10px] font-semibold leading-5 border",
+                            u.role === "admin" ? "bg-primary/20 text-primary border-primary/30" : "bg-muted/30 text-muted-foreground border-border/40")}>
+                            {u.role}
+                          </span>
+                        </td>
+                        <td className="px-3 py-1.5 text-muted-foreground truncate">
+                          {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString() : "Never"}
+                        </td>
+                        <td className="px-2 py-1">
+                          <div className="flex gap-1">
+                            <button onClick={() => handleEditUser(u)}
+                              className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-border/40 hover:bg-muted/50 transition-colors">
+                              <Edit className="w-2.5 h-2.5" /> Edit
+                            </button>
+                            <button onClick={() => { if (confirm(`Deactivate ${u.name}?`)) deactivateUserMutation.mutate({ userId: u.id }); }}
+                              className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-border/40 text-muted-foreground hover:bg-muted/50 transition-colors">
+                              Off
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </Card>
 
             {/* Inactive Users Table */}
             {inactiveUsers.length > 0 && (
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold mb-4">Inactive Users ({inactiveUsers.length})</h3>
-                  <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Email</TableHead>
-                        {isPlatformAdmin && <TableHead>Partner</TableHead>}
-                        {isPlatformAdmin && <TableHead>Client ID</TableHead>}
-                        <TableHead>Role</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {inactiveUsers.map(u => {
-                        const partner = u.clientId ? clientMap[u.clientId] : "N/A";
-                        
-                        return (
-                          <TableRow key={u.id} className="opacity-60">
-                            <TableCell className="font-medium">{u.name}</TableCell>
-                            <TableCell>{u.email}</TableCell>
-                            {isPlatformAdmin && <TableCell>{partner}</TableCell>}
-                            {isPlatformAdmin && <TableCell>{u.clientId ?? "N/A"}</TableCell>}
-                            <TableCell>
-                              <Badge variant="secondary">{u.role}</Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => handleReactivateUser(u)}
-                              >
-                                <RotateCcw className="w-3 h-3 mr-1" />
-                                Reactivate
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                  </div>
-                </CardContent>
+              <Card className="overflow-hidden">
+                <div className="px-4 py-2.5 border-b border-border/30 bg-muted/10">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Inactive Users ({inactiveUsers.length})</h3>
+                </div>
+                <table className="w-full border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
+                  <colgroup>
+                    <col style={{ width: isPlatformAdmin ? '18%' : '22%' }} />
+                    <col style={{ width: isPlatformAdmin ? '22%' : '32%' }} />
+                    {isPlatformAdmin && <><col style={{ width: '14%' }} /><col style={{ width: '8%' }} /></>}
+                    <col style={{ width: '8%' }} />
+                    <col style={{ width: isPlatformAdmin ? '18%' : '28%' }} />
+                  </colgroup>
+                  <thead>
+                    <tr className="border-b border-border/30 bg-muted/15">
+                      {['Name','Email',...(isPlatformAdmin?['Partner','CID']:[]),'Role',''].map((h,i) => (
+                        <th key={i} className="text-left px-3 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {inactiveUsers.map(u => {
+                      const partner = u.clientId ? clientMap[u.clientId] : "—";
+                      return (
+                        <tr key={u.id} className="border-b border-border/20 hover:bg-muted/20 transition-colors opacity-60">
+                          <td className="px-3 py-1.5 font-medium truncate">{u.name}</td>
+                          <td className="px-3 py-1.5 text-muted-foreground truncate">{u.email}</td>
+                          {isPlatformAdmin && <td className="px-3 py-1.5 text-muted-foreground truncate">{partner}</td>}
+                          {isPlatformAdmin && <td className="px-3 py-1.5 text-muted-foreground">{u.clientId ?? "—"}</td>}
+                          <td className="px-3 py-1.5">
+                            <span className="px-1.5 py-0 rounded text-[10px] font-semibold leading-5 border bg-muted/30 text-muted-foreground border-border/40">{u.role}</span>
+                          </td>
+                          <td className="px-2 py-1">
+                            <button onClick={() => handleReactivateUser(u)}
+                              className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-border/40 hover:bg-muted/50 transition-colors">
+                              <RotateCcw className="w-2.5 h-2.5" /> Reactivate
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </Card>
             )}
           </>
@@ -2095,77 +1946,54 @@ export default function PlatformAdmin() {
                     <p className="text-sm">Upload a template to make it available on the intake form for your organizations.</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        {isPlatformAdmin && <TableHead>Partner</TableHead>}
-                        <TableHead>Question</TableHead>
-                        <TableHead>Label</TableHead>
-                        <TableHead>File</TableHead>
-                        <TableHead>Size</TableHead>
-                        <TableHead>Uploaded By</TableHead>
-                        <TableHead>Updated</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
+                  <table className="w-full border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
+                    <colgroup>
+                      {isPlatformAdmin && <col style={{ width: '9%' }} />}
+                      <col style={{ width: isPlatformAdmin ? '14%' : '16%' }} />
+                      <col style={{ width: isPlatformAdmin ? '16%' : '20%' }} />
+                      <col style={{ width: '18%' }} />
+                      <col style={{ width: '7%'  }} />
+                      <col style={{ width: '10%' }} />
+                      <col style={{ width: '9%'  }} />
+                      <col style={{ width: isPlatformAdmin ? '17%' : '20%' }} />
+                    </colgroup>
+                    <thead>
+                      <tr className="border-b border-border/30 bg-muted/15">
+                        {[...(isPlatformAdmin?['Partner']:[]),'Question','Label','File','Size','By','Updated',''].map((h,i)=>(
+                          <th key={i} className="text-left px-3 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
                       {templates.map(t => (
-                        <TableRow key={t.id}>
-                          {isPlatformAdmin && (
-                            <TableCell>
-                              <Badge variant="outline">{clientMap[t.clientId] || `Client ${t.clientId}`}</Badge>
-                            </TableCell>
-                          )}
-                          <TableCell className="font-mono text-sm">{t.questionId}</TableCell>
-                          <TableCell className="font-medium">{t.label}</TableCell>
-                          <TableCell>
-                            <a
-                              href={t.fileUrl}
-                              download={t.fileName}
-                              className="text-primary hover:underline flex items-center gap-1"
-                            >
-                              <Download className="w-3 h-3" />
-                              {t.fileName}
+                        <tr key={t.id} className="border-b border-border/20 hover:bg-muted/20 transition-colors">
+                          {isPlatformAdmin && <td className="px-3 py-1.5 text-muted-foreground truncate">{clientMap[t.clientId] || `#${t.clientId}`}</td>}
+                          <td className="px-3 py-1.5 font-mono truncate text-muted-foreground">{t.questionId}</td>
+                          <td className="px-3 py-1.5 font-medium truncate">{t.label}</td>
+                          <td className="px-3 py-1.5 truncate">
+                            <a href={t.fileUrl} download={t.fileName} className="text-primary hover:underline flex items-center gap-1">
+                              <Download className="w-3 h-3 shrink-0" /><span className="truncate">{t.fileName}</span>
                             </a>
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {t.fileSize ? `${(t.fileSize / 1024).toFixed(1)} KB` : 'N/A'}
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">{t.uploadedBy || 'N/A'}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {new Date(t.updatedAt).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <a
-                                href={t.fileUrl}
-                                download={t.fileName}
-                                className="inline-flex items-center justify-center rounded-md text-sm font-medium h-8 px-3 border border-input bg-background hover:bg-accent hover:text-accent-foreground"
-                              >
-                                <Download className="w-3 h-3 mr-1" />
-                                Download
+                          </td>
+                          <td className="px-3 py-1.5 text-muted-foreground whitespace-nowrap">{t.fileSize ? `${(t.fileSize/1024).toFixed(0)}K` : '—'}</td>
+                          <td className="px-3 py-1.5 text-muted-foreground truncate">{t.uploadedBy || '—'}</td>
+                          <td className="px-3 py-1.5 text-muted-foreground whitespace-nowrap">{new Date(t.updatedAt).toLocaleDateString()}</td>
+                          <td className="px-2 py-1">
+                            <div className="flex gap-1">
+                              <a href={t.fileUrl} download={t.fileName}
+                                className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-border/40 hover:bg-muted/50 transition-colors">
+                                <Download className="w-2.5 h-2.5" /> DL
                               </a>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setReplaceTemplateId(t.id);
-                                  setReplaceTemplateLabel(t.label);
-                                  setReplaceTemplateFile(null);
-                                  setIsReplaceTemplateDialogOpen(true);
-                                }}
-                              >
-                                <Upload className="w-3 h-3 mr-1" />
-                                Replace
-                              </Button>
+                              <button onClick={() => { setReplaceTemplateId(t.id); setReplaceTemplateLabel(t.label); setReplaceTemplateFile(null); setIsReplaceTemplateDialogOpen(true); }}
+                                className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-border/40 hover:bg-muted/50 transition-colors">
+                                <Upload className="w-2.5 h-2.5" /> Replace
+                              </button>
                             </div>
-                          </TableCell>
-                        </TableRow>
+                          </td>
+                        </tr>
                       ))}
-                    </TableBody>
-                  </Table>
-                  </div>
+                    </tbody>
+                  </table>
                 )}
               </CardContent>
             </Card>
@@ -2188,53 +2016,39 @@ export default function PlatformAdmin() {
                     {!inactiveTemplates || inactiveTemplates.length === 0 ? (
                       <p className="text-sm text-muted-foreground text-center py-4">No inactive templates.</p>
                     ) : (
-                      <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            {isPlatformAdmin && <TableHead>Partner</TableHead>}
-                            <TableHead>Question</TableHead>
-                            <TableHead>Label</TableHead>
-                            <TableHead>File</TableHead>
-                            <TableHead>Uploaded By</TableHead>
-                            <TableHead>Created</TableHead>
-                            <TableHead>Deactivated By</TableHead>
-                            <TableHead>Deactivated At</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
+                      <table className="w-full border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
+                        <colgroup>
+                          {isPlatformAdmin && <col style={{ width: '9%' }} />}
+                          <col style={{ width: '14%' }} /><col style={{ width: '16%' }} />
+                          <col style={{ width: '18%' }} /><col style={{ width: '10%' }} />
+                          <col style={{ width: '9%'  }} /><col style={{ width: '12%' }} /><col style={{ width: '12%' }} />
+                        </colgroup>
+                        <thead>
+                          <tr className="border-b border-border/30 bg-muted/15">
+                            {[...(isPlatformAdmin?['Partner']:[]),'Question','Label','File','By','Created','Deact. By','Deact. At'].map((h,i)=>(
+                              <th key={i} className="text-left px-3 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
                           {inactiveTemplates.map(t => (
-                            <TableRow key={t.id} className="opacity-60">
-                              {isPlatformAdmin && (
-                                <TableCell>
-                                  <Badge variant="secondary">{clientMap[t.clientId] || `Client ${t.clientId}`}</Badge>
-                                </TableCell>
-                              )}
-                              <TableCell className="font-mono text-sm">{t.questionId}</TableCell>
-                              <TableCell className="font-medium">{t.label}</TableCell>
-                              <TableCell>
-                                <a
-                                  href={t.fileUrl}
-                                  download={t.fileName}
-                                  className="text-muted-foreground hover:underline flex items-center gap-1"
-                                >
-                                  <Download className="w-3 h-3" />
-                                  {t.fileName}
+                            <tr key={t.id} className="border-b border-border/20 hover:bg-muted/20 transition-colors opacity-60">
+                              {isPlatformAdmin && <td className="px-3 py-1.5 text-muted-foreground truncate">{clientMap[t.clientId]||`#${t.clientId}`}</td>}
+                              <td className="px-3 py-1.5 font-mono truncate text-muted-foreground">{t.questionId}</td>
+                              <td className="px-3 py-1.5 font-medium truncate">{t.label}</td>
+                              <td className="px-3 py-1.5 truncate">
+                                <a href={t.fileUrl} download={t.fileName} className="text-muted-foreground hover:underline flex items-center gap-1">
+                                  <Download className="w-3 h-3 shrink-0" /><span className="truncate">{t.fileName}</span>
                                 </a>
-                              </TableCell>
-                              <TableCell className="text-sm text-muted-foreground">{t.uploadedBy || 'N/A'}</TableCell>
-                              <TableCell className="text-sm text-muted-foreground">
-                                {new Date(t.createdAt).toLocaleDateString()}
-                              </TableCell>
-                              <TableCell className="text-sm text-muted-foreground">{t.deactivatedBy || 'N/A'}</TableCell>
-                              <TableCell className="text-sm text-muted-foreground">
-                                {t.deactivatedAt ? new Date(t.deactivatedAt).toLocaleDateString() : 'N/A'}
-                              </TableCell>
-                            </TableRow>
+                              </td>
+                              <td className="px-3 py-1.5 text-muted-foreground truncate">{t.uploadedBy||'—'}</td>
+                              <td className="px-3 py-1.5 text-muted-foreground whitespace-nowrap">{new Date(t.createdAt).toLocaleDateString()}</td>
+                              <td className="px-3 py-1.5 text-muted-foreground truncate">{t.deactivatedBy||'—'}</td>
+                              <td className="px-3 py-1.5 text-muted-foreground whitespace-nowrap">{t.deactivatedAt?new Date(t.deactivatedAt).toLocaleDateString():'—'}</td>
+                            </tr>
                           ))}
-                        </TableBody>
-                      </Table>
-                      </div>
+                        </tbody>
+                      </table>
                     )}
                   </>
                 )}
@@ -2352,72 +2166,61 @@ export default function PlatformAdmin() {
                     <p className="text-sm">Create a partner to start organizing your clients.</p>
                   </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>ID</TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Slug</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Organizations</TableHead>
-                        <TableHead>Created</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
+                  <table className="w-full border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
+                    <colgroup>
+                      <col style={{ width: '4%' }} /><col style={{ width: '16%' }} />
+                      <col style={{ width: '14%' }} /><col style={{ width: '22%' }} />
+                      <col style={{ width: '8%' }} /><col style={{ width: '8%' }} />
+                      <col style={{ width: '10%' }} /><col style={{ width: '18%' }} />
+                    </colgroup>
+                    <thead>
+                      <tr className="border-b border-border/30 bg-muted/15">
+                        {['ID','Name','Slug','Description','Status','Orgs','Created',''].map((h,i)=>(
+                          <th key={i} className="text-left px-3 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
                       {clients.map(c => {
                         const orgCount = orgs?.filter(o => o.clientId === c.id).length || 0;
                         return (
-                          <TableRow key={c.id} className={c.status === 'inactive' ? 'opacity-50' : ''}>
-                            <TableCell className="font-mono text-sm">{c.id}</TableCell>
-                            <TableCell className="font-medium">{c.name}</TableCell>
-                            <TableCell className="font-mono text-sm">{c.slug}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground">{c.description || '—'}</TableCell>
-                            <TableCell>
-                              <Badge variant={c.status === 'active' ? 'default' : 'secondary'}>
+                          <tr key={c.id} className={cn("border-b border-border/20 hover:bg-muted/20 transition-colors", c.status==='inactive'&&"opacity-50")}>
+                            <td className="px-3 py-1.5 font-mono text-muted-foreground">{c.id}</td>
+                            <td className="px-3 py-1.5 font-medium truncate">{c.name}</td>
+                            <td className="px-3 py-1.5 font-mono text-muted-foreground truncate">{c.slug}</td>
+                            <td className="px-3 py-1.5 text-muted-foreground truncate">{c.description||'—'}</td>
+                            <td className="px-3 py-1.5">
+                              <span className={cn("px-1.5 py-0 rounded text-[10px] font-semibold leading-5 border",
+                                c.status==='active'?"bg-green-500/15 text-green-400 border-green-500/30":"bg-muted/30 text-muted-foreground border-border/40")}>
                                 {c.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>{orgCount}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground">
-                              {new Date(c.createdAt).toLocaleDateString()}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleEditPartner(c)}
-                                >
-                                  <Edit className="w-3 h-3 mr-1" />
-                                  Edit
-                                </Button>
-                                {c.status === 'active' ? (
-                                  <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    onClick={() => handleDeactivatePartner(c.id)}
-                                  >
+                              </span>
+                            </td>
+                            <td className="px-3 py-1.5 text-muted-foreground">{orgCount}</td>
+                            <td className="px-3 py-1.5 text-muted-foreground whitespace-nowrap">{new Date(c.createdAt).toLocaleDateString()}</td>
+                            <td className="px-2 py-1">
+                              <div className="flex gap-1">
+                                <button onClick={() => handleEditPartner(c)}
+                                  className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-border/40 hover:bg-muted/50 transition-colors">
+                                  <Edit className="w-2.5 h-2.5" /> Edit
+                                </button>
+                                {c.status==='active' ? (
+                                  <button onClick={() => handleDeactivatePartner(c.id)}
+                                    className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors">
                                     Deactivate
-                                  </Button>
+                                  </button>
                                 ) : (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleReactivatePartner(c.id)}
-                                  >
-                                    <RotateCcw className="w-3 h-3 mr-1" />
-                                    Reactivate
-                                  </Button>
+                                  <button onClick={() => handleReactivatePartner(c.id)}
+                                    className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-border/40 hover:bg-muted/50 transition-colors">
+                                    <RotateCcw className="w-2.5 h-2.5" /> Reactivate
+                                  </button>
                                 )}
                               </div>
-                            </TableCell>
-                          </TableRow>
+                            </td>
+                          </tr>
                         );
                       })}
-                    </TableBody>
-                  </Table>
+                    </tbody>
+                  </table>
                 )}
               </CardContent>
             </Card>
@@ -2530,75 +2333,52 @@ export default function PlatformAdmin() {
                     <p className="text-sm">Upload specification documents for clients to download.</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Title</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead>File</TableHead>
-                        <TableHead>Size</TableHead>
-                        <TableHead>Uploaded By</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
+                  <table className="w-full border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
+                    <colgroup>
+                      <col style={{ width: '22%' }} /><col style={{ width: '10%' }} />
+                      <col style={{ width: '20%' }} /><col style={{ width: '7%'  }} />
+                      <col style={{ width: '10%' }} /><col style={{ width: '9%'  }} />
+                      <col style={{ width: '22%' }} />
+                    </colgroup>
+                    <thead>
+                      <tr className="border-b border-border/30 bg-muted/15">
+                        {['Title','Category','File','Size','By','Date',''].map((h,i)=>(
+                          <th key={i} className="text-left px-3 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
                       {specs.map(spec => (
-                        <TableRow key={spec.id}>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">{spec.title}</div>
-                              {spec.description && (
-                                <div className="text-sm text-muted-foreground">{spec.description}</div>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {spec.category ? (
-                              <Badge variant="outline">{spec.category}</Badge>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-sm">{spec.fileName}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {spec.fileSize ? `${(spec.fileSize / 1024).toFixed(0)} KB` : '—'}
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">{spec.uploadedBy}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {new Date(spec.createdAt).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button size="sm" variant="outline" asChild>
-                                <a href={spec.fileUrl} target="_blank" rel="noopener noreferrer">
-                                  <Download className="w-3 h-3 mr-1" />
-                                  Download
-                                </a>
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleEditSpec(spec)}
-                              >
-                                <Edit className="w-3 h-3 mr-1" />
-                                Edit
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => handleDeactivateSpec(spec.id)}
-                              >
+                        <tr key={spec.id} className="border-b border-border/20 hover:bg-muted/20 transition-colors">
+                          <td className="px-3 py-1.5">
+                            <div className="font-medium truncate">{spec.title}</div>
+                            {spec.description && <div className="text-muted-foreground truncate text-[10px]">{spec.description}</div>}
+                          </td>
+                          <td className="px-3 py-1.5 text-muted-foreground truncate">{spec.category||'—'}</td>
+                          <td className="px-3 py-1.5 truncate text-muted-foreground">{spec.fileName}</td>
+                          <td className="px-3 py-1.5 text-muted-foreground whitespace-nowrap">{spec.fileSize?`${(spec.fileSize/1024).toFixed(0)}K`:'—'}</td>
+                          <td className="px-3 py-1.5 text-muted-foreground truncate">{spec.uploadedBy}</td>
+                          <td className="px-3 py-1.5 text-muted-foreground whitespace-nowrap">{new Date(spec.createdAt).toLocaleDateString()}</td>
+                          <td className="px-2 py-1">
+                            <div className="flex gap-1">
+                              <a href={spec.fileUrl} target="_blank" rel="noopener noreferrer"
+                                className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-border/40 hover:bg-muted/50 transition-colors">
+                                <Download className="w-2.5 h-2.5" /> DL
+                              </a>
+                              <button onClick={() => handleEditSpec(spec)}
+                                className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-border/40 hover:bg-muted/50 transition-colors">
+                                <Edit className="w-2.5 h-2.5" /> Edit
+                              </button>
+                              <button onClick={() => handleDeactivateSpec(spec.id)}
+                                className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors">
                                 Remove
-                              </Button>
+                              </button>
                             </div>
-                          </TableCell>
-                        </TableRow>
+                          </td>
+                        </tr>
                       ))}
-                    </TableBody>
-                  </Table>
-                  </div>
+                    </tbody>
+                  </table>
                 )}
               </CardContent>
             </Card>
@@ -2755,96 +2535,58 @@ export default function PlatformAdmin() {
 
                       {/* Vendor list */}
                       <div className="border rounded-lg overflow-hidden">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="w-12">#</TableHead>
-                              <TableHead>Vendor Name</TableHead>
-                              <TableHead className="w-24 text-center">Status</TableHead>
-                              <TableHead className="w-32 text-right">Actions</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
+                        <table className="w-full border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
+                          <colgroup>
+                            <col style={{ width: '8%' }} /><col style={{ width: '55%' }} />
+                            <col style={{ width: '15%' }} /><col style={{ width: '22%' }} />
+                          </colgroup>
+                          <thead>
+                            <tr className="border-b border-border/30 bg-muted/15">
+                              {['#','Vendor','Status',''].map((h,i)=>(
+                                <th key={i} className={cn("px-3 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide", i===3?"text-right":"text-left")}>{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
                             {(vendors || []).map((vendor, idx) => (
-                              <TableRow key={vendor.id} className={cn(!vendor.isActive && "opacity-50")}>
-                                <TableCell className="text-muted-foreground text-sm">{idx + 1}</TableCell>
-                                <TableCell>
+                              <tr key={vendor.id} className={cn("border-b border-border/20 hover:bg-muted/20 transition-colors", !vendor.isActive && "opacity-50")}>
+                                <td className="px-3 py-1.5 text-muted-foreground">{idx+1}</td>
+                                <td className="px-3 py-1.5">
                                   {editVendorId === vendor.id ? (
                                     <div className="flex gap-2 items-center">
-                                      <Input
-                                        value={editVendorName}
-                                        onChange={(e) => setEditVendorName(e.target.value)}
-                                        onKeyDown={(e) => {
-                                          if (e.key === "Enter" && editVendorName.trim()) {
-                                            updateVendorMutation.mutate({ id: vendor.id, vendorName: editVendorName.trim() });
-                                          }
-                                          if (e.key === "Escape") {
-                                            setEditVendorId(null);
-                                          }
-                                        }}
-                                        className="max-w-xs h-8"
-                                        autoFocus
-                                      />
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-8 w-8 p-0"
-                                        onClick={() => {
-                                          if (editVendorName.trim()) {
-                                            updateVendorMutation.mutate({ id: vendor.id, vendorName: editVendorName.trim() });
-                                          }
-                                        }}
-                                      >
-                                        <Check className="w-3 h-3" />
-                                      </Button>
+                                      <Input value={editVendorName} onChange={(e)=>setEditVendorName(e.target.value)}
+                                        onKeyDown={(e)=>{ if(e.key==="Enter"&&editVendorName.trim()) updateVendorMutation.mutate({id:vendor.id,vendorName:editVendorName.trim()}); if(e.key==="Escape") setEditVendorId(null); }}
+                                        className="h-6 text-xs" autoFocus />
+                                      <button onClick={()=>{ if(editVendorName.trim()) updateVendorMutation.mutate({id:vendor.id,vendorName:editVendorName.trim()}); }}
+                                        className="p-1 rounded hover:bg-muted/50"><Check className="w-3 h-3" /></button>
                                     </div>
                                   ) : (
-                                    <span className="text-sm font-medium">{vendor.vendorName}</span>
+                                    <span className="font-medium">{vendor.vendorName}</span>
                                   )}
-                                </TableCell>
-                                <TableCell className="text-center">
-                                  <Badge
-                                    variant={vendor.isActive ? "default" : "secondary"}
-                                    className={cn(
-                                      "cursor-pointer text-xs",
-                                      vendor.isActive ? "bg-green-600/20 text-green-400 hover:bg-green-600/30" : ""
-                                    )}
-                                    onClick={() => toggleVendorMutation.mutate({ id: vendor.id, isActive: vendor.isActive ? 0 : 1 })}
-                                  >
-                                    {vendor.isActive ? "Active" : "Hidden"}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="text-right">
+                                </td>
+                                <td className="px-3 py-1.5">
+                                  <button onClick={()=>toggleVendorMutation.mutate({id:vendor.id,isActive:vendor.isActive?0:1})}
+                                    className={cn("px-1.5 py-0 rounded text-[10px] font-semibold leading-5 border cursor-pointer transition-colors",
+                                      vendor.isActive?"bg-green-500/15 text-green-400 border-green-500/30 hover:bg-green-500/25":"bg-muted/30 text-muted-foreground border-border/40 hover:bg-muted/50")}>
+                                    {vendor.isActive?"Active":"Hidden"}
+                                  </button>
+                                </td>
+                                <td className="px-2 py-1 text-right">
                                   <div className="flex gap-1 justify-end">
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      className="h-7 w-7 p-0"
-                                      onClick={() => {
-                                        setEditVendorId(vendor.id);
-                                        setEditVendorName(vendor.vendorName);
-                                      }}
-                                    >
+                                    <button onClick={()=>{ setEditVendorId(vendor.id); setEditVendorName(vendor.vendorName); }}
+                                      className="p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors">
                                       <Edit className="w-3 h-3" />
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                                      onClick={() => {
-                                        if (confirm(`Remove "${vendor.vendorName}" from ${systemType}?`)) {
-                                          deleteVendorMutation.mutate({ id: vendor.id });
-                                        }
-                                      }}
-                                    >
+                                    </button>
+                                    <button onClick={()=>{ if(confirm(`Remove "${vendor.vendorName}" from ${systemType}?`)) deleteVendorMutation.mutate({id:vendor.id}); }}
+                                      className="p-1 rounded hover:bg-red-500/10 text-muted-foreground hover:text-red-400 transition-colors">
                                       <AlertCircle className="w-3 h-3" />
-                                    </Button>
+                                    </button>
                                   </div>
-                                </TableCell>
-                              </TableRow>
+                                </td>
+                              </tr>
                             ))}
-                          </TableBody>
-                        </Table>
+                          </tbody>
+                        </table>
                       </div>
                         </CardContent>
                       </CollapsibleContent>
@@ -2868,79 +2610,47 @@ export default function PlatformAdmin() {
                   <p className="text-muted-foreground text-sm py-4 text-center">No changes recorded yet.</p>
                 ) : (
                   <div className="rounded-md border max-h-[400px] overflow-y-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-36">Date</TableHead>
-                          <TableHead className="w-28">Action</TableHead>
-                          <TableHead>System Type</TableHead>
-                          <TableHead>Details</TableHead>
-                          <TableHead className="w-48">Changed By</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
+                    <table className="w-full border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
+                      <colgroup>
+                        <col style={{ width: '17%' }} /><col style={{ width: '10%' }} />
+                        <col style={{ width: '18%' }} /><col style={{ width: '35%' }} />
+                        <col style={{ width: '20%' }} />
+                      </colgroup>
+                      <thead className="sticky top-0 z-10 bg-muted/80 backdrop-blur">
+                        <tr className="border-b border-border/30">
+                          {['Date','Action','System Type','Details','By'].map((h,i)=>(
+                            <th key={i} className="text-left px-3 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
                         {vendorAuditLogs.map((log) => {
-                          const actionLabel: Record<string, string> = {
-                            add: 'Added',
-                            update: 'Renamed',
-                            toggle: 'Toggled',
-                            delete: 'Deleted',
-                            add_system_type: 'New Type',
-                            seed_defaults: 'Seeded',
-                          };
-                          const actionColor: Record<string, string> = {
-                            add: 'text-green-400',
-                            update: 'text-blue-400',
-                            toggle: 'text-yellow-400',
-                            delete: 'text-red-400',
-                            add_system_type: 'text-purple-400',
-                            seed_defaults: 'text-muted-foreground',
-                          };
-
+                          const actionLabel: Record<string, string> = { add:'Added', update:'Renamed', toggle:'Toggled', delete:'Deleted', add_system_type:'New Type', seed_defaults:'Seeded' };
+                          const actionColor: Record<string, string> = { add:'text-green-400', update:'text-blue-400', toggle:'text-yellow-400', delete:'text-red-400', add_system_type:'text-purple-400', seed_defaults:'text-muted-foreground' };
                           let details = '';
-                          if (log.action === 'add') {
-                            details = `Added "${log.vendorName}"`;
-                          } else if (log.action === 'update') {
-                            details = `"${log.previousValue}" → "${log.newValue}"`;
-                          } else if (log.action === 'toggle') {
-                            details = `"${log.vendorName}" ${log.newValue === 'active' ? 'activated' : 'deactivated'}`;
-                          } else if (log.action === 'delete') {
-                            details = `Removed "${log.vendorName}"`;
-                          } else if (log.action === 'add_system_type') {
-                            try {
-                              const vendors = JSON.parse(log.newValue || '[]');
-                              details = `Added ${vendors.length} vendors: ${vendors.join(', ')}`;
-                            } catch {
-                              details = log.newValue || '';
-                            }
-                          } else if (log.action === 'seed_defaults') {
-                            try {
-                              const types = JSON.parse(log.newValue || '[]');
-                              details = `Seeded ${types.length} system types`;
-                            } catch {
-                              details = 'Seeded default vendors';
-                            }
-                          }
-
+                          if (log.action==='add') details=`Added "${log.vendorName}"`;
+                          else if (log.action==='update') details=`"${log.previousValue}" → "${log.newValue}"`;
+                          else if (log.action==='toggle') details=`"${log.vendorName}" ${log.newValue==='active'?'activated':'deactivated'}`;
+                          else if (log.action==='delete') details=`Removed "${log.vendorName}"`;
+                          else if (log.action==='add_system_type') { try { const v=JSON.parse(log.newValue||'[]'); details=`Added ${v.length} vendors: ${v.join(', ')}`; } catch { details=log.newValue||''; } }
+                          else if (log.action==='seed_defaults') { try { const t=JSON.parse(log.newValue||'[]'); details=`Seeded ${t.length} system types`; } catch { details='Seeded defaults'; } }
                           return (
-                            <TableRow key={log.id}>
-                              <TableCell className="text-xs text-muted-foreground">
-                                {new Date(log.performedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}{' '}
-                                {new Date(log.performedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                              </TableCell>
-                              <TableCell>
-                                <span className={cn('text-xs font-medium', actionColor[log.action] || 'text-muted-foreground')}>
-                                  {actionLabel[log.action] || log.action}
-                                </span>
-                              </TableCell>
-                              <TableCell className="text-sm">{log.systemType}</TableCell>
-                              <TableCell className="text-sm max-w-[300px] truncate" title={details}>{details}</TableCell>
-                              <TableCell className="text-xs text-muted-foreground">{log.performedBy}</TableCell>
-                            </TableRow>
+                            <tr key={log.id} className="border-b border-border/20 hover:bg-muted/20 transition-colors">
+                              <td className="px-3 py-1.5 text-muted-foreground whitespace-nowrap">
+                                {new Date(log.performedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}{' '}
+                                {new Date(log.performedAt).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}
+                              </td>
+                              <td className="px-3 py-1.5">
+                                <span className={cn('font-medium', actionColor[log.action]||'text-muted-foreground')}>{actionLabel[log.action]||log.action}</span>
+                              </td>
+                              <td className="px-3 py-1.5 truncate">{log.systemType}</td>
+                              <td className="px-3 py-1.5 truncate text-muted-foreground" title={details}>{details}</td>
+                              <td className="px-3 py-1.5 text-muted-foreground truncate">{log.performedBy}</td>
+                            </tr>
                           );
                         })}
-                      </TableBody>
-                    </Table>
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </CardContent>

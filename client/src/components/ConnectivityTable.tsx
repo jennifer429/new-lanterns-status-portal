@@ -356,19 +356,18 @@ export function ConnectivityTable({ rows: rawRows, onChange, systems = [] }: Con
 
       {/* ── Desktop table (hidden on mobile) ── */}
       <div className="hidden lg:block rounded-md border border-border/50 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse" style={{ tableLayout: 'fixed', minWidth: 940 }}>
+        <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
             <colgroup>
-              <col style={{ width: 150 }} />
-              <col style={{ width: 115 }} />
-              <col style={{ width: 115 }} />
-              <col style={{ width: 140 }} />
-              <col style={{ width: 140 }} />
-              <col style={{ width: 70 }} />
-              <col style={{ width: 70 }} />
-              <col style={{ width: 52 }} />
-              <col style={{ width: '100%' }} />
-              <col style={{ width: 40 }} />
+              {/* Traffic Type */}  <col style={{ width: '16%' }} />
+              {/* Source */}        <col style={{ width: '11%' }} />
+              {/* Destination */}   <col style={{ width: '11%' }} />
+              {/* Src IP:Port */}   <col style={{ width: '13%' }} />
+              {/* Dst IP:Port */}   <col style={{ width: '13%' }} />
+              {/* Src AE */}        <col style={{ width: '7%'  }} />
+              {/* Dst AE */}        <col style={{ width: '7%'  }} />
+              {/* Env */}           <col style={{ width: '5%'  }} />
+              {/* Notes */}         <col style={{ width: '14%' }} />
+              {/* Actions */}       <col style={{ width: '3%'  }} />
             </colgroup>
 
             {/* ── Header ── */}
@@ -376,10 +375,10 @@ export function ConnectivityTable({ rows: rawRows, onChange, systems = [] }: Con
               <tr className="bg-muted/25 border-b border-border/50">
                 {[
                   'Traffic Type', 'Source', 'Destination',
-                  'Source IP : Port', 'Dest IP : Port',
+                  'Src IP : Port', 'Dst IP : Port',
                   'Src AE', 'Dst AE', 'Env', 'Notes', '',
                 ].map((h, i) => (
-                  <th key={i} className="text-left px-2 py-[5px] text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wide whitespace-nowrap select-none">
+                  <th key={i} className="text-left px-1.5 py-[5px] text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wide whitespace-nowrap select-none">
                     {h}
                   </th>
                 ))}
@@ -502,7 +501,6 @@ export function ConnectivityTable({ rows: rawRows, onChange, systems = [] }: Con
               ))}
             </tbody>
           </table>
-        </div>
 
         {/* Notion-style "+ New row" footer */}
         <button onClick={addRow}
