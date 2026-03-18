@@ -190,8 +190,8 @@ function WorkflowPhaseCard({
                 : "bg-gradient-to-r from-muted-foreground/20 to-muted-foreground/10"
           )}
         />
-        <CardContent className="p-5 pt-6">
-          <div className="flex items-start justify-between mb-4">
+        <CardContent className="p-4 pt-5">
+          <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-3">
               <div
                 className={cn(
@@ -218,7 +218,7 @@ function WorkflowPhaseCard({
           </div>
 
           {/* Progress bar */}
-          <div className="mb-3">
+          <div className="mb-2">
             <div className="flex items-center justify-between text-xs mb-1.5">
               <span className="text-muted-foreground">
                 {completed}/{total} complete
@@ -248,7 +248,7 @@ function WorkflowPhaseCard({
           </div>
 
           {/* Progress dots */}
-          <div className="flex items-center gap-1.5 mb-4">
+          <div className="flex items-center gap-1.5 mb-3">
             {Array.from({ length: total }, (_, i) => (
               <div
                 key={i}
@@ -521,22 +521,79 @@ export default function Home() {
       <PhiDisclaimer />
 
       {/* Dashboard Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-5">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 space-y-3">
+        {/* ── Quick Links: Connectivity & Specs ── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {/* Connectivity Card */}
+          <Card className="card-elevated overflow-hidden">
+            <div className="px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-primary/10">
+                  <Network className="w-4 h-4 text-primary" />
+                </div>
+                <span className="text-sm font-semibold">Connectivity</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {connectivityLoading ? (
+                  <Badge variant="outline" className="text-[10px] text-muted-foreground gap-1">
+                    <Loader2 className="w-3 h-3 animate-spin" /> Loading
+                  </Badge>
+                ) : connRows.length ? (
+                  <Badge variant="outline" className="text-[10px] border-green-500/40 text-green-400">
+                    {connRows.length} connections
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-[10px] text-muted-foreground">Not set</Badge>
+                )}
+                <Link href={`/org/${orgSlug}`}>
+                  <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={(e) => {
+                    e.preventDefault();
+                    // Scroll to connectivity section below
+                    document.getElementById('connectivity-section')?.scrollIntoView({ behavior: 'smooth' });
+                  }}>
+                    View <ArrowRight className="w-3 h-3 ml-1" />
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </Card>
+
+          {/* Specifications Card */}
+          <Link href={`/org/${orgSlug}/specs`}>
+            <Card className="card-elevated card-clickable overflow-hidden cursor-pointer group">
+              <div className="px-4 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-1.5 rounded-lg bg-primary/10">
+                    <BookOpen className="w-4 h-4 text-primary" />
+                  </div>
+                  <span className="text-sm font-semibold">Specifications</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-[10px] text-muted-foreground font-semibold">
+                    {specs.length} docs
+                  </Badge>
+                  <ArrowUpRight className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+              </div>
+            </Card>
+          </Link>
+        </div>
+
         {/* ── Hero: Overall Progress ── */}
         <Card className="card-elevated overflow-hidden">
           {/* Top accent gradient */}
           <div className="h-1 bg-gradient-to-r from-primary via-primary/60 to-emerald-500/40" />
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row items-center gap-6">
+          <CardContent className="p-4">
+            <div className="flex flex-col md:flex-row items-center gap-4">
               {/* Progress Ring */}
-              <ProgressRing value={overallPct} size={110} stroke={8} />
+              <ProgressRing value={overallPct} size={90} stroke={7} />
 
               {/* Stats */}
               <div className="flex-1 text-center md:text-left">
-                <h2 className="text-xl font-bold tracking-tight mb-1">
+                <h2 className="text-lg font-bold tracking-tight mb-0.5">
                   Implementation Progress
                 </h2>
-                <p className="text-sm text-muted-foreground mb-5">
+                <p className="text-xs text-muted-foreground mb-3">
                   {overallPct === 100
                     ? "All phases complete — ready for go-live."
                     : overallPct > 0
@@ -544,7 +601,7 @@ export default function Home() {
                       : "Get started by filling out the questionnaire."}
                 </p>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-2">
                   {[
                     { label: "Questionnaire", value: `${completedSections}/${totalSections}`, done: qDone },
                     { label: "Tests Passed", value: `${valCompleted}/${valTotal}`, done: vDone },
@@ -553,7 +610,7 @@ export default function Home() {
                     <div
                       key={stat.label}
                       className={cn(
-                        "text-center p-3 rounded-xl border transition-colors",
+                        "text-center p-2 rounded-lg border transition-colors",
                         stat.done
                           ? "bg-emerald-500/10 border-emerald-500/20"
                           : "bg-muted/20 border-border/30"
@@ -561,13 +618,13 @@ export default function Home() {
                     >
                       <div
                         className={cn(
-                          "text-lg font-bold tracking-tight",
+                          "text-base font-bold tracking-tight",
                           stat.done ? "text-emerald-400" : "text-primary"
                         )}
                       >
                         {stat.value}
                       </div>
-                      <div className="text-[11px] text-muted-foreground mt-0.5 font-medium">
+                      <div className="text-[10px] text-muted-foreground mt-0.5 font-medium">
                         {stat.label}
                       </div>
                     </div>
@@ -576,19 +633,19 @@ export default function Home() {
               </div>
 
               {/* Quick stats sidebar */}
-              <div className="flex flex-col gap-3 min-w-[140px]">
-                <div className="flex items-center gap-2 text-sm">
-                  <FileText className="w-4 h-4 text-muted-foreground" />
+              <div className="flex flex-col gap-2 min-w-[130px]">
+                <div className="flex items-center gap-2 text-xs">
+                  <FileText className="w-3.5 h-3.5 text-muted-foreground" />
                   <span className="text-muted-foreground">Files:</span>
                   <span className="font-semibold">{allFiles.length}</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Activity className="w-4 h-4 text-muted-foreground" />
+                <div className="flex items-center gap-2 text-xs">
+                  <Activity className="w-3.5 h-3.5 text-muted-foreground" />
                   <span className="text-muted-foreground">Phase:</span>
                   <Badge
                     variant="outline"
                     className={cn(
-                      "text-xs font-semibold",
+                      "text-[10px] font-semibold",
                       activePhase === "questionnaire"
                         ? "border-primary/40 text-primary"
                         : activePhase === "testing"
@@ -604,10 +661,10 @@ export default function Home() {
                   </Badge>
                 </div>
                 {diagramFiles.length > 0 && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <ImageIcon className="w-4 h-4 text-muted-foreground" />
+                  <div className="flex items-center gap-2 text-xs">
+                    <ImageIcon className="w-3.5 h-3.5 text-muted-foreground" />
                     <span className="text-muted-foreground">Diagram:</span>
-                    <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-xs font-semibold">
+                    <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[10px] font-semibold">
                       Uploaded
                     </Badge>
                   </div>
@@ -618,7 +675,7 @@ export default function Home() {
         </Card>
 
         {/* ── Workflow Phase Cards ── */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <WorkflowPhaseCard
             title="Questionnaire"
             subtitle="Start here"
@@ -650,8 +707,6 @@ export default function Home() {
             isLocked={false}
           />
         </div>
-
-        <div className="section-divider" />
 
         {/* ── Architecture Diagram ── */}
         <CollapsibleSection
@@ -762,6 +817,7 @@ export default function Home() {
         </CollapsibleSection>
 
         {/* ── Connectivity (live Notion) ── */}
+        <div id="connectivity-section">
         <CollapsibleSection
           title="Connectivity"
           icon={<Network className="w-5 h-5 text-primary" />}
@@ -804,64 +860,13 @@ export default function Home() {
             )}
           </CardContent>
         </CollapsibleSection>
+        </div>
 
+        {/* ── Specifications (inline section removed — now a separate page via /org/:slug/specs) ── */}
 
-
-        {/* ── Specifications ── */}
-        {specs.length > 0 && (
-          <>
-            <div className="section-divider" />
-            <CollapsibleSection
-              title="New Lantern Specifications"
-              icon={<BookOpen className="w-5 h-5 text-primary" />}
-              badge={
-                <Badge
-                  variant="outline"
-                  className="text-xs text-muted-foreground font-semibold"
-                >
-                  {specs.length} docs
-                </Badge>
-              }
-              defaultOpen={false}
-            >
-              <CardContent className="p-5">
-                <div className="space-y-2">
-                  {specs.map((spec: any) => (
-                    <a
-                      key={spec.id}
-                      href={spec.fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between p-3.5 rounded-xl border border-border/50 hover:bg-accent/50 hover:border-border transition-all group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary/15 transition-colors">
-                          <Download className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <div className="text-sm font-semibold">{spec.title}</div>
-                          {spec.description && (
-                            <div className="text-xs text-muted-foreground mt-0.5">
-                              {spec.description}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      {spec.category && (
-                        <span className="text-xs bg-primary/10 text-primary px-2.5 py-1 rounded-lg font-medium">
-                          {spec.category}
-                        </span>
-                      )}
-                    </a>
-                  ))}
-                </div>
-              </CardContent>
-            </CollapsibleSection>
-          </>
-        )}
 
         {/* Bottom spacer */}
-        <div className="h-8" />
+        <div className="h-4" />
       </div>
     </div>
   );

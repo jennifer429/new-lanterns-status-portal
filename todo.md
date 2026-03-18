@@ -2140,3 +2140,10 @@
 - [x] Create dedicated /org/:slug/specs page with search, category grouping, and download buttons
 - [x] Register route in App.tsx
 - [x] Ensure the specs page works for non-admin users (read-only view)
+
+## Dashboard Layout Reorganization (Mar 18, 2026)
+- [x] Move Connectivity section above the Implementation Progress bar
+- [x] Move Specs section above the Implementation Progress bar
+- [x] Compact all sections to fit in one viewport without scrolling
+- [x] Reduce padding, card sizes, and spacing to achieve single-view layout
+- [x] Remove duplicate Specifications collapsible section (now a separate page)
