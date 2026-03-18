@@ -1063,13 +1063,21 @@ export default function IntakeNewRedesign() {
       section.questions.forEach(q => {
         // Skip file upload questions — not text-answerable
         if (q.type === 'upload' || q.type === 'upload-download') return;
-        
+
         const response = responses[q.id] || '';
-        const responseStr = Array.isArray(response) ? response.join('; ') : String(response);
-        
+        let responseStr: string;
+        if (q.type === 'contacts-table' || q.type === 'systems-list') {
+          // Serialize complex types as JSON so they can round-trip through import
+          responseStr = response ? (typeof response === 'string' ? response : JSON.stringify(response)) : '';
+        } else if (Array.isArray(response)) {
+          responseStr = response.join('; ');
+        } else {
+          responseStr = String(response);
+        }
+
         // Include valid options for dropdown and multi-select so AI knows what to pick
         const optionsStr = q.options ? q.options.join('; ') : '';
-        
+
         lines.push(`${section.title}|${q.id}|${q.text}|${q.type}|${optionsStr}|${responseStr}`);
       });
     });
@@ -1129,7 +1137,14 @@ export default function IntakeNewRedesign() {
         if (responseType === 'workflow') return;
         
         // Convert to appropriate type based on response type
-        if (responseType === 'multi-select' || responseType === 'multiple-choice') {
+        if (responseType === 'contacts-table' || responseType === 'systems-list') {
+          // These are stored as JSON — parse back to object so the UI can display them
+          try {
+            importedResponses[questionId] = JSON.parse(responseValue);
+          } catch {
+            importedResponses[questionId] = responseValue; // leave as-is if unparseable
+          }
+        } else if (responseType === 'multi-select' || responseType === 'multiple-choice') {
           importedResponses[questionId] = responseValue.split('; ').map(v => v.trim()).filter(Boolean);
         } else {
           importedResponses[questionId] = responseValue;
@@ -1353,12 +1368,26 @@ export default function IntakeNewRedesign() {
         } catch { parsed = {} as ContactsData; }
 
         const updateContact = (rowKey: ContactKey, field: keyof ContactRow, val: string) => {
-          const next = { ...parsed, [rowKey]: { ...empty, ...(parsed[rowKey] || {}), [field]: val } };
-          // Only persist if any field is non-empty; otherwise clear the response
-          const hasContent = Object.values(next).some(r =>
-            Object.values(r).some(v => v.trim() !== '')
-          );
-          setResponses(prev => ({ ...prev, [question.id]: hasContent ? JSON.stringify(next) : '' }));
+          setResponses(prev => {
+            // Always read from latest state to avoid stale closure overwriting parallel edits
+            const current = prev[question.id];
+            let prevParsed: ContactsData;
+            try {
+              prevParsed = current
+                ? (typeof current === 'string' ? JSON.parse(current) : current)
+                : {} as ContactsData;
+            } catch { prevParsed = {} as ContactsData; }
+
+            const next: ContactsData = {
+              ...prevParsed,
+              [rowKey]: { ...empty, ...(prevParsed[rowKey] || {}), [field]: val },
+            } as ContactsData;
+            const hasContent = Object.values(next).some(r =>
+              Object.values(r as ContactRow).some(v => (v as string).trim() !== '')
+            );
+            // Store as object — auto-save will JSON.stringify it
+            return { ...prev, [question.id]: hasContent ? next : '' };
+          });
         };
 
         return (
