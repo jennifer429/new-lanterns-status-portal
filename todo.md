@@ -2134,3 +2134,9 @@
 - [x] CSV import processes client-side and updates state directly (no server endpoint needed)
 - [x] Include organization name and export date in the CSV filename
 - [x] Write vitest tests for CSV utility functions
+
+## NL Specifications Access from Org Dashboard (Mar 18, 2026)
+- [x] Add Specifications link to the org dashboard UserMenu dropdown
+- [x] Create dedicated /org/:slug/specs page with search, category grouping, and download buttons
+- [x] Register route in App.tsx
+- [x] Ensure the specs page works for non-admin users (read-only view)
