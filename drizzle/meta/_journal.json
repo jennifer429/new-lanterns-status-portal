@@ -190,6 +190,13 @@
       "when": 1773630480654,
       "tag": "0026_bouncy_madrox",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "5",
+      "when": 1773848991906,
+      "tag": "0027_broad_midnight",
+      "breakpoints": true
     }
   ]
 }

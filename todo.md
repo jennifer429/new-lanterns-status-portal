@@ -2147,3 +2147,11 @@
 - [x] Compact all sections to fit in one viewport without scrolling
 - [x] Reduce padding, card sizes, and spacing to achieve single-view layout
 - [x] Remove duplicate Specifications collapsible section (now a separate page)
+
+## Permanent Fix: Duplicate Users on Deployment (Mar 18, 2026)
+- [x] Clean up all duplicate email rows in users table (jennifer: 3→1, melissa: 2→1)
+- [x] Add UNIQUE constraint on email column in database schema (migration 0027)
+- [x] Login queries already use LIMIT 1 — verified in auth.ts and authRoutes.ts
+- [x] All user creation endpoints already check for existing email before insert
+- [x] db.ts upsert uses onDuplicateKeyUpdate for OAuth flow
+- [ ] Verify login works after cleanup
