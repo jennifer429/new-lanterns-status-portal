@@ -41,6 +41,7 @@ import { trpc } from "@/lib/trpc";
 import { useState, useEffect, useRef } from "react";
 import { questionnaireSections } from "@shared/questionnaireData";
 import { calculateProgress } from "@shared/progressCalculation";
+import { SECTION_DEFS as TASK_SECTION_DEFS } from "@shared/taskDefs";
 import { PhiDisclaimer } from "@/components/PhiDisclaimer";
 import { UserMenu } from "@/components/UserMenu";
 import { cn } from "@/lib/utils";
@@ -463,10 +464,9 @@ export default function Home() {
 
   // Implementation stats from real data
   const implResults = implementationData || {};
-  const implEntries = Object.values(implResults) as any[];
-  const implTotal = 14;
-  const implCompleted = implEntries.filter(
-    (v: any) => v.status === "complete"
+  const implTotal = TASK_SECTION_DEFS.flatMap(s => s.tasks).length;
+  const implCompleted = TASK_SECTION_DEFS.flatMap(s => s.tasks).filter(
+    t => (implResults as any)[t.id]?.completed === true
   ).length;
 
   // Overall progress (weighted: questionnaire 40%, testing 30%, implementation 30%)
