@@ -125,6 +125,57 @@ function SystemsMultiSelect({ selectedNames, allSystems, onChange }: SystemsMult
   );
 }
 
+interface WorkflowBlockProps {
+  id: string;
+  label: string;
+  description: string;
+  placeholder: string;
+  values: Record<string, any>;
+  systems: IntegrationSystem[];
+  onChange: (key: string, value: any) => void;
+}
+
+function WorkflowBlock({ id, label, description, placeholder, values, systems, onChange }: WorkflowBlockProps) {
+  const descKey = `IW.${id}_description`;
+  const sysKey  = `IW.${id}_systems`;
+  const selectedNames: string[] = (() => {
+    try {
+      const v = values[sysKey];
+      if (!v) return [];
+      return Array.isArray(v) ? v : JSON.parse(v);
+    } catch { return []; }
+  })();
+  const isFilled = !!(values[descKey] && String(values[descKey]).trim().length > 0);
+
+  return (
+    <div className={cn('space-y-3 p-5 rounded-xl border bg-card transition-colors', isFilled && 'border-primary/50')}>
+      <div className="flex items-center gap-2">
+        {isFilled
+          ? <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+          : <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 flex-shrink-0" />
+        }
+        <h3 className="font-semibold text-base">{label}</h3>
+      </div>
+      <p className="text-sm text-muted-foreground">{description}</p>
+      <Textarea
+        value={values[descKey] || ''}
+        onChange={(e) => onChange(descKey, e.target.value)}
+        placeholder={placeholder}
+        rows={5}
+        className="resize-y"
+      />
+      <div className="space-y-1.5">
+        <p className="text-sm text-muted-foreground">Systems involved:</p>
+        <SystemsMultiSelect
+          selectedNames={selectedNames}
+          allSystems={systems}
+          onChange={(v) => onChange(sysKey, v)}
+        />
+      </div>
+    </div>
+  );
+}
+
 interface IntegrationWorkflowsProps {
   values: Record<string, any>;
   onChange: (key: string, value: any) => void;
@@ -187,49 +238,6 @@ export function IntegrationWorkflows({ values, onChange, organizationId, onBack,
   const totalComplete = completedWorkflows + (historicDone ? 1 : 0) + (techSheetsDone ? 1 : 0) + (overlayDone ? 1 : 0) + (ctDoseDone ? 1 : 0);
   const allComplete = totalComplete === 8;
 
-  // ── Workflow block ────────────────────────────────────────────────────────────
-  const WorkflowBlock = ({
-    id, label, description, placeholder,
-  }: { id: string; label: string; description: string; placeholder: string }) => {
-    const descKey = `IW.${id}_description`;
-    const sysKey  = `IW.${id}_systems`;
-    const selectedNames: string[] = (() => {
-      try {
-        const v = values[sysKey];
-        if (!v) return [];
-        return Array.isArray(v) ? v : JSON.parse(v);
-      } catch { return []; }
-    })();
-    const isFilled = !!(values[descKey] && String(values[descKey]).trim().length > 0);
-
-    return (
-      <div className={cn('space-y-3 p-5 rounded-xl border bg-card transition-colors', isFilled && 'border-primary/50')}>
-        <div className="flex items-center gap-2">
-          {isFilled
-            ? <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-            : <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 flex-shrink-0" />
-          }
-          <h3 className="font-semibold text-base">{label}</h3>
-        </div>
-        <p className="text-sm text-muted-foreground">{description}</p>
-        <Textarea
-          value={values[descKey] || ''}
-          onChange={(e) => onChange(descKey, e.target.value)}
-          placeholder={placeholder}
-          rows={5}
-          className="resize-y"
-        />
-        <div className="space-y-1.5">
-          <p className="text-sm text-muted-foreground">Systems involved:</p>
-          <SystemsMultiSelect
-            selectedNames={selectedNames}
-            allSystems={systems}
-            onChange={(v) => onChange(sysKey, v)}
-          />
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div className="space-y-8">
@@ -259,24 +267,36 @@ export function IntegrationWorkflows({ values, onChange, organizationId, onBack,
           label="Orders Workflow"
           description="Describe how imaging orders reach the platform."
           placeholder="e.g., Orders originate in Epic, sent via HL7 ORM through Mirth Connect to New Lantern..."
+          values={values}
+          systems={systems}
+          onChange={onChange}
         />
         <WorkflowBlock
           id="images"
           label="Images Workflow"
           description="Describe how imaging studies are routed."
           placeholder="e.g., Studies acquired on modalities (CT, MR, XR) and sent via DICOM C-STORE to PACS, then forwarded to New Lantern..."
+          values={values}
+          systems={systems}
+          onChange={onChange}
         />
         <WorkflowBlock
           id="priors"
           label="Priors Workflow"
           description="Describe how prior studies are retrieved."
           placeholder="e.g., New Lantern queries prior PACS via C-FIND/C-MOVE for relevant prior studies when a new order arrives..."
+          values={values}
+          systems={systems}
+          onChange={onChange}
         />
         <WorkflowBlock
           id="reports"
           label="Reports Workflow"
           description="Describe how reports are delivered back."
           placeholder="e.g., Finalized reports sent via HL7 ORU through Mirth Connect back to Epic Radiant..."
+          values={values}
+          systems={systems}
+          onChange={onChange}
         />
       </div>
 
