@@ -1051,126 +1051,105 @@ export default function IntakeNewRedesign() {
 
   // Export pipe-delimited file (excludes upload, upload-download, and workflow types)
   const handleExportCSV = () => {
-    const lines = ['Section|Question ID|Question Text|Response Type|Valid Options|Response Value'];
-    
+    // Build a structured JSON export so all types (contacts, multi-select, dropdowns, etc.)
+    // round-trip perfectly and are human-readable / editable.
+    const exportResponses: Record<string, any> = {};
+    const meta: Record<string, { section: string; text: string; type: string; options?: string[] }> = {};
+
     questionnaireSections.forEach(section => {
-      // Skip workflow sections entirely — not text-answerable
-      if (section.type === 'workflow') return;
-      
-      // Handle standard question sections
-      if (!section.questions) return;
-      
+      if (section.type === 'workflow' || !section.questions) return;
       section.questions.forEach(q => {
-        // Skip file upload questions — not text-answerable
         if (q.type === 'upload' || q.type === 'upload-download') return;
-
-        const response = responses[q.id] || '';
-        let responseStr: string;
-        if (q.type === 'contacts-table' || q.type === 'systems-list') {
-          // Serialize complex types as JSON so they can round-trip through import
-          responseStr = response ? (typeof response === 'string' ? response : JSON.stringify(response)) : '';
-        } else if (Array.isArray(response)) {
-          responseStr = response.join('; ');
-        } else {
-          responseStr = String(response);
+        const raw = responses[q.id];
+        // Store value as-is (objects stay objects, arrays stay arrays, strings stay strings)
+        // null/undefined → omit from export so file stays clean
+        if (raw !== undefined && raw !== null && raw !== '') {
+          exportResponses[q.id] = typeof raw === 'string'
+            ? (() => { try { return JSON.parse(raw); } catch { return raw; } })()
+            : raw;
         }
-
-        // Include valid options for dropdown and multi-select so AI knows what to pick
-        const optionsStr = q.options ? q.options.join('; ') : '';
-
-        lines.push(`${section.title}|${q.id}|${q.text}|${q.type}|${optionsStr}|${responseStr}`);
+        meta[q.id] = {
+          section: section.title,
+          text: q.text,
+          type: q.type,
+          ...(q.options ? { options: q.options } : {}),
+        };
       });
     });
-    
-    const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+
+    const payload = {
+      exported: new Date().toISOString(),
+      org: slug,
+      responses: exportResponses,
+      meta,
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${slug}-intake-responses.txt`;
+    a.download = `${slug}-intake-responses.json`;
     a.click();
   };
 
-  // Import pipe-delimited file (supports both 5-column legacy and 6-column new format)
+  // Import responses — supports JSON (new) and legacy pipe-delimited (txt/csv) formats
   const handleImportFile = async () => {
     if (!importFile || !slug) return;
-    
+
     setIsImporting(true);
     try {
       const text = await importFile.text();
-      const lines = text.split('\n').filter(line => line.trim());
-      
-      // Detect format from header
-      const header = lines[0] || '';
-      const headerParts = header.split('|');
-      const hasOptionsColumn = headerParts.length >= 6; // New format has Valid Options column
-      
-      // Skip header row
-      const dataLines = lines.slice(1);
-      
       const importedResponses: Record<string, any> = {};
-      let importCount = 0;
-      
-      dataLines.forEach(line => {
-        const parts = line.split('|');
-        
-        let questionId: string;
-        let responseType: string;
-        let responseValue: string;
-        
-        if (hasOptionsColumn) {
-          // New 6-column format: Section|Question ID|Question Text|Response Type|Valid Options|Response Value
-          if (parts.length < 6) return;
-          questionId = parts[1]?.trim();
-          responseType = parts[3]?.trim();
-          responseValue = parts[5]?.trim();
-        } else {
-          // Legacy 5-column format: Section|Question ID|Question Text|Response Type|Response Value
-          if (parts.length < 5) return;
-          questionId = parts[1]?.trim();
-          responseType = parts[3]?.trim();
-          responseValue = parts[4]?.trim();
-        }
-        
-        if (!questionId || !responseValue) return;
-        
-        // Skip workflow types (shouldn't be in export, but handle gracefully)
-        if (responseType === 'workflow') return;
-        
-        // Convert to appropriate type based on response type
-        if (responseType === 'contacts-table' || responseType === 'systems-list') {
-          // These are stored as JSON — parse back to object so the UI can display them
-          try {
-            importedResponses[questionId] = JSON.parse(responseValue);
-          } catch {
-            importedResponses[questionId] = responseValue; // leave as-is if unparseable
+
+      // ── JSON format (new) ─────────────────────────────────────────────────
+      if (importFile.name.endsWith('.json') || text.trimStart().startsWith('{')) {
+        const payload = JSON.parse(text);
+        const src = payload.responses ?? payload; // support both { responses: {...} } and bare object
+        if (typeof src !== 'object' || src === null) throw new Error('Invalid JSON format');
+        Object.entries(src).forEach(([qid, val]) => {
+          if (val !== undefined && val !== null && val !== '') {
+            importedResponses[qid] = val;
           }
-        } else if (responseType === 'multi-select' || responseType === 'multiple-choice') {
-          importedResponses[questionId] = responseValue.split('; ').map(v => v.trim()).filter(Boolean);
-        } else {
-          importedResponses[questionId] = responseValue;
-        }
-        importCount++;
-      });
-      
-      // Merge imported responses into existing state
+        });
+
+      // ── Legacy pipe-delimited (txt / csv) ────────────────────────────────
+      } else {
+        const lines = text.split('\n').filter(l => l.trim());
+        const header = lines[0] || '';
+        const hasOptionsColumn = header.split('|').length >= 6;
+        lines.slice(1).forEach(line => {
+          const parts = line.split('|');
+          const questionId  = hasOptionsColumn ? parts[1]?.trim() : parts[1]?.trim();
+          const responseType = hasOptionsColumn ? parts[3]?.trim() : parts[3]?.trim();
+          const responseValue = hasOptionsColumn ? parts[5]?.trim() : parts[4]?.trim();
+          if (!questionId || !responseValue) return;
+          if (responseType === 'workflow') return;
+          if (responseType === 'contacts-table' || responseType === 'systems-list') {
+            try { importedResponses[questionId] = JSON.parse(responseValue); }
+            catch { importedResponses[questionId] = responseValue; }
+          } else if (responseType === 'multi-select' || responseType === 'multiple-choice') {
+            importedResponses[questionId] = responseValue.split('; ').map((v: string) => v.trim()).filter(Boolean);
+          } else {
+            importedResponses[questionId] = responseValue;
+          }
+        });
+      }
+
+      const importCount = Object.keys(importedResponses).length;
+      if (importCount === 0) throw new Error('No responses found in file');
+
+      // Merge into state and persist to DB
       setResponses(prev => ({ ...prev, ...importedResponses }));
-      
-      // Save only the imported responses to database
-      const savePromises = Object.entries(importedResponses).map(([questionId, value]) => {
-        return saveMutation.mutateAsync({
+      await Promise.all(Object.entries(importedResponses).map(([questionId, value]) =>
+        saveMutation.mutateAsync({
           organizationSlug: slug,
           questionId,
           response: typeof value === 'object' ? JSON.stringify(value) : String(value),
           userEmail: user?.email || '',
-        });
-      });
-      
-      await Promise.all(savePromises);
-      
-      toast.success('Import successful', {
-        description: `Imported ${importCount} responses`
-      });
-      
+        })
+      ));
+
+      toast.success('Import successful', { description: `Imported ${importCount} responses` });
       setImportDialogOpen(false);
       setImportFile(null);
     } catch (error) {
@@ -2030,7 +2009,7 @@ export default function IntakeNewRedesign() {
           <DialogHeader>
             <DialogTitle>Import Questionnaire Data</DialogTitle>
             <DialogDescription>
-              Upload a pipe-delimited file to update questionnaire responses. The file must match the export format.
+              Upload a <strong>.json</strong> export file to restore responses. Legacy <code>.txt</code> / <code>.csv</code> pipe-delimited files are also accepted.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -2039,7 +2018,7 @@ export default function IntakeNewRedesign() {
               <Input
                 id="import-file"
                 type="file"
-                accept=".txt,.csv"
+                accept=".json,.txt,.csv"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   setImportFile(file || null);
