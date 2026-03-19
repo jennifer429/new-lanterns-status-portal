@@ -2173,3 +2173,16 @@
 ## Bug Fix: Dashboard Count Mismatch (Mar 18, 2026)
 - [x] Fix Task List count showing 0% on dashboard but 3% on Task List page (verified: dashboard uses v.completed===true, matching API)
 - [x] Fix Testing count mismatch between dashboard and Testing Checklist page (verified: dashboard uses v.status==="Pass", matching Validation page)
+
+## SSO AD Configuration & Not Applicable Status (Mar 19, 2026)
+- [x] Add SSO Active Directory Configuration task to Task List (System Configuration section)
+- [x] Add link to SSO Instructions PDF from Specifications page
+- [x] Add SSO test to Testing Checklist (Connectivity Validation phase)
+- [x] Add "Not Applicable" (N/A) option for tasks (same as marking complete but excludes from count)
+- [x] Add "Not Applicable" status option for tests (alongside Pass/Fail/Not Tested)
+- [x] Update task UI to show N/A toggle/button
+- [x] Update test UI to show N/A toggle/button
+- [x] N/A items should be excluded from completion percentage calculations
+- [x] Update dashboard counts to account for N/A items
+- [x] Fix dashboard hardcoded totals (28 tests, 39 tasks) to match actual page counts
+- [x] Update CSV export to include N/A status for both tasks and tests

@@ -1,0 +1,2 @@
+ALTER TABLE `validationResults` MODIFY COLUMN `status` enum('Pass','Fail','Not Tested','Pending','N/A') NOT NULL DEFAULT 'Not Tested';--> statement-breakpoint
+ALTER TABLE `taskCompletion` ADD `notApplicable` int DEFAULT 0 NOT NULL;

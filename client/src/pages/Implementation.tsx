@@ -31,6 +31,8 @@ import {
   XSquare,
   CalendarCheck,
   Square,
+  Ban,
+  BookOpen,
 } from "lucide-react";
 import { useRoute, Link } from "wouter";
 import { cn } from "@/lib/utils";
@@ -47,6 +49,9 @@ interface TaskDef {
   description?: string;
   intakeLink?: string;
   intakeLinkLabel?: string;
+  /** Link to a specification/document page for reference */
+  specLink?: string;
+  specLinkLabel?: string;
 }
 
 interface SectionDef {
@@ -91,6 +96,7 @@ const SECTION_DEFS: SectionDef[] = [
       { id: "config:users",    title: "User Account Provisioning",   description: "All user accounts created with correct roles",             intakeLink: "/intake?section=config-files", intakeLinkLabel: "User List (CF.2)" },
       { id: "config:provider", title: "Provider Directory Upload",   description: "Referring and reading physician directory loaded",         intakeLink: "/intake?section=config-files", intakeLinkLabel: "Provider Directory (CF.6)" },
       { id: "config:worklist", title: "Worklist Configuration",      description: "Worklist filters, sorting, and display configured",        intakeLink: "/intake?section=hl7-dicom",    intakeLinkLabel: "HL7 & DICOM Settings" },
+      { id: "config:sso",      title: "SSO Active Directory Configuration", description: "Single Sign-On configured via Active Directory per SSO Instructions", specLink: "/specs", specLinkLabel: "SSO Instructions" },
     ],
   },
   {
@@ -222,6 +228,7 @@ export default function Implementation() {
 
   const [localOverrides, setLocalOverrides] = useState<Record<string, {
     completed?: boolean;
+    notApplicable?: boolean;
     completedAt?: Date | null;
     owner?: string;
     targetDate?: string;
@@ -277,19 +284,25 @@ export default function Implementation() {
     const s = taskMap[taskId];
     const l = localOverrides[taskId] ?? {};
     return {
-      completed:   l.completed   !== undefined ? l.completed   : (s?.completed   ?? false),
-      completedAt: l.completedAt !== undefined ? l.completedAt : (s?.completedAt ?? null),
-      owner:       l.owner       !== undefined ? l.owner       : (s?.owner       ?? ""),
-      targetDate:  l.targetDate  !== undefined ? l.targetDate  : (s?.targetDate  ?? ""),
-      notes:       l.notes       !== undefined ? l.notes       : (s?.notes       ?? ""),
+      completed:      l.completed      !== undefined ? l.completed      : (s?.completed      ?? false),
+      notApplicable:  l.notApplicable  !== undefined ? l.notApplicable  : (s?.notApplicable  ?? false),
+      completedAt:    l.completedAt    !== undefined ? l.completedAt    : (s?.completedAt    ?? null),
+      owner:          l.owner          !== undefined ? l.owner          : (s?.owner          ?? ""),
+      targetDate:     l.targetDate     !== undefined ? l.targetDate     : (s?.targetDate     ?? ""),
+      notes:          l.notes          !== undefined ? l.notes          : (s?.notes          ?? ""),
     };
   }
 
-  function save(taskId: string, sectionName: string, patch: { completed?: boolean; owner?: string; targetDate?: string; notes?: string }) {
+  function save(taskId: string, sectionName: string, patch: { completed?: boolean; notApplicable?: boolean; owner?: string; targetDate?: string; notes?: string }) {
     const current = getMerged(taskId);
     const merged = { ...current, ...patch };
     if (patch.completed !== undefined) {
       merged.completedAt = patch.completed ? new Date() : null;
+    }
+    // When marking N/A, also uncheck completed
+    if (patch.notApplicable) {
+      merged.completed = false;
+      merged.completedAt = null;
     }
     setLocalOverrides(prev => ({ ...prev, [taskId]: merged }));
     updateTask.mutate({
@@ -297,6 +310,7 @@ export default function Implementation() {
       taskId,
       sectionName,
       completed: merged.completed,
+      notApplicable: merged.notApplicable,
       owner: merged.owner || undefined,
       targetDate: merged.targetDate || undefined,
       notes: merged.notes || undefined,
@@ -383,7 +397,7 @@ export default function Implementation() {
           task.id,
           task.title,
           task.description || "",
-          merged.completed ? "Complete" : "Not Started",
+          merged.notApplicable ? "N/A" : merged.completed ? "Complete" : "Not Started",
           merged.owner || "",
           merged.targetDate || "",
           merged.completedAt ? new Date(merged.completedAt).toISOString().slice(0, 10) : "",
@@ -473,8 +487,9 @@ export default function Implementation() {
   }
 
   const allTaskIds = SECTION_DEFS.flatMap(s => s.tasks.map(t => t.id));
-  const total = allTaskIds.length;
-  const completed = allTaskIds.filter(id => getMerged(id).completed).length;
+  const naCount = allTaskIds.filter(id => getMerged(id).notApplicable).length;
+  const total = allTaskIds.length - naCount;
+  const completed = allTaskIds.filter(id => getMerged(id).completed && !getMerged(id).notApplicable).length;
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   return (
@@ -561,9 +576,10 @@ export default function Implementation() {
 
               {/* Sections */}
               {SECTION_DEFS.map((section, sIdx) => {
-                const sectionCompleted = section.tasks.filter(t => getMerged(t.id).completed).length;
-                const sectionTotal = section.tasks.length;
-                const allDone = sectionCompleted === sectionTotal;
+                const sectionNa = section.tasks.filter(t => getMerged(t.id).notApplicable).length;
+                const sectionCompleted = section.tasks.filter(t => getMerged(t.id).completed && !getMerged(t.id).notApplicable).length;
+                const sectionTotal = section.tasks.length - sectionNa;
+                const allDone = sectionTotal > 0 && sectionCompleted === sectionTotal;
                 const isCollapsed = !!collapsedSections[section.id];
 
                 return (
@@ -585,19 +601,26 @@ export default function Implementation() {
                           <h3 className="text-sm font-bold text-foreground mt-0.5">{section.title}</h3>
                         </div>
                       </div>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "text-xs font-semibold",
-                          allDone
-                            ? "border-emerald-500/40 text-emerald-400"
-                            : sectionCompleted > 0
-                              ? "border-primary/40 text-primary"
-                              : "border-border text-foreground"
+                      <div className="flex items-center gap-2">
+                        {sectionNa > 0 && (
+                          <Badge variant="outline" className="text-xs font-semibold border-amber-500/30 text-amber-400">
+                            {sectionNa} N/A
+                          </Badge>
                         )}
-                      >
-                        {sectionCompleted}/{sectionTotal} Complete
-                      </Badge>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-xs font-semibold",
+                            allDone
+                              ? "border-emerald-500/40 text-emerald-400"
+                              : sectionCompleted > 0
+                                ? "border-primary/40 text-primary"
+                                : "border-border text-foreground"
+                          )}
+                        >
+                          {sectionCompleted}/{sectionTotal} Complete
+                        </Badge>
+                      </div>
                     </button>
 
                     {/* Bulk action toolbar — visible when expanded */}
@@ -688,13 +711,14 @@ export default function Implementation() {
                         </div>
 
                         {section.tasks.map((task, tIdx) => {
-                          const { completed: done, completedAt, owner, targetDate, notes } = getMerged(task.id);
+                          const { completed: done, notApplicable: isNA, completedAt, owner, targetDate, notes } = getMerged(task.id);
                           const notesOpen = !!expandedNotes[task.id];
                           const intakeHref = task.intakeLink ? `/org/${slug}${task.intakeLink}` : null;
+                          const specHref = task.specLink ? `/org/${slug}${task.specLink}` : null;
                           const isSelected = selectedTaskIds.has(task.id);
 
                           return (
-                            <div key={task.id} className={cn(tIdx < section.tasks.length - 1 ? "border-b border-border/20" : "", isSelected && "bg-primary/5")}>
+                            <div key={task.id} className={cn(tIdx < section.tasks.length - 1 ? "border-b border-border/20" : "", isSelected && "bg-primary/5", isNA && "opacity-50")}>
                               {/* Main row */}
                               <div className="grid grid-cols-1 md:grid-cols-[24px_40px_1fr_120px_110px_110px_auto] gap-3 items-start px-5 py-3">
                                 {/* Row selection checkbox */}
@@ -712,33 +736,63 @@ export default function Implementation() {
                                 </div>
                                 {/* Done Checkbox */}
                                 <div className="flex justify-center pt-0.5">
-                                  <button
-                                    onClick={() => save(task.id, section.title, { completed: !done })}
-                                    className="focus:outline-none"
-                                    title={done ? "Mark incomplete" : "Mark complete"}
-                                  >
-                                    {done
-                                      ? <CheckCircle2 className="w-6 h-6 text-green-500 hover:text-green-400 transition-colors" />
-                                      : <Circle className="w-6 h-6 text-muted-foreground/40 hover:text-primary/60 transition-colors cursor-pointer" />
-                                    }
-                                  </button>
+                                  {isNA ? (
+                                    <Ban className="w-6 h-6 text-muted-foreground/40" />
+                                  ) : (
+                                    <button
+                                      onClick={() => save(task.id, section.title, { completed: !done })}
+                                      className="focus:outline-none"
+                                      title={done ? "Mark incomplete" : "Mark complete"}
+                                    >
+                                      {done
+                                        ? <CheckCircle2 className="w-6 h-6 text-green-500 hover:text-green-400 transition-colors" />
+                                        : <Circle className="w-6 h-6 text-muted-foreground/40 hover:text-primary/60 transition-colors cursor-pointer" />
+                                      }
+                                    </button>
+                                  )}
                                 </div>
 
-                                {/* Task name + description + intake link */}
+                                {/* Task name + description + intake link + spec link + N/A toggle */}
                                 <div className="space-y-0.5">
-                                  <p className="text-sm font-medium text-foreground">{task.title}</p>
-                                  {task.description && (
-                                    <p className="text-xs text-muted-foreground">{task.description}</p>
-                                  )}
-                                  {intakeHref && (
-                                    <a
-                                      href={intakeHref}
-                                      className="inline-flex items-center gap-1 text-xs text-primary/60 hover:text-primary transition-colors mt-0.5"
+                                  <div className="flex items-center gap-2">
+                                    <p className={cn("text-sm font-medium text-foreground", isNA && "line-through")}>{task.title}</p>
+                                    <button
+                                      onClick={() => save(task.id, section.title, { notApplicable: !isNA })}
+                                      className={cn(
+                                        "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider border transition-all",
+                                        isNA
+                                          ? "bg-amber-500/20 text-amber-400 border-amber-500/40 hover:bg-amber-500/30"
+                                          : "bg-transparent text-muted-foreground/40 border-border/30 hover:text-amber-400 hover:border-amber-500/40"
+                                      )}
+                                      title={isNA ? "Remove N/A — include in progress" : "Mark as Not Applicable"}
                                     >
-                                      <ExternalLink className="w-3 h-3" />
-                                      {task.intakeLinkLabel}
-                                    </a>
+                                      <Ban className="w-2.5 h-2.5" />
+                                      N/A
+                                    </button>
+                                  </div>
+                                  {task.description && (
+                                    <p className={cn("text-xs text-muted-foreground", isNA && "line-through")}>{task.description}</p>
                                   )}
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    {intakeHref && (
+                                      <a
+                                        href={intakeHref}
+                                        className="inline-flex items-center gap-1 text-xs text-primary/60 hover:text-primary transition-colors"
+                                      >
+                                        <ExternalLink className="w-3 h-3" />
+                                        {task.intakeLinkLabel}
+                                      </a>
+                                    )}
+                                    {specHref && (
+                                      <a
+                                        href={specHref}
+                                        className="inline-flex items-center gap-1 text-xs text-blue-400/70 hover:text-blue-400 transition-colors"
+                                      >
+                                        <BookOpen className="w-3 h-3" />
+                                        {task.specLinkLabel}
+                                      </a>
+                                    )}
+                                  </div>
                                   {/* Mobile: owner + dates + comment toggle */}
                                   <div className="md:hidden flex flex-wrap items-center gap-3 mt-2">
                                     <InlineEdit
@@ -875,12 +929,21 @@ export default function Implementation() {
                       </div>
                       <span className="font-medium text-foreground">{total - completed}</span>
                     </div>
+                    {naCount > 0 && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-amber-500/40" />
+                          <span className="text-foreground">Not Applicable</span>
+                        </div>
+                        <span className="font-medium text-amber-400">{naCount}</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Next Up */}
                   {(() => {
                     const remaining = SECTION_DEFS.flatMap(s =>
-                      s.tasks.filter(t => !getMerged(t.id).completed)
+                      s.tasks.filter(t => !getMerged(t.id).completed && !getMerged(t.id).notApplicable)
                     ).slice(0, 3);
 
                     if (remaining.length === 0) return (

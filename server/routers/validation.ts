@@ -54,7 +54,7 @@ export const validationRouter = router({
         organizationSlug: z.string(),
         testKey: z.string(),
         actual: z.string().optional(),
-        status: z.enum(["Pass", "Fail", "Not Tested", "Pending"]),
+        status: z.enum(["Pass", "Fail", "Not Tested", "Pending", "N/A"]),
         signOff: z.string().optional(),
         notes: z.string().optional(),
         testedDate: z.string().optional(),

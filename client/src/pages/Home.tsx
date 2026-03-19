@@ -435,7 +435,8 @@ export default function Home() {
   // Validation stats from real data
   const valResults = validationData || {};
   const valEntries = Object.values(valResults) as any[];
-  const valTotal = 18;
+  const valNaCount = valEntries.filter((v: any) => v.status === "N/A").length;
+  const valTotal = 28 - valNaCount; // 28 tests total (4+5+4+15 across 4 phases)
   const valCompleted = valEntries.filter(
     (v: any) => v.status === "Pass"
   ).length;
@@ -443,9 +444,10 @@ export default function Home() {
   // Implementation stats from real data
   const implResults = implementationData || {};
   const implEntries = Object.values(implResults) as any[];
-  const implTotal = 14;
+  const implNaCount = implEntries.filter((v: any) => v.notApplicable === true).length;
+  const implTotal = 39 - implNaCount; // 39 tasks total (5+6+5+3+5+4+11 across 7 phases)
   const implCompleted = implEntries.filter(
-    (v: any) => v.completed === true
+    (v: any) => v.completed === true && v.notApplicable !== true
   ).length;
 
   // Overall progress (weighted: questionnaire 40%, testing 30%, implementation 30%)
