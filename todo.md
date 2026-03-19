@@ -2155,3 +2155,21 @@
 - [x] All user creation endpoints already check for existing email before insert
 - [x] db.ts upsert uses onDuplicateKeyUpdate for OAuth flow
 - [ ] Verify login works after cleanup
+
+## Fix Duplicate Sections on Org Dashboard (Mar 18, 2026)
+- [x] Remove duplicate Connectivity cards/links on org dashboard
+- [x] Remove duplicate Notion/Specs cards/links on org dashboard
+
+## Dashboard Top Section Redesign (Mar 18, 2026)
+- [x] Connectivity card: expandable with inline Notion connectivity table, download/delete actions
+- [x] Architecture card: compact thumbnail strip with horizontal scroll, click-to-enlarge lightbox, download/delete per diagram
+- [x] Specifications card: show NL standard docs + site-uploaded files, download/delete actions
+- [x] Arrange all 3 cards in a row above the Implementation Progress bar
+- [x] Remove old collapsible Architecture Diagram section
+- [x] Remove old collapsible Connectivity section (already done)
+- [ ] Add /org/:slug/connectivity route and page as fallback
+- [ ] DO NOT modify any auth/password/user code
+
+## Bug Fix: Dashboard Count Mismatch (Mar 18, 2026)
+- [x] Fix Task List count showing 0% on dashboard but 3% on Task List page (verified: dashboard uses v.completed===true, matching API)
+- [x] Fix Testing count mismatch between dashboard and Testing Checklist page (verified: dashboard uses v.status==="Pass", matching Validation page)

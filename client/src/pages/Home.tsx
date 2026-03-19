@@ -1,7 +1,8 @@
 /**
  * Site Dashboard — rich command-center view for a specific organization.
- * Shows: overall progress hero, workflow phase cards, architecture diagram,
- * connectivity info, questionnaire breakdown, validation stats, implementation stats, specs.
+ * Shows: 3 expandable resource cards (Connectivity, Architecture, Specs),
+ * overall progress hero, workflow phase cards.
+ * Designed to fit in a single viewport without scrolling.
  */
 
 import { Button } from "@/components/ui/button";
@@ -9,32 +10,24 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ConnectivityTable, type ConnectivityRow } from "@/components/ConnectivityTable";
 import { Badge } from "@/components/ui/badge";
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
   ClipboardList,
   FileText,
   CheckCircle2,
-  Circle,
   ExternalLink,
   Download,
   ArrowRight,
-  Pencil,
   BookOpen,
   ShieldCheck,
   Wrench,
   Network,
   Image as ImageIcon,
-  Clock,
   ChevronDown,
   Trash2,
   Activity,
   ArrowUpRight,
   Loader2,
-  AlertCircle,
-  Sparkles,
+  X,
+  Maximize2,
 } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -44,49 +37,6 @@ import { calculateProgress } from "@shared/progressCalculation";
 import { PhiDisclaimer } from "@/components/PhiDisclaimer";
 import { UserMenu } from "@/components/UserMenu";
 import { cn } from "@/lib/utils";
-
-// ── Collapsible Section (with smooth Radix animation) ──────────────────────
-function CollapsibleSection({
-  title,
-  icon,
-  badge,
-  defaultOpen = false,
-  children,
-}: {
-  title: string;
-  icon: React.ReactNode;
-  badge?: React.ReactNode;
-  defaultOpen?: boolean;
-  children: React.ReactNode;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <Collapsible open={open} onOpenChange={setOpen}>
-      <Card className="card-elevated overflow-hidden">
-        <CollapsibleTrigger asChild>
-          <button className="w-full px-5 py-4 flex items-center justify-between hover:bg-accent/50 transition-colors">
-            <div className="flex items-center gap-3">
-              {icon}
-              <span className="text-base font-semibold tracking-tight">{title}</span>
-            </div>
-            <div className="flex items-center gap-3">
-              {badge}
-              <ChevronDown
-                className={cn(
-                  "w-5 h-5 text-muted-foreground transition-transform duration-200",
-                  open && "rotate-180"
-                )}
-              />
-            </div>
-          </button>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <div className="border-t border-border/40">{children}</div>
-        </CollapsibleContent>
-      </Card>
-    </Collapsible>
-  );
-}
 
 // ── Progress Ring (SVG) ─────────────────────────────────────────────────────
 function ProgressRing({
@@ -288,10 +238,49 @@ function WorkflowPhaseCard({
   );
 }
 
+// ── Lightbox for architecture diagrams ──────────────────────────────────────
+function DiagramLightbox({
+  src,
+  alt,
+  onClose,
+}: {
+  src: string;
+  alt: string;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div className="relative max-w-[90vw] max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+        <button
+          onClick={onClose}
+          className="absolute -top-3 -right-3 z-10 bg-background/90 border border-border rounded-full p-1.5 hover:bg-background transition-colors"
+        >
+          <X className="w-4 h-4" />
+        </button>
+        <img
+          src={src}
+          alt={alt}
+          className="max-w-full max-h-[85vh] object-contain rounded-lg border border-border/30"
+        />
+        <div className="text-center mt-2 text-sm text-muted-foreground">{alt}</div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Component ──────────────────────────────────────────────────────────
 export default function Home() {
   const [, params] = useRoute("/org/:slug");
   const orgSlug = params?.slug || "demo";
+
+  // Expandable card states
+  const [connectivityOpen, setConnectivityOpen] = useState(false);
+  const [architectureOpen, setArchitectureOpen] = useState(false);
+  const [specsOpen, setSpecsOpen] = useState(false);
+  const [lightboxSrc, setLightboxSrc] = useState<{ src: string; alt: string } | null>(null);
 
   // Fetch organization data
   const { data: organization, isLoading: orgLoading } =
@@ -443,16 +432,6 @@ export default function Home() {
     (section: any) => section.completed === section.total
   ).length;
 
-  // Section progress for display
-  const sectionProgress = Object.entries(progress.sectionProgress).map(
-    ([name, stats]: [string, any]) => ({
-      name,
-      isComplete: stats.total > 0 && stats.completed === stats.total,
-      completed: stats.completed,
-      total: stats.total,
-    })
-  );
-
   // Validation stats from real data
   const valResults = validationData || {};
   const valEntries = Object.values(valResults) as any[];
@@ -466,7 +445,7 @@ export default function Home() {
   const implEntries = Object.values(implResults) as any[];
   const implTotal = 14;
   const implCompleted = implEntries.filter(
-    (v: any) => v.status === "complete"
+    (v: any) => v.completed === true
   ).length;
 
   // Overall progress (weighted: questionnaire 40%, testing 30%, implementation 30%)
@@ -494,16 +473,33 @@ export default function Home() {
   const orgName = organization?.name || "Your Organization";
   const partnerName = organization?.clientName || "";
 
+  // Group specs by category for the expandable card
+  const specsByCategory = new Map<string, any[]>();
+  for (const spec of specs) {
+    const cat = (spec as any).category || "General";
+    if (!specsByCategory.has(cat)) specsByCategory.set(cat, []);
+    specsByCategory.get(cat)!.push(spec);
+  }
+
   return (
     <div className="min-h-screen bg-background animate-page-in">
+      {/* Lightbox overlay */}
+      {lightboxSrc && (
+        <DiagramLightbox
+          src={lightboxSrc.src}
+          alt={lightboxSrc.alt}
+          onClose={() => setLightboxSrc(null)}
+        />
+      )}
+
       {/* ── Glass Header ── */}
       <header className="header-glass sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
               src="/images/new-lantern-logo.png"
               alt="New Lantern"
-              className="h-10"
+              className="h-9"
             />
           </div>
           <div className="flex items-center gap-3">
@@ -521,12 +517,19 @@ export default function Home() {
       <PhiDisclaimer />
 
       {/* Dashboard Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 space-y-3">
-        {/* ── Quick Links: Connectivity & Specs ── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {/* Connectivity Card */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 space-y-3">
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            TOP ROW: 3 Expandable Resource Cards
+            ═══════════════════════════════════════════════════════════════════ */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+
+          {/* ── 1. Connectivity Card ── */}
           <Card className="card-elevated overflow-hidden">
-            <div className="px-4 py-3 flex items-center justify-between">
+            <button
+              onClick={() => setConnectivityOpen(!connectivityOpen)}
+              className="w-full px-4 py-3 flex items-center justify-between hover:bg-accent/30 transition-colors"
+            >
               <div className="flex items-center gap-2.5">
                 <div className="p-1.5 rounded-lg bg-primary/10">
                   <Network className="w-4 h-4 text-primary" />
@@ -538,48 +541,250 @@ export default function Home() {
                   <Badge variant="outline" className="text-[10px] text-muted-foreground gap-1">
                     <Loader2 className="w-3 h-3 animate-spin" /> Loading
                   </Badge>
-                ) : connRows.length ? (
+                ) : connRows.length > 0 ? (
                   <Badge variant="outline" className="text-[10px] border-green-500/40 text-green-400">
-                    {connRows.length} connections
+                    {connRows.length}
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="text-[10px] text-muted-foreground">Not set</Badge>
+                  <Badge variant="outline" className="text-[10px] text-muted-foreground">0</Badge>
                 )}
-                <Link href={`/org/${orgSlug}`}>
-                  <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={(e) => {
-                    e.preventDefault();
-                    // Scroll to connectivity section below
-                    document.getElementById('connectivity-section')?.scrollIntoView({ behavior: 'smooth' });
-                  }}>
-                    View <ArrowRight className="w-3 h-3 ml-1" />
-                  </Button>
-                </Link>
+                <ChevronDown
+                  className={cn(
+                    "w-4 h-4 text-muted-foreground transition-transform duration-200",
+                    connectivityOpen && "rotate-180"
+                  )}
+                />
               </div>
-            </div>
+            </button>
+            {connectivityOpen && (
+              <div className="border-t border-border/40 max-h-[50vh] overflow-auto">
+                <div className="p-3">
+                  {connectivityLoading ? (
+                    <div className="flex items-center justify-center py-6">
+                      <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : connRows.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <ConnectivityTable rows={connRows} onChange={handleConnChange} />
+                      {connSaving && (
+                        <div className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                          <Loader2 className="w-3 h-3 animate-spin" /> Saving to Notion...
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-xs text-muted-foreground mb-2">No connectivity data yet</p>
+                      <Link href={`/org/${orgSlug}/intake`}>
+                        <Button size="sm" variant="outline" className="text-xs h-7">
+                          <ArrowRight className="w-3 h-3 mr-1" /> Add in Questionnaire
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
+                </div>
+                {connRows.length > 0 && (
+                  <div className="px-3 pb-2 flex items-center justify-end gap-2">
+                    <Link href={`/org/${orgSlug}/intake`}>
+                      <Button size="sm" variant="ghost" className="text-xs h-7 text-muted-foreground">
+                        <ExternalLink className="w-3 h-3 mr-1" /> Full View
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+              </div>
+            )}
           </Card>
 
-          {/* Specifications Card */}
-          <Link href={`/org/${orgSlug}/specs`}>
-            <Card className="card-elevated card-clickable overflow-hidden cursor-pointer group">
-              <div className="px-4 py-3 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-1.5 rounded-lg bg-primary/10">
-                    <BookOpen className="w-4 h-4 text-primary" />
-                  </div>
-                  <span className="text-sm font-semibold">Specifications</span>
+          {/* ── 2. Architecture Card ── */}
+          <Card className="card-elevated overflow-hidden">
+            <button
+              onClick={() => setArchitectureOpen(!architectureOpen)}
+              className="w-full px-4 py-3 flex items-center justify-between hover:bg-accent/30 transition-colors"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-primary/10">
+                  <ImageIcon className="w-4 h-4 text-primary" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="text-[10px] text-muted-foreground font-semibold">
-                    {specs.length} docs
+                <span className="text-sm font-semibold">Architecture</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {diagramFiles.length > 0 ? (
+                  <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[10px] font-semibold">
+                    {diagramFiles.length} file{diagramFiles.length > 1 ? "s" : ""}
                   </Badge>
-                  <ArrowUpRight className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                ) : (
+                  <Badge variant="outline" className="text-[10px] text-muted-foreground">None</Badge>
+                )}
+                <ChevronDown
+                  className={cn(
+                    "w-4 h-4 text-muted-foreground transition-transform duration-200",
+                    architectureOpen && "rotate-180"
+                  )}
+                />
+              </div>
+            </button>
+            {architectureOpen && (
+              <div className="border-t border-border/40">
+                <div className="p-3">
+                  {diagramFiles.length > 0 ? (
+                    <div className="flex gap-3 overflow-x-auto pb-1">
+                      {diagramFiles.map((file: any) => {
+                        const isImage = /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(file.fileName);
+                        return (
+                          <div key={file.id} className="flex-shrink-0 group/thumb relative">
+                            {isImage ? (
+                              <div
+                                className="w-32 h-24 rounded-lg border border-border/50 overflow-hidden bg-muted/10 cursor-pointer relative"
+                                onClick={() => setLightboxSrc({ src: file.fileUrl, alt: file.fileName })}
+                              >
+                                <img
+                                  src={file.fileUrl}
+                                  alt={file.fileName}
+                                  className="w-full h-full object-cover"
+                                />
+                                <div className="absolute inset-0 bg-black/0 group-hover/thumb:bg-black/30 transition-colors flex items-center justify-center">
+                                  <Maximize2 className="w-4 h-4 text-white opacity-0 group-hover/thumb:opacity-100 transition-opacity" />
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="w-32 h-24 rounded-lg border border-border/50 bg-muted/10 flex items-center justify-center">
+                                <FileText className="w-6 h-6 text-muted-foreground" />
+                              </div>
+                            )}
+                            <div className="mt-1 flex items-center justify-between">
+                              <span className="text-[10px] text-muted-foreground truncate max-w-[80px]">{file.fileName}</span>
+                              <div className="flex items-center gap-0.5">
+                                <a href={file.fileUrl} download={file.fileName} onClick={(e) => e.stopPropagation()}>
+                                  <Button size="sm" variant="ghost" className="h-5 w-5 p-0">
+                                    <Download className="w-3 h-3 text-muted-foreground" />
+                                  </Button>
+                                </a>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-5 w-5 p-0"
+                                  onClick={() => handleRemoveDiagram(file.id)}
+                                >
+                                  <Trash2 className="w-3 h-3 text-destructive" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4">
+                      <ImageIcon className="w-6 h-6 text-muted-foreground/40 mx-auto mb-2" />
+                      <p className="text-xs text-muted-foreground mb-2">No diagrams uploaded</p>
+                      <Link href={`/org/${orgSlug}/intake`}>
+                        <Button size="sm" variant="outline" className="text-xs h-7">
+                          <ArrowRight className="w-3 h-3 mr-1" /> Upload in Questionnaire
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
                 </div>
               </div>
-            </Card>
-          </Link>
+            )}
+          </Card>
+
+          {/* ── 3. Specifications Card ── */}
+          <Card className="card-elevated overflow-hidden">
+            <button
+              onClick={() => setSpecsOpen(!specsOpen)}
+              className="w-full px-4 py-3 flex items-center justify-between hover:bg-accent/30 transition-colors"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-primary/10">
+                  <BookOpen className="w-4 h-4 text-primary" />
+                </div>
+                <span className="text-sm font-semibold">Specifications</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-[10px] text-muted-foreground font-semibold">
+                  {specs.length} docs
+                </Badge>
+                <ChevronDown
+                  className={cn(
+                    "w-4 h-4 text-muted-foreground transition-transform duration-200",
+                    specsOpen && "rotate-180"
+                  )}
+                />
+              </div>
+            </button>
+            {specsOpen && (
+              <div className="border-t border-border/40 max-h-[50vh] overflow-auto">
+                <div className="p-3 space-y-2">
+                  {/* NL Standard Docs */}
+                  {specs.length > 0 ? (
+                    <>
+                      {Array.from(specsByCategory.entries()).map(([category, catSpecs]) => (
+                        <div key={category}>
+                          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">{category}</div>
+                          {catSpecs.map((spec: any) => (
+                            <div key={spec.id} className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-muted/30 transition-colors group/spec">
+                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                                <FileText className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                                <span className="text-xs font-medium truncate">{spec.title}</span>
+                              </div>
+                              {spec.fileUrl && (
+                                <a href={spec.fileUrl} target="_blank" rel="noopener noreferrer" className="flex-shrink-0">
+                                  <Button size="sm" variant="ghost" className="h-6 px-1.5 opacity-0 group-hover/spec:opacity-100 transition-opacity">
+                                    <Download className="w-3 h-3" />
+                                  </Button>
+                                </a>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    <p className="text-xs text-muted-foreground text-center py-3">No specifications available</p>
+                  )}
+
+                  {/* Site-uploaded files */}
+                  {allFiles.filter((f: any) => f.questionId !== "ARCH.diagram").length > 0 && (
+                    <div>
+                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1 mt-2">Site Uploads</div>
+                      {allFiles
+                        .filter((f: any) => f.questionId !== "ARCH.diagram")
+                        .slice(0, 5)
+                        .map((file: any) => (
+                          <div key={file.id} className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-muted/30 transition-colors group/file">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <FileText className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                              <span className="text-xs font-medium truncate">{file.fileName}</span>
+                            </div>
+                            <div className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover/file:opacity-100 transition-opacity">
+                              <a href={file.fileUrl} download={file.fileName}>
+                                <Button size="sm" variant="ghost" className="h-6 px-1.5">
+                                  <Download className="w-3 h-3" />
+                                </Button>
+                              </a>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+                <div className="px-3 pb-2 flex items-center justify-end">
+                  <Link href={`/org/${orgSlug}/specs`}>
+                    <Button size="sm" variant="ghost" className="text-xs h-7 text-muted-foreground">
+                      <ExternalLink className="w-3 h-3 mr-1" /> View All
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            )}
+          </Card>
         </div>
 
-        {/* ── Hero: Overall Progress ── */}
+        {/* ═══════════════════════════════════════════════════════════════════
+            IMPLEMENTATION PROGRESS HERO
+            ═══════════════════════════════════════════════════════════════════ */}
         <Card className="card-elevated overflow-hidden">
           {/* Top accent gradient */}
           <div className="h-1 bg-gradient-to-r from-primary via-primary/60 to-emerald-500/40" />
@@ -674,7 +879,9 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        {/* ── Workflow Phase Cards ── */}
+        {/* ═══════════════════════════════════════════════════════════════════
+            WORKFLOW PHASE CARDS
+            ═══════════════════════════════════════════════════════════════════ */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <WorkflowPhaseCard
             title="Questionnaire"
@@ -708,165 +915,8 @@ export default function Home() {
           />
         </div>
 
-        {/* ── Architecture Diagram ── */}
-        <CollapsibleSection
-          title="Architecture Diagram"
-          icon={<ImageIcon className="w-5 h-5 text-primary" />}
-          badge={
-            diagramFiles.length > 0 ? (
-              <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-xs font-semibold">
-                Uploaded
-              </Badge>
-            ) : (
-              <Badge
-                variant="outline"
-                className="text-xs text-muted-foreground"
-              >
-                Not Uploaded
-              </Badge>
-            )
-          }
-          defaultOpen={diagramFiles.length > 0}
-        >
-          <CardContent className="p-5">
-            {diagramFiles.length > 0 ? (
-              <div className="space-y-4">
-                {diagramFiles.map((file: any) => {
-                  const isImage = /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(
-                    file.fileName
-                  );
-                  return (
-                    <div key={file.id}>
-                      {isImage ? (
-                        <div className="border border-border/50 rounded-xl overflow-hidden bg-muted/10">
-                          <img
-                            src={file.fileUrl}
-                            alt={file.fileName}
-                            className="w-full max-h-[600px] object-contain"
-                          />
-                          <div className="flex items-center justify-between px-4 py-2.5 bg-muted/20 border-t border-border/30">
-                            <span className="text-sm text-muted-foreground">
-                              {file.fileName}
-                            </span>
-                            <div className="flex items-center gap-2">
-                              <a href={file.fileUrl} download={file.fileName}>
-                                <Button size="sm" variant="ghost" className="text-xs">
-                                  <Download className="w-4 h-4 mr-1" /> Download
-                                </Button>
-                              </a>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                                onClick={() => handleRemoveDiagram(file.id)}
-                              >
-                                <Trash2 className="w-4 h-4 mr-1" /> Remove
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-between p-4 border border-border/50 rounded-xl bg-muted/10">
-                          <div className="flex items-center gap-3">
-                            <FileText className="w-5 h-5 text-muted-foreground" />
-                            <span className="text-sm font-medium">
-                              {file.fileName}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <a href={file.fileUrl} download={file.fileName}>
-                              <Button size="sm" variant="ghost" className="text-xs">
-                                <Download className="w-4 h-4 mr-1" /> Download
-                              </Button>
-                            </a>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={() => handleRemoveDiagram(file.id)}
-                            >
-                              <Trash2 className="w-4 h-4 mr-1" /> Remove
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-14 border-2 border-dashed border-border/40 rounded-xl">
-                <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-muted/30 flex items-center justify-center">
-                  <ImageIcon className="w-7 h-7 text-muted-foreground/40" />
-                </div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">
-                  No architecture diagram uploaded yet
-                </p>
-                <p className="text-xs text-muted-foreground/70 mb-4">
-                  Upload your network diagram in the Questionnaire
-                </p>
-                <Link href={`/org/${orgSlug}/intake`}>
-                  <Button size="sm" variant="outline" className="text-xs">
-                    <ArrowRight className="w-4 h-4 mr-2" />
-                    Go to Questionnaire
-                  </Button>
-                </Link>
-              </div>
-            )}
-          </CardContent>
-        </CollapsibleSection>
-
-        {/* ── Connectivity (live Notion) ── */}
-        <div id="connectivity-section">
-        <CollapsibleSection
-          title="Connectivity"
-          icon={<Network className="w-5 h-5 text-primary" />}
-          badge={
-            connectivityLoading ? (
-              <Badge variant="outline" className="text-xs text-muted-foreground gap-1">
-                <Loader2 className="w-3 h-3 animate-spin" /> Loading…
-              </Badge>
-            ) : connRows.length ? (
-              <Badge variant="outline" className={cn("text-xs gap-1", connSaving ? "text-muted-foreground" : "border-green-500/40 text-green-400")}>
-                {connSaving && <Loader2 className="w-3 h-3 animate-spin" />}
-                {connRows.length} {connRows.length === 1 ? "connection" : "connections"}
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="text-xs text-muted-foreground">Notion</Badge>
-            )
-          }
-          defaultOpen={false}
-        >
-          <CardContent className="p-0">
-            {connectivityData?.error ? (
-              <div className="flex items-center gap-3 py-6 px-5 rounded-b-xl bg-destructive/10 border-t border-destructive/20">
-                <AlertCircle className="w-4 h-4 text-destructive shrink-0" />
-                <p className="text-sm text-destructive">Notion error: {connectivityData.error}</p>
-              </div>
-            ) : !connectivityData?.configured ? (
-              <div className="flex flex-col items-center justify-center py-10 gap-3 mx-5 my-5 border-2 border-dashed border-border/40 rounded-xl bg-muted/10">
-                <Network className="w-7 h-7 text-muted-foreground/40" />
-                <div className="text-center">
-                  <p className="text-sm font-medium">Notion API key not configured</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Set NOTION_API_KEY to enable live connectivity editing</p>
-                </div>
-              </div>
-            ) : (
-              <ConnectivityTable
-                rows={connRows}
-                systems={(() => { try { const r = existingResponses?.find((r: any) => r.questionId === 'ARCH.systems'); return r?.response ? JSON.parse(r.response) : []; } catch { return []; } })()}
-                onChange={handleConnChange}
-              />
-            )}
-          </CardContent>
-        </CollapsibleSection>
-        </div>
-
-        {/* ── Specifications (inline section removed — now a separate page via /org/:slug/specs) ── */}
-
-
         {/* Bottom spacer */}
-        <div className="h-4" />
+        <div className="h-2" />
       </div>
     </div>
   );
