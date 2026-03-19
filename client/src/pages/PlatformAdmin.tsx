@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp, AlertTriangle, AlertCircle, Info, Image, CheckSquare, BarChart3, Copy, Check, Clock, ChevronsUpDown, ChevronLeft, ChevronRight, Settings, ChevronDown, ListChecks, TestTube2, History } from "lucide-react";
+import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp, AlertTriangle, AlertCircle, Info, Image, CheckSquare, BarChart3, Copy, Check, Clock, ChevronsUpDown, ChevronLeft, ChevronRight, Settings, ChevronDown, ListChecks, TestTube2, History, Search, X } from "lucide-react";
 import { questionnaireSections } from "@shared/questionnaireData";
 import { TYPE_COLORS, type IntegrationSystem } from "@/components/IntegrationWorkflows";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -137,6 +137,10 @@ export default function PlatformAdmin() {
   // Sorting state for organizations
   const [orgSortBy, setOrgSortBy] = useState<"name" | "completion" | "partner">("name");
   const [orgSortOrder, setOrgSortOrder] = useState<"asc" | "desc">("asc");
+
+  // Dashboard filter state
+  const [dashboardPartnerFilter, setDashboardPartnerFilter] = useState<number | null>(null);
+  const [dashboardSiteSearch, setDashboardSiteSearch] = useState("");
 
   // Access control: Must be an admin (any admin - platform or partner)
   useEffect(() => {
@@ -870,6 +874,13 @@ export default function PlatformAdmin() {
   const activeOrgs = sortOrgs(orgs?.filter(o => o.status === "active"));
   const completedOrgs = sortOrgs(orgs?.filter(o => o.status === "completed"));
   const inactiveOrgs = sortOrgs(orgs?.filter(o => o.status === "inactive" || o.status === "paused"));
+
+  const filteredActiveOrgs = activeOrgs.filter(org => {
+    const matchesPartner = dashboardPartnerFilter === null || org.clientId === dashboardPartnerFilter;
+    const matchesSite = dashboardSiteSearch.trim() === "" ||
+      org.name.toLowerCase().includes(dashboardSiteSearch.trim().toLowerCase());
+    return matchesPartner && matchesSite;
+  });
   
   // Separate active and inactive users based on isActive field
   // isActive: 1 = active, 0 = deactivated (works for all user types including admins)
@@ -1044,10 +1055,80 @@ export default function PlatformAdmin() {
 
         {activeTab === "impl-dashboard" && (
           <>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold">Task List Dashboard</h2>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>{activeOrgs.length} active organizations</span>
+            <div className="flex flex-col gap-3 mb-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold">Task List Dashboard</h2>
+                <div className="text-sm text-muted-foreground">
+                  {(dashboardPartnerFilter !== null || dashboardSiteSearch.trim())
+                    ? `${filteredActiveOrgs.length} of ${activeOrgs.length} organizations`
+                    : `${activeOrgs.length} active organizations`}
+                </div>
+              </div>
+
+              {/* Filters */}
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Partner filter chips — only shown to platform admins with multiple partners */}
+                {isPlatformAdmin && clients && clients.length > 1 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      onClick={() => setDashboardPartnerFilter(null)}
+                      className={cn(
+                        "px-3 py-1 rounded-full text-xs font-medium transition-colors border",
+                        dashboardPartnerFilter === null
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-muted/40 text-muted-foreground border-border hover:bg-muted/70"
+                      )}
+                    >
+                      All Partners
+                    </button>
+                    {clients.map(client => (
+                      <button
+                        key={client.id}
+                        onClick={() => setDashboardPartnerFilter(
+                          dashboardPartnerFilter === client.id ? null : client.id
+                        )}
+                        className={cn(
+                          "px-3 py-1 rounded-full text-xs font-medium transition-colors border",
+                          dashboardPartnerFilter === client.id
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-muted/40 text-muted-foreground border-border hover:bg-muted/70"
+                        )}
+                      >
+                        {client.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Site search */}
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Search sites…"
+                    value={dashboardSiteSearch}
+                    onChange={e => setDashboardSiteSearch(e.target.value)}
+                    className="pl-8 pr-8 h-8 text-xs rounded-md border border-border bg-muted/20 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary w-48"
+                  />
+                  {dashboardSiteSearch && (
+                    <button
+                      onClick={() => setDashboardSiteSearch("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Clear all */}
+                {(dashboardPartnerFilter !== null || dashboardSiteSearch.trim()) && (
+                  <button
+                    onClick={() => { setDashboardPartnerFilter(null); setDashboardSiteSearch(""); }}
+                    className="text-xs text-muted-foreground underline hover:no-underline"
+                  >
+                    Clear filters
+                  </button>
+                )}
               </div>
             </div>
             
@@ -1076,14 +1157,14 @@ export default function PlatformAdmin() {
                     </tr>
                   </thead>
                   <tbody>
-                    {activeOrgs.length === 0 ? (
+                    {filteredActiveOrgs.length === 0 ? (
                       <tr>
                         <td colSpan={isPlatformAdmin ? 7 : 6} className="text-center py-10 text-muted-foreground text-xs italic">
-                          No active organizations
+                          {activeOrgs.length === 0 ? "No active organizations" : "No organizations match the current filter"}
                         </td>
                       </tr>
                     ) : (
-                      activeOrgs.map(org => {
+                      filteredActiveOrgs.map(org => {
                         const orgMetrics = metricsMap[org.id];
                         const partnerName = org.clientId ? clientMap[org.clientId] : "—";
                         const sectionProgress = transformSectionProgress(orgMetrics?.sectionProgress);
