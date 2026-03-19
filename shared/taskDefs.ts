@@ -4,6 +4,8 @@ export interface TaskDef {
   description?: string;
   intakeLink?: string;
   intakeLinkLabel?: string;
+  specLink?: string;
+  specLinkLabel?: string;
 }
 
 export interface SectionDef {
@@ -48,6 +50,7 @@ export const SECTION_DEFS: SectionDef[] = [
       { id: "config:users",    title: "User Account Provisioning",   description: "All user accounts created with correct roles",             intakeLink: "/intake?section=config-files", intakeLinkLabel: "User List (CF.2)" },
       { id: "config:provider", title: "Provider Directory Upload",   description: "Referring and reading physician directory loaded",         intakeLink: "/intake?section=config-files", intakeLinkLabel: "Provider Directory (CF.6)" },
       { id: "config:worklist", title: "Worklist Configuration",      description: "Worklist filters, sorting, and display configured",        intakeLink: "/intake?section=hl7-dicom",    intakeLinkLabel: "HL7 & DICOM Settings" },
+      { id: "config:sso",      title: "SSO Active Directory Configuration", description: "Single Sign-On configured via Active Directory per SSO Instructions", specLink: "/specs", specLinkLabel: "SSO Instructions" },
     ],
   },
   {

@@ -2134,3 +2134,55 @@
 - [x] CSV import processes client-side and updates state directly (no server endpoint needed)
 - [x] Include organization name and export date in the CSV filename
 - [x] Write vitest tests for CSV utility functions
+
+## NL Specifications Access from Org Dashboard (Mar 18, 2026)
+- [x] Add Specifications link to the org dashboard UserMenu dropdown
+- [x] Create dedicated /org/:slug/specs page with search, category grouping, and download buttons
+- [x] Register route in App.tsx
+- [x] Ensure the specs page works for non-admin users (read-only view)
+
+## Dashboard Layout Reorganization (Mar 18, 2026)
+- [x] Move Connectivity section above the Implementation Progress bar
+- [x] Move Specs section above the Implementation Progress bar
+- [x] Compact all sections to fit in one viewport without scrolling
+- [x] Reduce padding, card sizes, and spacing to achieve single-view layout
+- [x] Remove duplicate Specifications collapsible section (now a separate page)
+
+## Permanent Fix: Duplicate Users on Deployment (Mar 18, 2026)
+- [x] Clean up all duplicate email rows in users table (jennifer: 3→1, melissa: 2→1)
+- [x] Add UNIQUE constraint on email column in database schema (migration 0027)
+- [x] Login queries already use LIMIT 1 — verified in auth.ts and authRoutes.ts
+- [x] All user creation endpoints already check for existing email before insert
+- [x] db.ts upsert uses onDuplicateKeyUpdate for OAuth flow
+- [ ] Verify login works after cleanup
+
+## Fix Duplicate Sections on Org Dashboard (Mar 18, 2026)
+- [x] Remove duplicate Connectivity cards/links on org dashboard
+- [x] Remove duplicate Notion/Specs cards/links on org dashboard
+
+## Dashboard Top Section Redesign (Mar 18, 2026)
+- [x] Connectivity card: expandable with inline Notion connectivity table, download/delete actions
+- [x] Architecture card: compact thumbnail strip with horizontal scroll, click-to-enlarge lightbox, download/delete per diagram
+- [x] Specifications card: show NL standard docs + site-uploaded files, download/delete actions
+- [x] Arrange all 3 cards in a row above the Implementation Progress bar
+- [x] Remove old collapsible Architecture Diagram section
+- [x] Remove old collapsible Connectivity section (already done)
+- [ ] Add /org/:slug/connectivity route and page as fallback
+- [ ] DO NOT modify any auth/password/user code
+
+## Bug Fix: Dashboard Count Mismatch (Mar 18, 2026)
+- [x] Fix Task List count showing 0% on dashboard but 3% on Task List page (verified: dashboard uses v.completed===true, matching API)
+- [x] Fix Testing count mismatch between dashboard and Testing Checklist page (verified: dashboard uses v.status==="Pass", matching Validation page)
+
+## SSO AD Configuration & Not Applicable Status (Mar 19, 2026)
+- [x] Add SSO Active Directory Configuration task to Task List (System Configuration section)
+- [x] Add link to SSO Instructions PDF from Specifications page
+- [x] Add SSO test to Testing Checklist (Connectivity Validation phase)
+- [x] Add "Not Applicable" (N/A) option for tasks (same as marking complete but excludes from count)
+- [x] Add "Not Applicable" status option for tests (alongside Pass/Fail/Not Tested)
+- [x] Update task UI to show N/A toggle/button
+- [x] Update test UI to show N/A toggle/button
+- [x] N/A items should be excluded from completion percentage calculations
+- [x] Update dashboard counts to account for N/A items
+- [x] Fix dashboard hardcoded totals (28 tests, 39 tasks) to match actual page counts
+- [x] Update CSV export to include N/A status for both tasks and tests

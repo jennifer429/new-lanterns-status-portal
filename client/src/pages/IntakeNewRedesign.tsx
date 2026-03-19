@@ -655,7 +655,7 @@ export default function IntakeNewRedesign() {
   useEffect(() => {
     if (notionConnData?.rows && notionConnData.rows.length > 0) {
       setConnRows(notionConnData.rows as ConnectivityRow[]);
-      notionPageIds.current = new Set(notionConnData.rows.map(r => r.id));
+      notionPageIds.current = new Set(notionConnData.rows.map((r: any) => r.id));
     } else if (notionConnData !== undefined) {
       // Notion configured but empty — fall back to local DB data
       try {

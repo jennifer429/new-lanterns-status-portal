@@ -1,0 +1,20 @@
+{
+  "query": "SELECT email, COUNT(*) as cnt, GROUP_CONCAT(id ORDER BY id DESC) as ids FROM users WHERE email IS NOT NULL GROUP BY email HAVING cnt > 1",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT email, COUNT(*) as cnt, GROUP_CONCAT(id ORDER BY id DESC) as ids FROM users WHERE email IS NOT NULL GROUP BY email HAVING cnt > 1",
+  "rows": [
+    {
+      "email": "jennifer@newlantern.ai",
+      "cnt": "3",
+      "ids": "2790001,1110035,150019"
+    },
+    {
+      "email": "melissa.jacobs@radiologyone.com",
+      "cnt": "2",
+      "ids": "6060036,3270053"
+    }
+  ],
+  "messages": [],
+  "stdout": "email\tcnt\tids\njennifer@newlantern.ai\t3\t2790001,1110035,150019\nmelissa.jacobs@radiologyone.com\t2\t6060036,3270053\n",
+  "stderr": "",
+  "execution_time_ms": 155
+}

@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { LogOut, Shield, KeyRound } from "lucide-react";
+import { LogOut, Shield, KeyRound, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 
 export function UserMenu() {
@@ -84,6 +84,16 @@ export function UserMenu() {
               <DropdownMenuSeparator />
             </>
           )}
+          <DropdownMenuItem onClick={() => {
+            const match = window.location.pathname.match(/\/org\/([^/]+)/);
+            if (match) {
+              setLocation(`/org/${match[1]}/specs`);
+            }
+          }}>
+            <BookOpen className="w-4 h-4 mr-2" />
+            Specifications
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setChangePasswordOpen(true)}>
             <KeyRound className="w-4 h-4 mr-2" />
             Change Password

@@ -1,0 +1,9 @@
+{
+  "query": "UPDATE users SET passwordHash = '$2b$10$u/K5Lc.9eNEIF00KiLePyuplN2xBAPlp2BrX0113SFnpOT2PeFaCK' WHERE email = 'jennifer@newlantern.ai'",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute UPDATE users SET passwordHash = '$2b$10$u/K5Lc.9eNEIF00KiLePyuplN2xBAPlp2BrX0113SFnpOT2PeFaCK' WHERE email = 'jennifer@newlantern.ai'",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 60
+}

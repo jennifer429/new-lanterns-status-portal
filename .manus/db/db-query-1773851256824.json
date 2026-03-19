@@ -1,0 +1,73 @@
+{
+  "query": "SELECT id, email, name, role, passwordHash, loginMethod, isActive FROM users WHERE email LIKE '%jennifer%' OR email LIKE '%newlantern%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, email, name, role, passwordHash, loginMethod, isActive FROM users WHERE email LIKE '%jennifer%' OR email LIKE '%newlantern%';",
+  "rows": [
+    {
+      "id": "1320055",
+      "email": "jstar@newlantern.ai",
+      "name": "jstar",
+      "role": "admin",
+      "passwordHash": "$2b$10$PdBwvlG4LbUnjEu7Em4ZBOdP/KUSwpmo9Pi6PsvN0w0FGWTUEo5be",
+      "loginMethod": "password",
+      "isActive": "0"
+    },
+    {
+      "id": "1410041",
+      "email": "test@newlantern.ai",
+      "name": "Test User",
+      "role": "admin",
+      "passwordHash": "$2b$10$mt1xsDv2W73qW2QOLY32qud1FDbR7IxN0pNZQdmxIE4XoHNHiPvA.",
+      "loginMethod": "NULL",
+      "isActive": "0"
+    },
+    {
+      "id": "1530005",
+      "email": "admin@newlantern.ai",
+      "name": "New Lantern Admin",
+      "role": "admin",
+      "passwordHash": "$2b$10$YourHashHere",
+      "loginMethod": "email",
+      "isActive": "0"
+    },
+    {
+      "id": "2790001",
+      "email": "jennifer@newlantern.ai",
+      "name": "Jennifer Starling",
+      "role": "admin",
+      "passwordHash": "$2b$10$u/K5Lc.9eNEIF00KiLePyuplN2xBAPlp2BrX0113SFnpOT2PeFaCK",
+      "loginMethod": "google",
+      "isActive": "1"
+    },
+    {
+      "id": "2850001",
+      "email": "ryan@newlantern.ai",
+      "name": "ryan",
+      "role": "admin",
+      "passwordHash": "$2b$10$QPufygk7H/gyqyHEyHoJbeHrLEFqYS.CvPU1tA5r8jYoegvf03Psm",
+      "loginMethod": "password",
+      "isActive": "1"
+    },
+    {
+      "id": "2880009",
+      "email": "samir@newlantern.ai",
+      "name": "Samir Mehta",
+      "role": "admin",
+      "passwordHash": "NULL",
+      "loginMethod": "google",
+      "isActive": "1"
+    },
+    {
+      "id": "2940001",
+      "email": "amanda@newlantern.ai",
+      "name": "Amanda Burke",
+      "role": "admin",
+      "passwordHash": "NULL",
+      "loginMethod": "google",
+      "isActive": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\temail\tname\trole\tpasswordHash\tloginMethod\tisActive\n1320055\tjstar@newlantern.ai\tjstar\tadmin\t$2b$10$PdBwvlG4LbUnjEu7Em4ZBOdP/KUSwpmo9Pi6PsvN0w0FGWTUEo5be\tpassword\t0\n1410041\ttest@newlantern.ai\tTest User\tadmin\t$2b$10$mt1xsDv2W73qW2QOLY32qud1FDbR7IxN0pNZQdmxIE4XoHNHiPvA.\tNULL\t0\n1530005\tadmin@newlantern.ai\tNew Lantern Admin\tadmin\t$2b$10$YourHashHere\temail\t0\n2790001\tjennifer@newlantern.ai\tJennifer Starling\tadmin\t$2b$10$u/K5Lc.9eNEIF00KiLePyuplN2xBAPlp2BrX0113SFnpOT2PeFaCK\tgoogle\t1\n2850001\tryan@newlantern.ai\tryan\tadmin\t$2b$10$QPufygk7H/gyqyHEyHoJbeHrLEFqYS.CvPU1tA5r8jYoegvf03Psm\tpassword\t1\n2880009\tsamir@newlantern.ai\tSamir Mehta\tadmin\tNULL\tgoogle\t1\n2940001\tamanda@newlantern.ai\tAmanda Burke\tadmin\tNULL\tgoogle\t1\n",
+  "stderr": "",
+  "execution_time_ms": 98
+}

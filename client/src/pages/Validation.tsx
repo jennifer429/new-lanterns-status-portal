@@ -32,6 +32,7 @@ import {
   CalendarCheck,
   XSquare,
   Square,
+  Ban,
 } from "lucide-react";
 import { useRoute, Link } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -85,6 +86,13 @@ const phases: Phase[] = [
         description: "Verify ACK received on all configured HL7 ports",
         relatedQuestions: [
           { questionId: "CONN.endpoints", label: "Endpoints", sectionId: "connectivity" },
+        ],
+      },
+      {
+        name: "SSO / Active Directory Authentication",
+        description: "Verify Single Sign-On via Active Directory — users can log in with AD credentials, roles map correctly, and session persists",
+        relatedQuestions: [
+          { questionId: "CF.2", label: "User List", sectionId: "config-files" },
         ],
       },
     ],
@@ -561,6 +569,29 @@ export default function Validation() {
     });
   }
 
+  function toggleNA(pIdx: number, tIdx: number) {
+    const key = testKey(pIdx, tIdx);
+    const current = getMerged(key);
+    const isNA = current.status === "N/A";
+    const newStatus = isNA ? "Not Tested" : "N/A";
+
+    const merged = {
+      ...current,
+      status: newStatus,
+      testedDate: isNA ? "" : current.testedDate,
+    };
+
+    setLocalOverrides((prev) => ({ ...prev, [key]: merged }));
+    updateMutation.mutate({
+      organizationSlug: slug,
+      testKey: key,
+      status: newStatus as any,
+      signOff: merged.signOff || undefined,
+      notes: merged.notes || undefined,
+      testedDate: merged.testedDate || undefined,
+    });
+  }
+
   function saveField(pIdx: number, tIdx: number, patch: { signOff?: string; notes?: string; testedDate?: string }) {
     const key = testKey(pIdx, tIdx);
     const current = getMerged(key);
@@ -655,7 +686,7 @@ export default function Validation() {
           `Phase ${pIdx + 1}: ${phase.title}`,
           test.name,
           test.description,
-          merged.status === "Pass" ? "Tested" : "Not Tested",
+          merged.status === "N/A" ? "N/A" : merged.status === "Pass" ? "Tested" : "Not Tested",
           merged.testedDate || "",
           merged.signOff || "",
           merged.notes || "",
@@ -740,7 +771,8 @@ export default function Validation() {
 
   // Computed stats
   const allKeys = phases.flatMap((p, pIdx) => p.tests.map((_, tIdx) => testKey(pIdx, tIdx)));
-  const total = allKeys.length;
+  const naCount = allKeys.filter((k) => getMerged(k).status === "N/A").length;
+  const total = allKeys.length - naCount;
   const completed = allKeys.filter((k) => getMerged(k).status === "Pass").length;
   const completePct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
@@ -831,10 +863,11 @@ export default function Validation() {
               {/* Phases — collapsible */}
               {phases.map((phase, pIdx) => {
                 const phaseKeys = phase.tests.map((_, tIdx) => testKey(pIdx, tIdx));
+                const phaseNa = phaseKeys.filter((k) => getMerged(k).status === "N/A").length;
                 const phaseCompleted = phaseKeys.filter((k) => getMerged(k).status === "Pass").length;
-                const phaseTotal = phase.tests.length;
+                const phaseTotal = phase.tests.length - phaseNa;
                 const isCollapsed = !!collapsedPhases[pIdx];
-                const allDone = phaseCompleted === phaseTotal;
+                const allDone = phaseTotal > 0 && phaseCompleted === phaseTotal;
 
                 return (
                   <Card key={pIdx} className="card-elevated overflow-hidden">
@@ -856,19 +889,26 @@ export default function Validation() {
                           <h3 className="text-sm font-bold text-foreground mt-0.5">{phase.title}</h3>
                         </div>
                       </div>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "text-xs font-semibold",
-                          allDone
-                            ? "border-emerald-500/40 text-emerald-400"
-                            : phaseCompleted > 0
-                              ? "border-primary/40 text-primary"
-                              : "border-border text-foreground"
+                      <div className="flex items-center gap-2">
+                        {phaseNa > 0 && (
+                          <Badge variant="outline" className="text-xs font-semibold border-amber-500/30 text-amber-400">
+                            {phaseNa} N/A
+                          </Badge>
                         )}
-                      >
-                        {phaseCompleted}/{phaseTotal} Complete
-                      </Badge>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-xs font-semibold",
+                            allDone
+                              ? "border-emerald-500/40 text-emerald-400"
+                              : phaseCompleted > 0
+                                ? "border-primary/40 text-primary"
+                                : "border-border text-foreground"
+                          )}
+                        >
+                          {phaseCompleted}/{phaseTotal} Complete
+                        </Badge>
+                      </div>
                     </button>
 
                     {/* Bulk action toolbar — visible when expanded */}
@@ -962,13 +1002,14 @@ export default function Validation() {
                           const key = testKey(pIdx, tIdx);
                           const { status, signOff, notes, testedDate } = getMerged(key);
                           const isTested = status === "Pass";
+                          const isNA = status === "N/A";
                           const notesOpen = !!expandedNotes[key];
                           const relatedOpen = !!expandedRelated[key];
                           const hasRelated = test.relatedQuestions && test.relatedQuestions.length > 0;
                           const isSelected = selectedTestKeys.has(key);
 
                           return (
-                            <div key={tIdx} className={cn(tIdx < phase.tests.length - 1 ? "border-b border-border/20" : "", isSelected && "bg-primary/5")}>
+                            <div key={tIdx} className={cn(tIdx < phase.tests.length - 1 ? "border-b border-border/20" : "", isSelected && "bg-primary/5", isNA && "opacity-50")}>
                               {/* Main row */}
                               <div className="grid grid-cols-1 md:grid-cols-[24px_40px_1fr_100px_140px_auto] gap-3 items-start px-5 py-3">
                                 {/* Row selection checkbox */}
@@ -986,28 +1027,47 @@ export default function Validation() {
                                 </div>
                                 {/* Done Checkbox */}
                                 <div className="flex justify-center pt-0.5">
-                                  <button
-                                    onClick={() => toggleTested(pIdx, tIdx)}
-                                    className="focus:outline-none"
-                                    title={isTested ? "Mark as not tested" : "Mark as tested"}
-                                  >
-                                    {isTested ? (
-                                      <CheckCircle2 className="w-6 h-6 text-green-500 hover:text-green-400 transition-colors" />
-                                    ) : (
-                                      <Circle className="w-6 h-6 text-muted-foreground/40 hover:text-primary/60 transition-colors cursor-pointer" />
-                                    )}
-                                  </button>
+                                  {isNA ? (
+                                    <Ban className="w-6 h-6 text-muted-foreground/40" />
+                                  ) : (
+                                    <button
+                                      onClick={() => toggleTested(pIdx, tIdx)}
+                                      className="focus:outline-none"
+                                      title={isTested ? "Mark as not tested" : "Mark as tested"}
+                                    >
+                                      {isTested ? (
+                                        <CheckCircle2 className="w-6 h-6 text-green-500 hover:text-green-400 transition-colors" />
+                                      ) : (
+                                        <Circle className="w-6 h-6 text-muted-foreground/40 hover:text-primary/60 transition-colors cursor-pointer" />
+                                      )}
+                                    </button>
+                                  )}
                                 </div>
 
-                                {/* Test name + description + related questions toggle */}
+                                {/* Test name + description + N/A toggle + related questions toggle */}
                                 <div className="space-y-1">
-                                  <p className={cn(
-                                    "text-sm font-medium",
-                                    isTested ? "text-foreground" : "text-foreground"
-                                  )}>
-                                    {test.name}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">{test.description}</p>
+                                  <div className="flex items-center gap-2">
+                                    <p className={cn(
+                                      "text-sm font-medium text-foreground",
+                                      isNA && "line-through"
+                                    )}>
+                                      {test.name}
+                                    </p>
+                                    <button
+                                      onClick={() => toggleNA(pIdx, tIdx)}
+                                      className={cn(
+                                        "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider border transition-all",
+                                        isNA
+                                          ? "bg-amber-500/20 text-amber-400 border-amber-500/40 hover:bg-amber-500/30"
+                                          : "bg-transparent text-muted-foreground/40 border-border/30 hover:text-amber-400 hover:border-amber-500/40"
+                                      )}
+                                      title={isNA ? "Remove N/A — include in progress" : "Mark as Not Applicable"}
+                                    >
+                                      <Ban className="w-2.5 h-2.5" />
+                                      N/A
+                                    </button>
+                                  </div>
+                                  <p className={cn("text-xs text-muted-foreground", isNA && "line-through")}>{test.description}</p>
 
                                   {/* Related questions toggle */}
                                   {hasRelated && (
@@ -1139,6 +1199,15 @@ export default function Validation() {
                       </div>
                       <span className="font-medium text-foreground">{total - completed}</span>
                     </div>
+                    {naCount > 0 && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-amber-500/40" />
+                          <span className="text-foreground">Not Applicable</span>
+                        </div>
+                        <span className="font-medium text-amber-400">{naCount}</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Next Up */}
@@ -1146,7 +1215,7 @@ export default function Validation() {
                     const remaining = phases.flatMap((p, pIdx) =>
                       p.tests
                         .map((t, tIdx) => ({ ...t, key: testKey(pIdx, tIdx) }))
-                        .filter((t) => getMerged(t.key).status !== "Pass")
+                        .filter((t) => { const s = getMerged(t.key).status; return s !== "Pass" && s !== "N/A"; })
                     ).slice(0, 3);
 
                     if (remaining.length === 0) return (

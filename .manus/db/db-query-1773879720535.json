@@ -1,0 +1,74 @@
+{
+  "query": "SELECT vr.testKey, vr.status FROM validationResults vr JOIN organizations o ON vr.organizationId = o.id WHERE o.slug = 'baycare';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT vr.testKey, vr.status FROM validationResults vr JOIN organizations o ON vr.organizationId = o.id WHERE o.slug = 'baycare';",
+  "rows": [
+    {
+      "testKey": "0:0",
+      "status": "Pass"
+    },
+    {
+      "testKey": "2:0",
+      "status": "Not Tested"
+    },
+    {
+      "testKey": "2:1",
+      "status": "Not Tested"
+    },
+    {
+      "testKey": "2:2",
+      "status": "Not Tested"
+    },
+    {
+      "testKey": "2:3",
+      "status": "Not Tested"
+    },
+    {
+      "testKey": "3:0",
+      "status": "Not Tested"
+    },
+    {
+      "testKey": "3:1",
+      "status": "Not Tested"
+    },
+    {
+      "testKey": "0:1",
+      "status": "Pass"
+    },
+    {
+      "testKey": "0:2",
+      "status": "Pass"
+    },
+    {
+      "testKey": "1:0",
+      "status": "Not Tested"
+    },
+    {
+      "testKey": "1:1",
+      "status": "Not Tested"
+    },
+    {
+      "testKey": "1:2",
+      "status": "Not Tested"
+    },
+    {
+      "testKey": "1:3",
+      "status": "Not Tested"
+    },
+    {
+      "testKey": "1:4",
+      "status": "Not Tested"
+    },
+    {
+      "testKey": "3:5",
+      "status": "Not Tested"
+    },
+    {
+      "testKey": "3:4",
+      "status": "Not Tested"
+    }
+  ],
+  "messages": [],
+  "stdout": "testKey\tstatus\n0:0\tPass\n2:0\tNot Tested\n2:1\tNot Tested\n2:2\tNot Tested\n2:3\tNot Tested\n3:0\tNot Tested\n3:1\tNot Tested\n0:1\tPass\n0:2\tPass\n1:0\tNot Tested\n1:1\tNot Tested\n1:2\tNot Tested\n1:3\tNot Tested\n1:4\tNot Tested\n3:5\tNot Tested\n3:4\tNot Tested\n",
+  "stderr": "",
+  "execution_time_ms": 62
+}

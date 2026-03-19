@@ -17,6 +17,8 @@ import CreateOrganization from "./pages/CreateOrganization";
 import Implementation from "./pages/Implementation";
 import Validation from "./pages/Validation";
 import Workflows from "./pages/Workflows";
+import Specifications from "./pages/Specifications";
+import Connectivity from "./pages/Connectivity";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -58,6 +60,8 @@ function Router() {
       <Route path="/org/:slug/implement" component={Implementation} />
       <Route path="/org/:slug/validation" component={Validation} />
       <Route path="/org/:slug/workflows" component={Workflows} />
+      <Route path="/org/:slug/specs" component={Specifications} />
+      <Route path="/org/:slug/connectivity" component={Connectivity} />
       <Route path="/org/:slug/complete" component={IntakeComplete} />
       <Route path="/org/:slug/tasks" component={Tasks} />
       <Route path="/org/:slug" component={Home} />

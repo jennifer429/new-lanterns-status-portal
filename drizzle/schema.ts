@@ -14,7 +14,7 @@ export const users = mysqlTable("users", {
   /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
-  email: varchar("email", { length: 320 }),
+  email: varchar("email", { length: 320 }).unique(),
   passwordHash: varchar("passwordHash", { length: 255 }), // bcrypt hash for email/password auth
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
@@ -101,6 +101,7 @@ export const taskCompletion = mysqlTable("taskCompletion", {
   sectionName: varchar("sectionName", { length: 255 }).notNull(),
   taskId: varchar("taskId", { length: 50 }).notNull(),
   completed: int("completed").default(0).notNull(), // 0 or 1 (boolean)
+  notApplicable: int("notApplicable").default(0).notNull(), // 0 or 1 — marks task as N/A (excluded from counts)
   completedAt: timestamp("completedAt"),
   completedBy: varchar("completedBy", { length: 255 }),
   targetDate: varchar("targetDate", { length: 20 }), // YYYY-MM-DD target/due date
@@ -333,7 +334,7 @@ export const validationResults = mysqlTable("validationResults", {
   /** Stable key: "<phaseIndex>:<testIndex>", e.g. "1:2" */
   testKey: varchar("testKey", { length: 20 }).notNull(),
   actual: text("actual"),
-  status: mysqlEnum("status", ["Pass", "Fail", "Not Tested", "Pending"]).default("Not Tested").notNull(),
+  status: mysqlEnum("status", ["Pass", "Fail", "Not Tested", "Pending", "N/A"]).default("Not Tested").notNull(),
   signOff: varchar("signOff", { length: 255 }),
   notes: text("notes"),
   /** User-settable date for when this test was documented. Auto-populates with today's date. */
