@@ -34,6 +34,7 @@ import { trpc } from "@/lib/trpc";
 import { useState, useEffect, useRef } from "react";
 import { questionnaireSections } from "@shared/questionnaireData";
 import { calculateProgress } from "@shared/progressCalculation";
+import { SECTION_DEFS as TASK_SECTION_DEFS } from "@shared/taskDefs";
 import { PhiDisclaimer } from "@/components/PhiDisclaimer";
 import { UserMenu } from "@/components/UserMenu";
 import { cn } from "@/lib/utils";
@@ -445,9 +446,9 @@ export default function Home() {
   const implResults = implementationData || {};
   const implEntries = Object.values(implResults) as any[];
   const implNaCount = implEntries.filter((v: any) => v.notApplicable === true).length;
-  const implTotal = 39 - implNaCount; // 39 tasks total (5+6+5+3+5+4+11 across 7 phases)
-  const implCompleted = implEntries.filter(
-    (v: any) => v.completed === true && v.notApplicable !== true
+  const implTotal = TASK_SECTION_DEFS.flatMap(s => s.tasks).length - implNaCount;
+  const implCompleted = TASK_SECTION_DEFS.flatMap(s => s.tasks).filter(
+    t => (implResults as any)[t.id]?.completed === true && (implResults as any)[t.id]?.notApplicable !== true
   ).length;
 
   // Overall progress (weighted: questionnaire 40%, testing 30%, implementation 30%)
