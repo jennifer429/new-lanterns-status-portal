@@ -23,17 +23,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+
 import { UserPlus, Pencil, Trash2, Building2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { cn } from "@/lib/utils";
 
 
 export function UserManagement() {
@@ -206,73 +199,66 @@ export function UserManagement() {
 
           {/* Users Table */}
           <div className="rounded-lg border border-purple-500/20 overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-purple-950/30 hover:bg-purple-950/30">
-                  <TableHead className="text-gray-300">Name</TableHead>
-                  <TableHead className="text-gray-300">Email</TableHead>
-                  <TableHead className="text-gray-300">Role</TableHead>
-                  <TableHead className="text-gray-300">Organization</TableHead>
-                  <TableHead className="text-gray-300">Last Login</TableHead>
-                  <TableHead className="text-gray-300 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <table className="w-full border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
+              <colgroup>
+                <col style={{ width: '16%' }} />
+                <col style={{ width: '26%' }} />
+                <col style={{ width: '9%'  }} />
+                <col style={{ width: '28%' }} />
+                <col style={{ width: '14%' }} />
+                <col style={{ width: '7%'  }} />
+              </colgroup>
+              <thead>
+                <tr className="bg-purple-950/30 border-b border-purple-500/20">
+                  {['Name','Email','Role','Organization','Last Login',''].map((h,i) => (
+                    <th key={i} className="text-left px-3 py-2 text-[10px] font-medium text-gray-400 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
                 {filteredUsers?.map((user) => (
-                  <TableRow key={user.id} className="border-purple-500/20">
-                    <TableCell className="text-white font-medium">{user.name}</TableCell>
-                    <TableCell className="text-gray-300">{user.email}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={user.role === "admin" ? "default" : "outline"}
-                        className={
-                          user.role === "admin"
-                            ? "bg-purple-600 text-white"
-                            : "border-purple-500/30 text-purple-300"
-                        }
-                      >
-                        {user.role}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-gray-300">
+                  <tr key={user.id} className="border-b border-purple-500/10 hover:bg-purple-950/20 transition-colors">
+                    <td className="px-3 py-1.5 text-white font-medium truncate">{user.name}</td>
+                    <td className="px-3 py-1.5 text-gray-300 truncate">{user.email}</td>
+                    <td className="px-3 py-1.5">
+                      <span className={cn(
+                        "inline-block px-1.5 py-0 rounded text-[10px] font-semibold leading-5 border",
+                        user.role === "admin"
+                          ? "bg-purple-600/80 text-white border-purple-500/50"
+                          : "border-purple-500/30 text-purple-300"
+                      )}>{user.role}</span>
+                    </td>
+                    <td className="px-3 py-1.5 text-gray-300">
                       {user.organizationName ? (
-                        <div className="flex items-center gap-2">
-                          <Building2 className="w-3 h-3 text-purple-400" />
-                          {user.organizationName}
-                        </div>
+                        <span className="flex items-center gap-1 truncate">
+                          <Building2 className="w-3 h-3 text-purple-400 shrink-0" />
+                          <span className="truncate">{user.organizationName}</span>
+                        </span>
                       ) : (
                         <span className="text-gray-500 italic">None</span>
                       )}
-                    </TableCell>
-                    <TableCell className="text-gray-300 text-sm">
+                    </td>
+                    <td className="px-3 py-1.5 text-gray-400 whitespace-nowrap">
                       {user.lastLoginAt
                         ? formatDistanceToNow(new Date(user.lastLoginAt), { addSuffix: true })
                         : "Never"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(user)}
-                          className="text-purple-300 hover:text-purple-200 hover:bg-purple-950/30"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(user)}
-                          className="text-red-400 hover:text-red-300 hover:bg-red-950/30"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <div className="flex items-center justify-end gap-0.5">
+                        <button onClick={() => handleEdit(user)}
+                          className="p-1 rounded hover:bg-purple-950/50 text-purple-400 hover:text-purple-200 transition-colors">
+                          <Pencil className="w-3 h-3" />
+                        </button>
+                        <button onClick={() => handleDelete(user)}
+                          className="p-1 rounded hover:bg-red-950/40 text-red-500/60 hover:text-red-300 transition-colors">
+                          <Trash2 className="w-3 h-3" />
+                        </button>
                       </div>
-                    </TableCell>
-                  </TableRow>
+                    </td>
+                  </tr>
                 ))}
-              </TableBody>
-            </Table>
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>

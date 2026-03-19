@@ -167,49 +167,54 @@ export function OrganizationManagement() {
           </Dialog>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {organizations && organizations.length > 0 ? (
-            organizations.map((org: any) => (
-              <div
-                key={org.id}
-                className="flex items-center justify-between p-4 rounded-lg bg-purple-900/20 border border-purple-500/20 hover:bg-purple-900/30 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <Building2 className="w-5 h-5 text-purple-400" />
-                  <div>
-                    <p className="text-white font-medium">{org.name}</p>
-                    <p className="text-sm text-gray-400">Slug: {org.slug}</p>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openEditDialog(org)}
-                    className="border-purple-500/30 hover:bg-purple-600 hover:text-white text-gray-300"
-                  >
-                    <Edit className="w-4 h-4 mr-2" />
-                    Rename
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openDeleteDialog(org)}
-                    className="border-red-500/30 hover:bg-red-600 hover:text-white text-red-300"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Inactivate
-                  </Button>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="text-center py-12 text-gray-400">
-              No organizations found. Create one to get started.
-            </div>
-          )}
-        </div>
+      <CardContent className="p-0">
+        <table className="w-full border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
+          <colgroup>
+            <col style={{ width: '40%' }} />
+            <col style={{ width: '40%' }} />
+            <col style={{ width: '20%' }} />
+          </colgroup>
+          <thead>
+            <tr className="border-b border-purple-500/20 bg-purple-950/20">
+              {['Organization', 'Slug', ''].map((h, i) => (
+                <th key={i} className="text-left px-4 py-2 text-[10px] font-medium text-gray-400 uppercase tracking-wide">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {organizations && organizations.length > 0 ? (
+              organizations.map((org: any) => (
+                <tr key={org.id} className="border-b border-purple-500/10 hover:bg-purple-900/20 transition-colors">
+                  <td className="px-4 py-2 text-white font-medium truncate">
+                    <span className="flex items-center gap-2">
+                      <Building2 className="w-3 h-3 text-purple-400 shrink-0" />
+                      {org.name}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2 text-gray-400 font-mono truncate">{org.slug}</td>
+                  <td className="px-3 py-1.5">
+                    <div className="flex items-center justify-end gap-1">
+                      <button onClick={() => openEditDialog(org)}
+                        className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] text-purple-300 hover:text-white border border-purple-500/30 hover:bg-purple-600 transition-colors">
+                        <Edit className="w-2.5 h-2.5" /> Rename
+                      </button>
+                      <button onClick={() => openDeleteDialog(org)}
+                        className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] text-red-400/70 hover:text-white border border-red-500/20 hover:bg-red-600 transition-colors">
+                        <Trash2 className="w-2.5 h-2.5" /> Remove
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={3} className="px-4 py-8 text-center text-gray-500 italic text-xs">
+                  No organizations found. Create one to get started.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </CardContent>
 
       {/* Edit Dialog */}
