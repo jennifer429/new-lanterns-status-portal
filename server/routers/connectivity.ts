@@ -16,6 +16,7 @@ function getStr(prop: any): string {
     case "url":          return prop.url ?? "";
     case "email":        return prop.email ?? "";
     case "phone_number": return prop.phone_number ?? "";
+    case "status":       return prop.status?.name ?? "";
     default:             return "";
   }
 }
@@ -47,6 +48,7 @@ function normalise(s: string): string {
 const FIELD_CANDIDATES: Record<string, string[]> = {
   site:              ["Site", "Organization", "Org", "Client", "Site Name", "Facility"],
   trafficType:       ["Traffic Type", "Type", "Protocol", "Connection Type", "Connection"],
+  connectionDetails: ["connection details", "Connection Details", "Details", "Config"],
   sourceSystem:      ["Source System", "Source", "From System", "From", "Sending System"],
   destinationSystem: ["Destination System", "Destination", "Dest", "To System", "To", "Receiving System"],
   sourceIp:          ["Source IP", "Src IP", "Source IP Address", "Source Host"],
@@ -58,6 +60,8 @@ const FIELD_CANDIDATES: Record<string, string[]> = {
   envTest:           ["Test", "Test Env", "Test Environment", "Env Test", "UAT"],
   envProd:           ["Prod", "Production", "Prod Env", "Production Environment", "Env Prod", "Live"],
   notes:             ["Notes", "Comments", "Note", "Comment", "Description"],
+  status:            ["Status"],
+  goLiveDate:        ["Go Live Date", "Go-Live Date", "GoLive", "Launch Date"],
 };
 
 type FieldInfo = { propName: string; propType: string };
@@ -105,8 +109,8 @@ function buildRowProperties(
 ): Record<string, any> {
   const props: Record<string, any> = {};
 
-  // Always set the title property (page name = source → destination)
-  props[titlePropName] = buildNotionProp("title", `${row.sourceSystem || "?"} → ${row.destinationSystem || "?"}`);
+  // Always set the title property (page name = site name)
+  props[titlePropName] = buildNotionProp("title", siteName || row.sourceSystem || "?");
 
   const set = (field: string, value: string | boolean) => {
     const info = schemaMap[field];
@@ -116,11 +120,14 @@ function buildRowProperties(
     const v = String(value);
     // Don't write empty strings to select (would create blank option)
     if (info.propType === "select" && !v) return;
+    // Skip status fields (read-only in Notion)
+    if (info.propType === "status") return;
     props[info.propName] = buildNotionProp(info.propType, value);
   };
 
   set("site",              siteName);
   set("trafficType",       row.trafficType      || "");
+  set("connectionDetails", row.connectionDetails|| "");
   set("sourceSystem",      row.sourceSystem     || "");
   set("destinationSystem", row.destinationSystem|| "");
   set("sourceIp",          row.sourceIp         || "");
@@ -141,6 +148,18 @@ function rowKey(trafficType: string, sourceSystem: string, destinationSystem: st
   return [trafficType, sourceSystem, destinationSystem].map(normalise).join("|");
 }
 
+// ── Helpers to resolve data source ID and database ID ────────────────────────
+
+/** Get the data source ID for querying (v5 SDK uses dataSources.query). */
+function getDataSourceId(): string {
+  return ENV.notionConnectivityDataSourceId || "";
+}
+
+/** Get the database ID for schema retrieval and page creation. */
+function getDatabaseId(): string {
+  return ENV.notionConnectivityDbId || "";
+}
+
 // ── Schema cache (5 min TTL) ──────────────────────────────────────────────────
 
 let _schemaCache: { data: any; ts: number } | null = null;
@@ -156,6 +175,49 @@ async function getCachedSchema(client: any, dbId: string) {
 async function getSchemaMap(client: any, dbId: string) {
   const schema = await getCachedSchema(client, dbId);
   return buildSchemaMap(schema);
+}
+
+/**
+ * Parse the "connection details" free-text field to extract structured data.
+ * The field contains pipe-separated key-value pairs like:
+ *   "NL NAT: 34.53.119.94  | Munson IP: 204.63.202.18  | Port: 6661 (alt 13009)"
+ */
+function parseConnectionDetails(details: string): {
+  sourceIp: string;
+  destIp: string;
+  sourcePort: string;
+  destPort: string;
+  sourceAeTitle: string;
+  destAeTitle: string;
+} {
+  const result = { sourceIp: "", destIp: "", sourcePort: "", destPort: "", sourceAeTitle: "", destAeTitle: "" };
+  if (!details) return result;
+
+  // Split by pipe and parse key-value pairs
+  const parts = details.split("|").map(s => s.trim()).filter(Boolean);
+  for (const part of parts) {
+    const lower = part.toLowerCase();
+    // Extract IP addresses
+    if (lower.includes("nl nat") || lower.includes("source ip") || lower.includes("src ip")) {
+      const match = part.match(/:\s*([\d.]+)/);
+      if (match) result.sourceIp = match[1];
+    } else if (lower.includes("ip") && !lower.includes("nl") && !lower.includes("source")) {
+      const match = part.match(/:\s*([\d.]+)/);
+      if (match) result.destIp = match[1];
+    }
+    // Extract ports
+    if (lower.includes("port")) {
+      const match = part.match(/:\s*(\d+)/);
+      if (match) result.destPort = match[1];
+    }
+    // Extract AE titles
+    if (lower.includes("ae")) {
+      const match = part.match(/:\s*(.+)/);
+      if (match) result.destAeTitle = match[1].trim();
+    }
+  }
+
+  return result;
 }
 
 // ── Router ────────────────────────────────────────────────────────────────────
@@ -174,12 +236,17 @@ const ConnectivityRowSchema = z.object({
   envTest:           z.boolean(),
   envProd:           z.boolean(),
   notes:             z.string(),
+  connectionDetails: z.string().optional(),
+  status:            z.string().optional(),
 });
 
 export const connectivityRouter = router({
   /**
    * Fetch connectivity rows from the Notion database and filter by org.
    * Returns `configured: false` when the Notion API key is missing.
+   *
+   * In Notion SDK v5, databases.query was replaced by dataSources.query
+   * which uses data_source_id instead of database_id.
    */
   getForOrg: publicProcedure
     .input(z.object({
@@ -188,13 +255,15 @@ export const connectivityRouter = router({
     }))
     .query(async ({ input }) => {
       const client = getNotionClient();
-      if (!client || !ENV.notionConnectivityDbId) {
+      const dsId = getDataSourceId();
+      if (!client || !dsId) {
         return { rows: [], configured: false };
       }
 
       try {
-        const response = await (client as any).databases.query({
-          database_id: ENV.notionConnectivityDbId,
+        // Use dataSources.query (v5 SDK) with data_source_id
+        const response = await (client as any).dataSources.query({
+          data_source_id: dsId,
           page_size: 100,
         });
 
@@ -205,21 +274,30 @@ export const connectivityRouter = router({
           .filter((page: any) => page.object === "page" && !page.archived)
           .map((page: any) => {
             const p = page.properties as Record<string, any>;
+
+            // Get the raw "connection details" field
+            const connectionDetails = getStr(pick(p, "connection details", "Connection Details", "Details", "Config"));
+            // Parse structured data from connection details
+            const parsed = parseConnectionDetails(connectionDetails);
+
             return {
               id: page.id,
-              site: getStr(pick(p, ...FIELD_CANDIDATES.site)),
+              site:              getStr(pick(p, ...FIELD_CANDIDATES.site)),
               trafficType:       getStr(pick(p, ...FIELD_CANDIDATES.trafficType)),
-              sourceSystem:      getStr(pick(p, ...FIELD_CANDIDATES.sourceSystem)),
-              destinationSystem: getStr(pick(p, ...FIELD_CANDIDATES.destinationSystem)),
-              sourceIp:          getStr(pick(p, ...FIELD_CANDIDATES.sourceIp)),
-              sourcePort:        getStr(pick(p, ...FIELD_CANDIDATES.sourcePort)),
-              destIp:            getStr(pick(p, ...FIELD_CANDIDATES.destIp)),
-              destPort:          getStr(pick(p, ...FIELD_CANDIDATES.destPort)),
-              sourceAeTitle:     getStr(pick(p, ...FIELD_CANDIDATES.sourceAeTitle)),
-              destAeTitle:       getStr(pick(p, ...FIELD_CANDIDATES.destAeTitle)),
+              connectionDetails,
+              // Use parsed values as fallback if dedicated columns don't exist
+              sourceSystem:      getStr(pick(p, ...FIELD_CANDIDATES.sourceSystem)) || "",
+              destinationSystem: getStr(pick(p, ...FIELD_CANDIDATES.destinationSystem)) || "",
+              sourceIp:          getStr(pick(p, ...FIELD_CANDIDATES.sourceIp)) || parsed.sourceIp,
+              sourcePort:        getStr(pick(p, ...FIELD_CANDIDATES.sourcePort)) || parsed.sourcePort,
+              destIp:            getStr(pick(p, ...FIELD_CANDIDATES.destIp)) || parsed.destIp,
+              destPort:          getStr(pick(p, ...FIELD_CANDIDATES.destPort)) || parsed.destPort,
+              sourceAeTitle:     getStr(pick(p, ...FIELD_CANDIDATES.sourceAeTitle)) || parsed.sourceAeTitle,
+              destAeTitle:       getStr(pick(p, ...FIELD_CANDIDATES.destAeTitle)) || parsed.destAeTitle,
               envTest:           getBool(pick(p, ...FIELD_CANDIDATES.envTest)),
               envProd:           getBool(pick(p, ...FIELD_CANDIDATES.envProd)),
               notes:             getStr(pick(p, ...FIELD_CANDIDATES.notes)),
+              status:            getStr(pick(p, ...FIELD_CANDIDATES.status)),
             };
           })
           .filter((row: any) => {
@@ -253,22 +331,22 @@ export const connectivityRouter = router({
     }))
     .mutation(async ({ input }) => {
       const client = getNotionClient();
-      if (!client || !ENV.notionConnectivityDbId) {
+      const dbId = getDatabaseId();
+      const dsId = getDataSourceId();
+      if (!client || !dbId || !dsId) {
         return { ok: false, error: "Notion not configured" };
       }
 
       try {
         // 1. Fetch DB schema to resolve property names
-        const dbSchema = await client.databases.retrieve({
-          database_id: ENV.notionConnectivityDbId,
-        });
+        const dbSchema = await client.databases.retrieve({ database_id: dbId });
         const { schemaMap, titlePropName } = buildSchemaMap(dbSchema);
 
         // 2. Fetch existing Notion pages for this org so we can match for updates
         const slugNorm = normalise(input.organizationSlug);
         const nameNorm = normalise(input.organizationName);
-        const existing = await (client as any).databases.query({
-          database_id: ENV.notionConnectivityDbId,
+        const existing = await (client as any).dataSources.query({
+          data_source_id: dsId,
           page_size: 100,
         });
 
@@ -312,7 +390,7 @@ export const connectivityRouter = router({
               updated++;
             } else {
               await client.pages.create({
-                parent: { database_id: ENV.notionConnectivityDbId },
+                parent: { database_id: dbId },
                 properties,
               });
               created++;
@@ -334,11 +412,12 @@ export const connectivityRouter = router({
     .input(z.object({ organizationName: z.string(), row: ConnectivityRowSchema }))
     .mutation(async ({ input }) => {
       const client = getNotionClient();
-      if (!client || !ENV.notionConnectivityDbId) throw new Error("Notion not configured");
-      const { schemaMap, titlePropName } = await getSchemaMap(client, ENV.notionConnectivityDbId);
+      const dbId = getDatabaseId();
+      if (!client || !dbId) throw new Error("Notion not configured");
+      const { schemaMap, titlePropName } = await getSchemaMap(client, dbId);
       const properties = buildRowProperties(input.row, schemaMap, titlePropName, input.organizationName);
       const page = await client.pages.create({
-        parent: { database_id: ENV.notionConnectivityDbId },
+        parent: { database_id: dbId },
         properties,
       });
       return { pageId: page.id };
@@ -349,8 +428,9 @@ export const connectivityRouter = router({
     .input(z.object({ pageId: z.string(), organizationName: z.string(), row: ConnectivityRowSchema }))
     .mutation(async ({ input }) => {
       const client = getNotionClient();
-      if (!client || !ENV.notionConnectivityDbId) throw new Error("Notion not configured");
-      const { schemaMap, titlePropName } = await getSchemaMap(client, ENV.notionConnectivityDbId);
+      const dbId = getDatabaseId();
+      if (!client || !dbId) throw new Error("Notion not configured");
+      const { schemaMap, titlePropName } = await getSchemaMap(client, dbId);
       const properties = buildRowProperties(input.row, schemaMap, titlePropName, input.organizationName);
       await client.pages.update({ page_id: input.pageId, properties });
       return { ok: true };

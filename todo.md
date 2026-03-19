@@ -2186,3 +2186,11 @@
 - [x] Update dashboard counts to account for N/A items
 - [x] Fix dashboard hardcoded totals (28 tests, 39 tasks) to match actual page counts
 - [x] Update CSV export to include N/A status for both tasks and tests
+## Fix Notion API Integration (Mar 19, 2026)
+- [x] Fix 'client.databases.query is not a function' error in Notion connectivity fetch
+  - Root cause: @notionhq/client v5.9.0 moved databases.query to dataSources.query with data_source_id
+  - Also fixed: hardcoded connectivity DB ID was invalid; now uses NOTION_CONNECTIVITY_DATASOURCE_ID env var
+  - Added parseConnectionDetails() to extract IPs/ports/AE from free-text "connection details" field
+- [x] Verify connectivity data displays correctly on org dashboard expandable card
+  - Tested with Munson Medical Center: 3 rows (HL7 ORM, DICOM, VPN) load correctly
+- [ ] Verify connectivity data displays on dedicated connectivity pages
