@@ -811,9 +811,9 @@ export default function Home() {
 
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { label: "Questionnaire", value: `${completedSections}/${totalSections}`, done: qDone },
-                    { label: "Tests Passed", value: `${valCompleted}/${valTotal}`, done: vDone },
-                    { label: "Tasks Done", value: `${implCompleted}/${implTotal}`, done: implCompleted === implTotal && implTotal > 0 },
+                    { label: "Questionnaire", count: `${completedSections}/${totalSections}`, pct: Math.round(qPct), done: qDone },
+                    { label: "Tests Passed", count: `${valCompleted}/${valTotal}`, pct: Math.round(vPct), done: vDone },
+                    { label: "Tasks Done", count: `${implCompleted}/${implTotal}`, pct: Math.round(iPct), done: implCompleted === implTotal && implTotal > 0 },
                   ].map((stat) => (
                     <div
                       key={stat.label}
@@ -830,10 +830,10 @@ export default function Home() {
                           stat.done ? "text-emerald-400" : "text-primary"
                         )}
                       >
-                        {stat.value}
+                        {stat.pct}%
                       </div>
                       <div className="text-[10px] text-muted-foreground mt-0.5 font-medium">
-                        {stat.label}
+                        {stat.count} {stat.label}
                       </div>
                     </div>
                   ))}

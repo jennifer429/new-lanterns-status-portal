@@ -2225,3 +2225,9 @@
 - [ ] View/download uploaded documents
 - [ ] Delete uploaded documents
 - [ ] Store files in S3 with metadata in DB
+
+## Dashboard Completion Percentage Display (Mar 20, 2026)
+- [x] Show task completion % on dashboard matching Task List page
+- [x] Show test completion % on dashboard matching Testing page
+- [x] Ensure N/A items are excluded from counts consistently
+- [x] Hero stats show percentage prominently with count below (e.g. "17%" / "1/6 Questionnaire")
