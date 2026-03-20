@@ -218,10 +218,15 @@ function ArchitectureOverview({
         const imported = JSON.parse(e.target?.result as string);
         if (Array.isArray(imported)) {
           // Merge: add imported systems that don't already exist
+          // Supports both native format { name, type, description } and
+          // external format { vendor_product, system_type, notes }
           const merged = [...systems];
           for (const item of imported) {
-            if (item.name && item.type && !merged.some(s => s.name === item.name && s.type === item.type)) {
-              merged.push({ id: crypto.randomUUID(), name: item.name, type: item.type, description: item.description || '' });
+            const name = item.name || item.vendor_product || '';
+            const type = item.type || item.system_type || '';
+            const description = item.description || item.notes || '';
+            if (name && type && !merged.some(s => s.name === name && s.type === type)) {
+              merged.push({ id: crypto.randomUUID(), name, type, description });
             }
           }
           saveSystems(merged);
