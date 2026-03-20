@@ -2194,3 +2194,34 @@
 - [x] Verify connectivity data displays correctly on org dashboard expandable card
   - Tested with Munson Medical Center: 3 rows (HL7 ORM, DICOM, VPN) load correctly
 - [ ] Verify connectivity data displays on dedicated connectivity pages
+
+## Redesign Task/Test Status UX (Mar 20, 2026)
+- [ ] Select rows via checkboxes (individual or Select All per phase)
+- [ ] Bulk action toolbar appears when rows selected: Mark Done, Mark N/A, Undo
+- [x] Date auto-records when marking Done or N/A (date of action, not manual entry)
+- [x] Status column clearly shows status (Done, N/A, blank) with the date it was set
+- [x] Mass select and bulk Mark Done, Mark N/A, or Undo
+- [x] Same UX pattern for both Task List (Implementation) and Testing (Validation) pages
+- [x] Remove old tiny inline N/A buttons
+- [x] Update DB schema if needed for status + date tracking on tasks
+
+## Redesign Task/Test Status UX (Mar 20, 2026)
+- [x] Remove tiny inline N/A buttons from task/test rows
+- [x] Add prominent status column with clickable StatusBadge: Open → Done → N/A → Open
+- [x] Record date when any status is set (Done date, N/A date)
+- [x] Select rows via checkboxes (individual + Select All per phase)
+- [x] Floating bulk action toolbar when rows selected: Mark Done/Tested, Mark N/A, Undo, Clear
+- [x] Same UX pattern for both Task List and Testing pages
+- [x] Fix server to set completedAt when N/A is marked (record the action date)
+
+## Architecture Document Management (Mar 20, 2026)
+- [ ] Allow uploading multiple architecture diagrams
+- [ ] Allow removing individual architecture diagrams
+- [ ] Allow replacing individual architecture diagrams
+
+## Per-Site File Artifacts (Mar 20, 2026)
+- [ ] Add file artifacts/documents section per org site
+- [ ] Upload documents with notes per file
+- [ ] View/download uploaded documents
+- [ ] Delete uploaded documents
+- [ ] Store files in S3 with metadata in DB
