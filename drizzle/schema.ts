@@ -102,6 +102,8 @@ export const taskCompletion = mysqlTable("taskCompletion", {
   taskId: varchar("taskId", { length: 50 }).notNull(),
   completed: int("completed").default(0).notNull(), // 0 or 1 (boolean)
   notApplicable: int("notApplicable").default(0).notNull(), // 0 or 1 — marks task as N/A (excluded from counts)
+  inProgress: int("inProgress").default(0).notNull(), // 0 or 1 — marks task as in-progress
+  blocked: int("blocked").default(0).notNull(), // 0 or 1 — marks task as blocked
   completedAt: timestamp("completedAt"),
   completedBy: varchar("completedBy", { length: 255 }),
   targetDate: varchar("targetDate", { length: 20 }), // YYYY-MM-DD target/due date

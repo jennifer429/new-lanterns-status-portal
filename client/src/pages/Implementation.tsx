@@ -20,6 +20,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   CheckCircle2,
   Circle,
   ListChecks,
@@ -33,6 +39,9 @@ import {
   Square,
   Ban,
   BookOpen,
+  Clock,
+  AlertCircle,
+  ChevronUp,
   Undo2,
 } from "lucide-react";
 import { useRoute, Link } from "wouter";
@@ -183,6 +192,8 @@ export default function Implementation() {
   const [localOverrides, setLocalOverrides] = useState<Record<string, {
     completed?: boolean;
     notApplicable?: boolean;
+    inProgress?: boolean;
+    blocked?: boolean;
     completedAt?: Date | null;
     owner?: string;
     targetDate?: string;
@@ -192,6 +203,7 @@ export default function Implementation() {
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const [resetTargetSection, setResetTargetSection] = useState<typeof SECTION_DEFS[number] | null>(null);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+  const [bulkStatusOpenSection, setBulkStatusOpenSection] = useState<string | null>(null);
 
   function toggleTaskSelection(taskId: string) {
     setSelectedTaskIds(prev => {
@@ -340,7 +352,105 @@ export default function Implementation() {
     });
   }
 
-  // ── Section-level bulk actions ────────────────────────────────────────────────
+  function getMerged(taskId: string) {
+    const s = taskMap[taskId];
+    const l = localOverrides[taskId] ?? {};
+    return {
+      completed:      l.completed      !== undefined ? l.completed      : (s?.completed      ?? false),
+      notApplicable:  l.notApplicable  !== undefined ? l.notApplicable  : (s?.notApplicable  ?? false),
+      inProgress:     l.inProgress     !== undefined ? l.inProgress     : (s?.inProgress     ?? false),
+      blocked:        l.blocked        !== undefined ? l.blocked        : (s?.blocked        ?? false),
+      completedAt:    l.completedAt    !== undefined ? l.completedAt    : (s?.completedAt    ?? null),
+      owner:          l.owner          !== undefined ? l.owner          : (s?.owner          ?? ""),
+      targetDate:     l.targetDate     !== undefined ? l.targetDate     : (s?.targetDate     ?? ""),
+      notes:          l.notes          !== undefined ? l.notes          : (s?.notes          ?? ""),
+    };
+  }
+
+  type TaskStatus = "open" | "in_progress" | "complete" | "n_a" | "blocked";
+
+  function getTaskStatus(taskId: string): TaskStatus {
+    const m = getMerged(taskId);
+    if (m.completed) return "complete";
+    if (m.notApplicable) return "n_a";
+    if (m.blocked) return "blocked";
+    if (m.inProgress) return "in_progress";
+    return "open";
+  }
+
+  function applyStatus(taskId: string, sectionName: string, status: TaskStatus) {
+    const current = getMerged(taskId);
+    const patch = {
+      completed:    status === "complete",
+      notApplicable: status === "n_a",
+      inProgress:   status === "in_progress",
+      blocked:      status === "blocked",
+    };
+    const merged = { ...current, ...patch };
+    if (status === "complete") {
+      merged.completedAt = new Date();
+    } else {
+      merged.completedAt = null;
+    }
+    setLocalOverrides(prev => ({ ...prev, [taskId]: merged }));
+    updateTask.mutate({
+      organizationSlug: slug,
+      taskId,
+      sectionName,
+      completed: merged.completed,
+      notApplicable: merged.notApplicable,
+      inProgress: merged.inProgress,
+      blocked: merged.blocked,
+      owner: merged.owner || undefined,
+      targetDate: merged.targetDate || undefined,
+      notes: merged.notes || undefined,
+    });
+  }
+
+  function bulkApplyStatus(status: TaskStatus) {
+    selectedTaskIds.forEach(taskId => {
+      const section = SECTION_DEFS.find(s => s.tasks.some(t => t.id === taskId));
+      if (!section) return;
+      applyStatus(taskId, section.title, status);
+    });
+  }
+
+  function save(taskId: string, sectionName: string, patch: { completed?: boolean; notApplicable?: boolean; owner?: string; targetDate?: string; notes?: string }) {
+    const current = getMerged(taskId);
+    const merged = { ...current, ...patch };
+    if (patch.completed !== undefined) {
+      merged.completedAt = patch.completed ? new Date() : null;
+    }
+    // When marking N/A, also uncheck completed
+    if (patch.notApplicable) {
+      merged.completed = false;
+      merged.completedAt = null;
+    }
+    setLocalOverrides(prev => ({ ...prev, [taskId]: merged }));
+    updateTask.mutate({
+      organizationSlug: slug,
+      taskId,
+      sectionName,
+      completed: merged.completed,
+      notApplicable: merged.notApplicable,
+      inProgress: merged.inProgress,
+      blocked: merged.blocked,
+      owner: merged.owner || undefined,
+      targetDate: merged.targetDate || undefined,
+      notes: merged.notes || undefined,
+    });
+  }
+
+  function formatDate(d: Date | null | undefined) {
+    if (!d) return "";
+    return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  }
+
+  function todayStr() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  // ── Bulk actions per section ──────────────────────────────────────────────────
 
   function bulkCompleteSection(section: SectionDef) {
     section.tasks.forEach(task => {
@@ -471,6 +581,8 @@ export default function Implementation() {
   const naCount = allTaskIds.filter(id => getMerged(id).notApplicable).length;
   const total = allTaskIds.length - naCount;
   const completed = allTaskIds.filter(id => getMerged(id).completed && !getMerged(id).notApplicable).length;
+  const inProgressCount = allTaskIds.filter(id => getMerged(id).inProgress && !getMerged(id).notApplicable).length;
+  const blockedCount = allTaskIds.filter(id => getMerged(id).blocked && !getMerged(id).notApplicable).length;
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
   const selectedCount = selectedTaskIds.size;
 
@@ -603,6 +715,8 @@ export default function Implementation() {
               {SECTION_DEFS.map((section, sIdx) => {
                 const sectionNa = section.tasks.filter(t => getMerged(t.id).notApplicable).length;
                 const sectionCompleted = section.tasks.filter(t => getMerged(t.id).completed && !getMerged(t.id).notApplicable).length;
+                const sectionInProgress = section.tasks.filter(t => getMerged(t.id).inProgress && !getMerged(t.id).notApplicable).length;
+                const sectionBlocked = section.tasks.filter(t => getMerged(t.id).blocked && !getMerged(t.id).notApplicable).length;
                 const sectionTotal = section.tasks.length - sectionNa;
                 const allDone = sectionTotal > 0 && sectionCompleted === sectionTotal;
                 const isCollapsed = !!collapsedSections[section.id];
@@ -630,8 +744,18 @@ export default function Implementation() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
+                        {sectionBlocked > 0 && (
+                          <Badge variant="outline" className="text-xs font-semibold border-red-500/30 text-red-500">
+                            {sectionBlocked} Blocked
+                          </Badge>
+                        )}
+                        {sectionInProgress > 0 && (
+                          <Badge variant="outline" className="text-xs font-semibold border-amber-400/30 text-amber-400">
+                            {sectionInProgress} In Progress
+                          </Badge>
+                        )}
                         {sectionNa > 0 && (
-                          <Badge variant="outline" className="text-xs font-semibold border-amber-500/30 text-amber-400">
+                          <Badge variant="outline" className="text-xs font-semibold border-purple-400/30 text-purple-400">
                             {sectionNa} N/A
                           </Badge>
                         )}
@@ -651,81 +775,118 @@ export default function Implementation() {
                       </div>
                     </button>
 
-                    {/* Section action bar — visible when expanded */}
-                    {!isCollapsed && (
-                      <div className="flex flex-wrap items-center gap-3 px-5 py-2.5 border-b border-border/20 bg-muted/10">
-                        <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mr-1">Actions</span>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); toggleSelectAllInSection(section); }}
-                          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
-                        >
-                          {allSectionSelected ? <CheckSquare className="w-3.5 h-3.5 text-primary" /> : <Square className="w-3.5 h-3.5" />}
-                          {allSectionSelected ? "Deselect All" : "Select All"}
-                        </button>
-                        <span className="text-border">|</span>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); bulkCompleteSection(section); }}
-                          disabled={allDone}
-                          className={cn(
-                            "inline-flex items-center gap-1.5 text-xs transition-colors",
-                            allDone
-                              ? "text-muted-foreground/30 cursor-not-allowed"
-                              : "text-emerald-400 hover:text-emerald-300 cursor-pointer"
-                          )}
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          All Done
-                        </button>
-                        <span className="text-border">|</span>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setResetTargetSection(section); }}
-                          disabled={sectionCompleted === 0 && sectionNa === 0}
-                          className={cn(
-                            "inline-flex items-center gap-1.5 text-xs transition-colors",
-                            sectionCompleted === 0 && sectionNa === 0
-                              ? "text-muted-foreground/30 cursor-not-allowed"
-                              : "text-destructive/70 hover:text-destructive cursor-pointer"
-                          )}
-                        >
-                          <XSquare className="w-3.5 h-3.5" />
-                          Reset All
-                        </button>
-                        <span className="text-border">|</span>
-                        <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <CalendarCheck className="w-3.5 h-3.5" />
-                          {selectedInSection.length > 0 ? (
-                            <>
-                              <span className="text-primary font-medium">Set date for {selectedInSection.length} selected:</span>
-                              <input
-                                type="date"
-                                defaultValue={todayStr()}
-                                onChange={(e) => { if (e.target.value) bulkSetDateSelected(e.target.value); }}
-                                className="bg-transparent border-b border-primary/60 px-1 py-0.5 text-xs text-foreground focus:outline-none focus:border-primary [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
-                              />
-                            </>
-                          ) : (
-                            <>
-                              <span>Set all dates:</span>
-                              <input
-                                type="date"
-                                defaultValue={todayStr()}
-                                onChange={(e) => { if (e.target.value) bulkSetDateSection(section, e.target.value); }}
-                                className="bg-transparent border-b border-border/40 px-1 py-0.5 text-xs text-foreground focus:outline-none focus:border-primary/60 [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
-                              />
-                            </>
-                          )}
+                    {/* Bulk action toolbar — visible when expanded */}
+                    {!isCollapsed && (() => {
+                      const sectionTaskIds = section.tasks.map(t => t.id);
+                      const selectedInSection = sectionTaskIds.filter(id => selectedTaskIds.has(id));
+                      const allSectionSelected = sectionTaskIds.length > 0 && sectionTaskIds.every(id => selectedTaskIds.has(id));
+                      const bulkStatusOpen = bulkStatusOpenSection === section.title;
+                      return (
+                        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-2.5 border-b border-border/20 bg-muted/10">
+                          {/* Left: select-all + selected count + set status */}
+                          <div className="flex flex-wrap items-center gap-2">
+                            {/* Select all checkbox */}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); toggleSelectAllInSection(section); }}
+                              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                            >
+                              {allSectionSelected
+                                ? <CheckSquare className="w-3.5 h-3.5 text-primary" />
+                                : <Square className="w-3.5 h-3.5" />
+                              }
+                              <span>Select all</span>
+                            </button>
+
+                            {/* Selected count chip */}
+                            {selectedInSection.length > 0 && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-primary/15 text-primary text-[11px] font-semibold">
+                                {selectedInSection.length} selected
+                              </span>
+                            )}
+
+                            {/* Set status dropdown — only when rows selected */}
+                            {selectedInSection.length > 0 && (
+                              <DropdownMenu open={bulkStatusOpen} onOpenChange={(open) => setBulkStatusOpenSection(open ? section.title : null)}>
+                                <DropdownMenuTrigger asChild>
+                                  <button className="inline-flex items-center gap-1.5 px-3 py-1 rounded border border-border/60 bg-background text-xs font-medium hover:bg-muted/50 transition-colors">
+                                    Set status
+                                    {bulkStatusOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                  </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="w-44">
+                                  <DropdownMenuItem onClick={() => { bulkApplyStatus("complete"); setBulkStatusOpenSection(null); }} className="gap-2 cursor-pointer">
+                                    <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+                                    Mark complete
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => { bulkApplyStatus("in_progress"); setBulkStatusOpenSection(null); }} className="gap-2 cursor-pointer">
+                                    <span className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
+                                    In progress
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => { bulkApplyStatus("n_a"); setBulkStatusOpenSection(null); }} className="gap-2 cursor-pointer">
+                                    <span className="w-2 h-2 rounded-full bg-purple-400 flex-shrink-0" />
+                                    Mark N/A
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => { bulkApplyStatus("blocked"); setBulkStatusOpenSection(null); }} className="gap-2 cursor-pointer">
+                                    <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+                                    Blocked
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => { bulkApplyStatus("open"); setBulkStatusOpenSection(null); }} className="gap-2 cursor-pointer">
+                                    <span className="w-2 h-2 rounded-full bg-muted-foreground/40 flex-shrink-0" />
+                                    Open
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+
+                            {/* Reset all (no selection needed) */}
+                            {(sectionCompleted > 0 || sectionNa > 0) && selectedInSection.length === 0 && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setResetTargetSection(section); }}
+                                className="inline-flex items-center gap-1.5 text-xs text-destructive/60 hover:text-destructive cursor-pointer transition-colors"
+                              >
+                                <XSquare className="w-3.5 h-3.5" />
+                                Reset all
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Right: date picker */}
+                          <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <CalendarCheck className="w-3.5 h-3.5" />
+                            {selectedInSection.length > 0 ? (
+                              <>
+                                <span className="text-primary font-medium">Date:</span>
+                                <input
+                                  type="date"
+                                  defaultValue={todayStr()}
+                                  onChange={(e) => { if (e.target.value) bulkSetDateSelected(e.target.value); }}
+                                  className="bg-transparent border-b border-primary/60 px-1 py-0.5 text-xs text-foreground focus:outline-none focus:border-primary [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
+                                />
+                              </>
+                            ) : (
+                              <>
+                                <span>Date:</span>
+                                <input
+                                  type="date"
+                                  defaultValue={todayStr()}
+                                  onChange={(e) => { if (e.target.value) bulkSetDateSection(section, e.target.value); }}
+                                  className="bg-transparent border-b border-border/40 px-1 py-0.5 text-xs text-foreground focus:outline-none focus:border-primary/60 [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
+                                />
+                              </>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
 
                     {/* Collapsible content */}
                     <div className={`collapsible-body ${!isCollapsed ? "open" : ""}`}><div>
                       <CardContent className="p-0">
                         {/* Column headers */}
-                        <div className="hidden md:grid grid-cols-[28px_1fr_90px_120px_110px_110px_auto] gap-3 px-5 py-2 text-xs text-muted-foreground uppercase tracking-wider border-b border-border/20 bg-muted/10">
+                        <div className="hidden md:grid grid-cols-[24px_100px_1fr_120px_110px_110px_auto] gap-3 px-5 py-2 text-xs text-muted-foreground uppercase tracking-wider border-b border-border/20 bg-muted/10">
                           <div />
+                          <div>Status</div>
                           <div>Task</div>
-                          <div className="text-center">Status</div>
                           <div>Owner</div>
                           <div>Target Date</div>
                           <div>Status Date</div>
@@ -734,11 +895,21 @@ export default function Implementation() {
 
                         {section.tasks.map((task, tIdx) => {
                           const { completed: done, notApplicable: isNA, completedAt, owner, targetDate, notes } = getMerged(task.id);
+                          const taskStatus = getTaskStatus(task.id);
                           const notesOpen = !!expandedNotes[task.id];
                           const intakeHref = task.intakeLink ? `/org/${slug}${task.intakeLink}` : null;
                           const specHref = task.specLink ? `/org/${slug}${task.specLink}` : null;
                           const isSelected = selectedTaskIds.has(task.id);
-                          const status = getStatus(task.id);
+
+                          const STATUS_CONFIG = {
+                            open:        { label: "Open",        dot: "bg-muted-foreground/40", text: "text-muted-foreground" },
+                            in_progress: { label: "In progress", dot: "bg-amber-400",            text: "text-amber-400" },
+                            complete:    { label: "Complete",    dot: "bg-green-500",             text: "text-green-500" },
+                            n_a:         { label: "N/A",         dot: "bg-purple-400",            text: "text-purple-400" },
+                            blocked:     { label: "Blocked",     dot: "bg-red-500",               text: "text-red-500" },
+                          } as const;
+
+                          const sc = STATUS_CONFIG[taskStatus];
 
                           return (
                             <div
@@ -750,7 +921,7 @@ export default function Implementation() {
                               )}
                             >
                               {/* Main row */}
-                              <div className="grid grid-cols-1 md:grid-cols-[28px_1fr_90px_120px_110px_110px_auto] gap-3 items-start px-5 py-3">
+                              <div className="grid grid-cols-1 md:grid-cols-[24px_100px_1fr_120px_110px_110px_auto] gap-3 items-start px-5 py-3">
                                 {/* Row selection checkbox */}
                                 <div className="hidden md:flex items-center justify-center pt-1">
                                   <button
@@ -763,6 +934,44 @@ export default function Implementation() {
                                       : <Square className="w-4 h-4" />
                                     }
                                   </button>
+                                </div>
+
+                                {/* Status dropdown */}
+                                <div className="flex items-start pt-0.5">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <button className={cn(
+                                        "inline-flex items-center gap-1.5 px-2 py-1 rounded border border-border/40 bg-background/60 text-xs font-medium hover:bg-muted/50 transition-colors",
+                                        sc.text
+                                      )}>
+                                        <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", sc.dot)} />
+                                        {sc.label}
+                                        <ChevronDown className="w-2.5 h-2.5 opacity-60" />
+                                      </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start" className="w-40">
+                                      <DropdownMenuItem onClick={() => applyStatus(task.id, section.title, "complete")} className="gap-2 cursor-pointer">
+                                        <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+                                        Mark complete
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => applyStatus(task.id, section.title, "in_progress")} className="gap-2 cursor-pointer">
+                                        <span className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
+                                        In progress
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => applyStatus(task.id, section.title, "n_a")} className="gap-2 cursor-pointer">
+                                        <span className="w-2 h-2 rounded-full bg-purple-400 flex-shrink-0" />
+                                        Mark N/A
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => applyStatus(task.id, section.title, "blocked")} className="gap-2 cursor-pointer">
+                                        <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+                                        Blocked
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => applyStatus(task.id, section.title, "open")} className="gap-2 cursor-pointer">
+                                        <span className="w-2 h-2 rounded-full bg-muted-foreground/40 flex-shrink-0" />
+                                        Open
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
                                 </div>
 
                                 {/* Task name + description + links */}
@@ -793,7 +1002,22 @@ export default function Implementation() {
                                   </div>
                                   {/* Mobile: inline controls */}
                                   <div className="md:hidden flex flex-wrap items-center gap-3 mt-2">
-                                    <StatusBadge status={status} onClick={() => cycleStatus(task.id, section.title)} size="sm" />
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <button className={cn("inline-flex items-center gap-1.5 px-2 py-0.5 rounded border border-border/40 bg-background/60 text-xs font-medium hover:bg-muted/50 transition-colors", sc.text)}>
+                                          <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", sc.dot)} />
+                                          {sc.label}
+                                          <ChevronDown className="w-2.5 h-2.5 opacity-60" />
+                                        </button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="start" className="w-40">
+                                        <DropdownMenuItem onClick={() => applyStatus(task.id, section.title, "complete")} className="gap-2 cursor-pointer"><span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />Mark complete</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => applyStatus(task.id, section.title, "in_progress")} className="gap-2 cursor-pointer"><span className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />In progress</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => applyStatus(task.id, section.title, "n_a")} className="gap-2 cursor-pointer"><span className="w-2 h-2 rounded-full bg-purple-400 flex-shrink-0" />Mark N/A</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => applyStatus(task.id, section.title, "blocked")} className="gap-2 cursor-pointer"><span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />Blocked</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => applyStatus(task.id, section.title, "open")} className="gap-2 cursor-pointer"><span className="w-2 h-2 rounded-full bg-muted-foreground/40 flex-shrink-0" />Open</DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
                                     <InlineEdit value={owner} placeholder="Owner…" onCommit={v => save(task.id, section.title, { owner: v })} />
                                     <input
                                       type="date"
@@ -807,10 +1031,6 @@ export default function Implementation() {
                                   </div>
                                 </div>
 
-                                {/* Status badge — desktop */}
-                                <div className="hidden md:flex justify-center pt-0.5">
-                                  <StatusBadge status={status} onClick={() => cycleStatus(task.id, section.title)} />
-                                </div>
 
                                 {/* Owner — desktop */}
                                 <div className="hidden md:block">
@@ -910,6 +1130,24 @@ export default function Implementation() {
                       </div>
                       <span className="font-medium text-foreground">{completed}</span>
                     </div>
+                    {inProgressCount > 0 && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-amber-400" />
+                          <span className="text-foreground">In Progress</span>
+                        </div>
+                        <span className="font-medium text-amber-400">{inProgressCount}</span>
+                      </div>
+                    )}
+                    {blockedCount > 0 && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-red-500" />
+                          <span className="text-foreground">Blocked</span>
+                        </div>
+                        <span className="font-medium text-red-500">{blockedCount}</span>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full bg-muted-foreground/30" />
