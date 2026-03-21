@@ -2246,3 +2246,9 @@
 ## Questionnaire Navigation Update (Mar 20, 2026)
 - [x] Update Questionnaire page header to match Task List/Testing navigation style
 - [x] Add "Back to Dashboard" link in Questionnaire header consistent with other pages
+## Consistent Header Navigation Across All Pages (Mar 20, 2026)
+- [ ] Always display: New Lantern logo, Hospital name, Rad Group — in the same spot on every page
+- [ ] Always show a way to return to the org dashboard from any sub-page
+- [ ] Admin-only quick-nav: links to org dashboard, partner dashboard, and admin (all sites) dashboard (hidden for regular users)
+- [ ] Create shared PageHeader component used by all sub-pages
+- [ ] Apply shared header to: Task List, Testing, Questionnaire, Specifications, Connectivity

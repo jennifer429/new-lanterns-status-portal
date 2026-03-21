@@ -235,52 +235,6 @@ export default function Implementation() {
     });
   }
 
-  function bulkMarkDone() {
-    selectedTaskIds.forEach(taskId => {
-      const section = SECTION_DEFS.find(s => s.tasks.some(t => t.id === taskId));
-      if (!section) return;
-      applyStatus(taskId, section.title, "complete");
-    });
-    setSelectedTaskIds(new Set());
-  }
-
-  function bulkMarkNA() {
-    selectedTaskIds.forEach(taskId => {
-      const section = SECTION_DEFS.find(s => s.tasks.some(t => t.id === taskId));
-      if (!section) return;
-      applyStatus(taskId, section.title, "n_a");
-    });
-    setSelectedTaskIds(new Set());
-  }
-
-  function bulkUndo() {
-    selectedTaskIds.forEach(taskId => {
-      const section = SECTION_DEFS.find(s => s.tasks.some(t => t.id === taskId));
-      if (!section) return;
-      applyStatus(taskId, section.title, "open");
-    });
-    setSelectedTaskIds(new Set());
-  }
-
-  function bulkSetDateSelected(date: string) {
-    selectedTaskIds.forEach(taskId => {
-      const section = SECTION_DEFS.find(s => s.tasks.some(t => t.id === taskId));
-      if (!section) return;
-      const current = getMerged(taskId);
-      const merged = { ...current, targetDate: date };
-      setLocalOverrides(prev => ({ ...prev, [taskId]: merged }));
-      updateTask.mutate({
-        organizationSlug: slug,
-        taskId,
-        sectionName: section.title,
-        completed: merged.completed,
-        owner: merged.owner || undefined,
-        targetDate: date,
-        notes: merged.notes || undefined,
-      });
-    });
-  }
-
   function getMerged(taskId: string) {
     const s = taskMap[taskId];
     const l = localOverrides[taskId] ?? {};
@@ -407,6 +361,25 @@ export default function Implementation() {
       updateTask.mutate({
         organizationSlug: slug,
         taskId: task.id,
+        sectionName: section.title,
+        completed: merged.completed,
+        owner: merged.owner || undefined,
+        targetDate: date || undefined,
+        notes: merged.notes || undefined,
+      });
+    });
+  }
+
+  function bulkSetDateSelected(date: string) {
+    selectedTaskIds.forEach(taskId => {
+      const section = SECTION_DEFS.find(s => s.tasks.some(t => t.id === taskId));
+      if (!section) return;
+      const current = getMerged(taskId);
+      const merged = { ...current, targetDate: date };
+      setLocalOverrides(prev => ({ ...prev, [taskId]: merged }));
+      updateTask.mutate({
+        organizationSlug: slug,
+        taskId,
         sectionName: section.title,
         completed: merged.completed,
         owner: merged.owner || undefined,
