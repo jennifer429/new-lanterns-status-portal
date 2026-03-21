@@ -226,87 +226,11 @@ export default function Implementation() {
     });
   }
 
-  function getMerged(taskId: string) {
-    const s = taskMap[taskId];
-    const l = localOverrides[taskId] ?? {};
-    return {
-      completed:      l.completed      !== undefined ? l.completed      : (s?.completed      ?? false),
-      notApplicable:  l.notApplicable  !== undefined ? l.notApplicable  : (s?.notApplicable  ?? false),
-      completedAt:    l.completedAt    !== undefined ? l.completedAt    : (s?.completedAt    ?? null),
-      owner:          l.owner          !== undefined ? l.owner          : (s?.owner          ?? ""),
-      targetDate:     l.targetDate     !== undefined ? l.targetDate     : (s?.targetDate     ?? ""),
-      notes:          l.notes          !== undefined ? l.notes          : (s?.notes          ?? ""),
-    };
-  }
-
-  function getStatus(taskId: string): "done" | "na" | "open" {
-    const m = getMerged(taskId);
-    if (m.notApplicable) return "na";
-    if (m.completed) return "done";
-    return "open";
-  }
-
-  function save(taskId: string, sectionName: string, patch: { completed?: boolean; notApplicable?: boolean; owner?: string; targetDate?: string; notes?: string }) {
-    const current = getMerged(taskId);
-    const merged = { ...current, ...patch };
-    // Record date for Done or N/A
-    if (patch.completed || patch.notApplicable) {
-      merged.completedAt = new Date();
-    }
-    // Undo: clear date
-    if (patch.completed === false && patch.notApplicable === false) {
-      merged.completedAt = null;
-    }
-    // Mutual exclusion: Done clears N/A, N/A clears Done
-    if (patch.completed) {
-      merged.notApplicable = false;
-    }
-    if (patch.notApplicable) {
-      merged.completed = false;
-    }
-    setLocalOverrides(prev => ({ ...prev, [taskId]: merged }));
-    updateTask.mutate({
-      organizationSlug: slug,
-      taskId,
-      sectionName,
-      completed: merged.completed,
-      notApplicable: merged.notApplicable,
-      owner: merged.owner || undefined,
-      targetDate: merged.targetDate || undefined,
-      notes: merged.notes || undefined,
-    });
-  }
-
-  function cycleStatus(taskId: string, sectionName: string) {
-    const current = getStatus(taskId);
-    if (current === "open") {
-      save(taskId, sectionName, { completed: true, notApplicable: false });
-    } else if (current === "done") {
-      save(taskId, sectionName, { completed: false, notApplicable: true });
-    } else {
-      save(taskId, sectionName, { completed: false, notApplicable: false });
-    }
-  }
-
-  function formatDate(d: Date | null | undefined) {
-    if (!d) return "";
-    return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  }
-
-  function todayStr() {
-    return new Date().toISOString().slice(0, 10);
-  }
-
-  // ── Bulk actions ──────────────────────────────────────────────────────────────
-
   function bulkMarkDone() {
     selectedTaskIds.forEach(taskId => {
       const section = SECTION_DEFS.find(s => s.tasks.some(t => t.id === taskId));
       if (!section) return;
-      const current = getMerged(taskId);
-      if (!current.completed) {
-        save(taskId, section.title, { completed: true, notApplicable: false });
-      }
+      applyStatus(taskId, section.title, "complete");
     });
     setSelectedTaskIds(new Set());
   }
@@ -315,10 +239,7 @@ export default function Implementation() {
     selectedTaskIds.forEach(taskId => {
       const section = SECTION_DEFS.find(s => s.tasks.some(t => t.id === taskId));
       if (!section) return;
-      const current = getMerged(taskId);
-      if (!current.notApplicable) {
-        save(taskId, section.title, { completed: false, notApplicable: true });
-      }
+      applyStatus(taskId, section.title, "n_a");
     });
     setSelectedTaskIds(new Set());
   }
@@ -327,7 +248,7 @@ export default function Implementation() {
     selectedTaskIds.forEach(taskId => {
       const section = SECTION_DEFS.find(s => s.tasks.some(t => t.id === taskId));
       if (!section) return;
-      save(taskId, section.title, { completed: false, notApplicable: false });
+      applyStatus(taskId, section.title, "open");
     });
     setSelectedTaskIds(new Set());
   }
