@@ -91,7 +91,7 @@ export const implementationRouter = router({
         notApplicable: input.notApplicable ? 1 : 0,
         inProgress: input.inProgress ? 1 : 0,
         blocked: input.blocked ? 1 : 0,
-        completedAt: input.completed ? new Date() : null,
+        completedAt: (input.completed || input.notApplicable) ? new Date() : null,
         completedBy: input.owner ?? null,
         targetDate: input.targetDate ?? null,
         notes: input.notes ?? null,

@@ -1672,6 +1672,9 @@ export default function IntakeNewRedesign() {
                 <Upload className="w-4 h-4" />
                 Import
               </Button>
+              <Link href={`/org/${slug}`} className="text-sm text-foreground hover:text-primary transition-colors font-medium">
+                Back to Dashboard
+              </Link>
               <UserMenu />
             </div>
           </div>

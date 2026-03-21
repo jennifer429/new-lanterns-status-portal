@@ -1,8 +1,9 @@
 /**
- * Validation Checklist Page
- * Checkbox-based completion: check = tested, date auto-populates.
+ * Testing Checklist Page
+ * Select rows → set status (Tested / N/A / Undo).
+ * Floating bulk action toolbar appears when rows are selected.
+ * Status date auto-records when Tested or N/A is set.
  * Related questionnaire answers shown beside each test for context.
- * Sections are collapsible. Font is consistent — no grayed-out text.
  */
 
 import { useState, useRef, useEffect, useMemo } from "react";
@@ -33,6 +34,7 @@ import {
   XSquare,
   Square,
   Ban,
+  Undo2,
 } from "lucide-react";
 import { useRoute, Link } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -45,12 +47,11 @@ import { Download, Upload } from "lucide-react";
 
 interface TestCase {
   name: string;
-  description: string; // What to verify
-  /** Related questionnaire question IDs — shown as context beside the test */
+  description: string;
   relatedQuestions?: Array<{
     questionId: string;
-    label: string; // Short label like "VPN Details" or "PACS Vendor"
-    sectionId: string; // Questionnaire section to link to
+    label: string;
+    sectionId: string;
   }>;
 }
 
@@ -329,13 +330,8 @@ function InlineEdit({
   const [draft, setDraft] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (editing) inputRef.current?.focus();
-  }, [editing]);
-
-  useEffect(() => {
-    if (!editing) setDraft(value);
-  }, [value, editing]);
+  useEffect(() => { if (editing) inputRef.current?.focus(); }, [editing]);
+  useEffect(() => { if (!editing) setDraft(value); }, [value, editing]);
 
   function commit() {
     setEditing(false);
@@ -371,6 +367,69 @@ function InlineEdit({
   );
 }
 
+// ── Status badge component ────────────────────────────────────────────────────
+
+function StatusBadge({
+  status,
+  onClick,
+  size = "md",
+}: {
+  status: "pass" | "na" | "open";
+  onClick: () => void;
+  size?: "sm" | "md";
+}) {
+  const sizeClasses = size === "sm" ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-xs";
+
+  if (status === "pass") {
+    return (
+      <button
+        onClick={onClick}
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded-md font-semibold transition-all border cursor-pointer",
+          "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25",
+          sizeClasses
+        )}
+        title="Click to change status"
+      >
+        <CheckCircle2 className="w-3.5 h-3.5" />
+        Tested
+      </button>
+    );
+  }
+
+  if (status === "na") {
+    return (
+      <button
+        onClick={onClick}
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded-md font-semibold transition-all border cursor-pointer",
+          "bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/25",
+          sizeClasses
+        )}
+        title="Click to change status"
+      >
+        <Ban className="w-3.5 h-3.5" />
+        N/A
+      </button>
+    );
+  }
+
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-md font-semibold transition-all border cursor-pointer",
+        "bg-muted/30 text-muted-foreground/60 border-border/40 hover:bg-muted/50 hover:text-foreground",
+        sizeClasses
+      )}
+      title="Click to set status"
+    >
+      <Circle className="w-3.5 h-3.5" />
+      Open
+    </button>
+  );
+}
+
 // ── Related question answer display ─────────────────────────────────────────
 
 function RelatedAnswers({
@@ -403,7 +462,6 @@ function RelatedAnswers({
           } catch {
             displayAnswer = answer;
           }
-          // Truncate long answers
           if (displayAnswer.length > 60) {
             displayAnswer = displayAnswer.substring(0, 57) + "…";
           }
@@ -451,13 +509,11 @@ export default function Validation() {
     { refetchOnWindowFocus: false }
   );
 
-  // Fetch questionnaire responses for this org to show related answers
   const { data: intakeResponses = [] } = trpc.intake.getResponses.useQuery(
     { organizationSlug: slug },
     { refetchOnWindowFocus: false }
   );
 
-  // Build a lookup map of questionId → response value
   const responseLookup = useMemo(() => {
     const map: Record<string, string> = {};
     for (const r of intakeResponses) {
@@ -474,11 +530,9 @@ export default function Validation() {
     onSuccess: () => utils.validation.getResults.invalidate({ organizationSlug: slug }),
   });
 
-  // CSV import file ref
   const csvInputRef = useRef<HTMLInputElement>(null);
-
-  // Local optimistic state
-  const [localOverrides, setLocalOverrides] = useState<Record<string, { status?: string; signOff?: string; notes?: string; testedDate?: string }>>({}); const [importStatus, setImportStatus] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [localOverrides, setLocalOverrides] = useState<Record<string, { status?: string; signOff?: string; notes?: string; testedDate?: string }>>({});
+  const [importStatus, setImportStatus] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({});
   const [collapsedPhases, setCollapsedPhases] = useState<Record<number, boolean>>({});
   const [expandedRelated, setExpandedRelated] = useState<Record<string, boolean>>({});
@@ -507,26 +561,6 @@ export default function Validation() {
     });
   }
 
-  function bulkSetDateSelected(date: string) {
-    selectedTestKeys.forEach(key => {
-      const current = getMerged(key);
-      const merged = { ...current, testedDate: date };
-      setLocalOverrides(prev => ({ ...prev, [key]: merged }));
-      updateMutation.mutate({
-        organizationSlug: slug,
-        testKey: key,
-        status: merged.status as any,
-        signOff: merged.signOff || undefined,
-        notes: merged.notes || undefined,
-        testedDate: date,
-      });
-    });
-  }
-
-  function togglePhase(pIdx: number) {
-    setCollapsedPhases(prev => ({ ...prev, [pIdx]: !prev[pIdx] }));
-  }
-
   function todayStr() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -543,60 +577,27 @@ export default function Validation() {
     };
   }
 
-  function toggleTested(pIdx: number, tIdx: number) {
-    const key = testKey(pIdx, tIdx);
-    const current = getMerged(key);
-    const isTested = current.status === "Pass";
-
-    // Toggle: if already tested, uncheck; if not, check and auto-date
-    const newStatus = isTested ? "Not Tested" : "Pass";
-    const newDate = isTested ? "" : (current.testedDate || todayStr());
-
-    const merged = {
-      ...current,
-      status: newStatus,
-      testedDate: newDate,
-    };
-
-    setLocalOverrides((prev) => ({ ...prev, [key]: merged }));
-    updateMutation.mutate({
-      organizationSlug: slug,
-      testKey: key,
-      status: newStatus as any,
-      signOff: merged.signOff || undefined,
-      notes: merged.notes || undefined,
-      testedDate: merged.testedDate || undefined,
-    });
+  function getStatus(key: string): "pass" | "na" | "open" {
+    const m = getMerged(key);
+    if (m.status === "N/A") return "na";
+    if (m.status === "Pass") return "pass";
+    return "open";
   }
 
-  function toggleNA(pIdx: number, tIdx: number) {
-    const key = testKey(pIdx, tIdx);
-    const current = getMerged(key);
-    const isNA = current.status === "N/A";
-    const newStatus = isNA ? "Not Tested" : "N/A";
-
-    const merged = {
-      ...current,
-      status: newStatus,
-      testedDate: isNA ? "" : current.testedDate,
-    };
-
-    setLocalOverrides((prev) => ({ ...prev, [key]: merged }));
-    updateMutation.mutate({
-      organizationSlug: slug,
-      testKey: key,
-      status: newStatus as any,
-      signOff: merged.signOff || undefined,
-      notes: merged.notes || undefined,
-      testedDate: merged.testedDate || undefined,
-    });
-  }
-
-  function saveField(pIdx: number, tIdx: number, patch: { signOff?: string; notes?: string; testedDate?: string }) {
-    const key = testKey(pIdx, tIdx);
+  function saveTest(key: string, patch: { status?: string; signOff?: string; notes?: string; testedDate?: string }) {
     const current = getMerged(key);
     const merged = { ...current, ...patch };
-    setLocalOverrides((prev) => ({ ...prev, [key]: merged }));
+
+    // Record date for Pass or N/A
+    if (patch.status === "Pass" || patch.status === "N/A") {
+      merged.testedDate = merged.testedDate || todayStr();
+    }
+    // Undo: clear date
+    if (patch.status === "Not Tested") {
+      merged.testedDate = "";
+    }
+
+    setLocalOverrides(prev => ({ ...prev, [key]: merged }));
     updateMutation.mutate({
       organizationSlug: slug,
       testKey: key,
@@ -607,28 +608,93 @@ export default function Validation() {
     });
   }
 
-  // ── Bulk actions per phase ──────────────────────────────────────────────────
+  function cycleStatus(pIdx: number, tIdx: number) {
+    const key = testKey(pIdx, tIdx);
+    const current = getStatus(key);
+    if (current === "open") {
+      saveTest(key, { status: "Pass" });
+    } else if (current === "pass") {
+      saveTest(key, { status: "N/A" });
+    } else {
+      saveTest(key, { status: "Not Tested" });
+    }
+  }
+
+  function saveField(pIdx: number, tIdx: number, patch: { signOff?: string; notes?: string; testedDate?: string }) {
+    const key = testKey(pIdx, tIdx);
+    const current = getMerged(key);
+    const merged = { ...current, ...patch };
+    setLocalOverrides(prev => ({ ...prev, [key]: merged }));
+    updateMutation.mutate({
+      organizationSlug: slug,
+      testKey: key,
+      status: merged.status as any,
+      signOff: merged.signOff || undefined,
+      notes: merged.notes || undefined,
+      testedDate: merged.testedDate || undefined,
+    });
+  }
+
+  // ── Bulk actions ──────────────────────────────────────────────────────────────
+
+  function bulkMarkPassed() {
+    selectedTestKeys.forEach(key => {
+      if (getMerged(key).status !== "Pass") {
+        saveTest(key, { status: "Pass" });
+      }
+    });
+    setSelectedTestKeys(new Set());
+  }
+
+  function bulkMarkNA() {
+    selectedTestKeys.forEach(key => {
+      if (getMerged(key).status !== "N/A") {
+        saveTest(key, { status: "N/A" });
+      }
+    });
+    setSelectedTestKeys(new Set());
+  }
+
+  function bulkUndo() {
+    selectedTestKeys.forEach(key => {
+      saveTest(key, { status: "Not Tested" });
+    });
+    setSelectedTestKeys(new Set());
+  }
+
+  function bulkSetDateSelected(date: string) {
+    selectedTestKeys.forEach(key => {
+      const current = getMerged(key);
+      const merged = { ...current, testedDate: date };
+      setLocalOverrides(prev => ({ ...prev, [key]: merged }));
+      updateMutation.mutate({
+        organizationSlug: slug,
+        testKey: key,
+        status: merged.status as any,
+        signOff: merged.signOff || undefined,
+        notes: merged.notes || undefined,
+        testedDate: date,
+      });
+    });
+  }
+
+  // ── Phase-level bulk actions ──────────────────────────────────────────────────
 
   function bulkCheckPhase(pIdx: number) {
-    const today = todayStr();
+    phases[pIdx].tests.forEach((_, tIdx) => {
+      const key = testKey(pIdx, tIdx);
+      if (getMerged(key).status !== "Pass" && getMerged(key).status !== "N/A") {
+        saveTest(key, { status: "Pass" });
+      }
+    });
+  }
+
+  function bulkUncheckPhase(pIdx: number) {
     phases[pIdx].tests.forEach((_, tIdx) => {
       const key = testKey(pIdx, tIdx);
       const current = getMerged(key);
-      if (current.status !== "Pass") {
-        const merged = {
-          ...current,
-          status: "Pass",
-          testedDate: current.testedDate || today,
-        };
-        setLocalOverrides((prev) => ({ ...prev, [key]: merged }));
-        updateMutation.mutate({
-          organizationSlug: slug,
-          testKey: key,
-          status: "Pass" as any,
-          signOff: merged.signOff || undefined,
-          notes: merged.notes || undefined,
-          testedDate: merged.testedDate || undefined,
-        });
+      if (current.status === "Pass" || current.status === "N/A") {
+        saveTest(key, { status: "Not Tested" });
       }
     });
   }
@@ -638,38 +704,15 @@ export default function Validation() {
       const key = testKey(pIdx, tIdx);
       const current = getMerged(key);
       const merged = { ...current, testedDate: date };
-      setLocalOverrides((prev) => ({ ...prev, [key]: merged }));
+      setLocalOverrides(prev => ({ ...prev, [key]: merged }));
       updateMutation.mutate({
         organizationSlug: slug,
         testKey: key,
         status: merged.status as any,
         signOff: merged.signOff || undefined,
         notes: merged.notes || undefined,
-        testedDate: date || undefined,
+        testedDate: date,
       });
-    });
-  }
-
-  function bulkUncheckPhase(pIdx: number) {
-    phases[pIdx].tests.forEach((_, tIdx) => {
-      const key = testKey(pIdx, tIdx);
-      const current = getMerged(key);
-      if (current.status === "Pass") {
-        const merged = {
-          ...current,
-          status: "Not Tested",
-          testedDate: "",
-        };
-        setLocalOverrides((prev) => ({ ...prev, [key]: merged }));
-        updateMutation.mutate({
-          organizationSlug: slug,
-          testKey: key,
-          status: "Not Tested" as any,
-          signOff: merged.signOff || undefined,
-          notes: merged.notes || undefined,
-          testedDate: undefined,
-        });
-      }
     });
   }
 
@@ -717,7 +760,6 @@ export default function Validation() {
         const testName = record["Test Name"]?.trim();
         if (!testName) { skipped++; continue; }
 
-        // Find matching test by name
         let foundPIdx = -1;
         let foundTIdx = -1;
         phases.forEach((phase, pIdx) => {
@@ -735,19 +777,16 @@ export default function Validation() {
         const current = getMerged(key);
 
         const statusRaw = (record["Status"] || "").trim().toLowerCase();
-        const newStatus = (statusRaw === "tested" || statusRaw === "pass") ? "Pass" : "Not Tested";
+        let newStatus = "Not Tested";
+        if (statusRaw === "tested" || statusRaw === "pass") newStatus = "Pass";
+        else if (statusRaw === "n/a" || statusRaw === "na" || statusRaw === "not applicable") newStatus = "N/A";
+
         const newDate = record["Date Tested"]?.trim() || current.testedDate || "";
         const newSignOff = record["Sign-Off"]?.trim() || current.signOff || "";
         const newNotes = record["Notes"]?.trim() || current.notes || "";
 
-        const merged = {
-          status: newStatus,
-          testedDate: newDate,
-          signOff: newSignOff,
-          notes: newNotes,
-        };
-
-        setLocalOverrides((prev) => ({ ...prev, [key]: merged }));
+        const merged = { status: newStatus, testedDate: newDate, signOff: newSignOff, notes: newNotes };
+        setLocalOverrides(prev => ({ ...prev, [key]: merged }));
         updateMutation.mutate({
           organizationSlug: slug,
           testKey: key,
@@ -765,16 +804,16 @@ export default function Validation() {
       setImportStatus({ message: "Failed to parse CSV file.", type: "error" });
       setTimeout(() => setImportStatus(null), 5000);
     }
-    // Reset file input so same file can be re-imported
     if (csvInputRef.current) csvInputRef.current.value = "";
   }
 
   // Computed stats
   const allKeys = phases.flatMap((p, pIdx) => p.tests.map((_, tIdx) => testKey(pIdx, tIdx)));
-  const naCount = allKeys.filter((k) => getMerged(k).status === "N/A").length;
+  const naCount = allKeys.filter(k => getMerged(k).status === "N/A").length;
   const total = allKeys.length - naCount;
-  const completed = allKeys.filter((k) => getMerged(k).status === "Pass").length;
+  const completed = allKeys.filter(k => getMerged(k).status === "Pass").length;
   const completePct = total > 0 ? Math.round((completed / total) * 100) : 0;
+  const selectedCount = selectedTestKeys.size;
 
   return (
     <div className="min-h-screen bg-background animate-page-in">
@@ -820,11 +859,49 @@ export default function Validation() {
         </div>
       </header>
 
+      {/* Floating bulk action toolbar */}
+      {selectedCount > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-200">
+          <div className="flex items-center gap-3 px-5 py-3 rounded-xl bg-card border-2 border-primary/30 shadow-2xl shadow-primary/10 backdrop-blur-sm">
+            <span className="text-sm font-semibold text-foreground">
+              {selectedCount} selected
+            </span>
+            <div className="w-px h-6 bg-border/40" />
+            <button
+              onClick={bulkMarkPassed}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25 transition-all cursor-pointer"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              Mark Tested
+            </button>
+            <button
+              onClick={bulkMarkNA}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25 transition-all cursor-pointer"
+            >
+              <Ban className="w-4 h-4" />
+              Mark N/A
+            </button>
+            <button
+              onClick={bulkUndo}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-muted/40 text-foreground border border-border/40 hover:bg-muted/60 transition-all cursor-pointer"
+            >
+              <Undo2 className="w-4 h-4" />
+              Undo
+            </button>
+            <div className="w-px h-6 bg-border/40" />
+            <button
+              onClick={() => setSelectedTestKeys(new Set())}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Import status banner */}
       {importStatus && (
-        <div className={cn(
-          "max-w-7xl mx-auto px-6 mt-4",
-        )}>
+        <div className="max-w-7xl mx-auto px-6 mt-4">
           <div className={cn(
             "px-4 py-3 rounded-lg text-sm font-medium flex items-center gap-2 border",
             importStatus.type === "success"
@@ -854,6 +931,9 @@ export default function Validation() {
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="w-5 h-5 text-primary" />
                     <span className="text-sm text-foreground">{completed} of {total} tests completed</span>
+                    {naCount > 0 && (
+                      <span className="text-xs text-amber-400">({naCount} N/A)</span>
+                    )}
                   </div>
                   <span className="text-sm font-bold text-primary">{completePct}%</span>
                 </div>
@@ -863,25 +943,26 @@ export default function Validation() {
               {/* Phases — collapsible */}
               {phases.map((phase, pIdx) => {
                 const phaseKeys = phase.tests.map((_, tIdx) => testKey(pIdx, tIdx));
-                const phaseNa = phaseKeys.filter((k) => getMerged(k).status === "N/A").length;
-                const phaseCompleted = phaseKeys.filter((k) => getMerged(k).status === "Pass").length;
+                const phaseNa = phaseKeys.filter(k => getMerged(k).status === "N/A").length;
+                const phaseCompleted = phaseKeys.filter(k => getMerged(k).status === "Pass").length;
                 const phaseTotal = phase.tests.length - phaseNa;
                 const isCollapsed = !!collapsedPhases[pIdx];
                 const allDone = phaseTotal > 0 && phaseCompleted === phaseTotal;
+                const allPhaseSelected = phaseKeys.length > 0 && phaseKeys.every(k => selectedTestKeys.has(k));
+                const selectedInPhase = phaseKeys.filter(k => selectedTestKeys.has(k));
 
                 return (
                   <Card key={pIdx} className="card-elevated overflow-hidden">
                     {/* Collapsible section header */}
                     <button
-                      onClick={() => togglePhase(pIdx)}
+                      onClick={() => setCollapsedPhases(prev => ({ ...prev, [pIdx]: !prev[pIdx] }))}
                       className="w-full px-5 py-4 bg-muted/30 border-b border-border/40 flex items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors"
                     >
                       <div className="flex items-center gap-3">
-                        {isCollapsed ? (
-                          <ChevronRight className="w-5 h-5 text-foreground" />
-                        ) : (
-                          <ChevronDown className="w-5 h-5 text-foreground" />
-                        )}
+                        {isCollapsed
+                          ? <ChevronRight className="w-5 h-5 text-foreground" />
+                          : <ChevronDown className="w-5 h-5 text-foreground" />
+                        }
                         <div className="text-left">
                           <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
                             Phase {pIdx + 1}
@@ -911,10 +992,18 @@ export default function Validation() {
                       </div>
                     </button>
 
-                    {/* Bulk action toolbar — visible when expanded */}
-                    {!isCollapsed && (<>
+                    {/* Section action bar — visible when expanded */}
+                    {!isCollapsed && (
                       <div className="flex flex-wrap items-center gap-3 px-5 py-2.5 border-b border-border/20 bg-muted/10">
                         <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mr-1">Actions</span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); toggleSelectAllInPhase(pIdx); }}
+                          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                        >
+                          {allPhaseSelected ? <CheckSquare className="w-3.5 h-3.5 text-primary" /> : <Square className="w-3.5 h-3.5" />}
+                          {allPhaseSelected ? "Deselect All" : "Select All"}
+                        </button>
+                        <span className="text-border">|</span>
                         <button
                           onClick={(e) => { e.stopPropagation(); bulkCheckPhase(pIdx); }}
                           disabled={allDone}
@@ -922,19 +1011,19 @@ export default function Validation() {
                             "inline-flex items-center gap-1.5 text-xs transition-colors",
                             allDone
                               ? "text-muted-foreground/30 cursor-not-allowed"
-                              : "text-primary hover:text-primary/80 cursor-pointer"
+                              : "text-emerald-400 hover:text-emerald-300 cursor-pointer"
                           )}
                         >
-                          <CheckSquare className="w-3.5 h-3.5" />
-                          Complete All
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          All Tested
                         </button>
                         <span className="text-border">|</span>
                         <button
                           onClick={(e) => { e.stopPropagation(); setResetTargetPhase(pIdx); }}
-                          disabled={phaseCompleted === 0}
+                          disabled={phaseCompleted === 0 && phaseNa === 0}
                           className={cn(
                             "inline-flex items-center gap-1.5 text-xs transition-colors",
-                            phaseCompleted === 0
+                            phaseCompleted === 0 && phaseNa === 0
                               ? "text-muted-foreground/30 cursor-not-allowed"
                               : "text-destructive/70 hover:text-destructive cursor-pointer"
                           )}
@@ -943,56 +1032,41 @@ export default function Validation() {
                           Reset All
                         </button>
                         <span className="text-border">|</span>
-                        {/* Select-all toggle */}
-                        {(() => {
-                          const phaseKeys = phases[pIdx].tests.map((_, tIdx) => testKey(pIdx, tIdx));
-                          const allSelected = phaseKeys.length > 0 && phaseKeys.every(k => selectedTestKeys.has(k));
-                          const selectedInPhase = phaseKeys.filter(k => selectedTestKeys.has(k));
-                          return (
+                        <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <CalendarCheck className="w-3.5 h-3.5" />
+                          {selectedInPhase.length > 0 ? (
                             <>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); toggleSelectAllInPhase(pIdx); }}
-                                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
-                              >
-                                <Square className="w-3.5 h-3.5" />
-                                {allSelected ? "Deselect All" : "Select All"}
-                              </button>
-                              <span className="text-border">|</span>
-                              <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <CalendarCheck className="w-3.5 h-3.5" />
-                                {selectedInPhase.length > 0 ? (
-                                  <>
-                                    <span className="text-primary font-medium">Backdate {selectedInPhase.length} selected:</span>
-                                    <input
-                                      type="date"
-                                      defaultValue={todayStr()}
-                                      onChange={(e) => { if (e.target.value) bulkSetDateSelected(e.target.value); }}
-                                      className="bg-transparent border-b border-primary/60 px-1 py-0.5 text-xs text-foreground focus:outline-none focus:border-primary [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
-                                    />
-                                  </>
-                                ) : (
-                                  <>
-                                    <span>Set all dates:</span>
-                                    <input
-                                      type="date"
-                                      defaultValue={todayStr()}
-                                      onChange={(e) => { if (e.target.value) bulkDatePhase(pIdx, e.target.value); }}
-                                      className="bg-transparent border-b border-border/40 px-1 py-0.5 text-xs text-foreground focus:outline-none focus:border-primary/60 [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
-                                    />
-                                  </>
-                                )}
-                              </div>
+                              <span className="text-primary font-medium">Set date for {selectedInPhase.length} selected:</span>
+                              <input
+                                type="date"
+                                defaultValue={todayStr()}
+                                onChange={(e) => { if (e.target.value) bulkSetDateSelected(e.target.value); }}
+                                className="bg-transparent border-b border-primary/60 px-1 py-0.5 text-xs text-foreground focus:outline-none focus:border-primary [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
+                              />
                             </>
-                          );
-                        })()}
+                          ) : (
+                            <>
+                              <span>Set all dates:</span>
+                              <input
+                                type="date"
+                                defaultValue={todayStr()}
+                                onChange={(e) => { if (e.target.value) bulkDatePhase(pIdx, e.target.value); }}
+                                className="bg-transparent border-b border-border/40 px-1 py-0.5 text-xs text-foreground focus:outline-none focus:border-primary/60 [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
+                              />
+                            </>
+                          )}
+                        </div>
                       </div>
+                    )}
 
-                    <CardContent className="p-0">
+                    {/* Collapsible content */}
+                    {!isCollapsed && (
+                      <CardContent className="p-0">
                         {/* Column headers */}
-                        <div className="hidden md:grid grid-cols-[24px_40px_1fr_100px_140px_auto] gap-3 px-5 py-2 text-xs text-muted-foreground uppercase tracking-wider border-b border-border/20 bg-muted/10">
+                        <div className="hidden md:grid grid-cols-[28px_1fr_90px_100px_140px_auto] gap-3 px-5 py-2 text-xs text-muted-foreground uppercase tracking-wider border-b border-border/20 bg-muted/10">
                           <div />
-                          <div className="text-center">Done</div>
                           <div>Test</div>
+                          <div className="text-center">Status</div>
                           <div>Date</div>
                           <div>Sign-Off</div>
                           <div className="w-6" />
@@ -1001,17 +1075,21 @@ export default function Validation() {
                         {phase.tests.map((test, tIdx) => {
                           const key = testKey(pIdx, tIdx);
                           const { status, signOff, notes, testedDate } = getMerged(key);
-                          const isTested = status === "Pass";
                           const isNA = status === "N/A";
                           const notesOpen = !!expandedNotes[key];
                           const relatedOpen = !!expandedRelated[key];
                           const hasRelated = test.relatedQuestions && test.relatedQuestions.length > 0;
                           const isSelected = selectedTestKeys.has(key);
+                          const badgeStatus = getStatus(key);
 
                           return (
-                            <div key={tIdx} className={cn(tIdx < phase.tests.length - 1 ? "border-b border-border/20" : "", isSelected && "bg-primary/5", isNA && "opacity-50")}>
+                            <div key={tIdx} className={cn(
+                              tIdx < phase.tests.length - 1 ? "border-b border-border/20" : "",
+                              isSelected && "bg-primary/5",
+                              isNA && "opacity-60"
+                            )}>
                               {/* Main row */}
-                              <div className="grid grid-cols-1 md:grid-cols-[24px_40px_1fr_100px_140px_auto] gap-3 items-start px-5 py-3">
+                              <div className="grid grid-cols-1 md:grid-cols-[28px_1fr_90px_100px_140px_auto] gap-3 items-start px-5 py-3">
                                 {/* Row selection checkbox */}
                                 <div className="hidden md:flex items-center justify-center pt-1">
                                   <button
@@ -1020,53 +1098,15 @@ export default function Validation() {
                                     title="Select row"
                                   >
                                     {isSelected
-                                      ? <CheckSquare className="w-3.5 h-3.5 text-primary" />
-                                      : <Square className="w-3.5 h-3.5" />
+                                      ? <CheckSquare className="w-4 h-4 text-primary" />
+                                      : <Square className="w-4 h-4" />
                                     }
                                   </button>
                                 </div>
-                                {/* Done Checkbox */}
-                                <div className="flex justify-center pt-0.5">
-                                  {isNA ? (
-                                    <Ban className="w-6 h-6 text-muted-foreground/40" />
-                                  ) : (
-                                    <button
-                                      onClick={() => toggleTested(pIdx, tIdx)}
-                                      className="focus:outline-none"
-                                      title={isTested ? "Mark as not tested" : "Mark as tested"}
-                                    >
-                                      {isTested ? (
-                                        <CheckCircle2 className="w-6 h-6 text-green-500 hover:text-green-400 transition-colors" />
-                                      ) : (
-                                        <Circle className="w-6 h-6 text-muted-foreground/40 hover:text-primary/60 transition-colors cursor-pointer" />
-                                      )}
-                                    </button>
-                                  )}
-                                </div>
 
-                                {/* Test name + description + N/A toggle + related questions toggle */}
+                                {/* Test name + description + related questions */}
                                 <div className="space-y-1">
-                                  <div className="flex items-center gap-2">
-                                    <p className={cn(
-                                      "text-sm font-medium text-foreground",
-                                      isNA && "line-through"
-                                    )}>
-                                      {test.name}
-                                    </p>
-                                    <button
-                                      onClick={() => toggleNA(pIdx, tIdx)}
-                                      className={cn(
-                                        "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider border transition-all",
-                                        isNA
-                                          ? "bg-amber-500/20 text-amber-400 border-amber-500/40 hover:bg-amber-500/30"
-                                          : "bg-transparent text-muted-foreground/40 border-border/30 hover:text-amber-400 hover:border-amber-500/40"
-                                      )}
-                                      title={isNA ? "Remove N/A — include in progress" : "Mark as Not Applicable"}
-                                    >
-                                      <Ban className="w-2.5 h-2.5" />
-                                      N/A
-                                    </button>
-                                  </div>
+                                  <p className={cn("text-sm font-medium text-foreground", isNA && "line-through")}>{test.name}</p>
                                   <p className={cn("text-xs text-muted-foreground", isNA && "line-through")}>{test.description}</p>
 
                                   {/* Related questions toggle */}
@@ -1080,7 +1120,6 @@ export default function Validation() {
                                     </button>
                                   )}
 
-                                  {/* Related questionnaire answers — expandable */}
                                   {relatedOpen && hasRelated && (
                                     <RelatedAnswers
                                       questions={test.relatedQuestions}
@@ -1089,8 +1128,9 @@ export default function Validation() {
                                     />
                                   )}
 
-                                  {/* Mobile: date + sign-off inline */}
-                                  <div className="md:hidden flex items-center gap-3 mt-2">
+                                  {/* Mobile: inline controls */}
+                                  <div className="md:hidden flex flex-wrap items-center gap-3 mt-2">
+                                    <StatusBadge status={badgeStatus} onClick={() => cycleStatus(pIdx, tIdx)} size="sm" />
                                     <input
                                       type="date"
                                       value={testedDate}
@@ -1103,6 +1143,11 @@ export default function Validation() {
                                       onCommit={(v) => saveField(pIdx, tIdx, { signOff: v })}
                                     />
                                   </div>
+                                </div>
+
+                                {/* Status badge — desktop */}
+                                <div className="hidden md:flex justify-center pt-0.5">
+                                  <StatusBadge status={badgeStatus} onClick={() => cycleStatus(pIdx, tIdx)} />
                                 </div>
 
                                 {/* Date — desktop */}
@@ -1126,14 +1171,17 @@ export default function Validation() {
 
                                 {/* Comment toggle */}
                                 <button
-                                  onClick={() => setExpandedNotes((prev) => ({ ...prev, [key]: !notesOpen }))}
+                                  onClick={() => setExpandedNotes(prev => ({ ...prev, [key]: !notesOpen }))}
                                   className={cn(
-                                    "hidden md:flex items-center justify-center w-6 h-6 rounded hover:bg-muted/50 transition-colors",
+                                    "hidden md:flex items-center justify-center w-6 h-6 rounded hover:bg-muted/50 transition-colors relative",
                                     notesOpen || notes ? "text-primary" : "text-muted-foreground/40 hover:text-muted-foreground"
                                   )}
                                   title={notesOpen ? "Hide comments" : "Add comment"}
                                 >
                                   <MessageSquare className="w-3.5 h-3.5" />
+                                  {notes && !notesOpen && (
+                                    <span className="absolute w-1.5 h-1.5 bg-primary rounded-full top-0.5 right-0.5" />
+                                  )}
                                 </button>
                               </div>
 
@@ -1144,7 +1192,7 @@ export default function Validation() {
                                     className="w-full bg-transparent text-sm text-muted-foreground placeholder:text-muted-foreground/40 resize-none outline-none border-none focus:ring-0 py-2 min-h-[56px]"
                                     placeholder="Add a comment or note about this test…"
                                     value={notes}
-                                    onChange={(e) => setLocalOverrides((prev) => ({ ...prev, [key]: { ...getMerged(key), notes: e.target.value } }))}
+                                    onChange={(e) => setLocalOverrides(prev => ({ ...prev, [key]: { ...getMerged(key), notes: e.target.value } }))}
                                     onBlur={(e) => saveField(pIdx, tIdx, { notes: e.target.value })}
                                   />
                                 </div>
@@ -1153,7 +1201,7 @@ export default function Validation() {
                           );
                         })}
                       </CardContent>
-                    </>)}
+                    )}
                   </Card>
                 );
               })}
@@ -1173,7 +1221,7 @@ export default function Validation() {
                         <circle
                           cx="18" cy="18" r="15.9155" fill="none"
                           stroke="hsl(142 70% 45%)" strokeWidth="3"
-                          strokeDasharray={`${(completed / total) * 100} ${100 - (completed / total) * 100}`}
+                          strokeDasharray={`${total > 0 ? (completed / total) * 100 : 0} ${total > 0 ? 100 - (completed / total) * 100 : 100}`}
                         />
                       </svg>
                       <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -1215,7 +1263,7 @@ export default function Validation() {
                     const remaining = phases.flatMap((p, pIdx) =>
                       p.tests
                         .map((t, tIdx) => ({ ...t, key: testKey(pIdx, tIdx) }))
-                        .filter((t) => { const s = getMerged(t.key).status; return s !== "Pass" && s !== "N/A"; })
+                        .filter(t => { const s = getMerged(t.key).status; return s !== "Pass" && s !== "N/A"; })
                     ).slice(0, 3);
 
                     if (remaining.length === 0) return (

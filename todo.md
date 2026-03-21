@@ -2186,3 +2186,63 @@
 - [x] Update dashboard counts to account for N/A items
 - [x] Fix dashboard hardcoded totals (28 tests, 39 tasks) to match actual page counts
 - [x] Update CSV export to include N/A status for both tasks and tests
+## Fix Notion API Integration (Mar 19, 2026)
+- [x] Fix 'client.databases.query is not a function' error in Notion connectivity fetch
+  - Root cause: @notionhq/client v5.9.0 moved databases.query to dataSources.query with data_source_id
+  - Also fixed: hardcoded connectivity DB ID was invalid; now uses NOTION_CONNECTIVITY_DATASOURCE_ID env var
+  - Added parseConnectionDetails() to extract IPs/ports/AE from free-text "connection details" field
+- [x] Verify connectivity data displays correctly on org dashboard expandable card
+  - Tested with Munson Medical Center: 3 rows (HL7 ORM, DICOM, VPN) load correctly
+- [ ] Verify connectivity data displays on dedicated connectivity pages
+
+## Redesign Task/Test Status UX (Mar 20, 2026)
+- [ ] Select rows via checkboxes (individual or Select All per phase)
+- [ ] Bulk action toolbar appears when rows selected: Mark Done, Mark N/A, Undo
+- [x] Date auto-records when marking Done or N/A (date of action, not manual entry)
+- [x] Status column clearly shows status (Done, N/A, blank) with the date it was set
+- [x] Mass select and bulk Mark Done, Mark N/A, or Undo
+- [x] Same UX pattern for both Task List (Implementation) and Testing (Validation) pages
+- [x] Remove old tiny inline N/A buttons
+- [x] Update DB schema if needed for status + date tracking on tasks
+
+## Redesign Task/Test Status UX (Mar 20, 2026)
+- [x] Remove tiny inline N/A buttons from task/test rows
+- [x] Add prominent status column with clickable StatusBadge: Open → Done → N/A → Open
+- [x] Record date when any status is set (Done date, N/A date)
+- [x] Select rows via checkboxes (individual + Select All per phase)
+- [x] Floating bulk action toolbar when rows selected: Mark Done/Tested, Mark N/A, Undo, Clear
+- [x] Same UX pattern for both Task List and Testing pages
+- [x] Fix server to set completedAt when N/A is marked (record the action date)
+
+## Architecture Document Management (Mar 20, 2026)
+- [ ] Allow uploading multiple architecture diagrams
+- [ ] Allow removing individual architecture diagrams
+- [ ] Allow replacing individual architecture diagrams
+
+## Per-Site File Artifacts (Mar 20, 2026)
+- [ ] Add file artifacts/documents section per org site
+- [ ] Upload documents with notes per file
+- [ ] View/download uploaded documents
+- [ ] Delete uploaded documents
+- [ ] Store files in S3 with metadata in DB
+
+## Dashboard Completion Percentage Display (Mar 20, 2026)
+- [x] Show task completion % on dashboard matching Task List page
+- [x] Show test completion % on dashboard matching Testing page
+- [x] Ensure N/A items are excluded from counts consistently
+- [x] Hero stats show percentage prominently with count below (e.g. "17%" / "1/6 Questionnaire")
+
+## Welcome Email Draft (Mar 20, 2026)
+- [ ] Create welcome email draft in Gmail for inviting newly created portal users
+
+## Back to Dashboard Navigation (Mar 20, 2026)
+- [x] Add easy "Back to Dashboard" navigation from Questionnaire (Intake) page — added to header
+- [x] Add easy "Back to Dashboard" navigation from Task List (Implementation) page — already existed
+- [x] Add easy "Back to Dashboard" navigation from Testing (Validation) page — already existed
+- [x] Add easy "Back to Dashboard" navigation from Specifications page — already existed (ArrowLeft + Dashboard button)
+- [x] Add easy "Back to Dashboard" navigation from Connectivity page — already existed (ArrowLeft + Dashboard button)
+- [x] Consistent placement across all sub-pages
+
+## Questionnaire Navigation Update (Mar 20, 2026)
+- [x] Update Questionnaire page header to match Task List/Testing navigation style
+- [x] Add "Back to Dashboard" link in Questionnaire header consistent with other pages
