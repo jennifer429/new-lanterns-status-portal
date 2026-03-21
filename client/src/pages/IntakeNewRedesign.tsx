@@ -1222,22 +1222,28 @@ export default function IntakeNewRedesign() {
 
       case 'multi-select':
         return (
-          <div className="space-y-2">
-            {question.options?.map(opt => (
-              <div key={opt} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200">
-                <Checkbox
-                  checked={Array.isArray(value) && value.includes(opt)}
-                  onCheckedChange={(checked) => {
+          <div className="flex flex-wrap gap-2">
+            {question.options?.map(opt => {
+              const checked = Array.isArray(value) && value.includes(opt);
+              return (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => {
                     const current = Array.isArray(value) ? value : [];
-                    const updated = checked
-                      ? [...current, opt]
-                      : current.filter(v => v !== opt);
+                    const updated = checked ? current.filter(v => v !== opt) : [...current, opt];
                     setResponses(prev => ({ ...prev, [question.id]: updated }));
                   }}
-                />
-                <Label className="text-gray-900 cursor-pointer">{opt}</Label>
-              </div>
-            ))}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                    checked
+                      ? "bg-blue-600 border-blue-600 text-white"
+                      : "bg-white border-gray-300 text-gray-700 hover:border-blue-400"
+                  }`}
+                >
+                  {opt}
+                </button>
+              );
+            })}
           </div>
         );
 
