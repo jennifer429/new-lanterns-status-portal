@@ -2252,3 +2252,6 @@
 - [ ] Admin-only quick-nav: links to org dashboard, partner dashboard, and admin (all sites) dashboard (hidden for regular users)
 - [ ] Create shared PageHeader component used by all sub-pages
 - [ ] Apply shared header to: Task List, Testing, Questionnaire, Specifications, Connectivity
+
+## Merge Task Summary into Task List Card
+- [x] Merge task status breakdown (Done/In Progress/Blocked/Open/N/A counts + Next Up) into the Task List workflow card on dashboard
