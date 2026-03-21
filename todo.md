@@ -2231,3 +2231,18 @@
 - [x] Show test completion % on dashboard matching Testing page
 - [x] Ensure N/A items are excluded from counts consistently
 - [x] Hero stats show percentage prominently with count below (e.g. "17%" / "1/6 Questionnaire")
+
+## Welcome Email Draft (Mar 20, 2026)
+- [ ] Create welcome email draft in Gmail for inviting newly created portal users
+
+## Back to Dashboard Navigation (Mar 20, 2026)
+- [x] Add easy "Back to Dashboard" navigation from Questionnaire (Intake) page — added to header
+- [x] Add easy "Back to Dashboard" navigation from Task List (Implementation) page — already existed
+- [x] Add easy "Back to Dashboard" navigation from Testing (Validation) page — already existed
+- [x] Add easy "Back to Dashboard" navigation from Specifications page — already existed (ArrowLeft + Dashboard button)
+- [x] Add easy "Back to Dashboard" navigation from Connectivity page — already existed (ArrowLeft + Dashboard button)
+- [x] Consistent placement across all sub-pages
+
+## Questionnaire Navigation Update (Mar 20, 2026)
+- [x] Update Questionnaire page header to match Task List/Testing navigation style
+- [x] Add "Back to Dashboard" link in Questionnaire header consistent with other pages
