@@ -2255,3 +2255,7 @@
 
 ## Merge Task Summary into Task List Card
 - [x] Merge task status breakdown (Done/In Progress/Blocked/Open/N/A counts + Next Up) into the Task List workflow card on dashboard
+
+## Add Status Breakdown to Questionnaire and Testing Cards
+- [x] Add status breakdown (Complete/In Progress/Not Started counts) and Next Up sections to Questionnaire workflow card
+- [x] Add status breakdown (Pass/Fail/Not Tested counts) and Next Up sections to Testing workflow card
