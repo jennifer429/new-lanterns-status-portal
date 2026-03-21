@@ -47,6 +47,7 @@ import { useRoute, Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { UserMenu } from "@/components/UserMenu";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { buildCSV, downloadCSV, parseCSV, readFileAsText, csvFilename } from "@/lib/csv";
 import { Download, Upload } from "lucide-react";
 import { SECTION_DEFS, type TaskDef, type SectionDef } from "@shared/taskDefs";
@@ -173,6 +174,14 @@ function StatusBadge({
 export default function Implementation() {
   const [, params] = useRoute("/org/:slug/implement");
   const slug = params?.slug || "demo";
+  const { user } = useAuth();
+
+  const { data: organization } = trpc.organizations.getBySlug.useQuery(
+    { slug },
+    { enabled: !!slug, refetchOnWindowFocus: false }
+  );
+  const orgName = organization?.name || "";
+  const partnerName = organization?.clientName || "";
 
   const { data: taskMap = {}, isLoading } = trpc.implementation.getTasks.useQuery(
     { organizationSlug: slug },
@@ -508,22 +517,25 @@ export default function Implementation() {
     <div className="min-h-screen bg-background animate-page-in">
       {/* Header */}
       <header className="header-glass sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src="/images/flame-icon.png" alt="New Lantern" className="h-8 w-8" />
-            <div>
-              <h1 className="text-xl font-bold text-foreground">Task List</h1>
-              <p className="text-sm text-muted-foreground">PACS Onboarding</p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+          {/* Left: logo + page title */}
+          <div className="flex items-center gap-3 min-w-0">
+            <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-8 flex-shrink-0" />
+            <div className="hidden sm:block border-l border-border/40 pl-3 min-w-0">
+              <div className="text-sm font-bold tracking-tight truncate">Task List</div>
+              {orgName && <div className="text-xs text-muted-foreground truncate">{orgName}{partnerName ? ` · ${partnerName}` : ""}</div>}
             </div>
           </div>
-          <div className="flex items-center gap-3">
+
+          {/* Right: actions + nav + user */}
+          <div className="flex items-center gap-2">
             <button
               onClick={handleExportCSV}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-foreground bg-muted/40 border border-border/40 rounded-md hover:bg-muted/60 hover:border-primary/30 transition-all"
               title="Export task list as CSV"
             >
               <Download className="w-3.5 h-3.5" />
-              Export CSV
+              <span className="hidden sm:inline">Export CSV</span>
             </button>
             <button
               onClick={() => csvInputRef.current?.click()}
@@ -531,18 +543,18 @@ export default function Implementation() {
               title="Import task data from CSV"
             >
               <Upload className="w-3.5 h-3.5" />
-              Import CSV
+              <span className="hidden sm:inline">Import CSV</span>
             </button>
-            <input
-              ref={csvInputRef}
-              type="file"
-              accept=".csv"
-              className="hidden"
-              onChange={handleImportCSV}
-            />
-            <Link href={`/org/${slug}`} className="text-sm text-foreground hover:text-primary transition-colors font-medium">
-              Back to Dashboard
+            <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={handleImportCSV} />
+            <div className="w-px h-5 bg-border/40 mx-1" />
+            <Link href={`/org/${slug}`} className="text-sm text-foreground hover:text-primary transition-colors font-medium whitespace-nowrap">
+              Site Dashboard
             </Link>
+            {user?.role === "admin" && (
+              <Link href="/admin" className="text-sm text-muted-foreground hover:text-primary transition-colors font-medium whitespace-nowrap">
+                Admin
+              </Link>
+            )}
             <UserMenu />
           </div>
         </div>

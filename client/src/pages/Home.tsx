@@ -446,10 +446,25 @@ export default function Home() {
   const implResults = implementationData || {};
   const implEntries = Object.values(implResults) as any[];
   const implNaCount = implEntries.filter((v: any) => v.notApplicable === true).length;
-  const implTotal = TASK_SECTION_DEFS.flatMap(s => s.tasks).length - implNaCount;
-  const implCompleted = TASK_SECTION_DEFS.flatMap(s => s.tasks).filter(
+  const allTaskDefs = TASK_SECTION_DEFS.flatMap(s => s.tasks);
+  const implTotal = allTaskDefs.length - implNaCount;
+  const implCompleted = allTaskDefs.filter(
     t => (implResults as any)[t.id]?.completed === true && (implResults as any)[t.id]?.notApplicable !== true
   ).length;
+  const implInProgressCount = allTaskDefs.filter(
+    t => (implResults as any)[t.id]?.inProgress === true && !(implResults as any)[t.id]?.notApplicable
+  ).length;
+  const implBlockedCount = allTaskDefs.filter(
+    t => (implResults as any)[t.id]?.blocked === true && !(implResults as any)[t.id]?.notApplicable
+  ).length;
+  const implOpenCount = allTaskDefs.filter(t => {
+    const r = (implResults as any)[t.id];
+    return !r?.completed && !r?.notApplicable && !r?.blocked && !r?.inProgress;
+  }).length;
+  const nextUpTasks = allTaskDefs.filter(t => {
+    const r = (implResults as any)[t.id];
+    return !r?.completed && !r?.notApplicable && !r?.blocked && !r?.inProgress;
+  }).slice(0, 3);
 
   // Overall progress (weighted: questionnaire 40%, testing 30%, implementation 30%)
   const qPct = totalSections > 0 ? (completedSections / totalSections) * 100 : 0;
@@ -786,9 +801,10 @@ export default function Home() {
         </div>
 
         {/* ═══════════════════════════════════════════════════════════════════
-            IMPLEMENTATION PROGRESS HERO
+            SECOND ROW: Progress Hero + Task Summary
             ═══════════════════════════════════════════════════════════════════ */}
-        <Card className="card-elevated overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <Card className="card-elevated overflow-hidden md:col-span-2">
           {/* Top accent gradient */}
           <div className="h-1 bg-gradient-to-r from-primary via-primary/60 to-emerald-500/40" />
           <CardContent className="p-4">
@@ -881,6 +897,49 @@ export default function Home() {
             </div>
           </CardContent>
         </Card>
+
+        {/* ── Task Summary Card ── */}
+        <Card className="card-elevated overflow-hidden">
+          <CardContent className="p-5">
+            <h3 className="text-sm font-bold tracking-tight mb-4">Task Summary</h3>
+            <div className="flex flex-col items-center mb-5">
+              <span className="text-5xl font-bold tracking-tight">{Math.round(iPct)}%</span>
+              <span className="text-sm text-muted-foreground mt-1">Complete</span>
+            </div>
+            <div className="space-y-2.5 mb-5">
+              {([
+                { label: "Done",           count: implCompleted,        dotCls: "bg-green-500",           numCls: "text-green-500" },
+                { label: "In Progress",    count: implInProgressCount,  dotCls: "bg-amber-400",           numCls: "text-amber-400" },
+                { label: "Blocked",        count: implBlockedCount,      dotCls: "bg-red-500",             numCls: "text-red-500" },
+                { label: "Open",           count: implOpenCount,         dotCls: "bg-muted-foreground/40", numCls: "text-foreground" },
+                { label: "Not Applicable", count: implNaCount,           dotCls: "bg-yellow-700",          numCls: "text-yellow-600" },
+              ] as const).map(({ label, count, dotCls, numCls }) => (
+                <div key={label} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dotCls}`} />
+                    <span className="text-sm text-foreground">{label}</span>
+                  </div>
+                  <span className={`text-sm font-semibold ${numCls}`}>{count}</span>
+                </div>
+              ))}
+            </div>
+            {nextUpTasks.length > 0 && (
+              <>
+                <div className="border-t border-border/40 mb-3" />
+                <h4 className="text-sm font-bold tracking-tight mb-2">Next Up</h4>
+                <ul className="space-y-1.5">
+                  {nextUpTasks.map(t => (
+                    <li key={t.id} className="flex items-start gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0 mt-1.5" />
+                      <span className="text-sm text-foreground">{t.title}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </CardContent>
+        </Card>
+        </div>
 
         {/* ═══════════════════════════════════════════════════════════════════
             WORKFLOW PHASE CARDS

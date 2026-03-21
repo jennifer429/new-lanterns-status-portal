@@ -13,6 +13,7 @@ import { Link } from "wouter";
 import { ExternalLink, Building2, Calendar, CheckCircle2, Clock, Users, TrendingUp, Activity, FileText, Download, Trash2, Search, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserManagement } from "@/components/UserManagement";
 import { FilesManagement } from "@/components/FilesManagement";
 import { OrganizationManagement } from "@/components/OrganizationManagement";
@@ -110,35 +111,24 @@ export default function Admin() {
 
               {/* Filter controls */}
               <div className="flex flex-col gap-2 min-w-0 sm:min-w-[320px]">
-                {/* Partner filter chips */}
-                {allClients.length > 1 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    <button
-                      onClick={() => setSelectedClientId(null)}
-                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                        selectedClientId === null
-                          ? "bg-purple-600 text-white"
-                          : "bg-purple-900/40 text-purple-300 hover:bg-purple-800/50"
-                      }`}
-                    >
-                      All Partners
-                    </button>
-                    {allClients.map((client) => (
-                      <button
-                        key={client.id}
-                        onClick={() => setSelectedClientId(
-                          selectedClientId === client.id ? null : client.id
-                        )}
-                        className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                          selectedClientId === client.id
-                            ? "bg-purple-600 text-white"
-                            : "bg-purple-900/40 text-purple-300 hover:bg-purple-800/50"
-                        }`}
-                      >
-                        {client.name}
-                      </button>
-                    ))}
-                  </div>
+                {/* Partner filter dropdown */}
+                {allClients.length > 0 && (
+                  <Select
+                    value={selectedClientId === null ? "all" : String(selectedClientId)}
+                    onValueChange={(v) => setSelectedClientId(v === "all" ? null : Number(v))}
+                  >
+                    <SelectTrigger className="h-8 text-xs bg-purple-900/20 border-purple-500/30 text-white focus:ring-purple-500">
+                      <SelectValue placeholder="All Partners" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-purple-950 border-purple-500/30">
+                      <SelectItem value="all" className="text-xs text-purple-200 focus:bg-purple-800/50">All Partners</SelectItem>
+                      {allClients.map((client) => (
+                        <SelectItem key={client.id} value={String(client.id)} className="text-xs text-purple-200 focus:bg-purple-800/50">
+                          {client.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
 
                 {/* Org search */}
@@ -278,6 +268,38 @@ export default function Admin() {
                         {org.completionPercentage === 100 ? 'Ready' : 'In Progress'}
                       </div>
                     </div>
+
+                    {/* Task Summary */}
+                    {org.taskStats && (
+                      <div className="border-t border-purple-500/20 pt-3 mt-1">
+                        <h3 className="text-white font-semibold text-sm mb-2">Task Summary</h3>
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className="text-3xl font-bold text-purple-400">
+                            {org.taskStats.total > org.taskStats.notApplicable
+                              ? Math.round((org.taskStats.completed / (org.taskStats.total - org.taskStats.notApplicable)) * 100)
+                              : 0}%
+                          </span>
+                          <span className="text-xs text-gray-400">Complete</span>
+                        </div>
+                        <div className="space-y-1.5">
+                          {([
+                            { label: "Done",           count: org.taskStats.completed,    dotCls: "bg-green-500",   numCls: "text-green-400" },
+                            { label: "In Progress",    count: org.taskStats.inProgress,   dotCls: "bg-amber-400",   numCls: "text-amber-400" },
+                            { label: "Blocked",        count: org.taskStats.blocked,      dotCls: "bg-red-500",     numCls: "text-red-400" },
+                            { label: "Open",           count: org.taskStats.total - org.taskStats.completed - org.taskStats.inProgress - org.taskStats.blocked - org.taskStats.notApplicable, dotCls: "bg-gray-500", numCls: "text-gray-300" },
+                            { label: "N/A",            count: org.taskStats.notApplicable, dotCls: "bg-yellow-700", numCls: "text-yellow-600" },
+                          ] as const).map(({ label, count, dotCls, numCls }) => (
+                            <div key={label} className="flex items-center justify-between text-xs">
+                              <div className="flex items-center gap-2">
+                                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dotCls}`} />
+                                <span className="text-gray-300">{label}</span>
+                              </div>
+                              <span className={`font-semibold ${numCls}`}>{count}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Uploaded Files */}
                     {org.files && org.files.length > 0 && (

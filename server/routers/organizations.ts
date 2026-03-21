@@ -4,6 +4,7 @@ import { getDb } from "../db";
 import { organizations, clients, sectionProgress, taskCompletion, activityFeed, users, intakeResponses, questions, responses, intakeFileAttachments } from "../../drizzle/schema";
 import { questionnaireSections } from "../../shared/questionnaireData";
 import { calculateProgress } from "../../shared/progressCalculation";
+import { SECTION_DEFS as TASK_SECTION_DEFS } from "../../shared/taskDefs";
 import { eq, and, desc, count, sql } from "drizzle-orm";
 // ClickUp and Linear integrations removed for simplification
 
@@ -358,6 +359,24 @@ export const organizationsRouter = router({
           url: f.fileUrl
         }));
 
+        // Get task completion stats for this organization
+        const taskRows = await db
+          .select()
+          .from(taskCompletion)
+          .where(eq(taskCompletion.organizationId, org.id));
+        const taskMap: Record<string, typeof taskRows[number]> = {};
+        for (const row of taskRows) {
+          taskMap[row.taskId] = row;
+        }
+        const allTaskDefs = TASK_SECTION_DEFS.flatMap(s => s.tasks);
+        const taskStats = {
+          total: allTaskDefs.length,
+          completed: allTaskDefs.filter(t => taskMap[t.id]?.completed === 1 && taskMap[t.id]?.notApplicable !== 1).length,
+          inProgress: allTaskDefs.filter(t => taskMap[t.id]?.inProgress === 1 && taskMap[t.id]?.notApplicable !== 1).length,
+          blocked: allTaskDefs.filter(t => taskMap[t.id]?.blocked === 1 && taskMap[t.id]?.notApplicable !== 1).length,
+          notApplicable: allTaskDefs.filter(t => taskMap[t.id]?.notApplicable === 1).length,
+        };
+
         return {
           ...org,
           userCount,
@@ -366,6 +385,7 @@ export const organizationsRouter = router({
           sectionProgress: sectionStats,
           fileCount: filesWithUrls.length,
           files: filesWithUrls,
+          taskStats,
         };
       })
     );

@@ -408,28 +408,29 @@ export default function IntakeNew() {
       case 'multi-select':
         const selectedValues = Array.isArray(value) ? value : [];
         return (
-          <div className="space-y-2">
-            {question.options?.map((option) => (
-              <div key={option} className="flex items-center gap-2">
-                <Checkbox
-                  checked={selectedValues.includes(option)}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      setResponses(prev => ({
-                        ...prev,
-                        [question.id]: [...selectedValues, option]
-                      }));
-                    } else {
-                      setResponses(prev => ({
-                        ...prev,
-                        [question.id]: selectedValues.filter(v => v !== option)
-                      }));
-                    }
+          <div className="flex flex-wrap gap-2">
+            {question.options?.map((option) => {
+              const checked = selectedValues.includes(option);
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => {
+                    const updated = checked
+                      ? selectedValues.filter(v => v !== option)
+                      : [...selectedValues, option];
+                    setResponses(prev => ({ ...prev, [question.id]: updated }));
                   }}
-                />
-                <label className="text-sm">{option}</label>
-              </div>
-            ))}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                    checked
+                      ? "bg-primary border-primary text-primary-foreground"
+                      : "bg-background border-border text-foreground hover:border-primary/60"
+                  }`}
+                >
+                  {option}
+                </button>
+              );
+            })}
           </div>
         );
 

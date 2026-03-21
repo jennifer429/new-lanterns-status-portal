@@ -1222,22 +1222,28 @@ export default function IntakeNewRedesign() {
 
       case 'multi-select':
         return (
-          <div className="space-y-2">
-            {question.options?.map(opt => (
-              <div key={opt} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200">
-                <Checkbox
-                  checked={Array.isArray(value) && value.includes(opt)}
-                  onCheckedChange={(checked) => {
+          <div className="flex flex-wrap gap-2">
+            {question.options?.map(opt => {
+              const checked = Array.isArray(value) && value.includes(opt);
+              return (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => {
                     const current = Array.isArray(value) ? value : [];
-                    const updated = checked
-                      ? [...current, opt]
-                      : current.filter(v => v !== opt);
+                    const updated = checked ? current.filter(v => v !== opt) : [...current, opt];
                     setResponses(prev => ({ ...prev, [question.id]: updated }));
                   }}
-                />
-                <Label className="text-gray-900 cursor-pointer">{opt}</Label>
-              </div>
-            ))}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                    checked
+                      ? "bg-blue-600 border-blue-600 text-white"
+                      : "bg-white border-gray-300 text-gray-700 hover:border-blue-400"
+                  }`}
+                >
+                  {opt}
+                </button>
+              );
+            })}
           </div>
         );
 
@@ -1643,7 +1649,7 @@ export default function IntakeNewRedesign() {
       <div className="flex-1 flex flex-col bg-transparent">
         {/* Header */}
         <header className="border-b border-purple-500/20 bg-black/40 backdrop-blur-md sticky top-0 z-30">
-          <div className="px-4 md:px-8 py-4 flex items-center justify-between gap-3">
+          <div className="px-4 md:px-8 py-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <button
                 className="md:hidden text-muted-foreground hover:text-white flex-shrink-0"
@@ -1651,7 +1657,11 @@ export default function IntakeNewRedesign() {
               >
                 <Menu className="w-6 h-6" />
               </button>
-              <h1 className="text-base md:text-xl font-bold truncate">{org?.clientName || 'Loading...'} — {org?.name || 'Loading...'}</h1>
+              <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-7 flex-shrink-0 hidden md:block" />
+              <div className="hidden sm:block border-l border-border/40 pl-3 min-w-0">
+                <div className="text-sm font-bold tracking-tight truncate">Questionnaire</div>
+                {org?.name && <div className="text-xs text-muted-foreground truncate">{org.name}{org.clientName ? ` · ${org.clientName}` : ""}</div>}
+              </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <Button
@@ -1672,9 +1682,15 @@ export default function IntakeNewRedesign() {
                 <Upload className="w-4 h-4" />
                 Import
               </Button>
-              <Link href={`/org/${slug}`} className="text-sm text-foreground hover:text-primary transition-colors font-medium">
-                Back to Dashboard
+              <div className="w-px h-5 bg-border/40 mx-1" />
+              <Link href={`/org/${slug}`} className="text-sm text-foreground hover:text-primary transition-colors font-medium whitespace-nowrap">
+                Site Dashboard
               </Link>
+              {user?.role === "admin" && (
+                <Link href="/admin" className="text-sm text-muted-foreground hover:text-primary transition-colors font-medium whitespace-nowrap">
+                  Admin
+                </Link>
+              )}
               <UserMenu />
             </div>
           </div>
