@@ -26,6 +26,7 @@ import {
   ShieldCheck,
   ChevronDown,
   ChevronRight,
+  ChevronUp,
   MessageSquare,
   ExternalLink,
   FileText,
@@ -34,8 +35,13 @@ import {
   XSquare,
   Square,
   Ban,
-  Undo2,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useRoute, Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
@@ -538,6 +544,7 @@ export default function Validation() {
   const [expandedRelated, setExpandedRelated] = useState<Record<string, boolean>>({});
   const [resetTargetPhase, setResetTargetPhase] = useState<number | null>(null);
   const [selectedTestKeys, setSelectedTestKeys] = useState<Set<string>>(new Set());
+  const [bulkStatusOpenPhase, setBulkStatusOpenPhase] = useState<number | null>(null);
 
   function toggleTestSelection(key: string) {
     setSelectedTestKeys(prev => {
@@ -658,6 +665,15 @@ export default function Validation() {
   function bulkUndo() {
     selectedTestKeys.forEach(key => {
       saveTest(key, { status: "Not Tested" });
+    });
+    setSelectedTestKeys(new Set());
+  }
+
+  function bulkApplyStatus(status: "pass" | "na" | "open") {
+    selectedTestKeys.forEach(key => {
+      if (status === "pass") saveTest(key, { status: "Pass" });
+      else if (status === "na") saveTest(key, { status: "N/A" });
+      else saveTest(key, { status: "Not Tested" });
     });
     setSelectedTestKeys(new Set());
   }
@@ -813,8 +829,6 @@ export default function Validation() {
   const total = allKeys.length - naCount;
   const completed = allKeys.filter(k => getMerged(k).status === "Pass").length;
   const completePct = total > 0 ? Math.round((completed / total) * 100) : 0;
-  const selectedCount = selectedTestKeys.size;
-
   return (
     <div className="min-h-screen bg-background animate-page-in">
       {/* Header */}
@@ -859,45 +873,6 @@ export default function Validation() {
         </div>
       </header>
 
-      {/* Floating bulk action toolbar */}
-      {selectedCount > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-200">
-          <div className="flex items-center gap-3 px-5 py-3 rounded-xl bg-card border-2 border-primary/30 shadow-2xl shadow-primary/10 backdrop-blur-sm">
-            <span className="text-sm font-semibold text-foreground">
-              {selectedCount} selected
-            </span>
-            <div className="w-px h-6 bg-border/40" />
-            <button
-              onClick={bulkMarkPassed}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25 transition-all cursor-pointer"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              Mark Tested
-            </button>
-            <button
-              onClick={bulkMarkNA}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25 transition-all cursor-pointer"
-            >
-              <Ban className="w-4 h-4" />
-              Mark N/A
-            </button>
-            <button
-              onClick={bulkUndo}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-muted/40 text-foreground border border-border/40 hover:bg-muted/60 transition-all cursor-pointer"
-            >
-              <Undo2 className="w-4 h-4" />
-              Undo
-            </button>
-            <div className="w-px h-6 bg-border/40" />
-            <button
-              onClick={() => setSelectedTestKeys(new Set())}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-            >
-              Clear
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Import status banner */}
       {importStatus && (
@@ -993,71 +968,97 @@ export default function Validation() {
                     </button>
 
                     {/* Section action bar — visible when expanded */}
-                    {!isCollapsed && (
-                      <div className="flex flex-wrap items-center gap-3 px-5 py-2.5 border-b border-border/20 bg-muted/10">
-                        <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mr-1">Actions</span>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); toggleSelectAllInPhase(pIdx); }}
-                          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
-                        >
-                          {allPhaseSelected ? <CheckSquare className="w-3.5 h-3.5 text-primary" /> : <Square className="w-3.5 h-3.5" />}
-                          {allPhaseSelected ? "Deselect All" : "Select All"}
-                        </button>
-                        <span className="text-border">|</span>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); bulkCheckPhase(pIdx); }}
-                          disabled={allDone}
-                          className={cn(
-                            "inline-flex items-center gap-1.5 text-xs transition-colors",
-                            allDone
-                              ? "text-muted-foreground/30 cursor-not-allowed"
-                              : "text-emerald-400 hover:text-emerald-300 cursor-pointer"
-                          )}
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          All Tested
-                        </button>
-                        <span className="text-border">|</span>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setResetTargetPhase(pIdx); }}
-                          disabled={phaseCompleted === 0 && phaseNa === 0}
-                          className={cn(
-                            "inline-flex items-center gap-1.5 text-xs transition-colors",
-                            phaseCompleted === 0 && phaseNa === 0
-                              ? "text-muted-foreground/30 cursor-not-allowed"
-                              : "text-destructive/70 hover:text-destructive cursor-pointer"
-                          )}
-                        >
-                          <XSquare className="w-3.5 h-3.5" />
-                          Reset All
-                        </button>
-                        <span className="text-border">|</span>
-                        <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <CalendarCheck className="w-3.5 h-3.5" />
-                          {selectedInPhase.length > 0 ? (
-                            <>
-                              <span className="text-primary font-medium">Set date for {selectedInPhase.length} selected:</span>
-                              <input
-                                type="date"
-                                defaultValue={todayStr()}
-                                onChange={(e) => { if (e.target.value) bulkSetDateSelected(e.target.value); }}
-                                className="bg-transparent border-b border-primary/60 px-1 py-0.5 text-xs text-foreground focus:outline-none focus:border-primary [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
-                              />
-                            </>
-                          ) : (
-                            <>
-                              <span>Set all dates:</span>
-                              <input
-                                type="date"
-                                defaultValue={todayStr()}
-                                onChange={(e) => { if (e.target.value) bulkDatePhase(pIdx, e.target.value); }}
-                                className="bg-transparent border-b border-border/40 px-1 py-0.5 text-xs text-foreground focus:outline-none focus:border-primary/60 [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
-                              />
-                            </>
-                          )}
+                    {!isCollapsed && (() => {
+                      const bulkStatusOpen = bulkStatusOpenPhase === pIdx;
+                      return (
+                        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-2.5 border-b border-border/20 bg-muted/10">
+                          {/* Left: select-all + selected count + set status */}
+                          <div className="flex flex-wrap items-center gap-2">
+                            {/* Select all checkbox */}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); toggleSelectAllInPhase(pIdx); }}
+                              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                            >
+                              {allPhaseSelected
+                                ? <CheckSquare className="w-3.5 h-3.5 text-primary" />
+                                : <Square className="w-3.5 h-3.5" />
+                              }
+                              <span>Select all</span>
+                            </button>
+
+                            {/* Selected count chip */}
+                            {selectedInPhase.length > 0 && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-primary/15 text-primary text-[11px] font-semibold">
+                                {selectedInPhase.length} selected
+                              </span>
+                            )}
+
+                            {/* Set status dropdown — only when rows selected */}
+                            {selectedInPhase.length > 0 && (
+                              <DropdownMenu open={bulkStatusOpen} onOpenChange={(open) => setBulkStatusOpenPhase(open ? pIdx : null)}>
+                                <DropdownMenuTrigger asChild>
+                                  <button className="inline-flex items-center gap-1.5 px-3 py-1 rounded border border-border/60 bg-background text-xs font-medium hover:bg-muted/50 transition-colors">
+                                    Set status
+                                    {bulkStatusOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                  </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="w-44">
+                                  <DropdownMenuItem onClick={() => { bulkApplyStatus("pass"); setBulkStatusOpenPhase(null); }} className="gap-2 cursor-pointer">
+                                    <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+                                    Mark tested
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => { bulkApplyStatus("na"); setBulkStatusOpenPhase(null); }} className="gap-2 cursor-pointer">
+                                    <span className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
+                                    Mark N/A
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => { bulkApplyStatus("open"); setBulkStatusOpenPhase(null); }} className="gap-2 cursor-pointer">
+                                    <span className="w-2 h-2 rounded-full bg-muted-foreground/40 flex-shrink-0" />
+                                    Open
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+
+                            {/* Reset all (no selection needed) */}
+                            {(phaseCompleted > 0 || phaseNa > 0) && selectedInPhase.length === 0 && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setResetTargetPhase(pIdx); }}
+                                className="inline-flex items-center gap-1.5 text-xs text-destructive/60 hover:text-destructive cursor-pointer transition-colors"
+                              >
+                                <XSquare className="w-3.5 h-3.5" />
+                                Reset all
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Right: date picker */}
+                          <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <CalendarCheck className="w-3.5 h-3.5" />
+                            {selectedInPhase.length > 0 ? (
+                              <>
+                                <span className="text-primary font-medium">Date:</span>
+                                <input
+                                  type="date"
+                                  defaultValue={todayStr()}
+                                  onChange={(e) => { if (e.target.value) bulkSetDateSelected(e.target.value); }}
+                                  className="bg-transparent border-b border-primary/60 px-1 py-0.5 text-xs text-foreground focus:outline-none focus:border-primary [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
+                                />
+                              </>
+                            ) : (
+                              <>
+                                <span>Date:</span>
+                                <input
+                                  type="date"
+                                  defaultValue={todayStr()}
+                                  onChange={(e) => { if (e.target.value) bulkDatePhase(pIdx, e.target.value); }}
+                                  className="bg-transparent border-b border-border/40 px-1 py-0.5 text-xs text-foreground focus:outline-none focus:border-primary/60 [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
+                                />
+                              </>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
 
                     {/* Collapsible content */}
                     {!isCollapsed && (
