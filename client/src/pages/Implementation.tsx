@@ -42,7 +42,6 @@ import {
   Clock,
   AlertCircle,
   ChevronUp,
-  Undo2,
 } from "lucide-react";
 import { useRoute, Link } from "wouter";
 import { cn } from "@/lib/utils";
@@ -584,8 +583,6 @@ export default function Implementation() {
   const inProgressCount = allTaskIds.filter(id => getMerged(id).inProgress && !getMerged(id).notApplicable).length;
   const blockedCount = allTaskIds.filter(id => getMerged(id).blocked && !getMerged(id).notApplicable).length;
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
-  const selectedCount = selectedTaskIds.size;
-
   return (
     <div className="min-h-screen bg-background animate-page-in">
       {/* Header */}
@@ -630,45 +627,6 @@ export default function Implementation() {
         </div>
       </header>
 
-      {/* Floating bulk action toolbar */}
-      {selectedCount > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-200">
-          <div className="flex items-center gap-3 px-5 py-3 rounded-xl bg-card border-2 border-primary/30 shadow-2xl shadow-primary/10 backdrop-blur-sm">
-            <span className="text-sm font-semibold text-foreground">
-              {selectedCount} selected
-            </span>
-            <div className="w-px h-6 bg-border/40" />
-            <button
-              onClick={bulkMarkDone}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25 transition-all cursor-pointer"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              Mark Done
-            </button>
-            <button
-              onClick={bulkMarkNA}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25 transition-all cursor-pointer"
-            >
-              <Ban className="w-4 h-4" />
-              Mark N/A
-            </button>
-            <button
-              onClick={bulkUndo}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-muted/40 text-foreground border border-border/40 hover:bg-muted/60 transition-all cursor-pointer"
-            >
-              <Undo2 className="w-4 h-4" />
-              Undo
-            </button>
-            <div className="w-px h-6 bg-border/40" />
-            <button
-              onClick={() => setSelectedTaskIds(new Set())}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-            >
-              Clear
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Import status banner */}
       {importStatus && (
