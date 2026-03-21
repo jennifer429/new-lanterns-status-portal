@@ -29,11 +29,13 @@ export const implementationRouter = router({
         .from(taskCompletion)
         .where(eq(taskCompletion.organizationId, org.id));
 
-      const taskMap: Record<string, { completed: boolean; notApplicable: boolean; completedAt: Date | null; owner: string | null; targetDate: string | null; notes: string | null }> = {};
+      const taskMap: Record<string, { completed: boolean; notApplicable: boolean; inProgress: boolean; blocked: boolean; completedAt: Date | null; owner: string | null; targetDate: string | null; notes: string | null }> = {};
       for (const row of rows) {
         taskMap[row.taskId] = {
           completed: row.completed === 1,
           notApplicable: row.notApplicable === 1,
+          inProgress: row.inProgress === 1,
+          blocked: row.blocked === 1,
           completedAt: row.completedAt ?? null,
           owner: row.completedBy ?? null,
           targetDate: row.targetDate ?? null,
@@ -54,6 +56,8 @@ export const implementationRouter = router({
         sectionName: z.string(),
         completed: z.boolean(),
         notApplicable: z.boolean().optional(),
+        inProgress: z.boolean().optional(),
+        blocked: z.boolean().optional(),
         owner: z.string().optional(),
         targetDate: z.string().optional(),
         notes: z.string().optional(),
@@ -85,6 +89,8 @@ export const implementationRouter = router({
       const payload = {
         completed: input.completed ? 1 : 0,
         notApplicable: input.notApplicable ? 1 : 0,
+        inProgress: input.inProgress ? 1 : 0,
+        blocked: input.blocked ? 1 : 0,
         completedAt: input.completed ? new Date() : null,
         completedBy: input.owner ?? null,
         targetDate: input.targetDate ?? null,

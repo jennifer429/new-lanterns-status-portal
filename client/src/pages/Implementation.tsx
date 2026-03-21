@@ -20,6 +20,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   CheckCircle2,
   Circle,
   ListChecks,
@@ -33,6 +39,9 @@ import {
   Square,
   Ban,
   BookOpen,
+  Clock,
+  AlertCircle,
+  ChevronUp,
 } from "lucide-react";
 import { useRoute, Link } from "wouter";
 import { cn } from "@/lib/utils";
@@ -119,6 +128,8 @@ export default function Implementation() {
   const [localOverrides, setLocalOverrides] = useState<Record<string, {
     completed?: boolean;
     notApplicable?: boolean;
+    inProgress?: boolean;
+    blocked?: boolean;
     completedAt?: Date | null;
     owner?: string;
     targetDate?: string;
@@ -128,6 +139,7 @@ export default function Implementation() {
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const [resetTargetSection, setResetTargetSection] = useState<typeof SECTION_DEFS[number] | null>(null);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+  const [bulkStatusOpenSection, setBulkStatusOpenSection] = useState<string | null>(null);
 
   function toggleTaskSelection(taskId: string) {
     setSelectedTaskIds(prev => {
@@ -176,11 +188,61 @@ export default function Implementation() {
     return {
       completed:      l.completed      !== undefined ? l.completed      : (s?.completed      ?? false),
       notApplicable:  l.notApplicable  !== undefined ? l.notApplicable  : (s?.notApplicable  ?? false),
+      inProgress:     l.inProgress     !== undefined ? l.inProgress     : (s?.inProgress     ?? false),
+      blocked:        l.blocked        !== undefined ? l.blocked        : (s?.blocked        ?? false),
       completedAt:    l.completedAt    !== undefined ? l.completedAt    : (s?.completedAt    ?? null),
       owner:          l.owner          !== undefined ? l.owner          : (s?.owner          ?? ""),
       targetDate:     l.targetDate     !== undefined ? l.targetDate     : (s?.targetDate     ?? ""),
       notes:          l.notes          !== undefined ? l.notes          : (s?.notes          ?? ""),
     };
+  }
+
+  type TaskStatus = "open" | "in_progress" | "complete" | "n_a" | "blocked";
+
+  function getTaskStatus(taskId: string): TaskStatus {
+    const m = getMerged(taskId);
+    if (m.completed) return "complete";
+    if (m.notApplicable) return "n_a";
+    if (m.blocked) return "blocked";
+    if (m.inProgress) return "in_progress";
+    return "open";
+  }
+
+  function applyStatus(taskId: string, sectionName: string, status: TaskStatus) {
+    const current = getMerged(taskId);
+    const patch = {
+      completed:    status === "complete",
+      notApplicable: status === "n_a",
+      inProgress:   status === "in_progress",
+      blocked:      status === "blocked",
+    };
+    const merged = { ...current, ...patch };
+    if (status === "complete") {
+      merged.completedAt = new Date();
+    } else {
+      merged.completedAt = null;
+    }
+    setLocalOverrides(prev => ({ ...prev, [taskId]: merged }));
+    updateTask.mutate({
+      organizationSlug: slug,
+      taskId,
+      sectionName,
+      completed: merged.completed,
+      notApplicable: merged.notApplicable,
+      inProgress: merged.inProgress,
+      blocked: merged.blocked,
+      owner: merged.owner || undefined,
+      targetDate: merged.targetDate || undefined,
+      notes: merged.notes || undefined,
+    });
+  }
+
+  function bulkApplyStatus(status: TaskStatus) {
+    selectedTaskIds.forEach(taskId => {
+      const section = SECTION_DEFS.find(s => s.tasks.some(t => t.id === taskId));
+      if (!section) return;
+      applyStatus(taskId, section.title, status);
+    });
   }
 
   function save(taskId: string, sectionName: string, patch: { completed?: boolean; notApplicable?: boolean; owner?: string; targetDate?: string; notes?: string }) {
@@ -201,6 +263,8 @@ export default function Implementation() {
       sectionName,
       completed: merged.completed,
       notApplicable: merged.notApplicable,
+      inProgress: merged.inProgress,
+      blocked: merged.blocked,
       owner: merged.owner || undefined,
       targetDate: merged.targetDate || undefined,
       notes: merged.notes || undefined,
@@ -380,6 +444,8 @@ export default function Implementation() {
   const naCount = allTaskIds.filter(id => getMerged(id).notApplicable).length;
   const total = allTaskIds.length - naCount;
   const completed = allTaskIds.filter(id => getMerged(id).completed && !getMerged(id).notApplicable).length;
+  const inProgressCount = allTaskIds.filter(id => getMerged(id).inProgress && !getMerged(id).notApplicable).length;
+  const blockedCount = allTaskIds.filter(id => getMerged(id).blocked && !getMerged(id).notApplicable).length;
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   return (
@@ -468,6 +534,8 @@ export default function Implementation() {
               {SECTION_DEFS.map((section, sIdx) => {
                 const sectionNa = section.tasks.filter(t => getMerged(t.id).notApplicable).length;
                 const sectionCompleted = section.tasks.filter(t => getMerged(t.id).completed && !getMerged(t.id).notApplicable).length;
+                const sectionInProgress = section.tasks.filter(t => getMerged(t.id).inProgress && !getMerged(t.id).notApplicable).length;
+                const sectionBlocked = section.tasks.filter(t => getMerged(t.id).blocked && !getMerged(t.id).notApplicable).length;
                 const sectionTotal = section.tasks.length - sectionNa;
                 const allDone = sectionTotal > 0 && sectionCompleted === sectionTotal;
                 const isCollapsed = !!collapsedSections[section.id];
@@ -492,8 +560,18 @@ export default function Implementation() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
+                        {sectionBlocked > 0 && (
+                          <Badge variant="outline" className="text-xs font-semibold border-red-500/30 text-red-500">
+                            {sectionBlocked} Blocked
+                          </Badge>
+                        )}
+                        {sectionInProgress > 0 && (
+                          <Badge variant="outline" className="text-xs font-semibold border-amber-400/30 text-amber-400">
+                            {sectionInProgress} In Progress
+                          </Badge>
+                        )}
                         {sectionNa > 0 && (
-                          <Badge variant="outline" className="text-xs font-semibold border-amber-500/30 text-amber-400">
+                          <Badge variant="outline" className="text-xs font-semibold border-purple-400/30 text-purple-400">
                             {sectionNa} N/A
                           </Badge>
                         )}
@@ -518,51 +596,82 @@ export default function Implementation() {
                       const sectionTaskIds = section.tasks.map(t => t.id);
                       const selectedInSection = sectionTaskIds.filter(id => selectedTaskIds.has(id));
                       const allSectionSelected = sectionTaskIds.length > 0 && sectionTaskIds.every(id => selectedTaskIds.has(id));
+                      const bulkStatusOpen = bulkStatusOpenSection === section.title;
                       return (
-                        <div className="flex flex-wrap items-center gap-3 px-5 py-2.5 border-b border-border/20 bg-muted/10">
-                          <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mr-1">Actions</span>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); bulkCompleteSection(section); }}
-                            disabled={allDone}
-                            className={cn(
-                              "inline-flex items-center gap-1.5 text-xs transition-colors",
-                              allDone
-                                ? "text-muted-foreground/30 cursor-not-allowed"
-                                : "text-primary hover:text-primary/80 cursor-pointer"
+                        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-2.5 border-b border-border/20 bg-muted/10">
+                          {/* Left: select-all + selected count + set status */}
+                          <div className="flex flex-wrap items-center gap-2">
+                            {/* Select all checkbox */}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); toggleSelectAllInSection(section); }}
+                              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                            >
+                              {allSectionSelected
+                                ? <CheckSquare className="w-3.5 h-3.5 text-primary" />
+                                : <Square className="w-3.5 h-3.5" />
+                              }
+                              <span>Select all</span>
+                            </button>
+
+                            {/* Selected count chip */}
+                            {selectedInSection.length > 0 && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-primary/15 text-primary text-[11px] font-semibold">
+                                {selectedInSection.length} selected
+                              </span>
                             )}
-                          >
-                            <CheckSquare className="w-3.5 h-3.5" />
-                            Mark All Done
-                          </button>
-                          <span className="text-border">|</span>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setResetTargetSection(section); }}
-                            disabled={sectionCompleted === 0}
-                            className={cn(
-                              "inline-flex items-center gap-1.5 text-xs transition-colors",
-                              sectionCompleted === 0
-                                ? "text-muted-foreground/30 cursor-not-allowed"
-                                : "text-destructive/70 hover:text-destructive cursor-pointer"
+
+                            {/* Set status dropdown — only when rows selected */}
+                            {selectedInSection.length > 0 && (
+                              <DropdownMenu open={bulkStatusOpen} onOpenChange={(open) => setBulkStatusOpenSection(open ? section.title : null)}>
+                                <DropdownMenuTrigger asChild>
+                                  <button className="inline-flex items-center gap-1.5 px-3 py-1 rounded border border-border/60 bg-background text-xs font-medium hover:bg-muted/50 transition-colors">
+                                    Set status
+                                    {bulkStatusOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                  </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="w-44">
+                                  <DropdownMenuItem onClick={() => { bulkApplyStatus("complete"); setBulkStatusOpenSection(null); }} className="gap-2 cursor-pointer">
+                                    <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+                                    Mark complete
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => { bulkApplyStatus("in_progress"); setBulkStatusOpenSection(null); }} className="gap-2 cursor-pointer">
+                                    <span className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
+                                    In progress
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => { bulkApplyStatus("n_a"); setBulkStatusOpenSection(null); }} className="gap-2 cursor-pointer">
+                                    <span className="w-2 h-2 rounded-full bg-purple-400 flex-shrink-0" />
+                                    Mark N/A
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => { bulkApplyStatus("blocked"); setBulkStatusOpenSection(null); }} className="gap-2 cursor-pointer">
+                                    <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+                                    Blocked
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => { bulkApplyStatus("open"); setBulkStatusOpenSection(null); }} className="gap-2 cursor-pointer">
+                                    <span className="w-2 h-2 rounded-full bg-muted-foreground/40 flex-shrink-0" />
+                                    Open
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             )}
-                          >
-                            <XSquare className="w-3.5 h-3.5" />
-                            Reset All
-                          </button>
-                          <span className="text-border">|</span>
-                          {/* Select-all toggle */}
-                          <button
-                            onClick={(e) => { e.stopPropagation(); toggleSelectAllInSection(section); }}
-                            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
-                          >
-                            <Square className="w-3.5 h-3.5" />
-                            {allSectionSelected ? "Deselect All" : "Select All"}
-                          </button>
-                          <span className="text-border">|</span>
+
+                            {/* Reset all (no selection needed) */}
+                            {sectionCompleted > 0 && selectedInSection.length === 0 && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setResetTargetSection(section); }}
+                                className="inline-flex items-center gap-1.5 text-xs text-destructive/60 hover:text-destructive cursor-pointer transition-colors"
+                              >
+                                <XSquare className="w-3.5 h-3.5" />
+                                Reset all
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Right: date picker */}
                           <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
                             <CalendarCheck className="w-3.5 h-3.5" />
                             {selectedInSection.length > 0 ? (
                               <>
-                                <span className="text-primary font-medium">Backdate {selectedInSection.length} selected:</span>
+                                <span className="text-primary font-medium">Date:</span>
                                 <input
                                   type="date"
                                   defaultValue={todayStr()}
@@ -572,7 +681,7 @@ export default function Implementation() {
                               </>
                             ) : (
                               <>
-                                <span>Set all dates:</span>
+                                <span>Date:</span>
                                 <input
                                   type="date"
                                   defaultValue={todayStr()}
@@ -590,27 +699,38 @@ export default function Implementation() {
                     <div className={`collapsible-body ${!isCollapsed ? "open" : ""}`}><div>
                       <CardContent className="p-0">
                         {/* Column headers */}
-                        <div className="hidden md:grid grid-cols-[24px_40px_1fr_120px_110px_110px_auto] gap-3 px-5 py-2 text-xs text-muted-foreground uppercase tracking-wider border-b border-border/20 bg-muted/10">
+                        <div className="hidden md:grid grid-cols-[24px_100px_1fr_120px_110px_110px_auto] gap-3 px-5 py-2 text-xs text-muted-foreground uppercase tracking-wider border-b border-border/20 bg-muted/10">
                           <div />
-                          <div className="text-center">Done</div>
+                          <div>Status</div>
                           <div>Task</div>
                           <div>Owner</div>
                           <div>Target Date</div>
-                          <div>Completed</div>
+                          <div>Status Date</div>
                           <div className="w-6" />
                         </div>
 
                         {section.tasks.map((task, tIdx) => {
                           const { completed: done, notApplicable: isNA, completedAt, owner, targetDate, notes } = getMerged(task.id);
+                          const taskStatus = getTaskStatus(task.id);
                           const notesOpen = !!expandedNotes[task.id];
                           const intakeHref = task.intakeLink ? `/org/${slug}${task.intakeLink}` : null;
                           const specHref = task.specLink ? `/org/${slug}${task.specLink}` : null;
                           const isSelected = selectedTaskIds.has(task.id);
 
+                          const STATUS_CONFIG = {
+                            open:        { label: "Open",        dot: "bg-muted-foreground/40", text: "text-muted-foreground" },
+                            in_progress: { label: "In progress", dot: "bg-amber-400",            text: "text-amber-400" },
+                            complete:    { label: "Complete",    dot: "bg-green-500",             text: "text-green-500" },
+                            n_a:         { label: "N/A",         dot: "bg-purple-400",            text: "text-purple-400" },
+                            blocked:     { label: "Blocked",     dot: "bg-red-500",               text: "text-red-500" },
+                          } as const;
+
+                          const sc = STATUS_CONFIG[taskStatus];
+
                           return (
                             <div key={task.id} className={cn(tIdx < section.tasks.length - 1 ? "border-b border-border/20" : "", isSelected && "bg-primary/5", isNA && "opacity-50")}>
                               {/* Main row */}
-                              <div className="grid grid-cols-1 md:grid-cols-[24px_40px_1fr_120px_110px_110px_auto] gap-3 items-start px-5 py-3">
+                              <div className="grid grid-cols-1 md:grid-cols-[24px_100px_1fr_120px_110px_110px_auto] gap-3 items-start px-5 py-3">
                                 {/* Row selection checkbox */}
                                 <div className="hidden md:flex items-center justify-center pt-1">
                                   <button
@@ -624,42 +744,48 @@ export default function Implementation() {
                                     }
                                   </button>
                                 </div>
-                                {/* Done Checkbox */}
-                                <div className="flex justify-center pt-0.5">
-                                  {isNA ? (
-                                    <Ban className="w-6 h-6 text-muted-foreground/40" />
-                                  ) : (
-                                    <button
-                                      onClick={() => save(task.id, section.title, { completed: !done })}
-                                      className="focus:outline-none"
-                                      title={done ? "Mark incomplete" : "Mark complete"}
-                                    >
-                                      {done
-                                        ? <CheckCircle2 className="w-6 h-6 text-green-500 hover:text-green-400 transition-colors" />
-                                        : <Circle className="w-6 h-6 text-muted-foreground/40 hover:text-primary/60 transition-colors cursor-pointer" />
-                                      }
-                                    </button>
-                                  )}
+
+                                {/* Status dropdown */}
+                                <div className="flex items-start pt-0.5">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <button className={cn(
+                                        "inline-flex items-center gap-1.5 px-2 py-1 rounded border border-border/40 bg-background/60 text-xs font-medium hover:bg-muted/50 transition-colors",
+                                        sc.text
+                                      )}>
+                                        <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", sc.dot)} />
+                                        {sc.label}
+                                        <ChevronDown className="w-2.5 h-2.5 opacity-60" />
+                                      </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start" className="w-40">
+                                      <DropdownMenuItem onClick={() => applyStatus(task.id, section.title, "complete")} className="gap-2 cursor-pointer">
+                                        <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+                                        Mark complete
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => applyStatus(task.id, section.title, "in_progress")} className="gap-2 cursor-pointer">
+                                        <span className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
+                                        In progress
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => applyStatus(task.id, section.title, "n_a")} className="gap-2 cursor-pointer">
+                                        <span className="w-2 h-2 rounded-full bg-purple-400 flex-shrink-0" />
+                                        Mark N/A
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => applyStatus(task.id, section.title, "blocked")} className="gap-2 cursor-pointer">
+                                        <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+                                        Blocked
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => applyStatus(task.id, section.title, "open")} className="gap-2 cursor-pointer">
+                                        <span className="w-2 h-2 rounded-full bg-muted-foreground/40 flex-shrink-0" />
+                                        Open
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
                                 </div>
 
-                                {/* Task name + description + intake link + spec link + N/A toggle */}
+                                {/* Task name + description + intake link + spec link */}
                                 <div className="space-y-0.5">
-                                  <div className="flex items-center gap-2">
-                                    <p className={cn("text-sm font-medium text-foreground", isNA && "line-through")}>{task.title}</p>
-                                    <button
-                                      onClick={() => save(task.id, section.title, { notApplicable: !isNA })}
-                                      className={cn(
-                                        "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider border transition-all",
-                                        isNA
-                                          ? "bg-amber-500/20 text-amber-400 border-amber-500/40 hover:bg-amber-500/30"
-                                          : "bg-transparent text-muted-foreground/40 border-border/30 hover:text-amber-400 hover:border-amber-500/40"
-                                      )}
-                                      title={isNA ? "Remove N/A — include in progress" : "Mark as Not Applicable"}
-                                    >
-                                      <Ban className="w-2.5 h-2.5" />
-                                      N/A
-                                    </button>
-                                  </div>
+                                  <p className={cn("text-sm font-medium text-foreground", isNA && "line-through")}>{task.title}</p>
                                   {task.description && (
                                     <p className={cn("text-xs text-muted-foreground", isNA && "line-through")}>{task.description}</p>
                                   )}
@@ -696,7 +822,7 @@ export default function Implementation() {
                                       onChange={(e) => save(task.id, section.title, { targetDate: e.target.value })}
                                       className="bg-transparent border border-border/40 rounded px-1.5 py-0.5 text-xs text-foreground focus:outline-none focus:border-primary/60 [&::-webkit-calendar-picker-indicator]:invert"
                                     />
-                                    {done && completedAt && (
+                                    {completedAt && (
                                       <span className="text-xs text-muted-foreground">{formatDate(completedAt)}</span>
                                     )}
                                     <button
@@ -733,9 +859,9 @@ export default function Implementation() {
                                   />
                                 </div>
 
-                                {/* Completed date — desktop */}
+                                {/* Status date — desktop (completedAt or updatedAt hint) */}
                                 <div className="hidden md:flex items-center text-xs text-foreground">
-                                  {done && completedAt
+                                  {completedAt
                                     ? formatDate(completedAt)
                                     : <span className="text-muted-foreground/30">—</span>
                                   }
@@ -812,6 +938,24 @@ export default function Implementation() {
                       </div>
                       <span className="font-medium text-foreground">{completed}</span>
                     </div>
+                    {inProgressCount > 0 && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-amber-400" />
+                          <span className="text-foreground">In Progress</span>
+                        </div>
+                        <span className="font-medium text-amber-400">{inProgressCount}</span>
+                      </div>
+                    )}
+                    {blockedCount > 0 && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-red-500" />
+                          <span className="text-foreground">Blocked</span>
+                        </div>
+                        <span className="font-medium text-red-500">{blockedCount}</span>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full bg-muted-foreground/30" />
