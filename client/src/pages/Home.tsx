@@ -38,6 +38,7 @@ import { SECTION_DEFS as TASK_SECTION_DEFS } from "@shared/taskDefs";
 import { PhiDisclaimer } from "@/components/PhiDisclaimer";
 import { UserMenu } from "@/components/UserMenu";
 import { cn } from "@/lib/utils";
+import { UploadedFilesList } from "@/components/UploadedFileRow";
 
 // ── Progress Ring (SVG) ─────────────────────────────────────────────────────
 function ProgressRing({
@@ -696,52 +697,18 @@ export default function Home() {
               <div className="border-t border-border/40">
                 <div className="p-3">
                   {diagramFiles.length > 0 ? (
-                    <div className="flex gap-3 overflow-x-auto pb-1">
-                      {diagramFiles.map((file: any) => {
-                        const isImage = /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(file.fileName);
-                        return (
-                          <div key={file.id} className="flex-shrink-0 group/thumb relative">
-                            {isImage ? (
-                              <div
-                                className="w-32 h-24 rounded-lg border border-border/50 overflow-hidden bg-muted/10 cursor-pointer relative"
-                                onClick={() => setLightboxSrc({ src: file.fileUrl, alt: file.fileName })}
-                              >
-                                <img
-                                  src={file.fileUrl}
-                                  alt={file.fileName}
-                                  className="w-full h-full object-cover"
-                                />
-                                <div className="absolute inset-0 bg-black/0 group-hover/thumb:bg-black/30 transition-colors flex items-center justify-center">
-                                  <Maximize2 className="w-4 h-4 text-white opacity-0 group-hover/thumb:opacity-100 transition-opacity" />
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="w-32 h-24 rounded-lg border border-border/50 bg-muted/10 flex items-center justify-center">
-                                <FileText className="w-6 h-6 text-muted-foreground" />
-                              </div>
-                            )}
-                            <div className="mt-1 flex items-center justify-between">
-                              <span className="text-[10px] text-muted-foreground truncate max-w-[80px]">{file.fileName}</span>
-                              <div className="flex items-center gap-0.5">
-                                <a href={file.fileUrl} download={file.fileName} onClick={(e) => e.stopPropagation()}>
-                                  <Button size="sm" variant="ghost" className="h-5 w-5 p-0">
-                                    <Download className="w-3 h-3 text-muted-foreground" />
-                                  </Button>
-                                </a>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-5 w-5 p-0"
-                                  onClick={() => handleRemoveDiagram(file.id)}
-                                >
-                                  <Trash2 className="w-3 h-3 text-destructive" />
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    <UploadedFilesList
+                      files={diagramFiles.map((file: any) => ({
+                        id: file.id,
+                        fileName: file.fileName,
+                        fileUrl: file.fileUrl,
+                        fileSize: file.fileSize,
+                        createdAt: file.createdAt,
+                        uploadedBy: file.uploadedBy,
+                      }))}
+                      onRemove={(fileId) => handleRemoveDiagram(fileId)}
+                      compact
+                    />
                   ) : (
                     <div className="text-center py-4">
                       <ImageIcon className="w-6 h-6 text-muted-foreground/40 mx-auto mb-2" />

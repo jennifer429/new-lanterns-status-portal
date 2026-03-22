@@ -32,6 +32,7 @@ import { WorkflowDiagram } from "@/components/WorkflowDiagram";
 import { IntegrationWorkflows } from "@/components/IntegrationWorkflows";
 import { ConnectivityTable, type ConnectivityRow } from "@/components/ConnectivityTable";
 import { UserMenu } from "@/components/UserMenu";
+import { UploadedFilesList } from "@/components/UploadedFileRow";
 
 // Section icons mapping
 const sectionIcons: Record<string, any> = {
@@ -1278,30 +1279,14 @@ export default function IntakeNewRedesign() {
                 ))}
               </div>
             )}
-            
-            {/* File status + upload button */}
+
+            {/* Upload button row */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 flex-1 min-w-0">
+              <div className="flex items-center gap-2">
                 {questionFiles.length > 0 ? (
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 text-xs font-medium">
-                      <CheckCircle2 className="w-3 h-3" /> Uploaded
-                    </span>
-                    {questionFiles.map((file) => (
-                      <span key={file.id} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <Paperclip className="w-3.5 h-3.5" />
-                        <a href={file.fileUrl} target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition-colors truncate max-w-[200px]">
-                          {file.fileName}
-                        </a>
-                        <button
-                          onClick={() => deleteMutation.mutate({ organizationSlug: slug || '', fileId: file.id })}
-                          className="text-muted-foreground hover:text-red-400 transition-colors text-xs"
-                        >
-                          Remove
-                        </button>
-                      </span>
-                    ))}
-                  </div>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 text-xs font-medium">
+                    <CheckCircle2 className="w-3 h-3" /> {questionFiles.length} file{questionFiles.length !== 1 ? 's' : ''} uploaded
+                  </span>
                 ) : (
                   <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
                     <FileIcon className="w-3.5 h-3.5" /> No file uploaded
@@ -1333,6 +1318,23 @@ export default function IntakeNewRedesign() {
                 </Button>
               </div>
             </div>
+
+            {/* Clean vertical file list with preview/download/remove */}
+            {questionFiles.length > 0 && (
+              <UploadedFilesList
+                files={questionFiles.map(f => ({
+                  id: f.id,
+                  fileName: f.fileName,
+                  fileUrl: f.fileUrl,
+                  fileSize: f.fileSize,
+                  createdAt: f.createdAt,
+                  uploadedBy: f.uploadedBy,
+                }))}
+                onRemove={(fileId) => deleteMutation.mutate({ organizationSlug: slug || '', fileId })}
+                isRemoving={deleteMutation.isPending}
+                compact
+              />
+            )}
           </div>
         );
       }

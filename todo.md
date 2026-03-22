@@ -2265,3 +2265,9 @@
 - [x] ~Add editable fields/dropdowns for org-specific systems~ (cancelled by user)
 - [x] ~Add backend persistence for architecture diagram data per org~ (cancelled by user)
 - [x] ~Integrate diagram into the Architecture section~ (cancelled by user)
+
+## Clean File Upload Redesign
+- [x] Create shared UploadedFilesList component with vertical layout, full filenames, date, size, preview, download, remove
+- [x] Integrate clean file upload into Architecture page (Home.tsx dashboard)
+- [x] Integrate clean file upload into Questionnaire page (IntakeNewRedesign.tsx)
+- [x] Ensure consistent design across all file upload areas
