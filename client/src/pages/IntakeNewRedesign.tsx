@@ -1659,7 +1659,7 @@ export default function IntakeNewRedesign() {
               >
                 <Menu className="w-6 h-6" />
               </button>
-              <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-7 flex-shrink-0 hidden md:block" />
+              <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-8 flex-shrink-0 hidden md:block" />
               <div className="hidden sm:block border-l border-border/40 pl-3 min-w-0">
                 <div className="text-sm font-bold tracking-tight truncate">Questionnaire</div>
                 {org?.name && <div className="text-xs text-muted-foreground truncate">{org.name}{org.clientName ? ` · ${org.clientName}` : ""}</div>}

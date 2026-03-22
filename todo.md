@@ -2271,3 +2271,8 @@
 - [x] Integrate clean file upload into Architecture page (Home.tsx dashboard)
 - [x] Integrate clean file upload into Questionnaire page (IntakeNewRedesign.tsx)
 - [x] Ensure consistent design across all file upload areas
+
+## Consistent Org Name Display Across All Pages (Mar 22, 2026)
+- [x] Audit all pages for how org name (hospital/rad group) is currently displayed
+- [x] Standardize font, size, location, and style of org name across all pages
+- [x] Apply consistent org name display to: Dashboard, Questionnaire, Task List, Testing, Specifications, Connectivity
