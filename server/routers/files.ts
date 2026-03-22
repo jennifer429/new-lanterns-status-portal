@@ -15,7 +15,7 @@ const execAsync = promisify(exec);
 /**
  * Upload file to Google Drive and get shareable link
  */
-async function uploadToGoogleDrive(
+export async function uploadToGoogleDrive(
   fileName: string,
   fileBuffer: Buffer,
   organizationName: string
@@ -143,14 +143,9 @@ export const filesRouter = router({
 
       if (!org) throw new Error("Organization not found");
 
-      // Upload to S3
-      const { storagePut } = await import("../storage");
-      const fileKey = `intake/${org.slug}/${input.taskId}/${Date.now()}-${input.fileName}`;
-      const { url: fileUrl } = await storagePut(
-        fileKey,
-        fileBuffer,
-        input.mimeType
-      );
+      // Upload to Google Drive
+      const fileKey = `${Date.now()}-${input.fileName}`;
+      const fileUrl = await uploadToGoogleDrive(fileKey, fileBuffer, org.name);
 
       // Save metadata to database
       const [result] = await db.insert(fileAttachments).values({
