@@ -2259,3 +2259,9 @@
 ## Add Status Breakdown to Questionnaire and Testing Cards
 - [x] Add status breakdown (Complete/In Progress/Not Started counts) and Next Up sections to Questionnaire workflow card
 - [x] Add status breakdown (Pass/Fail/Not Tested counts) and Next Up sections to Testing workflow card
+
+## Interactive Architecture Diagram
+- [x] ~Create interactive architecture diagram component~ (cancelled by user)
+- [x] ~Add editable fields/dropdowns for org-specific systems~ (cancelled by user)
+- [x] ~Add backend persistence for architecture diagram data per org~ (cancelled by user)
+- [x] ~Integrate diagram into the Architecture section~ (cancelled by user)

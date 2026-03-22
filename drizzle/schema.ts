@@ -385,3 +385,4 @@ export const vendorAuditLog = mysqlTable("vendorAuditLog", {
 
 export type VendorAuditLog = typeof vendorAuditLog.$inferSelect;
 export type InsertVendorAuditLog = typeof vendorAuditLog.$inferInsert;
+
