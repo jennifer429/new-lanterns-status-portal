@@ -4,6 +4,7 @@ import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { intakeResponses, intakeFileAttachments, organizations, questions, questionOptions, responses, onboardingFeedback, clients, partnerTemplates } from "../../drizzle/schema";
 import { eq, and, sql } from "drizzle-orm";
+import { uploadToGoogleDrive } from "./files";
 
 export const intakeRouter = router({
   /**
@@ -456,10 +457,9 @@ export const intakeRouter = router({
         const sanitizedOrgName = org.name.replace(/[^a-zA-Z0-9-]/g, '_');
         const fileName = `${sanitizedOrgName}_${sanitizedEmail}_${input.questionId}-${shortTitle}_${timestamp}.${fileExt}`;
         
-        // Upload to S3 using built-in storage helper
-        const { storagePut } = await import("../storage");
-        const s3Key = `intake-files/${org.slug}/${fileName}`;
-        const { url: fileUrl } = await storagePut(s3Key, fileBuffer, input.mimeType);
+        // Upload to Google Drive
+        const fileUrl = await uploadToGoogleDrive(fileName, fileBuffer, org.name);
+        const s3Key = fileName; // store filename as reference
 
         // Store file info in database
         await db.insert(intakeFileAttachments).values({

@@ -4,6 +4,7 @@ import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { questions, questionOptions, organizations, users, clients, intakeFileAttachments, partnerTemplates, specifications, intakeResponses, systemVendorOptions, vendorAuditLog } from "../../drizzle/schema";
 import { eq, and, or, desc, inArray, sql } from "drizzle-orm";
+import { uploadToGoogleDrive } from "./files";
 import bcrypt from "bcrypt";
 
 /**
@@ -1399,12 +1400,12 @@ export const adminRouter = router({
       // Decode base64 file data
       const fileBuffer = Buffer.from(input.fileData, "base64");
 
-      // Upload to S3
-      const { storagePut } = await import("../storage");
+      // Upload to Google Drive
       const timestamp = Date.now();
       const fileExt = input.fileName.split('.').pop();
-      const s3Key = `partner-templates/${input.clientId}/${input.questionId}_${timestamp}.${fileExt}`;
-      const { url: fileUrl } = await storagePut(s3Key, fileBuffer, input.mimeType);
+      const driveFileName = `partner-templates_${input.clientId}_${input.questionId}_${timestamp}.${fileExt}`;
+      const fileUrl = await uploadToGoogleDrive(driveFileName, fileBuffer, "");
+      const s3Key = driveFileName;
 
       // Insert into database
       await db.insert(partnerTemplates).values({
@@ -1462,13 +1463,13 @@ export const adminRouter = router({
         deactivatedAt: new Date(),
       }).where(eq(partnerTemplates.id, input.id));
 
-      // Upload new file to S3
+      // Upload new file to Google Drive
       const fileBuffer = Buffer.from(input.fileData, "base64");
-      const { storagePut } = await import("../storage");
       const timestamp = Date.now();
       const fileExt = input.fileName.split('.').pop();
-      const s3Key = `partner-templates/${existing.clientId}/${existing.questionId}_${timestamp}.${fileExt}`;
-      const { url: fileUrl } = await storagePut(s3Key, fileBuffer, input.mimeType);
+      const driveFileName = `partner-templates_${existing.clientId}_${existing.questionId}_${timestamp}.${fileExt}`;
+      const fileUrl = await uploadToGoogleDrive(driveFileName, fileBuffer, "");
+      const s3Key = driveFileName;
 
       // Insert new active template
       await db.insert(partnerTemplates).values({
@@ -1526,12 +1527,11 @@ export const adminRouter = router({
 
       const fileBuffer = Buffer.from(input.fileData, "base64");
 
-      // Upload to S3
-      const { storagePut } = await import("../storage");
+      // Upload to Google Drive
       const timestamp = Date.now();
-      const fileExt = input.fileName.split('.').pop();
-      const s3Key = `specifications/${timestamp}_${input.fileName}`;
-      const { url: fileUrl } = await storagePut(s3Key, fileBuffer, input.mimeType);
+      const driveFileName = `specifications_${timestamp}_${input.fileName}`;
+      const fileUrl = await uploadToGoogleDrive(driveFileName, fileBuffer, "");
+      const s3Key = driveFileName;
 
       await db.insert(specifications).values({
         title: input.title,
