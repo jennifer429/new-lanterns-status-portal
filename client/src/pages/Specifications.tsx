@@ -19,6 +19,7 @@ import { Link, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useState, useMemo } from "react";
 import { UserMenu } from "@/components/UserMenu";
+import { PageBreadcrumb } from "@/components/PageBreadcrumb";
 
 export default function Specifications() {
   const [, params] = useRoute("/org/:slug/specs");
@@ -62,34 +63,29 @@ export default function Specifications() {
       {/* ── Glass Header ── */}
       <header className="header-glass sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <img
               src="/images/new-lantern-logo.png"
               alt="New Lantern"
-              className="h-10"
+              className="h-8 shrink-0"
             />
+            <div className="hidden sm:block border-l border-border/40 pl-3 min-w-0">
+              <div className="text-sm font-semibold tracking-tight truncate">Specifications</div>
+              {orgName && <div className="text-xs text-muted-foreground truncate">{orgName}</div>}
+            </div>
+            <div className="sm:hidden text-sm font-semibold truncate max-w-[120px]">{orgName}</div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="text-right">
-              <div className="text-sm font-semibold tracking-tight">
-                {orgName}
-              </div>
-            </div>
             <UserMenu />
           </div>
         </div>
       </header>
+      <PageBreadcrumb orgSlug={orgSlug} items={[{ label: "Specifications" }]} />
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
-        {/* ── Back + Title ── */}
+        {/* ── Title ── */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link href={`/org/${orgSlug}`}>
-              <Button variant="ghost" size="sm" className="gap-2">
-                <ArrowLeft className="w-4 h-4" />
-                Dashboard
-              </Button>
-            </Link>
             <div>
               <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2.5">
                 <BookOpen className="w-6 h-6 text-primary" />

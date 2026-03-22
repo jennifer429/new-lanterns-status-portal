@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { CheckCircle2, Circle, FileText, Calendar, Upload, ArrowLeft } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { useState } from "react";
+import { PageBreadcrumb } from "@/components/PageBreadcrumb";
 
 // Mock tasks - in production these would come from the database based on questionnaire responses
 const mockTasks = [
@@ -116,6 +117,7 @@ export default function Tasks() {
           </div>
         </div>
       </header>
+      <PageBreadcrumb orgSlug={orgSlug} items={[{ label: "Action Items" }]} />
 
       {/* Main Content */}
       <div className="container py-8 max-w-4xl">

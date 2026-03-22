@@ -32,6 +32,7 @@ import { WorkflowDiagram } from "@/components/WorkflowDiagram";
 import { IntegrationWorkflows } from "@/components/IntegrationWorkflows";
 import { ConnectivityTable, type ConnectivityRow } from "@/components/ConnectivityTable";
 import { UserMenu } from "@/components/UserMenu";
+import { PageBreadcrumb } from "@/components/PageBreadcrumb";
 
 // Section icons mapping
 const sectionIcons: Record<string, any> = {
@@ -1253,9 +1254,24 @@ export default function IntakeNewRedesign() {
         const inlineTemplates = dbTemplateMap.get(question.id) || [];
         const questionFiles = allUploadedFiles.filter(f => f.questionId === question.id);
         const uploadInputRef = { current: null as HTMLInputElement | null };
-        
+
+        const getFileThumbnail = (file: { fileName: string; fileUrl: string; mimeType?: string | null }) => {
+          const mime = file.mimeType || '';
+          const ext = file.fileName.split('.').pop()?.toLowerCase() || '';
+          if (mime.startsWith('image/') || ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) {
+            return <img src={file.fileUrl} alt={file.fileName} className="w-10 h-10 object-cover rounded border border-border/40" />;
+          }
+          const iconColor = ['pdf'].includes(ext) ? 'text-red-400' : ['doc','docx'].includes(ext) ? 'text-blue-400' : ['xlsx','xls','csv'].includes(ext) ? 'text-green-400' : 'text-muted-foreground';
+          return (
+            <div className={`w-10 h-10 flex flex-col items-center justify-center rounded border border-border/40 bg-muted/40 ${iconColor}`}>
+              <FileIcon className="w-4 h-4" />
+              <span className="text-[9px] font-bold leading-none mt-0.5 uppercase">{ext || 'FILE'}</span>
+            </div>
+          );
+        };
+
         return (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {/* Template download buttons */}
             {inlineTemplates.length > 0 && (
               <div className="flex flex-wrap gap-2">
@@ -1270,7 +1286,7 @@ export default function IntakeNewRedesign() {
                       link.download = tmpl.fileName;
                       link.click();
                     }}
-                    className="bg-purple-600/80 hover:bg-purple-700 text-white border-purple-500/50 text-xs"
+                    className="text-xs"
                   >
                     <Download className="w-3.5 h-3.5 mr-1.5" />
                     {tmpl.label} ({tmpl.fileName})
@@ -1278,60 +1294,59 @@ export default function IntakeNewRedesign() {
                 ))}
               </div>
             )}
-            
-            {/* File status + upload button */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                {questionFiles.length > 0 ? (
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 text-xs font-medium">
-                      <CheckCircle2 className="w-3 h-3" /> Uploaded
-                    </span>
-                    {questionFiles.map((file) => (
-                      <span key={file.id} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <Paperclip className="w-3.5 h-3.5" />
-                        <a href={file.fileUrl} target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition-colors truncate max-w-[200px]">
-                          {file.fileName}
-                        </a>
-                        <button
-                          onClick={() => deleteMutation.mutate({ organizationSlug: slug || '', fileId: file.id })}
-                          className="text-muted-foreground hover:text-red-400 transition-colors text-xs"
-                        >
-                          Remove
-                        </button>
-                      </span>
-                    ))}
+
+            {/* Uploaded file thumbnails */}
+            {questionFiles.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {questionFiles.map((file) => (
+                  <div key={file.id} className="flex items-center gap-2 p-2 rounded border border-border/40 bg-muted/20 max-w-[240px]">
+                    <a href={file.fileUrl} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                      {getFileThumbnail(file)}
+                    </a>
+                    <div className="flex-1 min-w-0">
+                      <a href={file.fileUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-foreground hover:text-primary transition-colors truncate block">
+                        {file.fileName}
+                      </a>
+                      <button
+                        onClick={() => deleteMutation.mutate({ organizationSlug: slug || '', fileId: file.id })}
+                        className="text-[10px] text-muted-foreground hover:text-destructive transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
+                ))}
+              </div>
+            )}
+
+            {/* Upload button */}
+            <div className="flex items-center gap-2">
+              {questionFiles.length === 0 && (
+                <span className="text-xs text-muted-foreground">No file uploaded</span>
+              )}
+              <input
+                ref={uploadInputRef}
+                type="file"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFileUpload(question.id, file);
+                  e.target.value = '';
+                }}
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => uploadInputRef.current?.click()}
+                disabled={isUploading}
+                className="text-xs"
+              >
+                {isUploading ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 ) : (
-                  <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                    <FileIcon className="w-3.5 h-3.5" /> No file uploaded
-                  </span>
+                  <><Upload className="w-3.5 h-3.5 mr-1" /> Upload</>
                 )}
-              </div>
-              <div>
-                <input
-                  ref={uploadInputRef}
-                  type="file"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFileUpload(question.id, file);
-                    e.target.value = '';
-                  }}
-                />
-                <Button
-                  size="sm"
-                  onClick={() => uploadInputRef.current?.click()}
-                  disabled={isUploading}
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
-                >
-                  {isUploading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <><Upload className="w-4 h-4 mr-1.5" /> Upload</>
-                  )}
-                </Button>
-              </div>
+              </Button>
             </div>
           </div>
         );
@@ -1658,10 +1673,11 @@ export default function IntakeNewRedesign() {
                 <Menu className="w-6 h-6" />
               </button>
               <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-7 flex-shrink-0 hidden md:block" />
-              <div className="hidden sm:block border-l border-border/40 pl-3 min-w-0">
+              <div className="hidden sm:flex flex-col border-l border-border/40 pl-3 min-w-0">
                 <div className="text-sm font-bold tracking-tight truncate">Questionnaire</div>
                 {org?.name && <div className="text-xs text-muted-foreground truncate">{org.name}{org.clientName ? ` · ${org.clientName}` : ""}</div>}
               </div>
+              {org?.name && <div className="sm:hidden text-sm font-semibold truncate max-w-[110px]">{org.name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 4)}</div>}
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <Button
@@ -1695,6 +1711,7 @@ export default function IntakeNewRedesign() {
             </div>
           </div>
         </header>
+        <PageBreadcrumb orgSlug={slug || ""} items={[{ label: "Questionnaire" }]} />
 
         {/* Overall Stats Banner */}
         <div className="bg-gradient-to-r from-purple-900/20 to-purple-800/20 border-b border-purple-500/20 px-4 md:px-8 py-3 md:py-4">
@@ -1830,20 +1847,22 @@ export default function IntakeNewRedesign() {
                   </div>
 
                   {/* File uploads section */}
-                  <div className="space-y-5">
-                    <h3 className="text-lg font-semibold">Configuration File Uploads</h3>
-                    <p className="text-xs text-yellow-400/80 flex items-center gap-1.5">
-                      <Shield className="w-3.5 h-3.5 flex-shrink-0" />
-                      <span>De-identify all files before uploading. Do not share PHI or patient data.</span>
-                    </p>
-                    <div className="grid grid-cols-1 gap-y-5">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Configuration File Uploads</h3>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground/70">
+                        <Shield className="w-3 h-3 flex-shrink-0" />
+                        <span>De-identify files before uploading</span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-y-3">
                       {currentSectionData?.questions?.filter(q => q.type === 'upload' || q.type === 'upload-download').map((question) => (
-                        <div key={question.id} id={`question-${question.id}`} className="p-4 rounded-lg bg-purple-900/10 border border-purple-500/15 col-span-1">
-                          <Label className="mb-3 block text-base">
-                            <span className="text-purple-400 font-bold mr-2">[{question.id}]</span>
+                        <div key={question.id} id={`question-${question.id}`} className="p-3 rounded-md bg-muted/30 border border-border/40 col-span-1">
+                          <Label className="mb-2 block text-sm">
+                            <span className="text-muted-foreground font-mono text-xs mr-1.5">[{question.id}]</span>
                             {question.text}
                           </Label>
-                          {question.notes && <p className="text-xs text-muted-foreground mb-3">{question.notes}</p>}
+                          {question.notes && <p className="text-xs text-muted-foreground mb-2">{question.notes}</p>}
                           {renderQuestion(question)}
                         </div>
                       ))}
@@ -1925,11 +1944,11 @@ export default function IntakeNewRedesign() {
                         } ${
                           isUnanswered ? 'p-4 border-2 border-red-500 rounded-lg bg-red-500/5' : ''
                         } ${
-                          isUploadType ? 'p-4 rounded-lg bg-purple-900/10 border border-purple-500/15' : ''
+                          isUploadType && !isUnanswered ? 'p-3 rounded-md bg-muted/30 border border-border/40' : ''
                         }`}
                       >
-                        <Label className="mb-3 block text-base">
-                          <span className="text-purple-400 font-bold mr-2">[{question.id}]</span>
+                        <Label className="mb-2 block text-sm">
+                          <span className="text-muted-foreground font-mono text-xs mr-1.5">[{question.id}]</span>
                           {question.text}
                           {isUnanswered && <span className="text-red-500 ml-2 font-semibold">* Required</span>}
                         </Label>

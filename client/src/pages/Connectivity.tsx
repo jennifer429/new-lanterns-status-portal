@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "wouter";
+import { PageBreadcrumb } from "@/components/PageBreadcrumb";
 
 export default function Connectivity() {
   const { user } = useAuth();
@@ -111,22 +112,26 @@ export default function Connectivity() {
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-border/40 bg-card/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <Link href={`/org/${orgSlug}`}>
-              <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground">
+              <Button variant="outline" size="sm" className="gap-1.5 shrink-0">
                 <ArrowLeft className="w-4 h-4" />
-                Dashboard
+                <span>Back to Dashboard</span>
               </Button>
             </Link>
-            <div className="h-5 w-px bg-border/50" />
-            <div className="flex items-center gap-2">
-              <Network className="w-4 h-4 text-primary" />
-              <span className="text-sm font-semibold">Connectivity Matrix</span>
+            <div className="hidden sm:flex items-center gap-2 min-w-0">
+              <div className="h-5 w-px bg-border/50" />
+              <Network className="w-4 h-4 text-primary shrink-0" />
+              <span className="text-sm font-semibold truncate">Connectivity Matrix</span>
+              {organization?.name && (
+                <span className="text-xs text-muted-foreground truncate">— {organization.name}</span>
+              )}
             </div>
           </div>
           <UserMenu />
         </div>
       </header>
+      <PageBreadcrumb orgSlug={orgSlug} items={[{ label: "Connectivity Matrix" }]} />
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
