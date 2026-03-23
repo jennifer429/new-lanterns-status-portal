@@ -18,6 +18,7 @@ export interface Question {
   templateUrl?: string; // For upload-download questions: URL to download template
   templateFileName?: string; // Display name for template download
   partnerTemplates?: { [clientId: number]: { url: string; fileName: string } }; // Partner-specific templates
+  acceptTypes?: string; // File input accept attribute (e.g., '.csv,.txt')
   conditionalOn?: { questionId: string; value: string }; // Show this question only if another question has specific value
   inactive?: boolean; // If true, question is hidden from the UI
 }
@@ -115,6 +116,7 @@ export const questionnaireSections: Section[] = [
       { id: 'CF.4', text: 'ORM/ORU specifications: Please upload your ORM specification and ORU specification if sending to New Lantern', type: 'upload' },
       { id: 'CF.5', text: 'Sample ORM report: Please upload a sample ORM report showing the expected format you will be sending', type: 'upload' },
       { id: 'CF.6', text: 'Provider Directory: Please upload your provider directory listing all referring and reading physicians', type: 'upload-download', notes: 'Required: Provider name, NPI, Specialty. Download the template below, complete it, and upload.', templateFileName: 'Provider Directory Template' },
+      { id: 'CF.7', text: 'Historic Reports: Upload a bulk flat file of historic radiology reports for data migration. One file with all patients — CSV or TXT, pipe-delimited.', type: 'upload', notes: 'Expected format (pipe-delimited, one header row):\naccession_nbr|fin_nbr|mrn|patient_name|order_date|exam_name|rept_sequence|report_info\n\nAccepted file types: .csv, .txt only. All patients should be in a single file.', acceptTypes: '.csv,.txt' },
     ],
   },
   {

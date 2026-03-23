@@ -2282,3 +2282,9 @@
 - [x] Update Testing progress: Pass=100%, N/A=100%, Fail=25%, NotTested=0%
 - [x] Update Progress Hero and overall implementation progress to use weighted calculation
 - [x] Ensure consistent weighted calculation across dashboard, admin, and partner views
+
+## Historic Reports File Upload (Mar 23, 2026)
+- [x] Add historic reports upload question (CF.7) to Configuration Files section
+- [x] Implement file type validation for CSV and TXT files only (accept attribute + JS validation)
+- [x] Add acceptTypes field to Question interface for reusable file type restrictions
+- [x] Upload UI uses existing clean UploadedFilesList component automatically

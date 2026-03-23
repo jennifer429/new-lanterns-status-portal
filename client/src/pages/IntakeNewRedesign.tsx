@@ -1298,9 +1298,22 @@ export default function IntakeNewRedesign() {
                   ref={uploadInputRef}
                   type="file"
                   className="hidden"
+                  accept={question.acceptTypes || undefined}
                   onChange={(e) => {
                     const file = e.target.files?.[0];
-                    if (file) handleFileUpload(question.id, file);
+                    if (file) {
+                      // Validate file type if acceptTypes is specified
+                      if (question.acceptTypes) {
+                        const allowedExts = question.acceptTypes.split(',').map(ext => ext.trim().toLowerCase());
+                        const fileExt = '.' + file.name.split('.').pop()?.toLowerCase();
+                        if (!allowedExts.includes(fileExt)) {
+                          alert(`Only ${allowedExts.join(', ')} files are accepted for this upload.`);
+                          e.target.value = '';
+                          return;
+                        }
+                      }
+                      handleFileUpload(question.id, file);
+                    }
                     e.target.value = '';
                   }}
                 />
