@@ -33,6 +33,7 @@ import { IntegrationWorkflows } from "@/components/IntegrationWorkflows";
 import { ConnectivityTable, type ConnectivityRow } from "@/components/ConnectivityTable";
 import { UserMenu } from "@/components/UserMenu";
 import { PageBreadcrumb } from "@/components/PageBreadcrumb";
+import { UploadedFilesList } from "@/components/UploadedFileRow";
 
 // Section icons mapping
 const sectionIcons: Record<string, any> = {
@@ -1295,59 +1296,61 @@ export default function IntakeNewRedesign() {
               </div>
             )}
 
-            {/* Uploaded file thumbnails */}
-            {questionFiles.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {questionFiles.map((file) => (
-                  <div key={file.id} className="flex items-center gap-2 p-2 rounded border border-border/40 bg-muted/20 max-w-[240px]">
-                    <a href={file.fileUrl} target="_blank" rel="noopener noreferrer" className="shrink-0">
-                      {getFileThumbnail(file)}
-                    </a>
-                    <div className="flex-1 min-w-0">
-                      <a href={file.fileUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-foreground hover:text-primary transition-colors truncate block">
-                        {file.fileName}
-                      </a>
-                      <button
-                        onClick={() => deleteMutation.mutate({ organizationSlug: slug || '', fileId: file.id })}
-                        className="text-[10px] text-muted-foreground hover:text-destructive transition-colors"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Upload button */}
-            <div className="flex items-center gap-2">
-              {questionFiles.length === 0 && (
-                <span className="text-xs text-muted-foreground">No file uploaded</span>
-              )}
-              <input
-                ref={uploadInputRef}
-                type="file"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleFileUpload(question.id, file);
-                  e.target.value = '';
-                }}
-              />
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => uploadInputRef.current?.click()}
-                disabled={isUploading}
-                className="text-xs"
-              >
-                {isUploading ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            {/* Upload button row */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {questionFiles.length > 0 ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 text-xs font-medium">
+                    <CheckCircle2 className="w-3 h-3" /> {questionFiles.length} file{questionFiles.length !== 1 ? 's' : ''} uploaded
+                  </span>
                 ) : (
-                  <><Upload className="w-3.5 h-3.5 mr-1" /> Upload</>
+                  <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <FileIcon className="w-3.5 h-3.5" /> No file uploaded
+                  </span>
                 )}
-              </Button>
+              </div>
+              <div>
+                <input
+                  ref={uploadInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload(question.id, file);
+                    e.target.value = '';
+                  }}
+                />
+                <Button
+                  size="sm"
+                  onClick={() => uploadInputRef.current?.click()}
+                  disabled={isUploading}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  {isUploading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <><Upload className="w-4 h-4 mr-1.5" /> Upload</>
+                  )}
+                </Button>
+              </div>
             </div>
+
+            {/* Clean vertical file list with preview/download/remove */}
+            {questionFiles.length > 0 && (
+              <UploadedFilesList
+                files={questionFiles.map(f => ({
+                  id: f.id,
+                  fileName: f.fileName,
+                  fileUrl: f.fileUrl,
+                  fileSize: f.fileSize,
+                  createdAt: f.createdAt,
+                  uploadedBy: f.uploadedBy,
+                }))}
+                onRemove={(fileId) => deleteMutation.mutate({ organizationSlug: slug || '', fileId })}
+                isRemoving={deleteMutation.isPending}
+                compact
+              />
+            )}
           </div>
         );
       }
@@ -1672,8 +1675,8 @@ export default function IntakeNewRedesign() {
               >
                 <Menu className="w-6 h-6" />
               </button>
-              <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-7 flex-shrink-0 hidden md:block" />
-              <div className="hidden sm:flex flex-col border-l border-border/40 pl-3 min-w-0">
+              <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-8 flex-shrink-0 hidden md:block" />
+              <div className="hidden sm:block border-l border-border/40 pl-3 min-w-0">
                 <div className="text-sm font-bold tracking-tight truncate">Questionnaire</div>
                 {org?.name && <div className="text-xs text-muted-foreground truncate">{org.name}{org.clientName ? ` · ${org.clientName}` : ""}</div>}
               </div>

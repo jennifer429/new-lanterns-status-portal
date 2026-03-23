@@ -38,6 +38,7 @@ import { SECTION_DEFS as TASK_SECTION_DEFS } from "@shared/taskDefs";
 import { PhiDisclaimer } from "@/components/PhiDisclaimer";
 import { UserMenu } from "@/components/UserMenu";
 import { cn } from "@/lib/utils";
+import { UploadedFilesList } from "@/components/UploadedFileRow";
 
 // ── Progress Ring (SVG) ─────────────────────────────────────────────────────
 function ProgressRing({
@@ -466,6 +467,56 @@ export default function Home() {
     return !r?.completed && !r?.notApplicable && !r?.blocked && !r?.inProgress;
   }).slice(0, 3);
 
+  // Questionnaire per-section stats for dashboard card
+  const qSectionEntries = Object.entries(progress.sectionProgress);
+  const qInProgressSections = qSectionEntries.filter(
+    ([, s]: [string, any]) => s.completed > 0 && s.completed < s.total
+  ).length;
+  const qNotStartedSections = qSectionEntries.filter(
+    ([, s]: [string, any]) => s.completed === 0
+  ).length;
+  const nextUpSections = qSectionEntries
+    .filter(([, s]: [string, any]) => s.completed < s.total)
+    .slice(0, 3)
+    .map(([title]) => title);
+
+  // Validation per-test stats for dashboard card
+  // Build a flat list of all test names across phases for "next up"
+  const VAL_PHASES = [
+    { title: "Connectivity Validation", count: 4 },
+    { title: "HL7 Message Validation", count: 5 },
+    { title: "Image Routing Validation", count: 4 },
+    { title: "User Acceptance Testing", count: 15 },
+  ];
+  // Flat test names for "Next Up" display (matches pIdx:tIdx keys)
+  const VAL_TEST_NAMES = [
+    "VPN Tunnel Connectivity", "DICOM Echo Test (C-ECHO)", "HL7 Port Connectivity", "SSO / Active Directory Authentication",
+    "ORM New Order (NW)", "ORM Cancel Order (CA)", "ORU Report Delivery", "ADT Patient Update", "Priority Routing (STAT)",
+    "DICOM Store from Modality", "Prior Image Query/Retrieve", "Worklist (MWL) Query", "AI Routing (if applicable)",
+    "End-to-End Order Workflow", "Radiologist Reading Workflow", "Tech QC Workflow", "Report Distribution", "STAT Escalation Path",
+    "Downtime Recovery", "Reschedule a Study", "Cancel a Study", "End-to-End Study Completion", "Addendum Workflow",
+    "CT Dose & Tech Sheet Integration", "BI-RADS Custom Report Insertion", "Lung-RADS / Lung CA Mapping", "Study Merge", "Study Split",
+  ];
+  const valFailedCount = Object.values(valResults as Record<string, any>).filter(
+    (v: any) => v.status === "Fail"
+  ).length;
+  const valNotTestedCount = valTotal - valCompleted - valFailedCount;
+  // Next up: first 3 tests that are not Pass and not N/A
+  const allValKeys: string[] = [];
+  let offset = 0;
+  for (const phase of VAL_PHASES) {
+    for (let t = 0; t < phase.count; t++) {
+      allValKeys.push(`${offset}:${t}`);
+    }
+    offset++;
+  }
+  const nextUpTests = allValKeys
+    .filter(k => {
+      const v = (valResults as any)[k];
+      return !v || (v.status !== "Pass" && v.status !== "N/A");
+    })
+    .slice(0, 3);
+
   // Overall progress (weighted: questionnaire 40%, testing 30%, implementation 30%)
   const qPct = totalSections > 0 ? (completedSections / totalSections) * 100 : 0;
   const vPct = valTotal > 0 ? (valCompleted / valTotal) * 100 : 0;
@@ -512,21 +563,17 @@ export default function Home() {
 
       {/* ── Glass Header ── */}
       <header className="header-glass sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img
-              src="/images/new-lantern-logo.png"
-              alt="New Lantern"
-              className="h-9"
-            />
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <div className="text-sm font-semibold tracking-tight">{orgName}</div>
-              {partnerName && (
-                <div className="text-xs text-muted-foreground">{partnerName}</div>
-              )}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+          {/* Left: logo + org name */}
+          <div className="flex items-center gap-3 min-w-0">
+            <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-8 flex-shrink-0" />
+            <div className="hidden sm:block border-l border-border/40 pl-3 min-w-0">
+              <div className="text-sm font-bold tracking-tight truncate">Site Dashboard</div>
+              {orgName && <div className="text-xs text-muted-foreground truncate">{orgName}{partnerName ? ` · ${partnerName}` : ""}</div>}
             </div>
+          </div>
+          {/* Right: user menu */}
+          <div className="flex items-center gap-2">
             <UserMenu />
           </div>
         </div>
@@ -646,52 +693,18 @@ export default function Home() {
               <div className="border-t border-border/40">
                 <div className="p-3">
                   {diagramFiles.length > 0 ? (
-                    <div className="flex gap-3 overflow-x-auto pb-1">
-                      {diagramFiles.map((file: any) => {
-                        const isImage = /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(file.fileName);
-                        return (
-                          <div key={file.id} className="flex-shrink-0 group/thumb relative">
-                            {isImage ? (
-                              <div
-                                className="w-32 h-24 rounded-lg border border-border/50 overflow-hidden bg-muted/10 cursor-pointer relative"
-                                onClick={() => setLightboxSrc({ src: file.fileUrl, alt: file.fileName })}
-                              >
-                                <img
-                                  src={file.fileUrl}
-                                  alt={file.fileName}
-                                  className="w-full h-full object-cover"
-                                />
-                                <div className="absolute inset-0 bg-black/0 group-hover/thumb:bg-black/30 transition-colors flex items-center justify-center">
-                                  <Maximize2 className="w-4 h-4 text-white opacity-0 group-hover/thumb:opacity-100 transition-opacity" />
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="w-32 h-24 rounded-lg border border-border/50 bg-muted/10 flex items-center justify-center">
-                                <FileText className="w-6 h-6 text-muted-foreground" />
-                              </div>
-                            )}
-                            <div className="mt-1 flex items-center justify-between">
-                              <span className="text-[10px] text-muted-foreground truncate max-w-[80px]">{file.fileName}</span>
-                              <div className="flex items-center gap-0.5">
-                                <a href={file.fileUrl} download={file.fileName} onClick={(e) => e.stopPropagation()}>
-                                  <Button size="sm" variant="ghost" className="h-5 w-5 p-0">
-                                    <Download className="w-3 h-3 text-muted-foreground" />
-                                  </Button>
-                                </a>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-5 w-5 p-0"
-                                  onClick={() => handleRemoveDiagram(file.id)}
-                                >
-                                  <Trash2 className="w-3 h-3 text-destructive" />
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    <UploadedFilesList
+                      files={diagramFiles.map((file: any) => ({
+                        id: file.id,
+                        fileName: file.fileName,
+                        fileUrl: file.fileUrl,
+                        fileSize: file.fileSize,
+                        createdAt: file.createdAt,
+                        uploadedBy: file.uploadedBy,
+                      }))}
+                      onRemove={(fileId) => handleRemoveDiagram(fileId)}
+                      compact
+                    />
                   ) : (
                     <div className="text-center py-4">
                       <ImageIcon className="w-6 h-6 text-muted-foreground/40 mx-auto mb-2" />
@@ -801,10 +814,9 @@ export default function Home() {
         </div>
 
         {/* ═══════════════════════════════════════════════════════════════════
-            SECOND ROW: Progress Hero + Task Summary
+            SECOND ROW: Progress Hero (full width)
             ═══════════════════════════════════════════════════════════════════ */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <Card className="card-elevated overflow-hidden md:col-span-2">
+        <Card className="card-elevated overflow-hidden">
           {/* Top accent gradient */}
           <div className="h-1 bg-gradient-to-r from-primary via-primary/60 to-emerald-500/40" />
           <CardContent className="p-4">
@@ -898,83 +910,388 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        {/* ── Task Summary Card ── */}
-        <Card className="card-elevated overflow-hidden">
-          <CardContent className="p-5">
-            <h3 className="text-sm font-bold tracking-tight mb-4">Task Summary</h3>
-            <div className="flex flex-col items-center mb-5">
-              <span className="text-5xl font-bold tracking-tight">{Math.round(iPct)}%</span>
-              <span className="text-sm text-muted-foreground mt-1">Complete</span>
-            </div>
-            <div className="space-y-2.5 mb-5">
-              {([
-                { label: "Done",           count: implCompleted,        dotCls: "bg-green-500",           numCls: "text-green-500" },
-                { label: "In Progress",    count: implInProgressCount,  dotCls: "bg-amber-400",           numCls: "text-amber-400" },
-                { label: "Blocked",        count: implBlockedCount,      dotCls: "bg-red-500",             numCls: "text-red-500" },
-                { label: "Open",           count: implOpenCount,         dotCls: "bg-muted-foreground/40", numCls: "text-foreground" },
-                { label: "Not Applicable", count: implNaCount,           dotCls: "bg-yellow-700",          numCls: "text-yellow-600" },
-              ] as const).map(({ label, count, dotCls, numCls }) => (
-                <div key={label} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dotCls}`} />
-                    <span className="text-sm text-foreground">{label}</span>
-                  </div>
-                  <span className={`text-sm font-semibold ${numCls}`}>{count}</span>
-                </div>
-              ))}
-            </div>
-            {nextUpTasks.length > 0 && (
-              <>
-                <div className="border-t border-border/40 mb-3" />
-                <h4 className="text-sm font-bold tracking-tight mb-2">Next Up</h4>
-                <ul className="space-y-1.5">
-                  {nextUpTasks.map(t => (
-                    <li key={t.id} className="flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0 mt-1.5" />
-                      <span className="text-sm text-foreground">{t.title}</span>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-          </CardContent>
-        </Card>
-        </div>
-
         {/* ═══════════════════════════════════════════════════════════════════
             WORKFLOW PHASE CARDS
             ═══════════════════════════════════════════════════════════════════ */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <WorkflowPhaseCard
-            title="Questionnaire"
-            subtitle="Start here"
-            icon={<ClipboardList className="w-5 h-5" />}
-            completed={completedSections}
-            total={totalSections}
-            href={`/org/${orgSlug}/intake`}
-            isActive={activePhase === "questionnaire"}
-            isLocked={false}
-          />
-          <WorkflowPhaseCard
-            title="Testing"
-            subtitle="Validate connectivity"
-            icon={<ShieldCheck className="w-5 h-5" />}
-            completed={valCompleted}
-            total={valTotal}
-            href={`/org/${orgSlug}/validation`}
-            isActive={activePhase === "testing"}
-            isLocked={false}
-          />
-          <WorkflowPhaseCard
-            title="Task List"
-            subtitle="Build & deploy"
-            icon={<Wrench className="w-5 h-5" />}
-            completed={implCompleted}
-            total={implTotal}
-            href={`/org/${orgSlug}/implement`}
-            isActive={activePhase === "implementation"}
-            isLocked={false}
-          />
+          {/* Questionnaire card — merged with section summary */}
+          {(() => {
+            const qPctCard = totalSections > 0 ? Math.round((completedSections / totalSections) * 100) : 0;
+            const qIsDone = completedSections === totalSections && totalSections > 0;
+            const qLabel = qIsDone ? "View" : completedSections > 0 ? "Continue" : "Start";
+            return (
+              <Link href={`/org/${orgSlug}/intake`}>
+                <Card
+                  className={cn(
+                    "card-elevated card-clickable relative overflow-hidden cursor-pointer group",
+                    activePhase === "questionnaire" && "border-primary/50",
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "absolute top-0 left-0 right-0 h-1 rounded-t-lg",
+                      qIsDone
+                        ? "bg-gradient-to-r from-emerald-500 to-emerald-400"
+                        : activePhase === "questionnaire"
+                          ? "bg-gradient-to-r from-primary to-primary/60"
+                          : "bg-gradient-to-r from-muted-foreground/20 to-muted-foreground/10"
+                    )}
+                  />
+                  <CardContent className="p-4 pt-5">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={cn(
+                            "p-2.5 rounded-xl transition-colors",
+                            qIsDone
+                              ? "bg-emerald-500/15 text-emerald-400"
+                              : activePhase === "questionnaire"
+                                ? "bg-primary/15 text-primary"
+                                : "bg-muted text-muted-foreground"
+                          )}
+                        >
+                          <ClipboardList className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold tracking-tight">Questionnaire</h3>
+                          <p className="text-xs text-muted-foreground mt-0.5">Start here</p>
+                        </div>
+                      </div>
+                      <ArrowUpRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+
+                    {/* Progress bar */}
+                    <div className="mb-3">
+                      <div className="flex items-center justify-between text-xs mb-1.5">
+                        <span className="text-muted-foreground">{completedSections}/{totalSections} complete</span>
+                        <span className={cn("font-semibold", qIsDone ? "text-emerald-400" : "text-foreground")}>{qPctCard}%</span>
+                      </div>
+                      <div className="h-2 bg-muted/40 rounded-full overflow-hidden">
+                        <div
+                          className={cn(
+                            "h-full rounded-full transition-all duration-500",
+                            qIsDone
+                              ? "bg-gradient-to-r from-emerald-500 to-emerald-400"
+                              : qPctCard > 0
+                                ? "bg-gradient-to-r from-primary to-primary/70"
+                                : "bg-transparent"
+                          )}
+                          style={{ width: `${qPctCard}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Status breakdown */}
+                    <div className="grid grid-cols-3 gap-1 mb-3">
+                      {([
+                        { label: "Done",    count: completedSections,    dotCls: "bg-green-500",           numCls: "text-green-500" },
+                        { label: "In Prog", count: qInProgressSections,  dotCls: "bg-amber-400",           numCls: "text-amber-400" },
+                        { label: "Open",    count: qNotStartedSections,  dotCls: "bg-muted-foreground/40", numCls: "text-foreground" },
+                      ] as const).map(({ label: statusLabel, count, dotCls, numCls }) => (
+                        <div key={statusLabel} className="text-center">
+                          <div className={`text-sm font-bold ${numCls}`}>{count}</div>
+                          <div className="flex items-center justify-center gap-1">
+                            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dotCls}`} />
+                            <span className="text-[10px] text-muted-foreground">{statusLabel}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Next Up */}
+                    {nextUpSections.length > 0 && (
+                      <div className="border-t border-border/30 pt-2 mb-3">
+                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Next Up</h4>
+                        <ul className="space-y-1">
+                          {nextUpSections.map(title => (
+                            <li key={title} className="flex items-start gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0 mt-1.5" />
+                              <span className="text-xs text-foreground">{title}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Action button */}
+                    <Button
+                      size="sm"
+                      variant={qIsDone ? "outline" : "default"}
+                      className={cn(
+                        "w-full text-xs font-semibold",
+                        qIsDone
+                          ? "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+                          : "badge-status-start"
+                      )}
+                    >
+                      {qIsDone ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
+                      ) : (
+                        <ArrowRight className="w-3.5 h-3.5 mr-1.5" />
+                      )}
+                      {qLabel}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })()}
+          {/* Testing card — merged with test summary */}
+          {(() => {
+            const vPctCard = valTotal > 0 ? Math.round((valCompleted / valTotal) * 100) : 0;
+            const vIsDone = valCompleted === valTotal && valTotal > 0;
+            const vLabel = vIsDone ? "View" : valCompleted > 0 ? "Continue" : "Start";
+            // Map nextUpTests keys to test names
+            const nextUpTestNames = nextUpTests.map(key => {
+              const [pIdx, tIdx] = key.split(":").map(Number);
+              let flatIdx = 0;
+              for (let i = 0; i < pIdx; i++) flatIdx += VAL_PHASES[i].count;
+              flatIdx += tIdx;
+              return VAL_TEST_NAMES[flatIdx] || `Test ${key}`;
+            });
+            return (
+              <Link href={`/org/${orgSlug}/validation`}>
+                <Card
+                  className={cn(
+                    "card-elevated card-clickable relative overflow-hidden cursor-pointer group",
+                    activePhase === "testing" && "border-primary/50",
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "absolute top-0 left-0 right-0 h-1 rounded-t-lg",
+                      vIsDone
+                        ? "bg-gradient-to-r from-emerald-500 to-emerald-400"
+                        : activePhase === "testing"
+                          ? "bg-gradient-to-r from-primary to-primary/60"
+                          : "bg-gradient-to-r from-muted-foreground/20 to-muted-foreground/10"
+                    )}
+                  />
+                  <CardContent className="p-4 pt-5">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={cn(
+                            "p-2.5 rounded-xl transition-colors",
+                            vIsDone
+                              ? "bg-emerald-500/15 text-emerald-400"
+                              : activePhase === "testing"
+                                ? "bg-primary/15 text-primary"
+                                : "bg-muted text-muted-foreground"
+                          )}
+                        >
+                          <ShieldCheck className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold tracking-tight">Testing</h3>
+                          <p className="text-xs text-muted-foreground mt-0.5">Validate connectivity</p>
+                        </div>
+                      </div>
+                      <ArrowUpRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+
+                    {/* Progress bar */}
+                    <div className="mb-3">
+                      <div className="flex items-center justify-between text-xs mb-1.5">
+                        <span className="text-muted-foreground">{valCompleted}/{valTotal} complete</span>
+                        <span className={cn("font-semibold", vIsDone ? "text-emerald-400" : "text-foreground")}>{vPctCard}%</span>
+                      </div>
+                      <div className="h-2 bg-muted/40 rounded-full overflow-hidden">
+                        <div
+                          className={cn(
+                            "h-full rounded-full transition-all duration-500",
+                            vIsDone
+                              ? "bg-gradient-to-r from-emerald-500 to-emerald-400"
+                              : vPctCard > 0
+                                ? "bg-gradient-to-r from-primary to-primary/70"
+                                : "bg-transparent"
+                          )}
+                          style={{ width: `${vPctCard}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Status breakdown */}
+                    <div className="grid grid-cols-4 gap-1 mb-3">
+                      {([
+                        { label: "Pass",       count: valCompleted,      dotCls: "bg-green-500",           numCls: "text-green-500" },
+                        { label: "Fail",       count: valFailedCount,    dotCls: "bg-red-500",             numCls: "text-red-500" },
+                        { label: "Not Tested", count: valNotTestedCount, dotCls: "bg-muted-foreground/40", numCls: "text-foreground" },
+                        { label: "N/A",        count: valNaCount,        dotCls: "bg-yellow-700",          numCls: "text-yellow-600" },
+                      ] as const).map(({ label: statusLabel, count, dotCls, numCls }) => (
+                        <div key={statusLabel} className="text-center">
+                          <div className={`text-sm font-bold ${numCls}`}>{count}</div>
+                          <div className="flex items-center justify-center gap-1">
+                            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dotCls}`} />
+                            <span className="text-[10px] text-muted-foreground">{statusLabel}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Next Up */}
+                    {nextUpTestNames.length > 0 && (
+                      <div className="border-t border-border/30 pt-2 mb-3">
+                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Next Up</h4>
+                        <ul className="space-y-1">
+                          {nextUpTestNames.map(name => (
+                            <li key={name} className="flex items-start gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0 mt-1.5" />
+                              <span className="text-xs text-foreground">{name}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Action button */}
+                    <Button
+                      size="sm"
+                      variant={vIsDone ? "outline" : "default"}
+                      className={cn(
+                        "w-full text-xs font-semibold",
+                        vIsDone
+                          ? "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+                          : "badge-status-start"
+                      )}
+                    >
+                      {vIsDone ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
+                      ) : (
+                        <ArrowRight className="w-3.5 h-3.5 mr-1.5" />
+                      )}
+                      {vLabel}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })()}
+          {/* Task List card — merged with task summary */}
+          {(() => {
+            const pct = implTotal > 0 ? Math.round((implCompleted / implTotal) * 100) : 0;
+            const isDone = implCompleted === implTotal && implTotal > 0;
+            const label = isDone ? "View" : implCompleted > 0 ? "Continue" : "Start";
+            return (
+              <Link href={`/org/${orgSlug}/implement`}>
+                <Card
+                  className={cn(
+                    "card-elevated card-clickable relative overflow-hidden cursor-pointer group",
+                    activePhase === "implementation" && "border-primary/50",
+                  )}
+                >
+                  {/* Top accent */}
+                  <div
+                    className={cn(
+                      "absolute top-0 left-0 right-0 h-1 rounded-t-lg",
+                      isDone
+                        ? "bg-gradient-to-r from-emerald-500 to-emerald-400"
+                        : activePhase === "implementation"
+                          ? "bg-gradient-to-r from-primary to-primary/60"
+                          : "bg-gradient-to-r from-muted-foreground/20 to-muted-foreground/10"
+                    )}
+                  />
+                  <CardContent className="p-4 pt-5">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={cn(
+                            "p-2.5 rounded-xl transition-colors",
+                            isDone
+                              ? "bg-emerald-500/15 text-emerald-400"
+                              : activePhase === "implementation"
+                                ? "bg-primary/15 text-primary"
+                                : "bg-muted text-muted-foreground"
+                          )}
+                        >
+                          <Wrench className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold tracking-tight">Task List</h3>
+                          <p className="text-xs text-muted-foreground mt-0.5">Build & deploy</p>
+                        </div>
+                      </div>
+                      <ArrowUpRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+
+                    {/* Progress bar */}
+                    <div className="mb-3">
+                      <div className="flex items-center justify-between text-xs mb-1.5">
+                        <span className="text-muted-foreground">{implCompleted}/{implTotal} complete</span>
+                        <span className={cn("font-semibold", isDone ? "text-emerald-400" : "text-foreground")}>{pct}%</span>
+                      </div>
+                      <div className="h-2 bg-muted/40 rounded-full overflow-hidden">
+                        <div
+                          className={cn(
+                            "h-full rounded-full transition-all duration-500",
+                            isDone
+                              ? "bg-gradient-to-r from-emerald-500 to-emerald-400"
+                              : pct > 0
+                                ? "bg-gradient-to-r from-primary to-primary/70"
+                                : "bg-transparent"
+                          )}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Status breakdown */}
+                    <div className="grid grid-cols-5 gap-1 mb-3">
+                      {([
+                        { label: "Done",  count: implCompleted,       dotCls: "bg-green-500",           numCls: "text-green-500" },
+                        { label: "In Prog", count: implInProgressCount, dotCls: "bg-amber-400",           numCls: "text-amber-400" },
+                        { label: "Blocked", count: implBlockedCount,    dotCls: "bg-red-500",             numCls: "text-red-500" },
+                        { label: "Open",  count: implOpenCount,        dotCls: "bg-muted-foreground/40", numCls: "text-foreground" },
+                        { label: "N/A",   count: implNaCount,          dotCls: "bg-yellow-700",          numCls: "text-yellow-600" },
+                      ] as const).map(({ label: statusLabel, count, dotCls, numCls }) => (
+                        <div key={statusLabel} className="text-center">
+                          <div className={`text-sm font-bold ${numCls}`}>{count}</div>
+                          <div className="flex items-center justify-center gap-1">
+                            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dotCls}`} />
+                            <span className="text-[10px] text-muted-foreground">{statusLabel}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Next Up */}
+                    {nextUpTasks.length > 0 && (
+                      <div className="border-t border-border/30 pt-2 mb-3">
+                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Next Up</h4>
+                        <ul className="space-y-1">
+                          {nextUpTasks.map(t => (
+                            <li key={t.id} className="flex items-start gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0 mt-1.5" />
+                              <span className="text-xs text-foreground">{t.title}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Action button */}
+                    <Button
+                      size="sm"
+                      variant={isDone ? "outline" : "default"}
+                      className={cn(
+                        "w-full text-xs font-semibold",
+                        isDone
+                          ? "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+                          : "badge-status-start"
+                      )}
+                    >
+                      {isDone ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
+                      ) : (
+                        <ArrowRight className="w-3.5 h-3.5 mr-1.5" />
+                      )}
+                      {label}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })()}
         </div>
 
         {/* Bottom spacer */}

@@ -2246,3 +2246,33 @@
 ## Questionnaire Navigation Update (Mar 20, 2026)
 - [x] Update Questionnaire page header to match Task List/Testing navigation style
 - [x] Add "Back to Dashboard" link in Questionnaire header consistent with other pages
+## Consistent Header Navigation Across All Pages (Mar 20, 2026)
+- [ ] Always display: New Lantern logo, Hospital name, Rad Group — in the same spot on every page
+- [ ] Always show a way to return to the org dashboard from any sub-page
+- [ ] Admin-only quick-nav: links to org dashboard, partner dashboard, and admin (all sites) dashboard (hidden for regular users)
+- [ ] Create shared PageHeader component used by all sub-pages
+- [ ] Apply shared header to: Task List, Testing, Questionnaire, Specifications, Connectivity
+
+## Merge Task Summary into Task List Card
+- [x] Merge task status breakdown (Done/In Progress/Blocked/Open/N/A counts + Next Up) into the Task List workflow card on dashboard
+
+## Add Status Breakdown to Questionnaire and Testing Cards
+- [x] Add status breakdown (Complete/In Progress/Not Started counts) and Next Up sections to Questionnaire workflow card
+- [x] Add status breakdown (Pass/Fail/Not Tested counts) and Next Up sections to Testing workflow card
+
+## Interactive Architecture Diagram
+- [x] ~Create interactive architecture diagram component~ (cancelled by user)
+- [x] ~Add editable fields/dropdowns for org-specific systems~ (cancelled by user)
+- [x] ~Add backend persistence for architecture diagram data per org~ (cancelled by user)
+- [x] ~Integrate diagram into the Architecture section~ (cancelled by user)
+
+## Clean File Upload Redesign
+- [x] Create shared UploadedFilesList component with vertical layout, full filenames, date, size, preview, download, remove
+- [x] Integrate clean file upload into Architecture page (Home.tsx dashboard)
+- [x] Integrate clean file upload into Questionnaire page (IntakeNewRedesign.tsx)
+- [x] Ensure consistent design across all file upload areas
+
+## Consistent Org Name Display Across All Pages (Mar 22, 2026)
+- [x] Audit all pages for how org name (hospital/rad group) is currently displayed
+- [x] Standardize font, size, location, and style of org name across all pages
+- [x] Apply consistent org name display to: Dashboard, Questionnaire, Task List, Testing, Specifications, Connectivity

@@ -1,0 +1,35 @@
+{
+  "query": "SELECT o.slug, o.name, COUNT(f.id) as file_count FROM organizations o JOIN intakeFileAttachments f ON f.organizationId = o.id GROUP BY o.slug, o.name ORDER BY file_count DESC LIMIT 5",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT o.slug, o.name, COUNT(f.id) as file_count FROM organizations o JOIN intakeFileAttachments f ON f.organizationId = o.id GROUP BY o.slug, o.name ORDER BY file_count DESC LIMIT 5",
+  "rows": [
+    {
+      "slug": "sanramon",
+      "name": "San Ramon Hospital",
+      "file_count": "3"
+    },
+    {
+      "slug": "Boulder",
+      "name": "Boulder Community Health",
+      "file_count": "3"
+    },
+    {
+      "slug": "RRMC",
+      "name": "RRAL",
+      "file_count": "3"
+    },
+    {
+      "slug": "munson",
+      "name": "Munson Medical Center",
+      "file_count": "2"
+    },
+    {
+      "slug": "marshallmedical",
+      "name": "Marshall Medical",
+      "file_count": "2"
+    }
+  ],
+  "messages": [],
+  "stdout": "slug\tname\tfile_count\nsanramon\tSan Ramon Hospital\t3\nBoulder\tBoulder Community Health\t3\nRRMC\tRRAL\t3\nmunson\tMunson Medical Center\t2\nmarshallmedical\tMarshall Medical\t2\n",
+  "stderr": "",
+  "execution_time_ms": 71
+}

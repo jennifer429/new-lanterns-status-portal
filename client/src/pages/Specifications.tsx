@@ -57,25 +57,23 @@ export default function Specifications() {
   }, [filteredSpecs]);
 
   const orgName = organization?.name || "Your Organization";
+  const partnerName = organization?.clientName || "";
 
   return (
     <div className="min-h-screen bg-background animate-page-in">
       {/* ── Glass Header ── */}
       <header className="header-glass sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+          {/* Left: logo + page title */}
           <div className="flex items-center gap-3 min-w-0">
-            <img
-              src="/images/new-lantern-logo.png"
-              alt="New Lantern"
-              className="h-8 shrink-0"
-            />
+            <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-8 flex-shrink-0" />
             <div className="hidden sm:block border-l border-border/40 pl-3 min-w-0">
-              <div className="text-sm font-semibold tracking-tight truncate">Specifications</div>
-              {orgName && <div className="text-xs text-muted-foreground truncate">{orgName}</div>}
+              <div className="text-sm font-bold tracking-tight truncate">NL Specifications</div>
+              {orgName && <div className="text-xs text-muted-foreground truncate">{orgName}{partnerName ? ` · ${partnerName}` : ""}</div>}
             </div>
-            <div className="sm:hidden text-sm font-semibold truncate max-w-[120px]">{orgName}</div>
           </div>
-          <div className="flex items-center gap-3">
+          {/* Right: user menu */}
+          <div className="flex items-center gap-2">
             <UserMenu />
           </div>
         </div>

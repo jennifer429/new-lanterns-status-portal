@@ -211,6 +211,27 @@
       "when": 1742598000000,
       "tag": "0029_task_status_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "5",
+      "when": 1774061622475,
+      "tag": "0030_mature_marten_broadcloak",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "5",
+      "when": 1774181598938,
+      "tag": "0031_third_human_robot",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "5",
+      "when": 1774182281614,
+      "tag": "0032_striped_firebird",
+      "breakpoints": true
     }
   ]
 }

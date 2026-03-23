@@ -110,25 +110,26 @@ export default function Connectivity() {
   return (
     <div className="min-h-screen bg-background animate-page-in">
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-border/40 bg-card/80 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
+      <header className="header-glass sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+          {/* Left: logo + page title */}
           <div className="flex items-center gap-3 min-w-0">
+            <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-8 flex-shrink-0" />
+            <div className="hidden sm:block border-l border-border/40 pl-3 min-w-0">
+              <div className="text-sm font-bold tracking-tight truncate">Connectivity Matrix</div>
+              {organization?.name && <div className="text-xs text-muted-foreground truncate">{organization.name}{organization.clientName ? ` · ${organization.clientName}` : ""}</div>}
+            </div>
+          </div>
+          {/* Right: back + user menu */}
+          <div className="flex items-center gap-2">
             <Link href={`/org/${orgSlug}`}>
               <Button variant="outline" size="sm" className="gap-1.5 shrink-0">
                 <ArrowLeft className="w-4 h-4" />
-                <span>Back to Dashboard</span>
+                <span className="hidden sm:inline">Dashboard</span>
               </Button>
             </Link>
-            <div className="hidden sm:flex items-center gap-2 min-w-0">
-              <div className="h-5 w-px bg-border/50" />
-              <Network className="w-4 h-4 text-primary shrink-0" />
-              <span className="text-sm font-semibold truncate">Connectivity Matrix</span>
-              {organization?.name && (
-                <span className="text-xs text-muted-foreground truncate">— {organization.name}</span>
-              )}
-            </div>
+            <UserMenu />
           </div>
-          <UserMenu />
         </div>
       </header>
       <PageBreadcrumb orgSlug={orgSlug} items={[{ label: "Connectivity Matrix" }]} />

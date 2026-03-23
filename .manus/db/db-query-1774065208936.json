@@ -1,0 +1,100 @@
+{
+  "query": "SELECT id, name, slug FROM organizations LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, name, slug FROM organizations LIMIT 20;",
+  "rows": [
+    {
+      "id": "60007",
+      "name": "Munson Medical Center",
+      "slug": "munson"
+    },
+    {
+      "id": "60008",
+      "name": "JCRHC",
+      "slug": "jcrhc"
+    },
+    {
+      "id": "60009",
+      "name": "Baycare",
+      "slug": "baycare"
+    },
+    {
+      "id": "240001",
+      "name": "RRAL",
+      "slug": "RRMC"
+    },
+    {
+      "id": "240002",
+      "name": "Boulder Community Health",
+      "slug": "Boulder"
+    },
+    {
+      "id": "300005",
+      "name": "my fake hospital",
+      "slug": "fakehosp"
+    },
+    {
+      "id": "330001",
+      "name": "fake 2",
+      "slug": "fake2"
+    },
+    {
+      "id": "360001",
+      "name": "testa",
+      "slug": "testa"
+    },
+    {
+      "id": "390005",
+      "name": "test 1",
+      "slug": "test1"
+    },
+    {
+      "id": "420001",
+      "name": "Testlast",
+      "slug": "Last"
+    },
+    {
+      "id": "420002",
+      "name": "List",
+      "slug": "List"
+    },
+    {
+      "id": "450001",
+      "name": "NewOrg2 - Corrected",
+      "slug": "new2"
+    },
+    {
+      "id": "480001",
+      "name": "RaDS Inc",
+      "slug": "radsinc"
+    },
+    {
+      "id": "510001",
+      "name": "RaDS Inc- Pilot",
+      "slug": "RaDS Inc- Pilot"
+    },
+    {
+      "id": "540001",
+      "name": "CIRA",
+      "slug": "cira"
+    },
+    {
+      "id": "600001",
+      "name": "HCA - Florida West",
+      "slug": "hca-flwest"
+    },
+    {
+      "id": "630001",
+      "name": "San Ramon Hospital",
+      "slug": "sanramon"
+    },
+    {
+      "id": "630002",
+      "name": "Marshall Medical",
+      "slug": "marshallmedical"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tslug\n60007\tMunson Medical Center\tmunson\n60008\tJCRHC\tjcrhc\n60009\tBaycare\tbaycare\n240001\tRRAL\tRRMC\n240002\tBoulder Community Health\tBoulder\n300005\tmy fake hospital\tfakehosp\n330001\tfake 2\tfake2\n360001\ttesta\ttesta\n390005\ttest 1\ttest1\n420001\tTestlast\tLast\n420002\tList\tList\n450001\tNewOrg2 - Corrected\tnew2\n480001\tRaDS Inc\tradsinc\n510001\tRaDS Inc- Pilot\tRaDS Inc- Pilot\n540001\tCIRA\tcira\n600001\tHCA - Florida West\thca-flwest\n630001\tSan Ramon Hospital\tsanramon\n630002\tMarshall Medical\tmarshallmedical\n",
+  "stderr": "",
+  "execution_time_ms": 112
+}
