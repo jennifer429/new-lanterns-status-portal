@@ -2276,3 +2276,9 @@
 - [x] Audit all pages for how org name (hospital/rad group) is currently displayed
 - [x] Standardize font, size, location, and style of org name across all pages
 - [x] Apply consistent org name display to: Dashboard, Questionnaire, Task List, Testing, Specifications, Connectivity
+
+## Weighted Progress Calculation (Mar 22, 2026)
+- [x] Update Task List progress: Done=100%, N/A=100%, InProgress=50%, Blocked=25%, Open=0%
+- [x] Update Testing progress: Pass=100%, N/A=100%, Fail=25%, NotTested=0%
+- [x] Update Progress Hero and overall implementation progress to use weighted calculation
+- [x] Ensure consistent weighted calculation across dashboard, admin, and partner views

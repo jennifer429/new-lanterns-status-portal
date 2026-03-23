@@ -275,8 +275,8 @@ export default function Admin() {
                         <h3 className="text-white font-semibold text-sm mb-2">Task Summary</h3>
                         <div className="flex items-center gap-3 mb-2">
                           <span className="text-3xl font-bold text-purple-400">
-                            {org.taskStats.total > org.taskStats.notApplicable
-                              ? Math.round((org.taskStats.completed / (org.taskStats.total - org.taskStats.notApplicable)) * 100)
+                            {org.taskStats.total > 0
+                              ? Math.round(((org.taskStats.completed * 1.0 + org.taskStats.notApplicable * 1.0 + org.taskStats.inProgress * 0.5 + org.taskStats.blocked * 0.25) / org.taskStats.total) * 100)
                               : 0}%
                           </span>
                           <span className="text-xs text-gray-400">Complete</span>
