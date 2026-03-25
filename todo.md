@@ -2288,3 +2288,6 @@
 - [x] Implement file type validation for CSV and TXT files only (accept attribute + JS validation)
 - [x] Add acceptTypes field to Question interface for reusable file type restrictions
 - [x] Upload UI uses existing clean UploadedFilesList component automatically
+
+## Remove Historic Reports Upload (PHI concern)
+- [x] Remove CF.7 Historic Reports flat file upload from questionnaire (contains PHI)
