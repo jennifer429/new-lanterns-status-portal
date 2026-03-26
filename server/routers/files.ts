@@ -3,75 +3,74 @@ import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { fileAttachments, organizations } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
-import { nanoid } from "nanoid";
+import { storagePut, storageGet } from "../storage";
+import { ENV } from "../_core/env";
+import { Readable } from "stream";
 import { exec } from "child_process";
 import { promisify } from "util";
-import { writeFile, unlink } from "fs/promises";
-import path from "path";
-import os from "os";
 
 const execAsync = promisify(exec);
 
 /**
- * Upload file to Google Drive and get shareable link
+ * Upload file to Google Drive and return a shareable link.
+ * Requires GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY env vars.
+ * Falls back to Forge storage proxy if Google credentials are not configured.
  */
 export async function uploadToGoogleDrive(
   fileName: string,
   fileBuffer: Buffer,
   organizationName: string
 ): Promise<string> {
-  // Create temp file
-  const tempDir = os.tmpdir();
-  const tempFilePath = path.join(tempDir, `${nanoid()}-${fileName}`);
-  
-  try {
-    await writeFile(tempFilePath, fileBuffer);
-    
-    // Upload to RadOne-Intake folder (ID: 1Awi2cFLAXApN9wWVMgqslyyXy69sHVTX)
-    const folderPath = `manus_google_drive:RadOne-Intake`;
-    
-    // Upload file to Google Drive
-    await execAsync(
-      `rclone copy "${tempFilePath}" "${folderPath}" --config /home/ubuntu/.gdrive-rclone.ini`
-    );
-    
-    // Wait for file to sync (Google Drive needs time to process)
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Get shareable link with retry logic
-    const remotePath = `${folderPath}/${fileName}`;
-    let shareableLink = '';
-    let attempts = 0;
-    const maxAttempts = 3;
-    
-    while (attempts < maxAttempts) {
-      try {
-        const { stdout } = await execAsync(
-          `rclone link "${remotePath}" --config /home/ubuntu/.gdrive-rclone.ini`
-        );
-        shareableLink = stdout.trim();
-        break;
-      } catch (error) {
-        attempts++;
-        if (attempts >= maxAttempts) {
-          throw new Error(`Failed to create shareable link after ${maxAttempts} attempts: ${error}`);
-        }
-        // Wait before retry
-        await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
-      }
-    }
-    
-    // Clean up temp file
-    await unlink(tempFilePath);
-    
-    return shareableLink;
-  } catch (error) {
-    // Clean up temp file on error
-    try {
-      await unlink(tempFilePath);
-    } catch {}
-    throw error;
+  // Try Google Drive API if credentials are configured
+  if (ENV.googleServiceAccountEmail && ENV.googleServiceAccountPrivateKey) {
+    const { google } = await import("googleapis");
+
+    const privateKey = ENV.googleServiceAccountPrivateKey.replace(/\\n/g, "\n");
+    const auth = new google.auth.JWT({
+      email: ENV.googleServiceAccountEmail,
+      key: privateKey,
+      scopes: ["https://www.googleapis.com/auth/drive"],
+    });
+
+    const drive = google.drive({ version: "v3", auth });
+
+    // Upload file to the configured folder
+    const uploadRes = await drive.files.create({
+      requestBody: {
+        name: fileName,
+        parents: [ENV.googleDriveFolderId],
+      },
+      media: {
+        mimeType: "application/octet-stream",
+        body: Readable.from(fileBuffer),
+      },
+      fields: "id,webViewLink",
+    });
+
+    const fileId = uploadRes.data.id;
+    if (!fileId) throw new Error("Google Drive upload returned no file ID");
+
+    // Make file readable by anyone with the link
+    await drive.permissions.create({
+      fileId,
+      requestBody: { role: "reader", type: "anyone" },
+    });
+
+    // Fetch the shareable link
+    const meta = await drive.files.get({
+      fileId,
+      fields: "webViewLink",
+    });
+
+    return meta.data.webViewLink || `https://drive.google.com/file/d/${fileId}/view`;
   }
+
+  // Fallback: use Forge storage proxy
+  const sanitizedOrg = organizationName.replace(/[^a-zA-Z0-9-_]/g, "_");
+  const key = `uploads/${sanitizedOrg}/${fileName}`;
+  await storagePut(key, fileBuffer);
+  const { url } = await storageGet(key);
+  return url;
 }
 
 /**
