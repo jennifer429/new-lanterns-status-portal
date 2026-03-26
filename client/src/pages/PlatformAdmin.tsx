@@ -977,7 +977,7 @@ export default function PlatformAdmin() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Task List Dashboard
+              Admin Dashboard
               {activeTab === "impl-dashboard" && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
               )}
@@ -1057,7 +1057,7 @@ export default function PlatformAdmin() {
           <>
             <div className="flex flex-col gap-3 mb-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold">Task List Dashboard</h2>
+                <h2 className="text-2xl font-bold">Admin Dashboard</h2>
                 <div className="text-sm text-muted-foreground">
                   {(dashboardPartnerFilter !== null || dashboardSiteSearch.trim())
                     ? `${filteredActiveOrgs.length} of ${activeOrgs.length} organizations`
@@ -1067,37 +1067,24 @@ export default function PlatformAdmin() {
 
               {/* Filters */}
               <div className="flex flex-wrap items-center gap-2">
-                {/* Partner filter chips — only shown to platform admins with multiple partners */}
+                {/* Partner filter dropdown — only shown to platform admins with multiple partners */}
                 {isPlatformAdmin && clients && clients.length > 1 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    <button
-                      onClick={() => setDashboardPartnerFilter(null)}
-                      className={cn(
-                        "px-3 py-1 rounded-full text-xs font-medium transition-colors border",
-                        dashboardPartnerFilter === null
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-muted/40 text-muted-foreground border-border hover:bg-muted/70"
-                      )}
-                    >
-                      All Partners
-                    </button>
-                    {clients.map(client => (
-                      <button
-                        key={client.id}
-                        onClick={() => setDashboardPartnerFilter(
-                          dashboardPartnerFilter === client.id ? null : client.id
-                        )}
-                        className={cn(
-                          "px-3 py-1 rounded-full text-xs font-medium transition-colors border",
-                          dashboardPartnerFilter === client.id
-                            ? "bg-primary text-primary-foreground border-primary"
-                            : "bg-muted/40 text-muted-foreground border-border hover:bg-muted/70"
-                        )}
-                      >
-                        {client.name}
-                      </button>
-                    ))}
-                  </div>
+                  <Select
+                    value={dashboardPartnerFilter === null ? "all" : String(dashboardPartnerFilter)}
+                    onValueChange={(v) => setDashboardPartnerFilter(v === "all" ? null : Number(v))}
+                  >
+                    <SelectTrigger className="h-8 text-xs w-44">
+                      <SelectValue placeholder="All Partners" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Partners</SelectItem>
+                      {clients.map(client => (
+                        <SelectItem key={client.id} value={String(client.id)}>
+                          {client.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
 
                 {/* Site search */}

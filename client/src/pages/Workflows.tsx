@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, Circle, ArrowLeft, ArrowRight } from "lucide-react";
 import { useRoute, Link } from "wouter";
+import { PageBreadcrumb } from "@/components/PageBreadcrumb";
 
 // System type colors (consistent with Architecture page)
 const TYPE_COLORS: Record<string, string> = {
@@ -87,21 +88,22 @@ export default function Workflows() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border/50 bg-card">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src="/images/flame-icon.png" alt="New Lantern" className="h-8 w-8" />
-            <div>
-              <h1 className="text-xl font-bold">Data Flow Workflows</h1>
-              <p className="text-xs text-muted-foreground">Integration Workflows — Part 2 of 2</p>
+      <header className="border-b border-border/50 bg-card sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <img src="/images/flame-icon.png" alt="New Lantern" className="h-7 w-7 shrink-0" />
+            <div className="hidden sm:block border-l border-border/40 pl-3 min-w-0">
+              <div className="text-sm font-bold tracking-tight truncate">Data Flow Workflows</div>
+              <p className="text-xs text-muted-foreground">Integration Workflows</p>
             </div>
           </div>
-          <Link href={`/org/${orgSlug}/intake`} className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5">
+          <Link href={`/org/${orgSlug}`} className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 shrink-0">
             <ArrowLeft className="w-4 h-4" />
-            Back to Intake
+            <span className="hidden sm:inline">Back to Dashboard</span>
           </Link>
         </div>
       </header>
+      <PageBreadcrumb orgSlug={orgSlug} items={[{ label: "Workflows" }]} />
 
       {/* Main content */}
       <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">

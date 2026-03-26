@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "wouter";
+import { PageBreadcrumb } from "@/components/PageBreadcrumb";
 
 export default function Connectivity() {
   const { user } = useAuth();
@@ -116,13 +117,13 @@ export default function Connectivity() {
             <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-8 flex-shrink-0" />
             <div className="hidden sm:block border-l border-border/40 pl-3 min-w-0">
               <div className="text-sm font-bold tracking-tight truncate">Connectivity Matrix</div>
-              {organization?.name && <div className="text-xs text-muted-foreground truncate">{organization.name}{organization.clientName ? ` \u00b7 ${organization.clientName}` : ""}</div>}
+              {organization?.name && <div className="text-xs text-muted-foreground truncate">{organization.name}{organization.clientName ? ` · ${organization.clientName}` : ""}</div>}
             </div>
           </div>
           {/* Right: back + user menu */}
           <div className="flex items-center gap-2">
             <Link href={`/org/${orgSlug}`}>
-              <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground">
+              <Button variant="outline" size="sm" className="gap-1.5 shrink-0">
                 <ArrowLeft className="w-4 h-4" />
                 <span className="hidden sm:inline">Dashboard</span>
               </Button>
@@ -131,6 +132,7 @@ export default function Connectivity() {
           </div>
         </div>
       </header>
+      <PageBreadcrumb orgSlug={orgSlug} items={[{ label: "Connectivity Matrix" }]} />
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">

@@ -11,4 +11,7 @@ export const ENV = {
   notionDatabaseId: process.env.NOTION_DATABASE_ID ?? "",
   notionConnectivityDbId: process.env.NOTION_CONNECTIVITY_DATABASE_ID ?? process.env.NOTION_DATABASE_ID ?? "",
   notionConnectivityDataSourceId: process.env.NOTION_CONNECTIVITY_DATASOURCE_ID ?? "",
+  googleServiceAccountEmail: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ?? "",
+  googleServiceAccountPrivateKey: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY ?? "",
+  googleDriveFolderId: process.env.GOOGLE_DRIVE_FOLDER_ID ?? "1Awi2cFLAXApN9wWVMgqslyyXy69sHVTX",
 };

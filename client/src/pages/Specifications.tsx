@@ -19,6 +19,7 @@ import { Link, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useState, useMemo } from "react";
 import { UserMenu } from "@/components/UserMenu";
+import { PageBreadcrumb } from "@/components/PageBreadcrumb";
 
 export default function Specifications() {
   const [, params] = useRoute("/org/:slug/specs");
@@ -68,7 +69,7 @@ export default function Specifications() {
             <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-8 flex-shrink-0" />
             <div className="hidden sm:block border-l border-border/40 pl-3 min-w-0">
               <div className="text-sm font-bold tracking-tight truncate">NL Specifications</div>
-              {orgName && <div className="text-xs text-muted-foreground truncate">{orgName}{partnerName ? ` \u00b7 ${partnerName}` : ""}</div>}
+              {orgName && <div className="text-xs text-muted-foreground truncate">{orgName}{partnerName ? ` · ${partnerName}` : ""}</div>}
             </div>
           </div>
           {/* Right: user menu */}
@@ -77,17 +78,12 @@ export default function Specifications() {
           </div>
         </div>
       </header>
+      <PageBreadcrumb orgSlug={orgSlug} items={[{ label: "Specifications" }]} />
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
-        {/* ── Back + Title ── */}
+        {/* ── Title ── */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link href={`/org/${orgSlug}`}>
-              <Button variant="ghost" size="sm" className="gap-2">
-                <ArrowLeft className="w-4 h-4" />
-                Dashboard
-              </Button>
-            </Link>
             <div>
               <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2.5">
                 <BookOpen className="w-6 h-6 text-primary" />

@@ -22,66 +22,77 @@ export function FileUpload({
   linearIssueId,
   onUploadComplete,
 }: FileUploadProps) {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
 
   const uploadMutation = trpc.files.upload.useMutation({
-    onSuccess: () => {
-      toast.success("File uploaded successfully!");
-      setSelectedFile(null);
-      onUploadComplete?.();
-    },
     onError: (error) => {
       toast.error(`Upload failed: ${error.message}`);
-      setIsUploading(false);
     },
   });
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Check file size (max 10MB)
+    const files = Array.from(event.target.files || []);
+    const valid = files.filter((file) => {
       if (file.size > 10 * 1024 * 1024) {
-        toast.error("File size must be less than 10MB");
-        return;
+        toast.error(`${file.name} exceeds 10MB limit`);
+        return false;
       }
-      setSelectedFile(file);
-    }
+      return true;
+    });
+    setSelectedFiles((prev) => [...prev, ...valid]);
+    // Reset input so same files can be re-selected if removed
+    event.target.value = "";
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleUpload = async () => {
-    if (!selectedFile) return;
-
+    if (selectedFiles.length === 0) return;
     setIsUploading(true);
 
-    try {
-      // Convert file to base64
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const base64Data = e.target?.result as string;
-        const base64Content = base64Data.split(",")[1]; // Remove data:mime;base64, prefix
+    let successCount = 0;
+    for (const file of selectedFiles) {
+      try {
+        const base64Content = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const result = e.target?.result as string;
+            resolve(result.split(",")[1]);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
 
         await uploadMutation.mutateAsync({
           organizationId,
           taskId,
           taskName,
-          fileName: selectedFile.name,
+          fileName: file.name,
           fileData: base64Content,
-          mimeType: selectedFile.type,
+          mimeType: file.type,
           clickupTaskId: clickupListId,
           linearIssueId: linearIssueId,
         });
+        successCount++;
+      } catch {
+        // error already shown via onError
+      }
+    }
 
-        setIsUploading(false);
-      };
-      reader.onerror = () => {
-        toast.error("Failed to read file");
-        setIsUploading(false);
-      };
-      reader.readAsDataURL(selectedFile);
-    } catch (error) {
-      console.error("Upload error:", error);
-      setIsUploading(false);
+    setIsUploading(false);
+    if (successCount > 0) {
+      toast.success(
+        successCount === selectedFiles.length
+          ? successCount === 1
+            ? "File uploaded successfully!"
+            : `${successCount} files uploaded successfully!`
+          : `${successCount} of ${selectedFiles.length} files uploaded.`
+      );
+      setSelectedFiles([]);
+      onUploadComplete?.();
     }
   };
 
@@ -93,49 +104,57 @@ export function FileUpload({
 
   return (
     <div className="space-y-3">
-      {!selectedFile ? (
-        <label className="block">
-          <input
-            type="file"
-            className="hidden"
-            onChange={handleFileSelect}
-            accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.txt,.xlsx,.xls"
-          />
-          <Card className="p-6 border-2 border-dashed border-border hover:border-primary/50 cursor-pointer transition-colors">
-            <div className="flex flex-col items-center gap-2 text-center">
-              <Upload className="w-8 h-8 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-medium">Click to upload file</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  PDF, DOC, PNG, JPG, TXT, XLSX (max 10MB)
-                </p>
-              </div>
+      {/* Drop zone */}
+      <label className="block">
+        <input
+          type="file"
+          className="hidden"
+          onChange={handleFileSelect}
+          accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.txt,.xlsx,.xls"
+          multiple
+          disabled={isUploading}
+        />
+        <Card className="p-4 border-2 border-dashed border-border hover:border-primary/50 cursor-pointer transition-colors">
+          <div className="flex flex-col items-center gap-2 text-center">
+            <Upload className="w-6 h-6 text-muted-foreground" />
+            <div>
+              <p className="text-sm font-medium">Click to add files</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                PDF, DOC, PNG, JPG, TXT, XLSX (max 10MB each)
+              </p>
             </div>
-          </Card>
-        </label>
-      ) : (
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <FileIcon className="w-8 h-8 text-primary flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{selectedFile.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {formatFileSize(selectedFile.size)}
-                </p>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSelectedFile(null)}
-              disabled={isUploading}
-            >
-              <X className="w-4 h-4" />
-            </Button>
           </div>
+        </Card>
+      </label>
+
+      {/* Selected files list */}
+      {selectedFiles.length > 0 && (
+        <div className="space-y-2">
+          {selectedFiles.map((file, i) => (
+            <Card key={i} className="p-3">
+              <div className="flex items-center gap-3">
+                <FileIcon className="w-6 h-6 text-primary flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{file.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatFileSize(file.size)}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 flex-shrink-0"
+                  onClick={() => removeFile(i)}
+                  disabled={isUploading}
+                >
+                  <X className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </Card>
+          ))}
+
           <Button
-            className="w-full mt-3"
+            className="w-full"
             onClick={handleUpload}
             disabled={isUploading}
           >
@@ -147,11 +166,11 @@ export function FileUpload({
             ) : (
               <>
                 <Upload className="w-4 h-4 mr-2" />
-                Upload File
+                Upload {selectedFiles.length > 1 ? `${selectedFiles.length} Files` : "File"}
               </>
             )}
           </Button>
-        </Card>
+        </div>
       )}
     </div>
   );

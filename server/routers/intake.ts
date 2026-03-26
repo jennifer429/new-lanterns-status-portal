@@ -994,6 +994,89 @@ export const intakeRouter = router({
     }),
 
   /**
+   * Upload an adhoc file (meeting notes, transcripts, etc.) from the dashboard
+   */
+  uploadAdhocFile: publicProcedure
+    .input(
+      z.object({
+        organizationSlug: z.string(),
+        fileName: z.string(),
+        fileData: z.string(), // base64
+        mimeType: z.string(),
+        userEmail: z.string().email(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const [org] = await db
+        .select()
+        .from(organizations)
+        .where(eq(organizations.slug, input.organizationSlug))
+        .limit(1);
+      if (!org) throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+
+      if (ctx.user?.clientId && org.clientId !== ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
+      }
+
+      const fileBuffer = Buffer.from(input.fileData, "base64");
+      const timestamp = Date.now();
+      const fileExt = input.fileName.split(".").pop();
+      const sanitizedEmail = input.userEmail.replace(/@/g, "-at-").replace(/[^a-zA-Z0-9.-]/g, "_");
+      const sanitizedOrg = org.name.replace(/[^a-zA-Z0-9-]/g, "_");
+      const storedName = `${sanitizedOrg}_${sanitizedEmail}_ADHOC_${timestamp}.${fileExt}`;
+
+      const fileUrl = await uploadToGoogleDrive(storedName, fileBuffer, org.name);
+
+      await db.insert(intakeFileAttachments).values({
+        organizationId: org.id,
+        questionId: "ADHOC",
+        fileName: input.fileName,
+        fileUrl,
+        driveFileId: storedName,
+        fileSize: fileBuffer.length,
+        mimeType: input.mimeType,
+        uploadedBy: input.userEmail,
+      });
+
+      return { success: true, fileUrl };
+    }),
+
+  /**
+   * Get adhoc files for an organization
+   */
+  getAdhocFiles: publicProcedure
+    .input(z.object({ organizationSlug: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const [org] = await db
+        .select()
+        .from(organizations)
+        .where(eq(organizations.slug, input.organizationSlug))
+        .limit(1);
+      if (!org) throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+
+      if (ctx.user?.clientId && org.clientId !== ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
+      }
+
+      return await db
+        .select()
+        .from(intakeFileAttachments)
+        .where(
+          and(
+            eq(intakeFileAttachments.organizationId, org.id),
+            eq(intakeFileAttachments.questionId, "ADHOC")
+          )
+        )
+        .orderBy(sql`${intakeFileAttachments.createdAt} DESC`);
+    }),
+
+  /**
    * Get active vendor options grouped by system type (for intake form dropdowns)
    */
   getActiveVendorOptions: publicProcedure.query(async () => {

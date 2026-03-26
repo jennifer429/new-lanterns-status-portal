@@ -46,6 +46,7 @@ import { useRoute, Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import { UserMenu } from "@/components/UserMenu";
+import { PageBreadcrumb } from "@/components/PageBreadcrumb";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { buildCSV, downloadCSV, parseCSV, readFileAsText, csvFilename } from "@/lib/csv";
 import { Download, Upload } from "lucide-react";
@@ -846,10 +847,11 @@ export default function Validation() {
           {/* Left: logo + page title */}
           <div className="flex items-center gap-3 min-w-0">
             <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-8 flex-shrink-0" />
-            <div className="hidden sm:block border-l border-border/40 pl-3 min-w-0">
+            <div className="hidden sm:flex flex-col border-l border-border/40 pl-3 min-w-0">
               <div className="text-sm font-bold tracking-tight truncate">Testing Checklist</div>
               {orgName && <div className="text-xs text-muted-foreground truncate">{orgName}{partnerName ? ` · ${partnerName}` : ""}</div>}
             </div>
+            {orgName && <div className="sm:hidden text-sm font-semibold truncate max-w-[100px]">{orgName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 4)}</div>}
           </div>
 
           {/* Right: actions + nav + user */}
@@ -884,7 +886,7 @@ export default function Validation() {
           </div>
         </div>
       </header>
-
+      <PageBreadcrumb orgSlug={slug || ""} items={[{ label: "Testing Checklist" }]} />
 
       {/* Import status banner */}
       {importStatus && (

@@ -28,7 +28,10 @@ import {
   Loader2,
   X,
   Maximize2,
+  Upload,
+  FolderOpen,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Link, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useState, useEffect, useRef } from "react";
@@ -39,6 +42,7 @@ import { PhiDisclaimer } from "@/components/PhiDisclaimer";
 import { UserMenu } from "@/components/UserMenu";
 import { cn } from "@/lib/utils";
 import { UploadedFilesList } from "@/components/UploadedFileRow";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 // ── Progress Ring (SVG) ─────────────────────────────────────────────────────
 function ProgressRing({
@@ -277,12 +281,16 @@ function DiagramLightbox({
 export default function Home() {
   const [, params] = useRoute("/org/:slug");
   const orgSlug = params?.slug || "demo";
+  const { user: currentUser } = useAuth();
 
   // Expandable card states
   const [connectivityOpen, setConnectivityOpen] = useState(false);
   const [architectureOpen, setArchitectureOpen] = useState(false);
   const [specsOpen, setSpecsOpen] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<{ src: string; alt: string } | null>(null);
+  const [adhocOpen, setAdhocOpen] = useState(false);
+  const [adhocFiles, setAdhocFiles] = useState<File[]>([]);
+  const [adhocUploading, setAdhocUploading] = useState(false);
 
   // Fetch organization data
   const { data: organization, isLoading: orgLoading } =
@@ -380,17 +388,73 @@ export default function Home() {
     }
   };
 
+  // Adhoc files
+  const { data: adhocFilesList = [], refetch: refetchAdhoc } = trpc.intake.getAdhocFiles.useQuery(
+    { organizationSlug: orgSlug },
+    { enabled: !!orgSlug }
+  );
+
+  const uploadAdhocMutation = trpc.intake.uploadAdhocFile.useMutation({
+    onSuccess: () => {
+      refetchAdhoc();
+    },
+  });
+
   // Delete file mutation
   const utils = trpc.useUtils();
   const deleteFileMutation = trpc.intake.deleteFile.useMutation({
     onSuccess: () => {
       utils.intake.getAllUploadedFiles.invalidate({ organizationSlug: orgSlug });
+      refetchAdhoc();
     },
   });
 
   const handleRemoveDiagram = (fileId: number) => {
     if (window.confirm("Remove this architecture diagram?")) {
       deleteFileMutation.mutate({ fileId, organizationSlug: orgSlug });
+    }
+  };
+
+  const handleAdhocFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []).filter((f) => {
+      if (f.size > 25 * 1024 * 1024) {
+        toast.error(`${f.name} exceeds 25MB limit`);
+        return false;
+      }
+      return true;
+    });
+    setAdhocFiles((prev) => [...prev, ...files]);
+    e.target.value = "";
+  };
+
+  const handleAdhocUpload = async () => {
+    if (adhocFiles.length === 0 || !currentUser?.email) return;
+    setAdhocUploading(true);
+    let ok = 0;
+    for (const file of adhocFiles) {
+      try {
+        const base64 = await new Promise<string>((res, rej) => {
+          const r = new FileReader();
+          r.onload = (e) => res((e.target!.result as string).split(",")[1]);
+          r.onerror = rej;
+          r.readAsDataURL(file);
+        });
+        await uploadAdhocMutation.mutateAsync({
+          organizationSlug: orgSlug,
+          fileName: file.name,
+          fileData: base64,
+          mimeType: file.type || "application/octet-stream",
+          userEmail: currentUser.email,
+        });
+        ok++;
+      } catch {
+        toast.error(`Failed to upload ${file.name}`);
+      }
+    }
+    setAdhocUploading(false);
+    if (ok > 0) {
+      toast.success(ok === 1 ? "File uploaded!" : `${ok} files uploaded!`);
+      setAdhocFiles([]);
     }
   };
 
@@ -683,6 +747,24 @@ export default function Home() {
                 <span className="text-sm font-semibold">Architecture</span>
               </div>
               <div className="flex items-center gap-2">
+                {/* Thumbnail strip for image files when collapsed */}
+                {!architectureOpen && diagramFiles.length > 0 && (() => {
+                  const imgFiles = diagramFiles.filter((f: any) => /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(f.fileName));
+                  if (imgFiles.length === 0) return null;
+                  return (
+                    <div className="flex items-center gap-1">
+                      {imgFiles.slice(0, 2).map((f: any) => (
+                        <img
+                          key={f.id}
+                          src={f.fileUrl}
+                          alt={f.fileName}
+                          className="w-7 h-7 rounded object-cover border border-border/40 cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={(e) => { e.stopPropagation(); setLightboxSrc({ src: f.fileUrl, alt: f.fileName }); }}
+                        />
+                      ))}
+                    </div>
+                  );
+                })()}
                 {diagramFiles.length > 0 ? (
                   <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[10px] font-semibold">
                     {diagramFiles.length} file{diagramFiles.length > 1 ? "s" : ""}
@@ -700,20 +782,54 @@ export default function Home() {
             </button>
             {architectureOpen && (
               <div className="border-t border-border/40">
-                <div className="p-3">
+                <div className="p-3 space-y-3">
                   {diagramFiles.length > 0 ? (
-                    <UploadedFilesList
-                      files={diagramFiles.map((file: any) => ({
-                        id: file.id,
-                        fileName: file.fileName,
-                        fileUrl: file.fileUrl,
-                        fileSize: file.fileSize,
-                        createdAt: file.createdAt,
-                        uploadedBy: file.uploadedBy,
-                      }))}
-                      onRemove={(fileId) => handleRemoveDiagram(fileId)}
-                      compact
-                    />
+                    <>
+                      {/* Image thumbnails grid */}
+                      {(() => {
+                        const imgFiles = diagramFiles.filter((f: any) => /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(f.fileName));
+                        if (imgFiles.length === 0) return null;
+                        return (
+                          <div className="grid grid-cols-2 gap-2">
+                            {imgFiles.map((f: any) => (
+                              <button
+                                key={f.id}
+                                onClick={() => setLightboxSrc({ src: f.fileUrl, alt: f.fileName })}
+                                className="relative aspect-video rounded-lg overflow-hidden border border-border/40 bg-muted/20 hover:border-primary/40 hover:opacity-90 transition-all group"
+                              >
+                                <img
+                                  src={f.fileUrl}
+                                  alt={f.fileName}
+                                  className="w-full h-full object-cover"
+                                />
+                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
+                                  <Maximize2 className="w-5 h-5 text-white" />
+                                </div>
+                                <div className="absolute bottom-0 left-0 right-0 bg-black/50 px-2 py-1">
+                                  <p className="text-[10px] text-white truncate">{f.fileName}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        );
+                      })()}
+                      {/* Non-image files list */}
+                      <UploadedFilesList
+                        files={diagramFiles
+                          .filter((f: any) => !/\.(png|jpg|jpeg|gif|webp|svg)$/i.test(f.fileName))
+                          .map((file: any) => ({
+                            id: file.id,
+                            fileName: file.fileName,
+                            fileUrl: file.fileUrl,
+                            fileSize: file.fileSize,
+                            createdAt: file.createdAt,
+                            uploadedBy: file.uploadedBy,
+                          }))}
+                        onRemove={(fileId) => handleRemoveDiagram(fileId)}
+                        compact
+                        emptyMessage=""
+                      />
+                    </>
                   ) : (
                     <div className="text-center py-4">
                       <ImageIcon className="w-6 h-6 text-muted-foreground/40 mx-auto mb-2" />
@@ -1304,6 +1420,122 @@ export default function Home() {
             );
           })()}
         </div>
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            DOCUMENTS & NOTES — Adhoc file uploads
+            ═══════════════════════════════════════════════════════════════════ */}
+        <Card className="card-elevated overflow-hidden">
+          <button
+            onClick={() => setAdhocOpen(!adhocOpen)}
+            className="w-full px-4 py-3 flex items-center justify-between hover:bg-accent/30 transition-colors"
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 rounded-lg bg-primary/10">
+                <FolderOpen className="w-4 h-4 text-primary" />
+              </div>
+              <div className="text-left">
+                <span className="text-sm font-semibold">Documents & Notes</span>
+                <p className="text-[11px] text-muted-foreground leading-none mt-0.5">Meeting transcripts, notes, and other files</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {adhocFilesList.length > 0 ? (
+                <Badge variant="outline" className="text-[10px] border-primary/40 text-primary font-semibold">
+                  {adhocFilesList.length} file{adhocFilesList.length !== 1 ? "s" : ""}
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px] text-muted-foreground">Upload</Badge>
+              )}
+              <ChevronDown
+                className={cn(
+                  "w-4 h-4 text-muted-foreground transition-transform duration-200",
+                  adhocOpen && "rotate-180"
+                )}
+              />
+            </div>
+          </button>
+          {adhocOpen && (
+            <div className="border-t border-border/40 p-3 space-y-3">
+              {/* Drop zone */}
+              <label className="block cursor-pointer">
+                <input
+                  type="file"
+                  className="hidden"
+                  multiple
+                  accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.txt,.xlsx,.xls,.mp3,.mp4,.wav,.m4a,.vtt,.srt"
+                  onChange={handleAdhocFileSelect}
+                  disabled={adhocUploading}
+                />
+                <div className="border-2 border-dashed border-border rounded-lg p-4 flex items-center gap-3 hover:border-primary/50 hover:bg-primary/5 transition-colors">
+                  <Upload className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                  <div>
+                    <p className="text-xs font-medium">Click to add files</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">PDFs, docs, images, audio, transcripts (max 25MB each)</p>
+                  </div>
+                </div>
+              </label>
+
+              {/* Staged files */}
+              {adhocFiles.length > 0 && (
+                <div className="space-y-1.5">
+                  {adhocFiles.map((f, i) => (
+                    <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/30 border border-border/40">
+                      <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                      <span className="text-xs flex-1 truncate">{f.name}</span>
+                      <span className="text-[10px] text-muted-foreground flex-shrink-0">
+                        {f.size < 1024 * 1024 ? `${(f.size / 1024).toFixed(1)} KB` : `${(f.size / (1024 * 1024)).toFixed(1)} MB`}
+                      </span>
+                      <button
+                        onClick={() => setAdhocFiles((prev) => prev.filter((_, j) => j !== i))}
+                        className="text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"
+                        disabled={adhocUploading}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                  <Button
+                    size="sm"
+                    className="w-full h-8 text-xs"
+                    onClick={handleAdhocUpload}
+                    disabled={adhocUploading || !currentUser?.email}
+                  >
+                    {adhocUploading ? (
+                      <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Uploading...</>
+                    ) : (
+                      <><Upload className="w-3.5 h-3.5 mr-1.5" /> Upload {adhocFiles.length} File{adhocFiles.length !== 1 ? "s" : ""}</>
+                    )}
+                  </Button>
+                </div>
+              )}
+
+              {/* Uploaded files list */}
+              {adhocFilesList.length > 0 ? (
+                <div className="space-y-1">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Uploaded Files</p>
+                  <UploadedFilesList
+                    files={adhocFilesList.map((f: any) => ({
+                      id: f.id,
+                      fileName: f.fileName,
+                      fileUrl: f.fileUrl,
+                      fileSize: f.fileSize,
+                      createdAt: f.createdAt,
+                      uploadedBy: f.uploadedBy,
+                    }))}
+                    onRemove={(fileId) => {
+                      if (window.confirm("Remove this file?")) {
+                        deleteFileMutation.mutate({ fileId, organizationSlug: orgSlug });
+                      }
+                    }}
+                    compact
+                  />
+                </div>
+              ) : adhocFiles.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-2">No files uploaded yet. Add meeting notes, transcripts, or any supporting documents.</p>
+              ) : null}
+            </div>
+          )}
+        </Card>
 
         {/* Bottom spacer */}
         <div className="h-2" />
