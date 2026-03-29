@@ -22,6 +22,18 @@ export function getNotionClient(): Client | null {
 }
 
 /**
+ * Notion client for the connectivity matrix — only requires NOTION_API_KEY,
+ * not the intake database ID, since the connectivity DB is configured separately.
+ */
+export function getConnectivityNotionClient(): Client | null {
+  if (!ENV.notionApiKey) return null;
+  if (!notionClient) {
+    notionClient = new Client({ auth: ENV.notionApiKey });
+  }
+  return notionClient;
+}
+
+/**
  * Check if organization should sync to Notion
  */
 export function shouldSyncToNotion(organizationSlug: string): boolean {
