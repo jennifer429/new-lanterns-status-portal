@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp, AlertTriangle, AlertCircle, Info, Image, CheckSquare, BarChart3, Copy, Check, Clock, ChevronsUpDown, ChevronLeft, ChevronRight, Settings, ChevronDown, ListChecks, TestTube2, History, Search, X } from "lucide-react";
+import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp, AlertTriangle, AlertCircle, Info, Image, CheckSquare, BarChart3, Copy, Check, Clock, ChevronLeft, ChevronRight, Settings, ChevronDown, ListChecks, TestTube2, History, Search, X } from "lucide-react";
 import { questionnaireSections } from "@shared/questionnaireData";
 import { TYPE_COLORS, type IntegrationSystem } from "@/components/IntegrationWorkflows";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -38,12 +38,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Checkbox } from "@/components/ui/checkbox";
 
 /**
  * Unified Admin Dashboard
@@ -140,7 +134,7 @@ export default function PlatformAdmin() {
 
   // Dashboard filter state
   const [dashboardPartnerFilter, setDashboardPartnerFilter] = useState<number | null>(null);
-  const [dashboardSiteSearch, setDashboardSiteSearch] = useState("");
+  const [dashboardSiteFilter, setDashboardSiteFilter] = useState<number | null>(null);
 
   // Access control: Must be an admin (any admin - platform or partner)
   useEffect(() => {
@@ -875,10 +869,13 @@ export default function PlatformAdmin() {
   const completedOrgs = sortOrgs(orgs?.filter(o => o.status === "completed"));
   const inactiveOrgs = sortOrgs(orgs?.filter(o => o.status === "inactive" || o.status === "paused"));
 
+  const dashboardAvailableSites = activeOrgs.filter(org =>
+    dashboardPartnerFilter === null || org.clientId === dashboardPartnerFilter
+  );
+
   const filteredActiveOrgs = activeOrgs.filter(org => {
     const matchesPartner = dashboardPartnerFilter === null || org.clientId === dashboardPartnerFilter;
-    const matchesSite = dashboardSiteSearch.trim() === "" ||
-      org.name.toLowerCase().includes(dashboardSiteSearch.trim().toLowerCase());
+    const matchesSite = dashboardSiteFilter === null || org.id === dashboardSiteFilter;
     return matchesPartner && matchesSite;
   });
   
@@ -1059,7 +1056,7 @@ export default function PlatformAdmin() {
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold">Admin Dashboard</h2>
                 <div className="text-sm text-muted-foreground">
-                  {(dashboardPartnerFilter !== null || dashboardSiteSearch.trim())
+                  {(dashboardPartnerFilter !== null || dashboardSiteFilter !== null)
                     ? `${filteredActiveOrgs.length} of ${activeOrgs.length} organizations`
                     : `${activeOrgs.length} active organizations`}
                 </div>
@@ -1071,7 +1068,10 @@ export default function PlatformAdmin() {
                 {isPlatformAdmin && clients && clients.length > 1 && (
                   <Select
                     value={dashboardPartnerFilter === null ? "all" : String(dashboardPartnerFilter)}
-                    onValueChange={(v) => setDashboardPartnerFilter(v === "all" ? null : Number(v))}
+                    onValueChange={(v) => {
+                      setDashboardPartnerFilter(v === "all" ? null : Number(v));
+                      setDashboardSiteFilter(null);
+                    }}
                   >
                     <SelectTrigger className="h-8 text-xs w-44">
                       <SelectValue placeholder="All Partners" />
@@ -1087,30 +1087,28 @@ export default function PlatformAdmin() {
                   </Select>
                 )}
 
-                {/* Site search */}
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-                  <input
-                    type="text"
-                    placeholder="Search sites…"
-                    value={dashboardSiteSearch}
-                    onChange={e => setDashboardSiteSearch(e.target.value)}
-                    className="pl-8 pr-8 h-8 text-xs rounded-md border border-border bg-muted/20 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary w-48"
-                  />
-                  {dashboardSiteSearch && (
-                    <button
-                      onClick={() => setDashboardSiteSearch("")}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
+                {/* Site dropdown — filtered by selected partner */}
+                <Select
+                  value={dashboardSiteFilter === null ? "all" : String(dashboardSiteFilter)}
+                  onValueChange={(v) => setDashboardSiteFilter(v === "all" ? null : Number(v))}
+                >
+                  <SelectTrigger className="h-8 text-xs w-48">
+                    <SelectValue placeholder="All Sites" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Sites</SelectItem>
+                    {dashboardAvailableSites.map(org => (
+                      <SelectItem key={org.id} value={String(org.id)}>
+                        {org.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
                 {/* Clear all */}
-                {(dashboardPartnerFilter !== null || dashboardSiteSearch.trim()) && (
+                {(dashboardPartnerFilter !== null || dashboardSiteFilter !== null) && (
                   <button
-                    onClick={() => { setDashboardPartnerFilter(null); setDashboardSiteSearch(""); }}
+                    onClick={() => { setDashboardPartnerFilter(null); setDashboardSiteFilter(null); }}
                     className="text-xs text-muted-foreground underline hover:no-underline"
                   >
                     Clear filters
@@ -3245,14 +3243,28 @@ function ConnectivityMatrix({ orgs }: { orgs: ConnectivityOrg[] }) {
   }, [allFiles]);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
-  // Org visibility filter
-  const [visibleOrgIds, setVisibleOrgIds] = useState<Set<number>>(() => new Set(orgs.map(o => o.id)));
-  const toggleOrg = (id: number) => setVisibleOrgIds(prev => {
-    const next = new Set(prev);
-    if (next.has(id)) { next.delete(id); } else { next.add(id); }
-    return next;
-  });
-  const filteredOrgs = orgs.filter(o => visibleOrgIds.has(o.id));
+  // Partner + site filter
+  const [connPartnerFilter, setConnPartnerFilter] = useState<string | null>(null);
+  const [connSiteFilter, setConnSiteFilter] = useState<number | null>(null);
+
+  const connAvailablePartners = useMemo(() => {
+    const names = new Set(orgs.map(o => o.partnerName).filter(Boolean));
+    return Array.from(names) as string[];
+  }, [orgs]);
+
+  const connAvailableSites = useMemo(() =>
+    orgs.filter(o => connPartnerFilter === null || o.partnerName === connPartnerFilter),
+    [orgs, connPartnerFilter]
+  );
+
+  const filteredOrgs = useMemo(() =>
+    orgs.filter(o => {
+      const matchesPartner = connPartnerFilter === null || o.partnerName === connPartnerFilter;
+      const matchesSite = connSiteFilter === null || o.id === connSiteFilter;
+      return matchesPartner && matchesSite;
+    }),
+    [orgs, connPartnerFilter, connSiteFilter]
+  );
 
   // Collapsed sections state
   const [collapsedSections, setCollapsedSections] = useState<Set<number>>(
@@ -3403,55 +3415,50 @@ function ConnectivityMatrix({ orgs }: { orgs: ConnectivityOrg[] }) {
         </div>
       </div>
 
-      {/* Site multi-select filter */}
+      {/* Partner + site filter dropdowns */}
       {orgs.length > 0 && (
-        <div className="mb-4 flex items-center gap-3">
-          <span className="text-xs text-muted-foreground font-medium shrink-0">Sites:</span>
-          <Popover>
-            <PopoverTrigger asChild>
-              <button className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-border bg-card text-sm hover:bg-muted/50 transition-colors min-w-[160px] justify-between">
-                <span className="text-sm">
-                  {visibleOrgIds.size === 0
-                    ? "None selected"
-                    : visibleOrgIds.size === orgs.length
-                    ? `All ${orgs.length} sites`
-                    : `${visibleOrgIds.size} of ${orgs.length} sites`}
-                </span>
-                <ChevronsUpDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent align="start" className="w-64 p-2">
-              <div className="space-y-1">
-                {/* Select all / Clear */}
-                <div className="flex items-center justify-between px-2 py-1 mb-1 border-b border-border">
-                  <button
-                    onClick={() => setVisibleOrgIds(new Set(orgs.map(o => o.id)))}
-                    className="text-xs text-primary hover:underline"
-                  >
-                    Select all
-                  </button>
-                  <button
-                    onClick={() => setVisibleOrgIds(new Set())}
-                    className="text-xs text-muted-foreground hover:text-foreground hover:underline"
-                  >
-                    Clear
-                  </button>
-                </div>
-                {orgs.map(org => (
-                  <label
-                    key={org.id}
-                    className="flex items-center gap-2.5 px-2 py-1.5 rounded hover:bg-muted/50 cursor-pointer"
-                  >
-                    <Checkbox
-                      checked={visibleOrgIds.has(org.id)}
-                      onCheckedChange={() => toggleOrg(org.id)}
-                    />
-                    <span className="text-sm truncate">{org.name}</span>
-                  </label>
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          {connAvailablePartners.length > 1 && (
+            <Select
+              value={connPartnerFilter === null ? "all" : connPartnerFilter}
+              onValueChange={(v) => {
+                setConnPartnerFilter(v === "all" ? null : v);
+                setConnSiteFilter(null);
+              }}
+            >
+              <SelectTrigger className="h-8 text-xs w-44">
+                <SelectValue placeholder="All Partners" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Partners</SelectItem>
+                {connAvailablePartners.map(name => (
+                  <SelectItem key={name} value={name}>{name}</SelectItem>
                 ))}
-              </div>
-            </PopoverContent>
-          </Popover>
+              </SelectContent>
+            </Select>
+          )}
+          <Select
+            value={connSiteFilter === null ? "all" : String(connSiteFilter)}
+            onValueChange={(v) => setConnSiteFilter(v === "all" ? null : Number(v))}
+          >
+            <SelectTrigger className="h-8 text-xs w-48">
+              <SelectValue placeholder="All Sites" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Sites</SelectItem>
+              {connAvailableSites.map(org => (
+                <SelectItem key={org.id} value={String(org.id)}>{org.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {(connPartnerFilter !== null || connSiteFilter !== null) && (
+            <button
+              onClick={() => { setConnPartnerFilter(null); setConnSiteFilter(null); }}
+              className="text-xs text-muted-foreground underline hover:no-underline"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
       )}
 
