@@ -112,7 +112,7 @@ export async function readIntakeResponseFromNotion(
   }
 
   try {
-    const queryResponse = await client.databases.query({
+    const queryResponse = await (client.databases as any).query({
       database_id: ENV.notionDatabaseId,
       filter: {
         property: "Organization Slug",
@@ -147,7 +147,7 @@ export async function syncIntakeResponseToNotion(
 
   try {
     // Query for existing page by exact slug match (reliable, unlike search())
-    const queryResponse = await client.databases.query({
+    const queryResponse = await (client.databases as any).query({
       database_id: ENV.notionDatabaseId,
       filter: {
         property: "Organization Slug",

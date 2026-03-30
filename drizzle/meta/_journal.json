@@ -239,6 +239,13 @@
       "when": 1743350400000,
       "tag": "0033_org_notes",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "5",
+      "when": 1774892156614,
+      "tag": "0034_bitter_susan_delgado",
+      "breakpoints": true
     }
   ]
 }
