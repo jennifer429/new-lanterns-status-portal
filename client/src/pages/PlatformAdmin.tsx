@@ -135,6 +135,7 @@ export default function PlatformAdmin() {
   // Dashboard filter state
   const [dashboardPartnerFilter, setDashboardPartnerFilter] = useState<number | null>(null);
   const [dashboardSiteFilter, setDashboardSiteFilter] = useState<number | null>(null);
+  const [expandedSiteIds, setExpandedSiteIds] = useState<Set<number>>(new Set());
 
   // Access control: Must be an admin (any admin - platform or partner)
   useEffect(() => {
@@ -1116,14 +1117,193 @@ export default function PlatformAdmin() {
                 )}
               </div>
             </div>
-            
-            {/* Workflow Launcher Table */}
+
+            {/* Partner Admin: collapsible site cards with mini dashboards */}
+            {!isPlatformAdmin ? (
+              <div className="space-y-3">
+                {filteredActiveOrgs.length === 0 ? (
+                  <div className="text-center py-10 text-muted-foreground text-sm italic">
+                    {activeOrgs.length === 0 ? "No active organizations" : "No organizations match the current filter"}
+                  </div>
+                ) : (
+                  filteredActiveOrgs.map(org => {
+                    const orgMetrics = metricsMap[org.id];
+                    const sectionProg = transformSectionProgress(orgMetrics?.sectionProgress);
+                    const sectionsComplete = sectionProg.filter(s => s.progress === 100).length;
+                    const totalSections = sectionProg.length || 6;
+                    const qPct = totalSections > 0 ? Math.round((sectionsComplete / totalSections) * 100) : 0;
+                    const ts = orgMetrics?.taskStats;
+                    const tsDone = ts?.completed ?? 0;
+                    const tsTotal = ts ? (ts.total - ts.notApplicable) : 0;
+                    const tsPct = tsTotal > 0 ? Math.round((tsDone / tsTotal) * 100) : 0;
+                    const vs = orgMetrics?.validationStats;
+                    const vsPass = vs?.pass ?? 0;
+                    const vsTotal = vs ? (vs.total - vs.na) : 0;
+                    const vsPct = vsTotal > 0 ? Math.round((vsPass / vsTotal) * 100) : 0;
+                    const overallPct = orgMetrics?.completionPercent ?? 0;
+                    const filesCount = orgMetrics?.files.length ?? 0;
+                    const isExpanded = expandedSiteIds.has(org.id);
+
+                    return (
+                      <Card key={org.id} className="card-elevated overflow-hidden">
+                        {/* Collapsible header */}
+                        <button
+                          onClick={() => setExpandedSiteIds(prev => {
+                            const next = new Set(prev);
+                            next.has(org.id) ? next.delete(org.id) : next.add(org.id);
+                            return next;
+                          })}
+                          className="w-full px-5 py-4 flex items-center justify-between hover:bg-muted/30 transition-colors"
+                        >
+                          <div className="flex items-center gap-4 min-w-0">
+                            <span className="font-semibold text-base truncate">{org.name}</span>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <Badge variant="outline" className={cn(
+                                "text-xs font-semibold",
+                                overallPct === 100 ? "border-emerald-500/40 text-emerald-400" : "border-primary/40 text-primary"
+                              )}>
+                                {overallPct}% overall
+                              </Badge>
+                              <span className="text-xs text-muted-foreground hidden sm:inline">
+                                Q: {sectionsComplete}/{totalSections} · Tests: {vsPass}/{vs?.total ?? 28} · Tasks: {tsDone}/{ts?.total ?? 0}
+                              </span>
+                              {filesCount > 0 && (
+                                <Badge variant="secondary" className="text-xs">{filesCount} files</Badge>
+                              )}
+                            </div>
+                          </div>
+                          <ChevronDown className={cn("w-4 h-4 text-muted-foreground flex-shrink-0 transition-transform duration-200", isExpanded && "rotate-180")} />
+                        </button>
+
+                        {/* Expanded mini dashboard */}
+                        {isExpanded && (
+                          <div className="border-t border-border/40 px-5 py-5 space-y-5">
+                            {/* Overall progress bar */}
+                            <div>
+                              <div className="flex items-center justify-between mb-1.5">
+                                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Implementation Progress</span>
+                                <span className="text-sm font-bold text-primary">{overallPct}%</span>
+                              </div>
+                              <div className="w-full h-2 bg-muted/40 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-primary rounded-full transition-all"
+                                  style={{ width: `${overallPct}%` }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Three mini stat columns */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                              {/* Questionnaire */}
+                              <div className="rounded-lg border border-border/60 bg-muted/10 p-4">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <ClipboardList className="w-4 h-4 text-primary" />
+                                    <span className="text-xs font-semibold">Questionnaire</span>
+                                  </div>
+                                  <span className="text-base font-bold text-primary">{qPct}%</span>
+                                </div>
+                                <p className="text-xs text-muted-foreground mb-3">{sectionsComplete}/{totalSections} sections complete</p>
+                                <div className="w-full h-1.5 bg-muted/40 rounded-full mb-3">
+                                  <div className="h-full bg-primary rounded-full" style={{ width: `${qPct}%` }} />
+                                </div>
+                                <button
+                                  onClick={() => setLocation(`/org/${org.slug}/intake`)}
+                                  className="w-full text-xs py-1.5 px-3 rounded border border-primary/30 text-primary hover:bg-primary/10 transition-colors text-center"
+                                >
+                                  {qPct === 100 ? "View" : qPct === 0 ? "Start" : "Continue"}
+                                </button>
+                              </div>
+
+                              {/* Testing */}
+                              <div className="rounded-lg border border-border/60 bg-muted/10 p-4">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <TestTube2 className="w-4 h-4 text-primary" />
+                                    <span className="text-xs font-semibold">Testing</span>
+                                  </div>
+                                  <span className="text-base font-bold text-primary">{vsPct}%</span>
+                                </div>
+                                <p className="text-xs text-muted-foreground mb-3">{vsPass}/{vs?.total ?? 28} tests passed</p>
+                                <div className="w-full h-1.5 bg-muted/40 rounded-full mb-2">
+                                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${vsPct}%` }} />
+                                </div>
+                                <div className="flex gap-3 text-[10px] mb-3">
+                                  <span className="text-emerald-400 font-semibold">{vsPass} Pass</span>
+                                  <span className="text-red-400 font-semibold">{vs?.fail ?? 0} Fail</span>
+                                  <span className="text-muted-foreground">{vs?.notTested ?? (vs?.total ?? 28)} Not Tested</span>
+                                </div>
+                                <button
+                                  onClick={() => setLocation(`/org/${org.slug}/validation`)}
+                                  className="w-full text-xs py-1.5 px-3 rounded border border-primary/30 text-primary hover:bg-primary/10 transition-colors text-center"
+                                >
+                                  {vsPct === 100 ? "View" : vsPass === 0 ? "Start" : "Continue"}
+                                </button>
+                              </div>
+
+                              {/* Task List */}
+                              <div className="rounded-lg border border-border/60 bg-muted/10 p-4">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <ListChecks className="w-4 h-4 text-primary" />
+                                    <span className="text-xs font-semibold">Task List</span>
+                                  </div>
+                                  <span className="text-base font-bold text-primary">{tsPct}%</span>
+                                </div>
+                                <p className="text-xs text-muted-foreground mb-3">{tsDone}/{ts?.total ?? 0} tasks done</p>
+                                <div className="w-full h-1.5 bg-muted/40 rounded-full mb-2">
+                                  <div className="h-full bg-primary rounded-full" style={{ width: `${tsPct}%` }} />
+                                </div>
+                                <div className="flex flex-wrap gap-2 text-[10px] mb-3">
+                                  <span className="text-emerald-400 font-semibold">{ts?.completed ?? 0} Done</span>
+                                  <span className="text-amber-400 font-semibold">{ts?.inProgress ?? 0} In Prog</span>
+                                  <span className="text-red-400 font-semibold">{ts?.blocked ?? 0} Blocked</span>
+                                  <span className="text-muted-foreground">{ts ? (ts.total - tsDone - (ts.inProgress ?? 0) - (ts.blocked ?? 0) - ts.notApplicable) : 0} Open</span>
+                                </div>
+                                <button
+                                  onClick={() => setLocation(`/org/${org.slug}/implement`)}
+                                  className="w-full text-xs py-1.5 px-3 rounded border border-primary/30 text-primary hover:bg-primary/10 transition-colors text-center"
+                                >
+                                  {tsPct === 100 ? "View" : tsDone === 0 ? "Start" : "Continue"}
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Files */}
+                            {orgMetrics?.files && orgMetrics.files.length > 0 && (
+                              <div>
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Files</p>
+                                <div className="space-y-1 max-h-40 overflow-y-auto">
+                                  {orgMetrics.files.map((f: any) => (
+                                    <a
+                                      key={f.id}
+                                      href={f.fileUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-2 px-3 py-2 rounded border border-border/40 hover:bg-muted/30 transition-colors group"
+                                    >
+                                      <Download className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary flex-shrink-0 transition-colors" />
+                                      <span className="text-xs truncate flex-1">{f.fileName}</span>
+                                    </a>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </Card>
+                    );
+                  })
+                )}
+              </div>
+            ) : (
+            /* Platform Admin: existing table view */
             <Card className="card-elevated overflow-hidden">
               <CardContent className="p-0">
                 <table className="w-full border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
                   <colgroup>
-                    <col style={{ width: isPlatformAdmin ? '22%' : '28%' }} />
-                    {isPlatformAdmin && <col style={{ width: '12%' }} />}
+                    <col style={{ width: '22%' }} />
+                    <col style={{ width: '12%' }} />
                     <col style={{ width: '18%' }} />
                     <col style={{ width: '16%' }} />
                     <col style={{ width: '16%' }} />
@@ -1133,7 +1313,7 @@ export default function PlatformAdmin() {
                   <thead>
                     <tr className="border-b border-border/40 bg-muted/20">
                       <th className="text-left px-4 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Organization</th>
-                      {isPlatformAdmin && <th className="text-left px-3 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Partner</th>}
+                      <th className="text-left px-3 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Partner</th>
                       <th className="text-center px-2 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Questionnaire</th>
                       <th className="text-center px-2 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Testing</th>
                       <th className="text-center px-2 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Task List</th>
@@ -1144,7 +1324,7 @@ export default function PlatformAdmin() {
                   <tbody>
                     {filteredActiveOrgs.length === 0 ? (
                       <tr>
-                        <td colSpan={isPlatformAdmin ? 7 : 6} className="text-center py-10 text-muted-foreground text-xs italic">
+                        <td colSpan={7} className="text-center py-10 text-muted-foreground text-xs italic">
                           {activeOrgs.length === 0 ? "No active organizations" : "No organizations match the current filter"}
                         </td>
                       </tr>
@@ -1159,12 +1339,14 @@ export default function PlatformAdmin() {
                         const userCount = orgMetrics?.userCount || 0;
                         const questionnaireComplete = sectionsComplete === totalSections;
                         const qLabel = sectionsComplete === 0 ? "Start" : questionnaireComplete ? "View" : "Continue";
-                        const testingTotal = 4;
-                        const testingComplete = 0;
-                        const testingLabel = testingComplete === 0 ? "Start" : testingComplete === testingTotal ? "View" : "Continue";
-                        const implTotal = 5;
-                        const implComplete = 0;
-                        const implLabel = implComplete === 0 ? "Start" : implComplete === implTotal ? "View" : "Continue";
+                        const vs = orgMetrics?.validationStats;
+                        const vsPass = vs?.pass ?? 0;
+                        const vsTotal = vs?.total ?? 28;
+                        const testingLabel = vsPass === 0 ? "Start" : vsPass === vsTotal ? "View" : "Continue";
+                        const ts = orgMetrics?.taskStats;
+                        const tsDone = ts?.completed ?? 0;
+                        const tsTotal = ts?.total ?? 0;
+                        const implLabel = tsDone === 0 ? "Start" : tsDone === tsTotal ? "View" : "Continue";
 
                         // Helper to render a compact workflow cell
                         const WorkflowCell = ({ label, done, total, href }: { label: string; done: number; total: number; href: string }) => (
@@ -1188,12 +1370,10 @@ export default function PlatformAdmin() {
                                 {org.name}
                               </button>
                             </td>
-                            {isPlatformAdmin && (
-                              <td className="px-3 py-1.5 text-xs text-muted-foreground truncate">{partnerName}</td>
-                            )}
+                            <td className="px-3 py-1.5 text-xs text-muted-foreground truncate">{partnerName}</td>
                             <td className="px-1 py-1"><WorkflowCell label={qLabel} done={sectionsComplete} total={totalSections} href={`/org/${org.slug}/intake`} /></td>
-                            <td className="px-1 py-1"><WorkflowCell label={testingLabel} done={testingComplete} total={testingTotal} href={`/org/${org.slug}/validation`} /></td>
-                            <td className="px-1 py-1"><WorkflowCell label={implLabel} done={implComplete} total={implTotal} href={`/org/${org.slug}/implement`} /></td>
+                            <td className="px-1 py-1"><WorkflowCell label={testingLabel} done={vsPass} total={vsTotal} href={`/org/${org.slug}/validation`} /></td>
+                            <td className="px-1 py-1"><WorkflowCell label={implLabel} done={tsDone} total={tsTotal} href={`/org/${org.slug}/implement`} /></td>
                             <td className="px-2 py-1.5 text-center text-xs text-muted-foreground">{filesCount}</td>
                             <td className="px-2 py-1.5 text-center text-xs text-muted-foreground">{userCount}</td>
                           </tr>
@@ -1204,6 +1384,7 @@ export default function PlatformAdmin() {
                 </table>
               </CardContent>
             </Card>
+            )}
           </>
         )}
 
