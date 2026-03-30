@@ -353,7 +353,22 @@ export default function PartnerAdmin({ partnerName, allowedDomain }: PartnerAdmi
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-muted-foreground">Progress:</span>
-                            <span className="font-semibold text-primary">{orgMetrics.completionPercent}%</span>
+                            <span className="font-semibold text-primary">{(() => {
+                              const sp = orgMetrics.sectionProgress || {} as Record<string, {completed: number; total: number}>;
+                              const spVals = Object.values(sp) as Array<{completed: number; total: number}>;
+                              const secComplete = spVals.filter(s => s.completed === s.total && s.total > 0).length;
+                              const secTotal = spVals.length || 6;
+                              const qP = secTotal > 0 ? (secComplete / secTotal) * 100 : 0;
+                              const v = orgMetrics.validationStats;
+                              const vPass = v?.pass ?? 0;
+                              const vTot = v ? (v.total - (v.na ?? 0)) : 0;
+                              const vP = vTot > 0 ? (vPass / vTot) * 100 : 0;
+                              const t = orgMetrics.taskStats;
+                              const tDone = t?.completed ?? 0;
+                              const tTot = t ? (t.total - (t.notApplicable ?? 0)) : 0;
+                              const tP = tTot > 0 ? (tDone / tTot) * 100 : 0;
+                              return Math.round(qP * 0.4 + vP * 0.3 + tP * 0.3);
+                            })()}%</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <FileText className="w-4 h-4 text-muted-foreground" />

@@ -1140,12 +1140,12 @@ export default function PlatformAdmin() {
                     const vsPass = vs?.pass ?? 0;
                     const vsTotal = vs ? (vs.total - vs.na) : 0;
                     const vsPct = vsTotal > 0 ? Math.round((vsPass / vsTotal) * 100) : 0;
-                    const overallPct = orgMetrics?.completionPercent ?? 0;
+                    const overallPct = Math.round(qPct * 0.4 + vsPct * 0.3 + tsPct * 0.3);
                     const filesCount = orgMetrics?.files.length ?? 0;
                     const isExpanded = expandedSiteIds.has(org.id);
 
                     return (
-                      <Card key={org.id} className="card-elevated overflow-hidden">
+                      <Card key={org.id} className="card-elevated overflow-hidden border-border/60 bg-card/80">
                         {/* Collapsible header */}
                         <button
                           onClick={() => setExpandedSiteIds(prev => {
@@ -1153,7 +1153,7 @@ export default function PlatformAdmin() {
                             next.has(org.id) ? next.delete(org.id) : next.add(org.id);
                             return next;
                           })}
-                          className="w-full px-5 py-4 flex items-center justify-between hover:bg-muted/30 transition-colors"
+                          className="w-full px-5 py-4 flex items-center justify-between hover:bg-muted/50 transition-colors bg-muted/15"
                         >
                           <div className="flex items-center gap-4 min-w-0">
                             <span className="font-semibold text-base truncate">{org.name}</span>
@@ -1177,14 +1177,14 @@ export default function PlatformAdmin() {
 
                         {/* Expanded mini dashboard */}
                         {isExpanded && (
-                          <div className="border-t border-border/40 px-5 py-5 space-y-5">
+                          <div className="border-t-2 border-primary/20 px-5 py-5 space-y-5 bg-background/60">
                             {/* Overall progress bar */}
                             <div>
                               <div className="flex items-center justify-between mb-1.5">
                                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Implementation Progress</span>
                                 <span className="text-sm font-bold text-primary">{overallPct}%</span>
                               </div>
-                              <div className="w-full h-2 bg-muted/40 rounded-full overflow-hidden">
+                              <div className="w-full h-2 bg-muted/60 rounded-full overflow-hidden">
                                 <div
                                   className="h-full bg-primary rounded-full transition-all"
                                   style={{ width: `${overallPct}%` }}
@@ -1195,7 +1195,7 @@ export default function PlatformAdmin() {
                             {/* Three mini stat columns */}
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                               {/* Questionnaire */}
-                              <div className="rounded-lg border border-border/60 bg-muted/10 p-4">
+                              <div className="rounded-lg border border-border bg-muted/30 p-4">
                                 <div className="flex items-center justify-between mb-2">
                                   <div className="flex items-center gap-2">
                                     <ClipboardList className="w-4 h-4 text-primary" />
@@ -1216,7 +1216,7 @@ export default function PlatformAdmin() {
                               </div>
 
                               {/* Testing */}
-                              <div className="rounded-lg border border-border/60 bg-muted/10 p-4">
+                              <div className="rounded-lg border border-border bg-muted/30 p-4">
                                 <div className="flex items-center justify-between mb-2">
                                   <div className="flex items-center gap-2">
                                     <TestTube2 className="w-4 h-4 text-primary" />
@@ -1242,7 +1242,7 @@ export default function PlatformAdmin() {
                               </div>
 
                               {/* Task List */}
-                              <div className="rounded-lg border border-border/60 bg-muted/10 p-4">
+                              <div className="rounded-lg border border-border bg-muted/30 p-4">
                                 <div className="flex items-center justify-between mb-2">
                                   <div className="flex items-center gap-2">
                                     <ListChecks className="w-4 h-4 text-primary" />
