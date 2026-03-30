@@ -2297,3 +2297,8 @@
 - [x] Ensure consistency with Home.tsx weighted progress calculation
 - [x] Improve contrast on collapsible site cards and expanded sections in PlatformAdmin for better visual definition
 - [x] Fix PartnerAdmin to also use weighted formula instead of raw completionPercent
+
+## PlatformAdmin Card Visibility Improvements (Mar 30, 2026)
+- [x] Auto-expand first site card so users see the expandable pattern immediately
+- [x] Make all card borders (border-2), separators, and mini stat column borders much more noticeable
+- [x] Resolve git merge conflicts in PlatformAdmin.tsx (collapsible cards + weighted formula + stronger borders)

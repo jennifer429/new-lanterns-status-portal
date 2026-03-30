@@ -136,6 +136,7 @@ export default function PlatformAdmin() {
   const [dashboardPartnerFilter, setDashboardPartnerFilter] = useState<number | null>(null);
   const [dashboardSiteFilter, setDashboardSiteFilter] = useState<number | null>(null);
   const [expandedSiteIds, setExpandedSiteIds] = useState<Set<number>>(new Set());
+  const [firstExpandDone, setFirstExpandDone] = useState(false);
 
   // Access control: Must be an admin (any admin - platform or partner)
   useEffect(() => {
@@ -880,6 +881,14 @@ export default function PlatformAdmin() {
     return matchesPartner && matchesSite;
   });
   
+  // Auto-expand the first site card so the pattern is obvious
+  useEffect(() => {
+    if (!firstExpandDone && filteredActiveOrgs.length > 0) {
+      setExpandedSiteIds(new Set([filteredActiveOrgs[0].id]));
+      setFirstExpandDone(true);
+    }
+  }, [filteredActiveOrgs, firstExpandDone]);
+
   // Separate active and inactive users based on isActive field
   // isActive: 1 = active, 0 = deactivated (works for all user types including admins)
   const activeUsers = allUsers?.filter(u => u.isActive === 1) || [];
@@ -1118,273 +1127,188 @@ export default function PlatformAdmin() {
               </div>
             </div>
 
-            {/* Partner Admin: collapsible site cards with mini dashboards */}
-            {!isPlatformAdmin ? (
-              <div className="space-y-3">
-                {filteredActiveOrgs.length === 0 ? (
-                  <div className="text-center py-10 text-muted-foreground text-sm italic">
-                    {activeOrgs.length === 0 ? "No active organizations" : "No organizations match the current filter"}
-                  </div>
-                ) : (
-                  filteredActiveOrgs.map(org => {
-                    const orgMetrics = metricsMap[org.id];
-                    const sectionProg = transformSectionProgress(orgMetrics?.sectionProgress);
-                    const sectionsComplete = sectionProg.filter(s => s.progress === 100).length;
-                    const totalSections = sectionProg.length || 6;
-                    const qPct = totalSections > 0 ? Math.round((sectionsComplete / totalSections) * 100) : 0;
-                    const ts = orgMetrics?.taskStats;
-                    const tsDone = ts?.completed ?? 0;
-                    const tsTotal = ts ? (ts.total - ts.notApplicable) : 0;
-                    const tsPct = tsTotal > 0 ? Math.round((tsDone / tsTotal) * 100) : 0;
-                    const vs = orgMetrics?.validationStats;
-                    const vsPass = vs?.pass ?? 0;
-                    const vsTotal = vs ? (vs.total - vs.na) : 0;
-                    const vsPct = vsTotal > 0 ? Math.round((vsPass / vsTotal) * 100) : 0;
-                    const overallPct = Math.round(qPct * 0.4 + vsPct * 0.3 + tsPct * 0.3);
-                    const filesCount = orgMetrics?.files.length ?? 0;
-                    const isExpanded = expandedSiteIds.has(org.id);
+            {/* Collapsible site cards with mini dashboards (all admins) */}
+            <div className="space-y-4">
+              {filteredActiveOrgs.length === 0 ? (
+                <div className="text-center py-10 text-muted-foreground text-sm italic">
+                  {activeOrgs.length === 0 ? "No active organizations" : "No organizations match the current filter"}
+                </div>
+              ) : (
+                filteredActiveOrgs.map(org => {
+                  const orgMetrics = metricsMap[org.id];
+                  const partnerName = org.clientId ? clientMap[org.clientId] : "—";
+                  const sectionProg = transformSectionProgress(orgMetrics?.sectionProgress);
+                  const sectionsComplete = sectionProg.filter(s => s.progress === 100).length;
+                  const totalSections = sectionProg.length || 6;
+                  const qPct = totalSections > 0 ? Math.round((sectionsComplete / totalSections) * 100) : 0;
+                  const ts = (orgMetrics as any)?.taskStats;
+                  const tsDone = ts?.completed ?? 0;
+                  const tsTotal = ts ? (ts.total - (ts.notApplicable ?? 0)) : 0;
+                  const tsPct = tsTotal > 0 ? Math.round((tsDone / tsTotal) * 100) : 0;
+                  const vs = (orgMetrics as any)?.validationStats;
+                  const vsPass = vs?.pass ?? 0;
+                  const vsTotal = vs ? (vs.total - (vs.na ?? 0)) : 0;
+                  const vsPct = vsTotal > 0 ? Math.round((vsPass / vsTotal) * 100) : 0;
+                  const overallPct = Math.round(qPct * 0.4 + vsPct * 0.3 + tsPct * 0.3);
+                  const filesCount = orgMetrics?.files.length ?? 0;
+                  const userCount = orgMetrics?.userCount ?? 0;
+                  const isExpanded = expandedSiteIds.has(org.id);
 
-                    return (
-                      <Card key={org.id} className="card-elevated overflow-hidden border-border/60 bg-card/80">
-                        {/* Collapsible header */}
-                        <button
-                          onClick={() => setExpandedSiteIds(prev => {
-                            const next = new Set(prev);
-                            next.has(org.id) ? next.delete(org.id) : next.add(org.id);
-                            return next;
-                          })}
-                          className="w-full px-5 py-4 flex items-center justify-between hover:bg-muted/50 transition-colors bg-muted/15"
-                        >
-                          <div className="flex items-center gap-4 min-w-0">
-                            <span className="font-semibold text-base truncate">{org.name}</span>
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              <Badge variant="outline" className={cn(
-                                "text-xs font-semibold",
-                                overallPct === 100 ? "border-emerald-500/40 text-emerald-400" : "border-primary/40 text-primary"
-                              )}>
-                                {overallPct}% overall
-                              </Badge>
-                              <span className="text-xs text-muted-foreground hidden sm:inline">
-                                Q: {sectionsComplete}/{totalSections} · Tests: {vsPass}/{vs?.total ?? 28} · Tasks: {tsDone}/{ts?.total ?? 0}
-                              </span>
-                              {filesCount > 0 && (
-                                <Badge variant="secondary" className="text-xs">{filesCount} files</Badge>
-                              )}
-                            </div>
-                          </div>
-                          <ChevronDown className={cn("w-4 h-4 text-muted-foreground flex-shrink-0 transition-transform duration-200", isExpanded && "rotate-180")} />
-                        </button>
-
-                        {/* Expanded mini dashboard */}
-                        {isExpanded && (
-                          <div className="border-t-2 border-primary/20 px-5 py-5 space-y-5 bg-background/60">
-                            {/* Overall progress bar */}
-                            <div>
-                              <div className="flex items-center justify-between mb-1.5">
-                                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Implementation Progress</span>
-                                <span className="text-sm font-bold text-primary">{overallPct}%</span>
-                              </div>
-                              <div className="w-full h-2 bg-muted/60 rounded-full overflow-hidden">
-                                <div
-                                  className="h-full bg-primary rounded-full transition-all"
-                                  style={{ width: `${overallPct}%` }}
-                                />
-                              </div>
-                            </div>
-
-                            {/* Three mini stat columns */}
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                              {/* Questionnaire */}
-                              <div className="rounded-lg border border-border bg-muted/30 p-4">
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="flex items-center gap-2">
-                                    <ClipboardList className="w-4 h-4 text-primary" />
-                                    <span className="text-xs font-semibold">Questionnaire</span>
-                                  </div>
-                                  <span className="text-base font-bold text-primary">{qPct}%</span>
-                                </div>
-                                <p className="text-xs text-muted-foreground mb-3">{sectionsComplete}/{totalSections} sections complete</p>
-                                <div className="w-full h-1.5 bg-muted/40 rounded-full mb-3">
-                                  <div className="h-full bg-primary rounded-full" style={{ width: `${qPct}%` }} />
-                                </div>
-                                <button
-                                  onClick={() => setLocation(`/org/${org.slug}/intake`)}
-                                  className="w-full text-xs py-1.5 px-3 rounded border border-primary/30 text-primary hover:bg-primary/10 transition-colors text-center"
-                                >
-                                  {qPct === 100 ? "View" : qPct === 0 ? "Start" : "Continue"}
-                                </button>
-                              </div>
-
-                              {/* Testing */}
-                              <div className="rounded-lg border border-border bg-muted/30 p-4">
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="flex items-center gap-2">
-                                    <TestTube2 className="w-4 h-4 text-primary" />
-                                    <span className="text-xs font-semibold">Testing</span>
-                                  </div>
-                                  <span className="text-base font-bold text-primary">{vsPct}%</span>
-                                </div>
-                                <p className="text-xs text-muted-foreground mb-3">{vsPass}/{vs?.total ?? 28} tests passed</p>
-                                <div className="w-full h-1.5 bg-muted/40 rounded-full mb-2">
-                                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${vsPct}%` }} />
-                                </div>
-                                <div className="flex gap-3 text-[10px] mb-3">
-                                  <span className="text-emerald-400 font-semibold">{vsPass} Pass</span>
-                                  <span className="text-red-400 font-semibold">{vs?.fail ?? 0} Fail</span>
-                                  <span className="text-muted-foreground">{vs?.notTested ?? (vs?.total ?? 28)} Not Tested</span>
-                                </div>
-                                <button
-                                  onClick={() => setLocation(`/org/${org.slug}/validation`)}
-                                  className="w-full text-xs py-1.5 px-3 rounded border border-primary/30 text-primary hover:bg-primary/10 transition-colors text-center"
-                                >
-                                  {vsPct === 100 ? "View" : vsPass === 0 ? "Start" : "Continue"}
-                                </button>
-                              </div>
-
-                              {/* Task List */}
-                              <div className="rounded-lg border border-border bg-muted/30 p-4">
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="flex items-center gap-2">
-                                    <ListChecks className="w-4 h-4 text-primary" />
-                                    <span className="text-xs font-semibold">Task List</span>
-                                  </div>
-                                  <span className="text-base font-bold text-primary">{tsPct}%</span>
-                                </div>
-                                <p className="text-xs text-muted-foreground mb-3">{tsDone}/{ts?.total ?? 0} tasks done</p>
-                                <div className="w-full h-1.5 bg-muted/40 rounded-full mb-2">
-                                  <div className="h-full bg-primary rounded-full" style={{ width: `${tsPct}%` }} />
-                                </div>
-                                <div className="flex flex-wrap gap-2 text-[10px] mb-3">
-                                  <span className="text-emerald-400 font-semibold">{ts?.completed ?? 0} Done</span>
-                                  <span className="text-amber-400 font-semibold">{ts?.inProgress ?? 0} In Prog</span>
-                                  <span className="text-red-400 font-semibold">{ts?.blocked ?? 0} Blocked</span>
-                                  <span className="text-muted-foreground">{ts ? (ts.total - tsDone - (ts.inProgress ?? 0) - (ts.blocked ?? 0) - ts.notApplicable) : 0} Open</span>
-                                </div>
-                                <button
-                                  onClick={() => setLocation(`/org/${org.slug}/implement`)}
-                                  className="w-full text-xs py-1.5 px-3 rounded border border-primary/30 text-primary hover:bg-primary/10 transition-colors text-center"
-                                >
-                                  {tsPct === 100 ? "View" : tsDone === 0 ? "Start" : "Continue"}
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* Files */}
-                            {orgMetrics?.files && orgMetrics.files.length > 0 && (
-                              <div>
-                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Files</p>
-                                <div className="space-y-1 max-h-40 overflow-y-auto">
-                                  {orgMetrics.files.map((f: any) => (
-                                    <a
-                                      key={f.id}
-                                      href={f.fileUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="flex items-center gap-2 px-3 py-2 rounded border border-border/40 hover:bg-muted/30 transition-colors group"
-                                    >
-                                      <Download className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary flex-shrink-0 transition-colors" />
-                                      <span className="text-xs truncate flex-1">{f.fileName}</span>
-                                    </a>
-                                  ))}
-                                </div>
-                              </div>
+                  return (
+                    <Card key={org.id} className="overflow-hidden border-2 border-border/80 bg-card">
+                      {/* Collapsible header */}
+                      <button
+                        onClick={() => setExpandedSiteIds(prev => {
+                          const next = new Set(prev);
+                          next.has(org.id) ? next.delete(org.id) : next.add(org.id);
+                          return next;
+                        })}
+                        className="w-full px-5 py-4 flex items-center justify-between hover:bg-muted/40 transition-colors bg-muted/20"
+                      >
+                        <div className="flex items-center gap-4 min-w-0">
+                          <span className="font-semibold text-base truncate">{org.name}</span>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <Badge variant="outline" className={cn(
+                              "text-xs font-semibold border-2",
+                              overallPct === 100 ? "border-emerald-500/60 text-emerald-400" : "border-primary/60 text-primary"
+                            )}>
+                              {overallPct}% overall
+                            </Badge>
+                            <span className="text-xs text-muted-foreground hidden sm:inline">
+                              Q: {sectionsComplete}/{totalSections} · Tests: {vsPass}/{vs?.total ?? 28} · Tasks: {tsDone}/{ts?.total ?? 0}
+                            </span>
+                            {isPlatformAdmin && (
+                              <span className="text-xs text-muted-foreground hidden md:inline">· {partnerName}</span>
+                            )}
+                            {filesCount > 0 && (
+                              <Badge variant="secondary" className="text-xs">{filesCount} files</Badge>
                             )}
                           </div>
-                        )}
-                      </Card>
-                    );
-                  })
-                )}
-              </div>
-            ) : (
-            /* Platform Admin: existing table view */
-            <Card className="card-elevated overflow-hidden">
-              <CardContent className="p-0">
-                <table className="w-full border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
-                  <colgroup>
-                    <col style={{ width: '22%' }} />
-                    <col style={{ width: '12%' }} />
-                    <col style={{ width: '18%' }} />
-                    <col style={{ width: '16%' }} />
-                    <col style={{ width: '16%' }} />
-                    <col style={{ width: '8%'  }} />
-                    <col style={{ width: '8%'  }} />
-                  </colgroup>
-                  <thead>
-                    <tr className="border-b border-border/40 bg-muted/20">
-                      <th className="text-left px-4 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Organization</th>
-                      <th className="text-left px-3 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Partner</th>
-                      <th className="text-center px-2 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Questionnaire</th>
-                      <th className="text-center px-2 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Testing</th>
-                      <th className="text-center px-2 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Task List</th>
-                      <th className="text-center px-2 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Files</th>
-                      <th className="text-center px-2 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Users</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredActiveOrgs.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="text-center py-10 text-muted-foreground text-xs italic">
-                          {activeOrgs.length === 0 ? "No active organizations" : "No organizations match the current filter"}
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredActiveOrgs.map(org => {
-                        const orgMetrics = metricsMap[org.id];
-                        const partnerName = org.clientId ? clientMap[org.clientId] : "—";
-                        const sectionProgress = transformSectionProgress(orgMetrics?.sectionProgress);
-                        const sectionsComplete = sectionProgress.filter(s => s.progress === 100).length;
-                        const totalSections = sectionProgress.length || 6;
-                        const filesCount = orgMetrics?.files.length || 0;
-                        const userCount = orgMetrics?.userCount || 0;
-                        const questionnaireComplete = sectionsComplete === totalSections;
-                        const qLabel = sectionsComplete === 0 ? "Start" : questionnaireComplete ? "View" : "Continue";
-                        const vs = orgMetrics?.validationStats;
-                        const vsPass = vs?.pass ?? 0;
-                        const vsTotal = vs?.total ?? 28;
-                        const testingLabel = vsPass === 0 ? "Start" : vsPass === vsTotal ? "View" : "Continue";
-                        const ts = orgMetrics?.taskStats;
-                        const tsDone = ts?.completed ?? 0;
-                        const tsTotal = ts?.total ?? 0;
-                        const implLabel = tsDone === 0 ? "Start" : tsDone === tsTotal ? "View" : "Continue";
+                        </div>
+                        <ChevronDown className={cn("w-5 h-5 text-muted-foreground flex-shrink-0 transition-transform duration-200", isExpanded && "rotate-180")} />
+                      </button>
 
-                        // Helper to render a compact workflow cell
-                        const WorkflowCell = ({ label, done, total, href }: { label: string; done: number; total: number; href: string }) => (
-                          <button onClick={() => setLocation(href)}
-                            className="flex items-center justify-center gap-1.5 w-full px-2 py-1 rounded hover:bg-muted/40 transition-colors group">
-                            <span className={cn(
-                              "shrink-0 px-1.5 py-0 rounded text-[10px] font-semibold leading-[18px] border",
-                              label === "Start"    && "badge-status-start",
-                              label === "Continue" && "bg-primary/20 text-primary border-primary/30",
-                              label === "View"     && "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
-                            )}>{label}</span>
-                            <span className="text-muted-foreground text-[10px] whitespace-nowrap">{done}/{total}</span>
-                          </button>
-                        );
+                      {/* Expanded mini dashboard */}
+                      {isExpanded && (
+                        <div className="border-t-2 border-primary/40 px-5 py-5 space-y-5 bg-background">
+                          {/* Overall progress bar */}
+                          <div>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Implementation Progress</span>
+                              <span className="text-sm font-bold text-primary">{overallPct}%</span>
+                            </div>
+                            <div className="w-full h-2.5 bg-muted rounded-full overflow-hidden border border-border/60">
+                              <div
+                                className="h-full bg-primary rounded-full transition-all"
+                                style={{ width: `${overallPct}%` }}
+                              />
+                            </div>
+                          </div>
 
-                        return (
-                          <tr key={org.id} className="border-b border-border/20 hover:bg-muted/20 transition-colors">
-                            <td className="px-4 py-1.5">
-                              <button onClick={() => setLocation(`/org/${org.slug}`)}
-                                className="text-left text-xs font-semibold text-primary hover:underline hover:text-primary/80 transition-colors truncate w-full block">
-                                {org.name}
+                          {/* Three mini stat columns */}
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            {/* Questionnaire */}
+                            <div className="rounded-lg border-2 border-border bg-muted/40 p-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <ClipboardList className="w-4 h-4 text-primary" />
+                                  <span className="text-xs font-semibold">Questionnaire</span>
+                                </div>
+                                <span className="text-base font-bold text-primary">{qPct}%</span>
+                              </div>
+                              <p className="text-xs text-muted-foreground mb-3">{sectionsComplete}/{totalSections} sections complete</p>
+                              <div className="w-full h-1.5 bg-muted rounded-full mb-3 border border-border/40">
+                                <div className="h-full bg-primary rounded-full" style={{ width: `${qPct}%` }} />
+                              </div>
+                              <button
+                                onClick={() => setLocation(`/org/${org.slug}/intake`)}
+                                className="w-full text-xs py-1.5 px-3 rounded border-2 border-primary/40 text-primary hover:bg-primary/10 transition-colors text-center font-medium"
+                              >
+                                {qPct === 100 ? "View" : qPct === 0 ? "Start" : "Continue"}
                               </button>
-                            </td>
-                            <td className="px-3 py-1.5 text-xs text-muted-foreground truncate">{partnerName}</td>
-                            <td className="px-1 py-1"><WorkflowCell label={qLabel} done={sectionsComplete} total={totalSections} href={`/org/${org.slug}/intake`} /></td>
-                            <td className="px-1 py-1"><WorkflowCell label={testingLabel} done={vsPass} total={vsTotal} href={`/org/${org.slug}/validation`} /></td>
-                            <td className="px-1 py-1"><WorkflowCell label={implLabel} done={tsDone} total={tsTotal} href={`/org/${org.slug}/implement`} /></td>
-                            <td className="px-2 py-1.5 text-center text-xs text-muted-foreground">{filesCount}</td>
-                            <td className="px-2 py-1.5 text-center text-xs text-muted-foreground">{userCount}</td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </CardContent>
-            </Card>
-            )}
+                            </div>
+
+                            {/* Testing */}
+                            <div className="rounded-lg border-2 border-border bg-muted/40 p-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <TestTube2 className="w-4 h-4 text-primary" />
+                                  <span className="text-xs font-semibold">Testing</span>
+                                </div>
+                                <span className="text-base font-bold text-primary">{vsPct}%</span>
+                              </div>
+                              <p className="text-xs text-muted-foreground mb-3">{vsPass}/{vs?.total ?? 28} tests passed</p>
+                              <div className="w-full h-1.5 bg-muted rounded-full mb-2 border border-border/40">
+                                <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${vsPct}%` }} />
+                              </div>
+                              <div className="flex gap-3 text-[10px] mb-3">
+                                <span className="text-emerald-400 font-semibold">{vsPass} Pass</span>
+                                <span className="text-red-400 font-semibold">{vs?.fail ?? 0} Fail</span>
+                                <span className="text-muted-foreground">{vs?.notTested ?? (vs?.total ?? 28)} Not Tested</span>
+                              </div>
+                              <button
+                                onClick={() => setLocation(`/org/${org.slug}/validation`)}
+                                className="w-full text-xs py-1.5 px-3 rounded border-2 border-primary/40 text-primary hover:bg-primary/10 transition-colors text-center font-medium"
+                              >
+                                {vsPct === 100 ? "View" : vsPass === 0 ? "Start" : "Continue"}
+                              </button>
+                            </div>
+
+                            {/* Task List */}
+                            <div className="rounded-lg border-2 border-border bg-muted/40 p-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <ListChecks className="w-4 h-4 text-primary" />
+                                  <span className="text-xs font-semibold">Task List</span>
+                                </div>
+                                <span className="text-base font-bold text-primary">{tsPct}%</span>
+                              </div>
+                              <p className="text-xs text-muted-foreground mb-3">{tsDone}/{ts?.total ?? 0} tasks done</p>
+                              <div className="w-full h-1.5 bg-muted rounded-full mb-2 border border-border/40">
+                                <div className="h-full bg-primary rounded-full" style={{ width: `${tsPct}%` }} />
+                              </div>
+                              <div className="flex flex-wrap gap-2 text-[10px] mb-3">
+                                <span className="text-emerald-400 font-semibold">{ts?.completed ?? 0} Done</span>
+                                <span className="text-amber-400 font-semibold">{ts?.inProgress ?? 0} In Prog</span>
+                                <span className="text-red-400 font-semibold">{ts?.blocked ?? 0} Blocked</span>
+                                <span className="text-muted-foreground">{ts ? (ts.total - tsDone - (ts.inProgress ?? 0) - (ts.blocked ?? 0) - (ts.notApplicable ?? 0)) : 0} Open</span>
+                              </div>
+                              <button
+                                onClick={() => setLocation(`/org/${org.slug}/implement`)}
+                                className="w-full text-xs py-1.5 px-3 rounded border-2 border-primary/40 text-primary hover:bg-primary/10 transition-colors text-center font-medium"
+                              >
+                                {tsPct === 100 ? "View" : tsDone === 0 ? "Start" : "Continue"}
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Files */}
+                          {orgMetrics?.files && orgMetrics.files.length > 0 && (
+                            <div>
+                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Files</p>
+                              <div className="space-y-1 max-h-40 overflow-y-auto">
+                                {orgMetrics.files.map((f: any) => (
+                                  <a
+                                    key={f.id}
+                                    href={f.fileUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 px-3 py-2 rounded border border-border/60 hover:bg-muted/30 transition-colors group"
+                                  >
+                                    <Download className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary flex-shrink-0 transition-colors" />
+                                    <span className="text-xs truncate flex-1">{f.fileName}</span>
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </Card>
+                  );
+                })
+              )}
+            </div>
           </>
         )}
 
