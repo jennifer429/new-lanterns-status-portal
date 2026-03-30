@@ -136,7 +136,7 @@ export default function PlatformAdmin() {
   const [dashboardPartnerFilter, setDashboardPartnerFilter] = useState<number | null>(null);
   const [dashboardSiteFilter, setDashboardSiteFilter] = useState<number | null>(null);
   const [expandedSiteIds, setExpandedSiteIds] = useState<Set<number>>(new Set());
-  const [firstExpandDone, setFirstExpandDone] = useState(false);
+  const firstExpandDoneRef = useRef(false);
 
   // Access control: Must be an admin (any admin - platform or partner)
   useEffect(() => {
@@ -882,12 +882,13 @@ export default function PlatformAdmin() {
   });
   
   // Auto-expand the first site card so the pattern is obvious
+  const firstOrgId = filteredActiveOrgs[0]?.id;
   useEffect(() => {
-    if (!firstExpandDone && filteredActiveOrgs.length > 0) {
-      setExpandedSiteIds(new Set([filteredActiveOrgs[0].id]));
-      setFirstExpandDone(true);
+    if (!firstExpandDoneRef.current && firstOrgId != null) {
+      setExpandedSiteIds(new Set([firstOrgId]));
+      firstExpandDoneRef.current = true;
     }
-  }, [filteredActiveOrgs, firstExpandDone]);
+  }, [firstOrgId]);
 
   // Separate active and inactive users based on isActive field
   // isActive: 1 = active, 0 = deactivated (works for all user types including admins)

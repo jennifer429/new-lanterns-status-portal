@@ -2302,3 +2302,6 @@
 - [x] Auto-expand first site card so users see the expandable pattern immediately
 - [x] Make all card borders (border-2), separators, and mini stat column borders much more noticeable
 - [x] Resolve git merge conflicts in PlatformAdmin.tsx (collapsible cards + weighted formula + stronger borders)
+
+## Fix React Error #310 - Too Many Re-renders (Mar 30, 2026)
+- [x] Fix infinite re-render loop in PlatformAdmin auto-expand useEffect (used useRef + stable firstOrgId dependency)
