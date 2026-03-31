@@ -1,11 +1,14 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Plus, ExternalLink, Users, FileText, Download } from "lucide-react";
+import { Building2, Plus, ExternalLink, Users, FileText, Download, FolderOpen, Upload, X, Loader2, ChevronDown } from "lucide-react";
+import { UploadedFilesList } from "@/components/UploadedFileRow";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface PartnerAdminProps {
   partnerName: string; // "SRV" or "RadOne"
@@ -20,6 +23,13 @@ export default function PartnerAdmin({ partnerName, allowedDomain }: PartnerAdmi
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
 
+  // Notes & Files state
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [notesFiles, setNotesFiles] = useState<File[]>([]);
+  const [notesLabel, setNotesLabel] = useState("Call Notes");
+  const [notesCustomLabel, setNotesCustomLabel] = useState("");
+  const [notesUploading, setNotesUploading] = useState(false);
+
   // Access control: Partner admins must have a clientId
   useEffect(() => {
     if (!authLoading && (!user || !user.clientId)) {
@@ -30,6 +40,64 @@ export default function PartnerAdmin({ partnerName, allowedDomain }: PartnerAdmi
   // Get organizations and metrics filtered by user's clientId
   const { data: orgs, isLoading } = trpc.admin.getAllOrganizations.useQuery();
   const { data: metrics } = trpc.admin.getAdminSummary.useQuery();
+
+  // Partner-level notes
+  const { data: partnerNotes = [], refetch: refetchNotes } = trpc.notes.listByClient.useQuery(
+    { clientId: user?.clientId! },
+    { enabled: !!user?.clientId }
+  );
+
+  const uploadNoteMutation = trpc.notes.uploadForClient.useMutation({
+    onSuccess: () => { refetchNotes(); },
+  });
+
+  const deleteNoteMutation = trpc.notes.delete.useMutation({
+    onSuccess: () => { refetchNotes(); },
+  });
+
+  const handleNotesFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []).filter((f) => {
+      if (f.size > 25 * 1024 * 1024) {
+        toast.error(`${f.name} exceeds 25MB limit`);
+        return false;
+      }
+      return true;
+    });
+    setNotesFiles((prev) => [...prev, ...files]);
+    e.target.value = "";
+  };
+
+  const handleNotesUpload = async () => {
+    if (notesFiles.length === 0 || !user?.clientId) return;
+    const effectiveLabel = notesLabel === "Other" ? (notesCustomLabel.trim() || "Other") : notesLabel;
+    setNotesUploading(true);
+    let ok = 0;
+    for (const file of notesFiles) {
+      try {
+        const base64 = await new Promise<string>((res, rej) => {
+          const r = new FileReader();
+          r.onload = (e) => res((e.target!.result as string).split(",")[1]);
+          r.onerror = rej;
+          r.readAsDataURL(file);
+        });
+        await uploadNoteMutation.mutateAsync({
+          clientId: user.clientId!,
+          label: effectiveLabel,
+          fileName: file.name,
+          fileData: base64,
+          mimeType: file.type || "application/octet-stream",
+        });
+        ok++;
+      } catch {
+        toast.error(`Failed to upload ${file.name}`);
+      }
+    }
+    setNotesUploading(false);
+    if (ok > 0) {
+      toast.success(ok === 1 ? "File uploaded!" : `${ok} files uploaded!`);
+      setNotesFiles([]);
+    }
+  };
 
   // Create metrics map for quick lookup
   const metricsMap = metrics?.reduce((acc, m) => {
@@ -96,6 +164,145 @@ export default function PartnerAdmin({ partnerName, allowedDomain }: PartnerAdmi
           </CardContent>
         </Card>
 
+        {/* Notes & Files */}
+        <Card className="mb-8 overflow-hidden">
+          <button
+            onClick={() => setNotesOpen(!notesOpen)}
+            className="w-full px-6 py-4 flex items-center justify-between hover:bg-accent/30 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <FolderOpen className="w-4 h-4 text-primary" />
+              </div>
+              <div className="text-left">
+                <span className="text-sm font-semibold">Notes & Files</span>
+                <p className="text-xs text-muted-foreground mt-0.5">Upload call notes, templates, and labeled documents for your team</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {partnerNotes.length > 0 ? (
+                <Badge variant="outline" className="text-xs border-primary/40 text-primary font-semibold">
+                  {partnerNotes.length} file{partnerNotes.length !== 1 ? "s" : ""}
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-xs text-muted-foreground">Upload</Badge>
+              )}
+              <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform duration-200", notesOpen && "rotate-180")} />
+            </div>
+          </button>
+
+          {notesOpen && (
+            <div className="border-t border-border/40 px-6 py-4 space-y-4">
+              {/* Label selector */}
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Label this upload</p>
+                <div className="flex flex-wrap gap-2">
+                  {["Call Notes", "Meeting Notes", "Template", "Action Items", "Reference Doc", "Other"].map((opt) => (
+                    <button
+                      key={opt}
+                      onClick={() => setNotesLabel(opt)}
+                      className={cn(
+                        "px-3 py-1 rounded-full text-xs font-medium border transition-colors",
+                        notesLabel === opt
+                          ? "bg-primary/15 border-primary/50 text-primary"
+                          : "bg-muted/30 border-border/50 text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                      )}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+                {notesLabel === "Other" && (
+                  <input
+                    type="text"
+                    value={notesCustomLabel}
+                    onChange={(e) => setNotesCustomLabel(e.target.value)}
+                    placeholder="Enter a custom label…"
+                    className="w-full px-3 py-2 text-sm rounded-md border border-border bg-muted/20 focus:outline-none focus:ring-1 focus:ring-primary/50"
+                  />
+                )}
+              </div>
+
+              {/* Drop zone */}
+              <label className="block cursor-pointer">
+                <input
+                  type="file"
+                  className="hidden"
+                  multiple
+                  accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.txt,.xlsx,.xls,.mp3,.mp4,.wav,.m4a,.vtt,.srt"
+                  onChange={handleNotesFileSelect}
+                  disabled={notesUploading}
+                />
+                <div className="border-2 border-dashed border-border rounded-lg p-5 flex items-center gap-3 hover:border-primary/50 hover:bg-primary/5 transition-colors">
+                  <Upload className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium">Click to add files</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">PDFs, docs, images, audio, transcripts (max 25MB each)</p>
+                  </div>
+                </div>
+              </label>
+
+              {/* Staged files */}
+              {notesFiles.length > 0 && (
+                <div className="space-y-2">
+                  {notesFiles.map((f, i) => (
+                    <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/30 border border-border/40">
+                      <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                      <span className="text-sm flex-1 truncate">{f.name}</span>
+                      <span className="text-xs text-muted-foreground flex-shrink-0">
+                        {f.size < 1024 * 1024 ? `${(f.size / 1024).toFixed(1)} KB` : `${(f.size / (1024 * 1024)).toFixed(1)} MB`}
+                      </span>
+                      <button
+                        onClick={() => setNotesFiles((prev) => prev.filter((_, j) => j !== i))}
+                        className="text-muted-foreground hover:text-destructive transition-colors"
+                        disabled={notesUploading}
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                  <Button
+                    className="w-full"
+                    onClick={handleNotesUpload}
+                    disabled={notesUploading}
+                  >
+                    {notesUploading ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Uploading...</>
+                    ) : (
+                      <><Upload className="w-4 h-4 mr-2" /> Upload {notesFiles.length} File{notesFiles.length !== 1 ? "s" : ""}</>
+                    )}
+                  </Button>
+                </div>
+              )}
+
+              {/* Uploaded files */}
+              {partnerNotes.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Uploaded Files</p>
+                  <UploadedFilesList
+                    files={partnerNotes.map((f) => ({
+                      id: f.id,
+                      fileName: f.fileName,
+                      fileUrl: f.fileUrl,
+                      fileSize: f.fileSize,
+                      createdAt: f.createdAt,
+                      uploadedBy: f.uploadedBy,
+                      label: f.label,
+                    }))}
+                    onRemove={(noteId) => {
+                      if (window.confirm("Remove this file?")) {
+                        deleteNoteMutation.mutate({ noteId });
+                      }
+                    }}
+                  />
+                </div>
+              ) : notesFiles.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-3">No files uploaded yet. Add call notes, templates, or any supporting documents for your team.</p>
+              ) : null}
+            </div>
+          )}
+        </Card>
+
         {/* Organizations List */}
         <Card>
           <CardHeader>
@@ -146,7 +353,22 @@ export default function PartnerAdmin({ partnerName, allowedDomain }: PartnerAdmi
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-muted-foreground">Progress:</span>
-                            <span className="font-semibold text-primary">{orgMetrics.completionPercent}%</span>
+                            <span className="font-semibold text-primary">{(() => {
+                              const sp = orgMetrics.sectionProgress || {} as Record<string, {completed: number; total: number}>;
+                              const spVals = Object.values(sp) as Array<{completed: number; total: number}>;
+                              const secComplete = spVals.filter(s => s.completed === s.total && s.total > 0).length;
+                              const secTotal = spVals.length || 6;
+                              const qP = secTotal > 0 ? (secComplete / secTotal) * 100 : 0;
+                              const v = orgMetrics.validationStats;
+                              const vPass = v?.pass ?? 0;
+                              const vTot = v ? (v.total - (v.na ?? 0)) : 0;
+                              const vP = vTot > 0 ? (vPass / vTot) * 100 : 0;
+                              const t = orgMetrics.taskStats;
+                              const tDone = t?.completed ?? 0;
+                              const tTot = t ? (t.total - (t.notApplicable ?? 0)) : 0;
+                              const tP = tTot > 0 ? (tDone / tTot) * 100 : 0;
+                              return Math.round(qP * 0.4 + vP * 0.3 + tP * 0.3);
+                            })()}%</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <FileText className="w-4 h-4 text-muted-foreground" />

@@ -2291,3 +2291,13 @@
 
 ## Remove Historic Reports Upload (PHI concern)
 - [x] Remove CF.7 Historic Reports flat file upload from questionnaire (contains PHI)
+
+## Re-apply GitHub PR Changes After Rollback (Mar 31, 2026)
+- [ ] Weighted progress formula in PlatformAdmin (Q 40% + Testing 30% + Tasks 30%)
+- [ ] Weighted progress formula in PartnerAdmin
+- [ ] Collapsible site cards in PlatformAdmin with stable useEffect (no #310 error)
+- [ ] Stronger card borders and contrast
+- [ ] Auto-expand first site card
+- [ ] Notion connectivity fixes (server/notion.ts type cast)
+- [ ] Notes & Files upload feature (org_notes table, routes, UI)
+- [ ] Any other PR changes from 0688aee

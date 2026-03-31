@@ -7,6 +7,7 @@ import { ENV } from "./_core/env";
  */
 
 let notionClient: Client | null = null;
+let connectivityNotionClient: Client | null = null;
 
 export function getNotionClient(): Client | null {
   if (!ENV.notionApiKey || !ENV.notionDatabaseId) {
@@ -19,6 +20,18 @@ export function getNotionClient(): Client | null {
   }
 
   return notionClient;
+}
+
+/**
+ * Notion client for the connectivity matrix — only requires NOTION_API_KEY,
+ * not the intake database ID, since the connectivity DB is configured separately.
+ */
+export function getConnectivityNotionClient(): Client | null {
+  if (!ENV.notionApiKey) return null;
+  if (!connectivityNotionClient) {
+    connectivityNotionClient = new Client({ auth: ENV.notionApiKey });
+  }
+  return connectivityNotionClient;
 }
 
 /**
@@ -87,7 +100,39 @@ export async function uploadFileToNotion(
 }
 
 /**
- * Create or update a page in Notion database for an organization
+ * Read an intake response page from Notion for an organization.
+ * Returns the page properties or null if not found.
+ */
+export async function readIntakeResponseFromNotion(
+  organizationSlug: string
+): Promise<Record<string, any> | null> {
+  const client = getNotionClient();
+  if (!client || !shouldSyncToNotion(organizationSlug)) {
+    return null;
+  }
+
+  try {
+    const queryResponse = await (client.databases as any).query({
+      database_id: ENV.notionDatabaseId,
+      filter: {
+        property: "Organization Slug",
+        rich_text: { equals: organizationSlug },
+      },
+    });
+
+    if (queryResponse.results.length === 0) return null;
+
+    const page = queryResponse.results[0] as any;
+    return { pageId: page.id, properties: page.properties };
+  } catch (error) {
+    console.error("Error reading from Notion:", error);
+    return null;
+  }
+}
+
+/**
+ * Create or update a page in Notion database for an organization.
+ * Uses databases.query() with an exact slug filter instead of search() for reliable matching.
  */
 export async function syncIntakeResponseToNotion(
   organizationName: string,
@@ -101,12 +146,12 @@ export async function syncIntakeResponseToNotion(
   }
 
   try {
-    // Search for existing page for this organization using search API
-    const searchResponse = await client.search({
-      query: organizationSlug,
+    // Query for existing page by exact slug match (reliable, unlike search())
+    const queryResponse = await (client.databases as any).query({
+      database_id: ENV.notionDatabaseId,
       filter: {
-        property: "object",
-        value: "page",
+        property: "Organization Slug",
+        rich_text: { equals: organizationSlug },
       },
     });
 
@@ -122,15 +167,12 @@ export async function syncIntakeResponseToNotion(
       },
     };
 
-    // Add response data as properties (you'll need to customize this based on your database schema)
-    // For now, we'll store responses as a JSON string in a text property
     if (Object.keys(responses).length > 0) {
       properties["Responses"] = {
         rich_text: [{ text: { content: JSON.stringify(responses, null, 2).substring(0, 2000) } }],
       };
     }
 
-    // Add file attachments if any
     if (fileUploads && Object.keys(fileUploads).length > 0) {
       const allFiles = Object.values(fileUploads).flat();
       if (allFiles.length > 0) {
@@ -144,13 +186,10 @@ export async function syncIntakeResponseToNotion(
       }
     }
 
-    if (searchResponse.results.length > 0) {
+    if (queryResponse.results.length > 0) {
       // Update existing page
-      const pageId = searchResponse.results[0].id;
-      await client.pages.update({
-        page_id: pageId,
-        properties,
-      });
+      const pageId = queryResponse.results[0].id;
+      await client.pages.update({ page_id: pageId, properties });
       return pageId;
     } else {
       // Create new page

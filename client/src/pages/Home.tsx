@@ -291,6 +291,8 @@ export default function Home() {
   const [adhocOpen, setAdhocOpen] = useState(false);
   const [adhocFiles, setAdhocFiles] = useState<File[]>([]);
   const [adhocUploading, setAdhocUploading] = useState(false);
+  const [notesLabel, setNotesLabel] = useState("Call Notes");
+  const [notesCustomLabel, setNotesCustomLabel] = useState("");
 
   // Fetch organization data
   const { data: organization, isLoading: orgLoading } =
@@ -388,24 +390,29 @@ export default function Home() {
     }
   };
 
-  // Adhoc files
-  const { data: adhocFilesList = [], refetch: refetchAdhoc } = trpc.intake.getAdhocFiles.useQuery(
+  // Labeled notes (Documents & Notes section)
+  const { data: adhocFilesList = [], refetch: refetchAdhoc } = trpc.notes.listByOrg.useQuery(
     { organizationSlug: orgSlug },
     { enabled: !!orgSlug }
   );
 
-  const uploadAdhocMutation = trpc.intake.uploadAdhocFile.useMutation({
+  const uploadAdhocMutation = trpc.notes.uploadForOrg.useMutation({
     onSuccess: () => {
       refetchAdhoc();
     },
   });
 
-  // Delete file mutation
+  const deleteNoteMutation = trpc.notes.delete.useMutation({
+    onSuccess: () => {
+      refetchAdhoc();
+    },
+  });
+
+  // Delete file mutation (for architecture diagrams and intake files)
   const utils = trpc.useUtils();
   const deleteFileMutation = trpc.intake.deleteFile.useMutation({
     onSuccess: () => {
       utils.intake.getAllUploadedFiles.invalidate({ organizationSlug: orgSlug });
-      refetchAdhoc();
     },
   });
 
@@ -428,7 +435,8 @@ export default function Home() {
   };
 
   const handleAdhocUpload = async () => {
-    if (adhocFiles.length === 0 || !currentUser?.email) return;
+    if (adhocFiles.length === 0) return;
+    const effectiveLabel = notesLabel === "Other" ? (notesCustomLabel.trim() || "Other") : notesLabel;
     setAdhocUploading(true);
     let ok = 0;
     for (const file of adhocFiles) {
@@ -441,10 +449,10 @@ export default function Home() {
         });
         await uploadAdhocMutation.mutateAsync({
           organizationSlug: orgSlug,
+          label: effectiveLabel,
           fileName: file.name,
           fileData: base64,
           mimeType: file.type || "application/octet-stream",
-          userEmail: currentUser.email,
         });
         ok++;
       } catch {
@@ -1456,6 +1464,36 @@ export default function Home() {
           </button>
           {adhocOpen && (
             <div className="border-t border-border/40 p-3 space-y-3">
+              {/* Label selector */}
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Label this upload</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {["Call Notes", "Meeting Notes", "Template", "Action Items", "Reference Doc", "Other"].map((opt) => (
+                    <button
+                      key={opt}
+                      onClick={() => setNotesLabel(opt)}
+                      className={cn(
+                        "px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors",
+                        notesLabel === opt
+                          ? "bg-primary/15 border-primary/50 text-primary"
+                          : "bg-muted/30 border-border/50 text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                      )}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+                {notesLabel === "Other" && (
+                  <input
+                    type="text"
+                    value={notesCustomLabel}
+                    onChange={(e) => setNotesCustomLabel(e.target.value)}
+                    placeholder="Enter a custom label…"
+                    className="w-full px-2.5 py-1.5 text-xs rounded-md border border-border bg-muted/20 focus:outline-none focus:ring-1 focus:ring-primary/50"
+                  />
+                )}
+              </div>
+
               {/* Drop zone */}
               <label className="block cursor-pointer">
                 <input
@@ -1498,7 +1536,7 @@ export default function Home() {
                     size="sm"
                     className="w-full h-8 text-xs"
                     onClick={handleAdhocUpload}
-                    disabled={adhocUploading || !currentUser?.email}
+                    disabled={adhocUploading}
                   >
                     {adhocUploading ? (
                       <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Uploading...</>
@@ -1521,10 +1559,11 @@ export default function Home() {
                       fileSize: f.fileSize,
                       createdAt: f.createdAt,
                       uploadedBy: f.uploadedBy,
+                      label: f.label,
                     }))}
-                    onRemove={(fileId) => {
+                    onRemove={(noteId) => {
                       if (window.confirm("Remove this file?")) {
-                        deleteFileMutation.mutate({ fileId, organizationSlug: orgSlug });
+                        deleteNoteMutation.mutate({ noteId });
                       }
                     }}
                     compact
