@@ -145,6 +145,17 @@ export default function PlatformAdmin() {
     }
   }, [user, authLoading, setLocation]);
 
+  // Auto-expand the first site card so the pattern is obvious
+  // NOTE: Must be above the early return to avoid "rendered more hooks" error
+  // firstOrgId is defined later but we use a ref to bridge the gap
+  const firstOrgIdRef = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (!firstExpandDoneRef.current && firstOrgIdRef.current != null) {
+      setExpandedSiteIds(new Set([firstOrgIdRef.current]));
+      firstExpandDoneRef.current = true;
+    }
+  });
+
   // Determine if this is a platform admin (no clientId) or partner admin
   const isPlatformAdmin = user?.clientId === null || user?.clientId === undefined;
 
@@ -881,14 +892,8 @@ export default function PlatformAdmin() {
     return matchesPartner && matchesSite;
   });
   
-  // Auto-expand the first site card so the pattern is obvious
   const firstOrgId = filteredActiveOrgs[0]?.id;
-  useEffect(() => {
-    if (!firstExpandDoneRef.current && firstOrgId != null) {
-      setExpandedSiteIds(new Set([firstOrgId]));
-      firstExpandDoneRef.current = true;
-    }
-  }, [firstOrgId]);
+  firstOrgIdRef.current = firstOrgId;
 
   // Separate active and inactive users based on isActive field
   // isActive: 1 = active, 0 = deactivated (works for all user types including admins)

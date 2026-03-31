@@ -2293,11 +2293,12 @@
 - [x] Remove CF.7 Historic Reports flat file upload from questionnaire (contains PHI)
 
 ## Re-apply GitHub PR Changes After Rollback (Mar 31, 2026)
-- [ ] Weighted progress formula in PlatformAdmin (Q 40% + Testing 30% + Tasks 30%)
-- [ ] Weighted progress formula in PartnerAdmin
-- [ ] Collapsible site cards in PlatformAdmin with stable useEffect (no #310 error)
-- [ ] Stronger card borders and contrast
-- [ ] Auto-expand first site card
-- [ ] Notion connectivity fixes (server/notion.ts type cast)
-- [ ] Notes & Files upload feature (org_notes table, routes, UI)
-- [ ] Any other PR changes from 0688aee
+- [x] Weighted progress formula in PlatformAdmin (Q 40% + Testing 30% + Tasks 30%)
+- [x] Weighted progress formula in PartnerAdmin
+- [x] Collapsible site cards in PlatformAdmin with stable useEffect (no #310 error)
+- [x] Stronger card borders and contrast
+- [x] Auto-expand first site card
+- [x] Notion connectivity fixes (server/notion.ts type cast)
+- [x] Notes & Files upload feature (org_notes table, routes, UI)
+- [x] All other PR changes from 0688aee
+- [x] Fix "Rendered more hooks" error - moved useEffect above early return using ref bridge pattern
