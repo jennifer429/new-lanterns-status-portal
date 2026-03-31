@@ -2,8 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { questions, questionOptions, organizations, users, clients, intakeFileAttachments, partnerTemplates, specifications, intakeResponses, systemVendorOptions, vendorAuditLog, taskCompletion, validationResults } from "../../drizzle/schema";
-import { SECTION_DEFS as TASK_SECTION_DEFS } from "../../shared/taskDefs";
+import { questions, questionOptions, organizations, users, clients, intakeFileAttachments, partnerTemplates, specifications, intakeResponses, systemVendorOptions, vendorAuditLog } from "../../drizzle/schema";
 import { eq, and, or, desc, inArray, sql } from "drizzle-orm";
 import { uploadToGoogleDrive } from "./files";
 import bcrypt from "bcrypt";
@@ -948,40 +947,6 @@ export const adminRouter = router({
           .where(eq(intakeFileAttachments.organizationId, org.id))
           .orderBy(desc(intakeFileAttachments.createdAt));
 
-        // Task stats
-        const taskRows = await db
-          .select()
-          .from(taskCompletion)
-          .where(eq(taskCompletion.organizationId, org.id));
-        const taskMap: Record<string, typeof taskRows[number]> = {};
-        for (const row of taskRows) { taskMap[row.taskId] = row; }
-        const allTaskDefs = TASK_SECTION_DEFS.flatMap(s => s.tasks);
-        const taskStats = {
-          total: allTaskDefs.length,
-          completed: allTaskDefs.filter(t => taskMap[t.id]?.completed === 1 && taskMap[t.id]?.notApplicable !== 1).length,
-          inProgress: allTaskDefs.filter(t => taskMap[t.id]?.inProgress === 1 && taskMap[t.id]?.notApplicable !== 1).length,
-          blocked: allTaskDefs.filter(t => taskMap[t.id]?.blocked === 1 && taskMap[t.id]?.notApplicable !== 1).length,
-          notApplicable: allTaskDefs.filter(t => taskMap[t.id]?.notApplicable === 1).length,
-        };
-
-        // Validation / testing stats (total = 28 tests across 4 phases)
-        const TOTAL_TESTS = 28;
-        const valRows = await db
-          .select()
-          .from(validationResults)
-          .where(eq(validationResults.organizationId, org.id));
-        const valPass = valRows.filter(r => r.status === "Pass").length;
-        const valFail = valRows.filter(r => r.status === "Fail").length;
-        const valNA = valRows.filter(r => r.status === "N/A").length;
-        const valNotTested = TOTAL_TESTS - valPass - valFail - valNA;
-        const validationStats = {
-          total: TOTAL_TESTS,
-          pass: valPass,
-          fail: valFail,
-          notTested: Math.max(0, valNotTested),
-          na: valNA,
-        };
-
         return {
           organizationId: org.id,
           organizationName: org.name,
@@ -991,8 +956,6 @@ export const adminRouter = router({
           completionPercent,
           sectionsComplete,
           sectionProgress,
-          taskStats,
-          validationStats,
           files: files.map(f => ({
             id: f.id,
             fileName: f.fileName,

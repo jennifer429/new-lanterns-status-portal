@@ -21,7 +21,6 @@ export interface UploadedFile {
   fileSize?: number | null;
   createdAt?: Date | string | null;
   uploadedBy?: string | null;
-  label?: string | null;
 }
 
 interface UploadedFileRowProps {
@@ -98,16 +97,9 @@ export function UploadedFileRow({ file, onRemove, isRemoving, compact }: Uploade
 
         {/* File info — full name, no truncation */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <p className={`font-medium text-foreground break-words ${compact ? "text-xs" : "text-sm"}`}>
-              {file.fileName}
-            </p>
-            {file.label && (
-              <span className={`inline-flex items-center rounded-full border border-primary/30 bg-primary/10 text-primary font-medium px-1.5 ${compact ? "text-[9px] py-0" : "text-[10px] py-0.5"}`}>
-                {file.label}
-              </span>
-            )}
-          </div>
+          <p className={`font-medium text-foreground break-words ${compact ? "text-xs" : "text-sm"}`}>
+            {file.fileName}
+          </p>
           {metaParts.length > 0 && (
             <p className={`text-muted-foreground mt-0.5 ${compact ? "text-[10px]" : "text-xs"}`}>
               {metaParts.join(" · ")}

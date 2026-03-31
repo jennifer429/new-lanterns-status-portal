@@ -1122,7 +1122,7 @@ export default function Validation() {
                                 {/* Test name + description + related questions */}
                                 <div className="space-y-1">
                                   <p className={cn("text-sm font-medium text-foreground", isNA && "line-through")}>{test.name}</p>
-                                  <p className={cn("text-xs text-foreground/60", isNA && "line-through")}>{test.description}</p>
+                                  <p className={cn("text-xs text-muted-foreground", isNA && "line-through")}>{test.description}</p>
 
                                   {/* Related questions toggle */}
                                   {hasRelated && (
@@ -1204,7 +1204,7 @@ export default function Validation() {
                               {notesOpen && (
                                 <div className="px-5 pb-3 pt-0 bg-muted/10 border-t border-border/10">
                                   <textarea
-                                    className="w-full bg-transparent text-sm text-foreground/80 placeholder:text-muted-foreground/40 resize-none outline-none border-none focus:ring-0 py-2 min-h-[56px]"
+                                    className="w-full bg-transparent text-sm text-muted-foreground placeholder:text-muted-foreground/40 resize-none outline-none border-none focus:ring-0 py-2 min-h-[56px]"
                                     placeholder="Add a comment or note about this test…"
                                     value={notes}
                                     onChange={(e) => setLocalOverrides(prev => ({ ...prev, [key]: { ...getMerged(key), notes: e.target.value } }))}

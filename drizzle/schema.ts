@@ -386,24 +386,3 @@ export const vendorAuditLog = mysqlTable("vendorAuditLog", {
 export type VendorAuditLog = typeof vendorAuditLog.$inferSelect;
 export type InsertVendorAuditLog = typeof vendorAuditLog.$inferInsert;
 
-/**
- * Org Notes — labeled file uploads from the org and partner dashboards.
- * Supports both org-level notes (organizationId set) and partner-level notes (clientId set).
- * Users label each file (e.g., "Call Notes", "Template", "Reference Doc") for easy retrieval.
- */
-export const orgNotes = mysqlTable("orgNotes", {
-  id: int("id").autoincrement().primaryKey(),
-  organizationId: int("organizationId"), // set for org-level notes; null for partner-level
-  clientId: int("clientId"), // set for partner-level notes; also set on org-level for easy filtering
-  label: varchar("label", { length: 100 }).notNull().default("General"),
-  fileName: varchar("fileName", { length: 255 }).notNull(),
-  fileUrl: text("fileUrl").notNull(),
-  driveFileId: varchar("driveFileId", { length: 500 }),
-  fileSize: int("fileSize"),
-  mimeType: varchar("mimeType", { length: 100 }),
-  uploadedBy: varchar("uploadedBy", { length: 255 }),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
-
-export type OrgNote = typeof orgNotes.$inferSelect;
-export type InsertOrgNote = typeof orgNotes.$inferInsert;

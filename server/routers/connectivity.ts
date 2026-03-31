@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { router, publicProcedure } from "../_core/trpc";
-import { getConnectivityNotionClient } from "../notion";
+import { getNotionClient } from "../notion";
 import { ENV } from "../_core/env";
 
 // ── Notion property extractors ────────────────────────────────────────────────
@@ -254,7 +254,7 @@ export const connectivityRouter = router({
       organizationName: z.string().optional(),
     }))
     .query(async ({ input }) => {
-      const client = getConnectivityNotionClient();
+      const client = getNotionClient();
       const dsId = getDataSourceId();
       if (!client || !dsId) {
         return { rows: [], configured: false };
@@ -330,7 +330,7 @@ export const connectivityRouter = router({
       rows: z.array(ConnectivityRowSchema),
     }))
     .mutation(async ({ input }) => {
-      const client = getConnectivityNotionClient();
+      const client = getNotionClient();
       const dbId = getDatabaseId();
       const dsId = getDataSourceId();
       if (!client || !dbId || !dsId) {
@@ -411,7 +411,7 @@ export const connectivityRouter = router({
   createRow: publicProcedure
     .input(z.object({ organizationName: z.string(), row: ConnectivityRowSchema }))
     .mutation(async ({ input }) => {
-      const client = getConnectivityNotionClient();
+      const client = getNotionClient();
       const dbId = getDatabaseId();
       if (!client || !dbId) throw new Error("Notion not configured");
       const { schemaMap, titlePropName } = await getSchemaMap(client, dbId);
@@ -427,7 +427,7 @@ export const connectivityRouter = router({
   updateRow: publicProcedure
     .input(z.object({ pageId: z.string(), organizationName: z.string(), row: ConnectivityRowSchema }))
     .mutation(async ({ input }) => {
-      const client = getConnectivityNotionClient();
+      const client = getNotionClient();
       const dbId = getDatabaseId();
       if (!client || !dbId) throw new Error("Notion not configured");
       const { schemaMap, titlePropName } = await getSchemaMap(client, dbId);
@@ -440,7 +440,7 @@ export const connectivityRouter = router({
   archiveRow: publicProcedure
     .input(z.object({ pageId: z.string() }))
     .mutation(async ({ input }) => {
-      const client = getConnectivityNotionClient();
+      const client = getNotionClient();
       if (!client) throw new Error("Notion not configured");
       await client.pages.update({ page_id: input.pageId, archived: true });
       return { ok: true };

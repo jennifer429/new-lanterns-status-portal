@@ -2291,17 +2291,3 @@
 
 ## Remove Historic Reports Upload (PHI concern)
 - [x] Remove CF.7 Historic Reports flat file upload from questionnaire (contains PHI)
-
-## Fix PlatformAdmin Overall Progress Calculation (Mar 30, 2026)
-- [x] Replace overallPct in PlatformAdmin.tsx with weighted formula: Questionnaire 40% + Testing 30% + Task List 30%
-- [x] Ensure consistency with Home.tsx weighted progress calculation
-- [x] Improve contrast on collapsible site cards and expanded sections in PlatformAdmin for better visual definition
-- [x] Fix PartnerAdmin to also use weighted formula instead of raw completionPercent
-
-## PlatformAdmin Card Visibility Improvements (Mar 30, 2026)
-- [x] Auto-expand first site card so users see the expandable pattern immediately
-- [x] Make all card borders (border-2), separators, and mini stat column borders much more noticeable
-- [x] Resolve git merge conflicts in PlatformAdmin.tsx (collapsible cards + weighted formula + stronger borders)
-
-## Fix React Error #310 - Too Many Re-renders (Mar 30, 2026)
-- [x] Fix infinite re-render loop in PlatformAdmin auto-expand useEffect (used useRef + stable firstOrgId dependency)
