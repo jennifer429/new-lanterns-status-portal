@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRoute, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Download, Upload, CheckCircle2, Circle, Clock, ArrowLeft, ChevronRight, Trash2, LogOut, Home } from "lucide-react";
+import { Loader2, Download, Upload, CheckCircle2, Circle, Clock, ArrowLeft, ChevronRight, Trash2, LogOut, Home, Ban } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -92,6 +93,7 @@ export default function IntakeNew() {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [currentSection, setCurrentSection] = useState<string | null>(null);
   const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
+  const [naSections, setNaSections] = useState<Set<string>>(new Set());
   const [deleteFileId, setDeleteFileId] = useState<number | null>(null);
   const [deleteQuestionId, setDeleteQuestionId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -114,9 +116,17 @@ export default function IntakeNew() {
   useEffect(() => {
     if (existingResponses) {
       const loadedResponses: Record<string, any> = {};
+      const loadedNa = new Set<string>();
       existingResponses.forEach((resp) => {
         // Skip responses with null questionId (orphaned data)
         if (!resp.questionId) return;
+        
+        // Check for section-level N/A markers
+        if (resp.questionId.startsWith('__section_na:')) {
+          const sectionId = resp.questionId.replace('__section_na:', '');
+          loadedNa.add(sectionId);
+          return;
+        }
         
         try {
           const value = typeof resp.response === 'string' ? JSON.parse(resp.response) : resp.response;
@@ -126,6 +136,7 @@ export default function IntakeNew() {
         }
       });
       setResponses(loadedResponses);
+      setNaSections(loadedNa);
     }
   }, [existingResponses]);
 
@@ -249,9 +260,11 @@ export default function IntakeNew() {
     return Math.round((answeredCount / totalQuestions) * 100);
   };
 
-  // Calculate overall progress
+  // Calculate overall progress (N/A sections count as 100%)
   const calculateOverallProgress = () => {
-    const sectionProgresses = questionnaireData.map(calculateSectionProgress);
+    const sectionProgresses = questionnaireData.map(s => 
+      naSections.has(s.id) ? 100 : calculateSectionProgress(s)
+    );
     return Math.round(sectionProgresses.reduce((a, b) => a + b, 0) / questionnaireData.length);
   };
 
@@ -342,8 +355,34 @@ export default function IntakeNew() {
     URL.revokeObjectURL(url);
   };
 
+  // Toggle section N/A
+  const toggleSectionNa = (sectionId: string) => {
+    setNaSections(prev => {
+      const next = new Set(prev);
+      if (next.has(sectionId)) {
+        next.delete(sectionId);
+      } else {
+        next.add(sectionId);
+      }
+      return next;
+    });
+    // Save the N/A marker as a special response
+    setResponses(prev => {
+      const key = `__section_na:${sectionId}`;
+      if (naSections.has(sectionId)) {
+        // Removing N/A — delete the marker
+        const { [key]: _, ...rest } = prev;
+        return rest;
+      } else {
+        // Adding N/A — set the marker
+        return { ...prev, [key]: 'true' };
+      }
+    });
+  };
+
   // Get section status
   const getSectionStatus = (section: Section) => {
+    if (naSections.has(section.id)) return "na";
     const progress = calculateSectionProgress(section);
     if (progress === 100) return "complete";
     if (progress > 0) return "in-progress";
@@ -356,7 +395,9 @@ export default function IntakeNew() {
       case "complete":
         return <CheckCircle2 className="w-5 h-5 text-green-500" />;
       case "in-progress":
-        return <Clock className="w-5 h-5 text-orange-500" />;
+        return <Clock className="w-5 h-5 text-blue-400" />;
+      case "na":
+        return <Ban className="w-5 h-5 text-amber-400" />;
       default:
         return <Circle className="w-5 h-5 text-gray-400" />;
     }
@@ -649,35 +690,59 @@ export default function IntakeNew() {
                     progressLabel = `${answeredCount} of ${section.questions?.length || 0} questions answered`;
                   }
 
+                  const isNa = naSections.has(section.id);
+
                   return (
                     <Card
                       key={section.id}
-                      className="cursor-pointer hover:border-primary transition-colors"
-                      onClick={() => setCurrentSection(section.id)}
+                      className={cn(
+                        "hover:border-primary transition-colors",
+                        isNa && "opacity-60"
+                      )}
                     >
                       <CardHeader>
                         <div className="flex items-start justify-between">
-                          <div className="flex-1">
+                          <div className="flex-1 cursor-pointer" onClick={() => !isNa && setCurrentSection(section.id)}>
                             <div className="flex items-center gap-3 mb-2">
                               {getStatusIcon(status)}
-                              <CardTitle className="text-lg">
+                              <CardTitle className={cn("text-lg", isNa && "line-through text-muted-foreground")}>
                                 {idx + 1}. {section.title}
                               </CardTitle>
+                              {isNa && (
+                                <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/30 text-xs">N/A</Badge>
+                              )}
                             </div>
                             <CardDescription>{section.description}</CardDescription>
                           </div>
-                          <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); toggleSectionNa(section.id); }}
+                              className={cn(
+                                "px-2 py-1 rounded text-xs font-medium border transition-colors",
+                                isNa
+                                  ? "bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/25"
+                                  : "text-muted-foreground border-border hover:bg-muted/50"
+                              )}
+                              title={isNa ? "Remove N/A — re-enable this section" : "Mark as N/A — skip this section"}
+                            >
+                              <Ban className="w-3 h-3 inline mr-1" />
+                              {isNa ? "Undo N/A" : "N/A"}
+                            </button>
+                            {!isNa && <ChevronRight className="w-5 h-5 text-muted-foreground cursor-pointer" onClick={() => setCurrentSection(section.id)} />}
+                          </div>
                         </div>
                       </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">{progressLabel}</span>
-                            <span className="font-semibold text-primary">{progress}%</span>
+                      {!isNa && (
+                        <CardContent className="cursor-pointer" onClick={() => setCurrentSection(section.id)}>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">{progressLabel}</span>
+                              <span className="font-semibold text-primary">{progress}%</span>
+                            </div>
+                            <Progress value={progress} className="h-2" />
                           </div>
-                          <Progress value={progress} className="h-2" />
-                        </div>
-                      </CardContent>
+                        </CardContent>
+                      )}
                     </Card>
                   );
                 })}
@@ -690,7 +755,7 @@ export default function IntakeNew() {
                 <CardHeader>
                   <CardTitle>Overall Progress</CardTitle>
                   <CardDescription>
-                    {questionnaireData.filter(s => calculateSectionProgress(s) === 100).length} of {questionnaireData.length} sections complete
+                    {questionnaireData.filter(s => naSections.has(s.id) || calculateSectionProgress(s) === 100).length} of {questionnaireData.length} sections complete
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -701,21 +766,27 @@ export default function IntakeNew() {
 
                   <div className="space-y-2">
                     {questionnaireData.map((section) => {
-                      const progress = calculateSectionProgress(section);
+                      const progress = naSections.has(section.id) ? 100 : calculateSectionProgress(section);
                       const status = getSectionStatus(section);
                       return (
                         <div key={section.id} className="flex items-center justify-between text-sm">
                           <div className="flex items-center gap-2">
-                            {status === "complete" ? (
+                            {status === "na" ? (
+                              <Ban className="w-4 h-4 text-amber-400" />
+                            ) : status === "complete" ? (
                               <CheckCircle2 className="w-4 h-4 text-green-500" />
                             ) : status === "in-progress" ? (
-                              <Clock className="w-4 h-4 text-orange-500" />
+                              <Clock className="w-4 h-4 text-blue-400" />
                             ) : (
                               <Circle className="w-4 h-4 text-gray-400" />
                             )}
-                            <span className="truncate">{section.title}</span>
+                            <span className={cn("truncate", status === "na" && "line-through text-muted-foreground")}>{section.title}</span>
                           </div>
-                          <span className="font-medium">{progress}%</span>
+                          {status === "na" ? (
+                            <span className="text-xs text-amber-400 font-medium">N/A</span>
+                          ) : (
+                            <span className="font-medium">{progress}%</span>
+                          )}
                         </div>
                       );
                     })}

@@ -757,24 +757,6 @@ export default function Home() {
                 <span className="text-sm font-semibold">Architecture</span>
               </div>
               <div className="flex items-center gap-2">
-                {/* Thumbnail strip for image files when collapsed */}
-                {!architectureOpen && diagramFiles.length > 0 && (() => {
-                  const imgFiles = diagramFiles.filter((f: any) => /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(f.fileName));
-                  if (imgFiles.length === 0) return null;
-                  return (
-                    <div className="flex items-center gap-1">
-                      {imgFiles.slice(0, 2).map((f: any) => (
-                        <img
-                          key={f.id}
-                          src={f.fileUrl}
-                          alt={f.fileName}
-                          className="w-7 h-7 rounded object-cover border border-border/40 cursor-pointer hover:opacity-80 transition-opacity"
-                          onClick={(e) => { e.stopPropagation(); setLightboxSrc({ src: f.fileUrl, alt: f.fileName }); }}
-                        />
-                      ))}
-                    </div>
-                  );
-                })()}
                 {diagramFiles.length > 0 ? (
                   <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[10px] font-semibold">
                     {diagramFiles.length} file{diagramFiles.length > 1 ? "s" : ""}
@@ -790,6 +772,34 @@ export default function Home() {
                 />
               </div>
             </button>
+            {/* Architecture thumbnail preview when collapsed */}
+            {!architectureOpen && diagramFiles.length > 0 && (() => {
+              const imgFiles = diagramFiles.filter((f: any) => /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(f.fileName));
+              if (imgFiles.length === 0) return null;
+              const firstImg = imgFiles[0];
+              return (
+                <div className="px-3 pb-3">
+                  <button
+                    onClick={() => setLightboxSrc({ src: firstImg.fileUrl, alt: firstImg.fileName })}
+                    className="relative w-full aspect-[16/9] rounded-lg overflow-hidden border border-border/40 bg-muted/20 hover:border-primary/40 hover:opacity-90 transition-all group"
+                  >
+                    <img
+                      src={firstImg.fileUrl}
+                      alt={firstImg.fileName}
+                      className="w-full h-full object-contain bg-black/5"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
+                      <Maximize2 className="w-6 h-6 text-white" />
+                    </div>
+                    {imgFiles.length > 1 && (
+                      <div className="absolute top-2 right-2 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded font-medium">
+                        +{imgFiles.length - 1} more
+                      </div>
+                    )}
+                  </button>
+                </div>
+              );
+            })()}
             {architectureOpen && (
               <div className="border-t border-border/40">
                 <div className="p-3 space-y-3">

@@ -2339,3 +2339,7 @@
 - [x] Fix "In Progress" testing status reverting to "Failed" on page reload (Marshall example) — backend Zod enum was missing In Progress and Blocked
 - [x] Make "In Progress" colors consistent between tests and tasks (use blue everywhere)
 - [x] Make dashboard ordering consistent across all views
+
+## New Features - N/A for Questionnaire/Files & Architecture Thumbnail (Apr 1, 2026)
+- [x] Add N/A option to questionnaire/file uploads so sections can be skipped
+- [x] Add architecture picture thumbnail to the dashboard
