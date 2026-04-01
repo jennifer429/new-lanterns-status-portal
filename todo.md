@@ -2329,3 +2329,8 @@
 - [x] Update testing progress calculation so In Progress counts as 50% instead of 0%
 - [x] Applied consistently: Home.tsx (already correct), PlatformAdmin.tsx (fixed), PartnerAdmin.tsx (fixed), Validation.tsx overall + phase-level + donut chart (fixed)
 - [x] Weights: Pass=100%, InProgress=50%, Fail=25%, Blocked=25%, N/A=excluded, Open=0%
+
+## Connectivity Table Improvements (Mar 31, 2026)
+- [x] Update Traffic Type options to: ADT, Orders, Reports, Images, Image Priors, Image Q&R
+- [x] Add legacy type migration (DICOM→Images, HL7 ORM→Orders, HL7 ORU→Reports, etc.)
+- [x] Fix table readability — bigger fonts (text-xs), fixed column widths, horizontal scroll, text wrapping instead of truncation

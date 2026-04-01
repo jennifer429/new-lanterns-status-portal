@@ -34,12 +34,22 @@ interface ConnectivityTableProps {
 }
 
 const DEFAULT_TRAFFIC_TYPES = [
-  'HL7 - Orders (ORM)',
-  'HL7 - Results (ORU)',
-  'HL7 - ADT',
-  'DICOM - C-STORE (Images)',
-  'DICOM - C-FIND/C-MOVE (Query/Retrieve)',
+  'ADT',
+  'Orders',
+  'Reports',
+  'Images',
+  'Image Priors',
+  'Image Q&R',
 ] as const;
+
+// Map legacy traffic types to new names for display
+const LEGACY_TYPE_MAP: Record<string, string> = {
+  'HL7 - Orders (ORM)': 'Orders',
+  'HL7 - Results (ORU)': 'Reports',
+  'HL7 - ADT': 'ADT',
+  'DICOM - C-STORE (Images)': 'Images',
+  'DICOM - C-FIND/C-MOVE (Query/Retrieve)': 'Image Q&R',
+};
 
 const COMMON_SYSTEMS = [
   'Cerner', 'Cloverleaf', 'Epic', 'Epic Radiant', 'Fuji Synapse',
@@ -62,6 +72,7 @@ function emptyRow(): ConnectivityRow {
 function migrateRow(r: ConnectivityRow): ConnectivityRow {
   return {
     ...r,
+    trafficType: LEGACY_TYPE_MAP[r.trafficType] || r.trafficType,
     sourceIp: r.sourceIp || r.ip || '',
     sourcePort: r.sourcePort || r.port || '',
     destIp: r.destIp || '',
@@ -86,8 +97,8 @@ function InlineCell({
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
       className={cn(
-        'w-full bg-transparent border-none outline-none text-[11px] text-foreground',
-        'placeholder:text-muted-foreground/35 focus:bg-primary/5 rounded px-1 h-[22px]',
+        'w-full bg-transparent border-none outline-none text-xs text-foreground',
+        'placeholder:text-muted-foreground/35 focus:bg-primary/5 rounded px-1.5 py-1 min-h-[28px]',
         className
       )}
     />
@@ -114,13 +125,13 @@ function InlineCombobox({
       <PopoverTrigger asChild>
         <button
           className={cn(
-            'flex w-full items-center justify-between text-[11px] text-left',
-            'bg-transparent border-none outline-none rounded px-1 h-[22px]',
+            'flex w-full items-center justify-between text-xs text-left',
+            'bg-transparent border-none outline-none rounded px-1.5 py-1 min-h-[28px]',
             'hover:bg-primary/5 focus:bg-primary/5 transition-colors',
             !value && 'text-muted-foreground/35'
           )}
         >
-          <span className="truncate flex-1 leading-none">{value || placeholder}</span>
+          <span className="flex-1 leading-snug break-words">{value || placeholder}</span>
           <ChevronsUpDown className="ml-0.5 h-2.5 w-2.5 shrink-0 text-muted-foreground/40" />
         </button>
       </PopoverTrigger>
@@ -192,7 +203,7 @@ function ImportDialog({ open, onOpenChange, onImport }: {
         </DialogHeader>
         <div className="space-y-3">
           <div className="rounded-md border bg-muted/20 p-2 text-[10px] font-mono text-muted-foreground overflow-x-auto">
-            <pre>{`[{ "trafficType": "DICOM - C-STORE (Images)", "sourceSystem": "CT Scanner",
+            <pre>{`[{ "trafficType": "Images", "sourceSystem": "CT Scanner",
   "destinationSystem": "New Lantern PACS", "sourceIp": "10.1.2.3",
   "sourcePort": "104", "destIp": "10.1.2.50", "destPort": "11112",
   "environment": "both" }]`}</pre>
@@ -244,7 +255,7 @@ function mapImportRow(obj: any): ConnectivityRow {
   const legacyAe = obj.aeTitle || obj.aetitle || obj['ae title'] || obj.ae_title || '';
   return {
     id: makeId(),
-    trafficType:       obj.trafficType || obj.traffictype || obj['traffic type'] || obj.type || '',
+    trafficType:       LEGACY_TYPE_MAP[obj.trafficType || obj.traffictype || obj['traffic type'] || obj.type || ''] || obj.trafficType || obj.traffictype || obj['traffic type'] || obj.type || '',
     sourceSystem:      obj.sourceSystem || obj.sourcesystem || obj['source system'] || obj.source || '',
     destinationSystem: obj.destinationSystem || obj.destinationsystem || obj['destination system'] || obj.destination || '',
     sourceIp:          obj.sourceIp || obj.sourceip || obj['source ip'] || obj.ip || '',
@@ -355,19 +366,19 @@ export function ConnectivityTable({ rows: rawRows, onChange, systems = [] }: Con
       <ImportDialog open={importOpen} onOpenChange={setImportOpen} onImport={handleImport} />
 
       {/* ── Desktop table (hidden on mobile) ── */}
-      <div className="hidden lg:block rounded-md border border-border/50 overflow-hidden">
-        <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
+      <div className="hidden lg:block rounded-md border border-border/60 overflow-x-auto">
+        <table className="w-full border-collapse" style={{ minWidth: '1100px' }}>
             <colgroup>
-              {/* Traffic Type */}  <col style={{ width: '16%' }} />
-              {/* Source */}        <col style={{ width: '11%' }} />
-              {/* Destination */}   <col style={{ width: '11%' }} />
-              {/* Src IP:Port */}   <col style={{ width: '13%' }} />
-              {/* Dst IP:Port */}   <col style={{ width: '13%' }} />
-              {/* Src AE */}        <col style={{ width: '7%'  }} />
-              {/* Dst AE */}        <col style={{ width: '7%'  }} />
-              {/* Env */}           <col style={{ width: '5%'  }} />
-              {/* Notes */}         <col style={{ width: '14%' }} />
-              {/* Actions */}       <col style={{ width: '3%'  }} />
+              {/* Traffic Type */}  <col style={{ width: '120px' }} />
+              {/* Source */}        <col style={{ width: '140px' }} />
+              {/* Destination */}   <col style={{ width: '140px' }} />
+              {/* Src IP:Port */}   <col style={{ width: '160px' }} />
+              {/* Dst IP:Port */}   <col style={{ width: '160px' }} />
+              {/* Src AE */}        <col style={{ width: '90px'  }} />
+              {/* Dst AE */}        <col style={{ width: '90px'  }} />
+              {/* Env */}           <col style={{ width: '60px'  }} />
+              {/* Notes */}         <col style={{ minWidth: '180px' }} />
+              {/* Actions */}       <col style={{ width: '50px'  }} />
             </colgroup>
 
             {/* ── Header ── */}
@@ -378,7 +389,7 @@ export function ConnectivityTable({ rows: rawRows, onChange, systems = [] }: Con
                   'Src IP : Port', 'Dst IP : Port',
                   'Src AE', 'Dst AE', 'Env', 'Notes', '',
                 ].map((h, i) => (
-                  <th key={i} className="text-left px-1.5 py-[5px] text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wide whitespace-nowrap select-none">
+                  <th key={i} className="text-left px-2 py-2 text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wide whitespace-nowrap select-none border-b border-border/40">
                     {h}
                   </th>
                 ))}
@@ -396,8 +407,7 @@ export function ConnectivityTable({ rows: rawRows, onChange, systems = [] }: Con
 
               {rows.map((row, idx) => (
                 <tr key={row.id}
-                  className="group border-b border-border/25 last:border-b-0 hover:bg-muted/8 transition-colors"
-                  style={{ height: 28 }}>
+                  className="group border-b border-border/30 last:border-b-0 hover:bg-muted/10 transition-colors">
 
                   {/* Traffic Type */}
                   <td className="px-1 align-middle">
