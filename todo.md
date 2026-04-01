@@ -2307,3 +2307,13 @@
 - [x] Make card borders much bolder/more visible (border-primary/50 with purple shadow)
 - [x] Increase font sizes across the dashboard (org names text-lg, stats text-sm, percentages text-lg)
 - [x] Reduce dark empty space - tightened container py-5, card spacing space-y-3, header py-3
+
+## Expand Testing/Validation Statuses (Mar 31, 2026)
+- [x] Update DB schema enum to add In Progress and Blocked (Pass, Fail, Not Tested, Pending, N/A, In Progress, Blocked)
+- [x] Migrate existing records (existing Pass/Fail/N/A/Not Tested remain valid)
+- [x] Update backend admin stats to count all 6 statuses (pass, fail, inProgress, blocked, na, notTested)
+- [x] Update Validation.tsx: StatusBadge with 6 colors, cycleStatus with 6 states, bulk actions for all 6
+- [x] Update overall + per-phase + sidebar summary stats to show all 6 counts
+- [x] Update Home.tsx testing card with 6-status breakdown and weighted formula
+- [x] Update PlatformAdmin testing mini card with all 6 status counts
+- [x] Update CSV export/import to handle all 6 statuses

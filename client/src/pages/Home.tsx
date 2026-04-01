@@ -572,7 +572,9 @@ export default function Home() {
   const valFailedCount = Object.values(valResults as Record<string, any>).filter(
     (v: any) => v.status === "Fail"
   ).length;
-  const valNotTestedCount = valTotal - valCompleted - valFailedCount;
+  const valInProgressCount = valEntries.filter((v: any) => v.status === "In Progress").length;
+  const valBlockedCount = valEntries.filter((v: any) => v.status === "Blocked").length;
+  const valNotTestedCount = valTotal - valCompleted - valFailedCount - valNaCount - valInProgressCount - valBlockedCount;
   // Next up: first 3 tests that are not Pass and not N/A
   const allValKeys: string[] = [];
   let offset = 0;
@@ -594,9 +596,9 @@ export default function Home() {
   const implWeightedScore = implTotal > 0
     ? ((implCompleted * 1.0 + implNaCount * 1.0 + implInProgressCount * 0.5 + implBlockedCount * 0.25) / implTotal) * 100
     : 0;
-  // Validation weighted progress (Pass=100%, Fail=25%, N/A=100%, NotTested=0%)
+  // Validation weighted progress (Pass=100%, Fail=25%, N/A=100%, InProgress=50%, Blocked=25%, NotTested=0%)
   const valWeightedScore = 28 > 0
-    ? ((valCompleted * 1.0 + valNaCount * 1.0 + valFailedCount * 0.25) / 28) * 100
+    ? ((valCompleted * 1.0 + valNaCount * 1.0 + valFailedCount * 0.25 + valInProgressCount * 0.5 + valBlockedCount * 0.25) / 28) * 100
     : 0;
   // Overall progress (weighted: questionnaire 40%, testing 30%, implementation 30%)
   const qPct = totalSections > 0 ? (completedSections / totalSections) * 100 : 0;
@@ -1171,8 +1173,8 @@ export default function Home() {
           })()}
           {/* Testing card — merged with test summary */}
           {(() => {
-            // Weighted: Pass=100%, N/A=100%, Fail=25%, NotTested=0%
-            const vPctCard = valTotal > 0 ? Math.round(((valCompleted * 1.0 + valNaCount * 1.0 + valFailedCount * 0.25) / valTotal) * 100) : 0;
+            // Weighted: Pass=100%, N/A=100%, Fail=25%, InProgress=50%, Blocked=25%, Open=0%
+            const vPctCard = valTotal > 0 ? Math.round(((valCompleted * 1.0 + valNaCount * 1.0 + valFailedCount * 0.25 + valInProgressCount * 0.5 + valBlockedCount * 0.25) / valTotal) * 100) : 0;
             const vIsDone = vPctCard >= 100;
             const vLabel = vIsDone ? "View" : valCompleted > 0 ? "Continue" : "Start";
             // Map nextUpTests keys to test names
@@ -1246,12 +1248,14 @@ export default function Home() {
                     </div>
 
                     {/* Status breakdown */}
-                    <div className="grid grid-cols-4 gap-1 mb-3">
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 mb-3">
                       {([
-                        { label: "Pass",       count: valCompleted,      dotCls: "bg-green-500",           numCls: "text-green-500" },
-                        { label: "Fail",       count: valFailedCount,    dotCls: "bg-red-500",             numCls: "text-red-500" },
-                        { label: "Not Tested", count: valNotTestedCount, dotCls: "bg-muted-foreground/40", numCls: "text-foreground" },
-                        { label: "N/A",        count: valNaCount,        dotCls: "bg-yellow-700",          numCls: "text-yellow-600" },
+                        { label: "Pass",       count: valCompleted,        dotCls: "bg-emerald-500",         numCls: "text-emerald-500" },
+                        { label: "Fail",       count: valFailedCount,      dotCls: "bg-red-500",             numCls: "text-red-500" },
+                        { label: "In Prog",    count: valInProgressCount,  dotCls: "bg-blue-500",            numCls: "text-blue-500" },
+                        { label: "Blocked",    count: valBlockedCount,     dotCls: "bg-orange-500",          numCls: "text-orange-500" },
+                        { label: "N/A",        count: valNaCount,          dotCls: "bg-amber-500",           numCls: "text-amber-500" },
+                        { label: "Open",       count: valNotTestedCount,   dotCls: "bg-muted-foreground/40", numCls: "text-foreground" },
                       ] as const).map(({ label: statusLabel, count, dotCls, numCls }) => (
                         <div key={statusLabel} className="text-center">
                           <div className={`text-sm font-bold ${numCls}`}>{count}</div>

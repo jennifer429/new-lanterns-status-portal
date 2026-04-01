@@ -973,13 +973,17 @@ export const adminRouter = router({
         const valPass = valRows.filter(r => r.status === "Pass").length;
         const valFail = valRows.filter(r => r.status === "Fail").length;
         const valNA = valRows.filter(r => r.status === "N/A").length;
-        const valNotTested = TOTAL_TESTS - valPass - valFail - valNA;
+        const valInProgress = valRows.filter(r => r.status === "In Progress").length;
+        const valBlocked = valRows.filter(r => r.status === "Blocked").length;
+        const valNotTested = TOTAL_TESTS - valPass - valFail - valNA - valInProgress - valBlocked;
         const validationStats = {
           total: TOTAL_TESTS,
           pass: valPass,
           fail: valFail,
           notTested: Math.max(0, valNotTested),
           na: valNA,
+          inProgress: valInProgress,
+          blocked: valBlocked,
         };
 
         return {

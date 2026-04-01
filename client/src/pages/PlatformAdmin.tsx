@@ -1247,10 +1247,12 @@ export default function PlatformAdmin() {
                               <div className="w-full h-1.5 bg-muted rounded-full mb-2 border border-border/40">
                                 <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${vsPct}%` }} />
                               </div>
-                              <div className="flex gap-3 text-xs mb-3">
+                              <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs mb-3">
                                 <span className="text-emerald-400 font-semibold">{vsPass} Pass</span>
-                                <span className="text-red-400 font-semibold">{vs?.fail ?? 0} Fail</span>
-                                <span className="text-muted-foreground">{vs?.notTested ?? (vs?.total ?? 28)} Not Tested</span>
+                                {(vs?.fail ?? 0) > 0 && <span className="text-red-400 font-semibold">{vs.fail} Fail</span>}
+                                {(vs?.inProgress ?? 0) > 0 && <span className="text-blue-400 font-semibold">{vs.inProgress} In Prog</span>}
+                                {(vs?.blocked ?? 0) > 0 && <span className="text-orange-400 font-semibold">{vs.blocked} Blocked</span>}
+                                <span className="text-muted-foreground">{vs?.notTested ?? (vs?.total ?? 28)} Open</span>
                               </div>
                               <button
                                 onClick={() => setLocation(`/org/${org.slug}/validation`)}

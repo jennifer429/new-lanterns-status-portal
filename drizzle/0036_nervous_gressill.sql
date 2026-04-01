@@ -1,0 +1,1 @@
+ALTER TABLE `validationResults` MODIFY COLUMN `status` enum('Pass','Fail','Not Tested','Pending','N/A','In Progress','Blocked') NOT NULL DEFAULT 'Not Tested';

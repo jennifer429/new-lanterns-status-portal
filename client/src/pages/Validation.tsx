@@ -35,6 +35,9 @@ import {
   XSquare,
   Square,
   Ban,
+  XCircle,
+  Clock,
+  AlertTriangle,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -377,63 +380,45 @@ function InlineEdit({
 
 // ── Status badge component ────────────────────────────────────────────────────
 
+type ValidationStatus = "pass" | "fail" | "na" | "in_progress" | "blocked" | "open";
+
+const STATUS_CONFIG: Record<ValidationStatus, { label: string; icon: typeof CheckCircle2; colors: string }> = {
+  pass: { label: "Pass", icon: CheckCircle2, colors: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25" },
+  fail: { label: "Fail", icon: XCircle, colors: "bg-red-500/15 text-red-400 border-red-500/30 hover:bg-red-500/25" },
+  na: { label: "N/A", icon: Ban, colors: "bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/25" },
+  in_progress: { label: "In Progress", icon: Clock, colors: "bg-blue-500/15 text-blue-400 border-blue-500/30 hover:bg-blue-500/25" },
+  blocked: { label: "Blocked", icon: AlertTriangle, colors: "bg-orange-500/15 text-orange-400 border-orange-500/30 hover:bg-orange-500/25" },
+  open: { label: "Open", icon: Circle, colors: "bg-muted/30 text-muted-foreground/60 border-border/40 hover:bg-muted/50 hover:text-foreground" },
+};
+
+// Cycle order when clicking the badge: Open → Pass → Fail → In Progress → Blocked → N/A → Open
+const STATUS_CYCLE: ValidationStatus[] = ["open", "pass", "fail", "in_progress", "blocked", "na"];
+
 function StatusBadge({
   status,
   onClick,
   size = "md",
 }: {
-  status: "pass" | "na" | "open";
+  status: ValidationStatus;
   onClick: () => void;
   size?: "sm" | "md";
 }) {
   const sizeClasses = size === "sm" ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-xs";
-
-  if (status === "pass") {
-    return (
-      <button
-        onClick={onClick}
-        className={cn(
-          "inline-flex items-center gap-1.5 rounded-md font-semibold transition-all border cursor-pointer",
-          "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25",
-          sizeClasses
-        )}
-        title="Click to change status"
-      >
-        <CheckCircle2 className="w-3.5 h-3.5" />
-        Tested
-      </button>
-    );
-  }
-
-  if (status === "na") {
-    return (
-      <button
-        onClick={onClick}
-        className={cn(
-          "inline-flex items-center gap-1.5 rounded-md font-semibold transition-all border cursor-pointer",
-          "bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/25",
-          sizeClasses
-        )}
-        title="Click to change status"
-      >
-        <Ban className="w-3.5 h-3.5" />
-        N/A
-      </button>
-    );
-  }
+  const config = STATUS_CONFIG[status];
+  const Icon = config.icon;
 
   return (
     <button
       onClick={onClick}
       className={cn(
         "inline-flex items-center gap-1.5 rounded-md font-semibold transition-all border cursor-pointer",
-        "bg-muted/30 text-muted-foreground/60 border-border/40 hover:bg-muted/50 hover:text-foreground",
+        config.colors,
         sizeClasses
       )}
-      title="Click to set status"
+      title="Click to change status"
     >
-      <Circle className="w-3.5 h-3.5" />
-      Open
+      <Icon className="w-3.5 h-3.5" />
+      {config.label}
     </button>
   );
 }
@@ -594,10 +579,13 @@ export default function Validation() {
     };
   }
 
-  function getStatus(key: string): "pass" | "na" | "open" {
+  function getStatus(key: string): ValidationStatus {
     const m = getMerged(key);
-    if (m.status === "N/A") return "na";
     if (m.status === "Pass") return "pass";
+    if (m.status === "Fail") return "fail";
+    if (m.status === "N/A") return "na";
+    if (m.status === "In Progress") return "in_progress";
+    if (m.status === "Blocked") return "blocked";
     return "open";
   }
 
@@ -605,8 +593,8 @@ export default function Validation() {
     const current = getMerged(key);
     const merged = { ...current, ...patch };
 
-    // Record date for Pass or N/A
-    if (patch.status === "Pass" || patch.status === "N/A") {
+    // Record date for any active status
+    if (patch.status && patch.status !== "Not Tested") {
       merged.testedDate = merged.testedDate || todayStr();
     }
     // Undo: clear date
@@ -625,16 +613,22 @@ export default function Validation() {
     });
   }
 
+  // Map internal status keys to DB enum values
+  const STATUS_TO_DB: Record<ValidationStatus, string> = {
+    pass: "Pass",
+    fail: "Fail",
+    na: "N/A",
+    in_progress: "In Progress",
+    blocked: "Blocked",
+    open: "Not Tested",
+  };
+
   function cycleStatus(pIdx: number, tIdx: number) {
     const key = testKey(pIdx, tIdx);
     const current = getStatus(key);
-    if (current === "open") {
-      saveTest(key, { status: "Pass" });
-    } else if (current === "pass") {
-      saveTest(key, { status: "N/A" });
-    } else {
-      saveTest(key, { status: "Not Tested" });
-    }
+    const currentIdx = STATUS_CYCLE.indexOf(current);
+    const nextStatus = STATUS_CYCLE[(currentIdx + 1) % STATUS_CYCLE.length];
+    saveTest(key, { status: STATUS_TO_DB[nextStatus] });
   }
 
   function saveField(pIdx: number, tIdx: number, patch: { signOff?: string; notes?: string; testedDate?: string }) {
@@ -672,6 +666,15 @@ export default function Validation() {
     setSelectedTestKeys(new Set());
   }
 
+  function bulkMarkFail() {
+    selectedTestKeys.forEach(key => {
+      if (getMerged(key).status !== "Fail") {
+        saveTest(key, { status: "Fail" });
+      }
+    });
+    setSelectedTestKeys(new Set());
+  }
+
   function bulkUndo() {
     selectedTestKeys.forEach(key => {
       saveTest(key, { status: "Not Tested" });
@@ -679,11 +682,9 @@ export default function Validation() {
     setSelectedTestKeys(new Set());
   }
 
-  function bulkApplyStatus(status: "pass" | "na" | "open") {
+  function bulkApplyStatus(status: ValidationStatus) {
     selectedTestKeys.forEach(key => {
-      if (status === "pass") saveTest(key, { status: "Pass" });
-      else if (status === "na") saveTest(key, { status: "N/A" });
-      else saveTest(key, { status: "Not Tested" });
+      saveTest(key, { status: STATUS_TO_DB[status] });
     });
     setSelectedTestKeys(new Set());
   }
@@ -755,7 +756,7 @@ export default function Validation() {
           `Phase ${pIdx + 1}: ${phase.title}`,
           test.name,
           test.description,
-          merged.status === "N/A" ? "N/A" : merged.status === "Pass" ? "Tested" : "Not Tested",
+          merged.status,
           merged.testedDate || "",
           merged.signOff || "",
           merged.notes || "",
@@ -804,8 +805,11 @@ export default function Validation() {
 
         const statusRaw = (record["Status"] || "").trim().toLowerCase();
         let newStatus = "Not Tested";
-        if (statusRaw === "tested" || statusRaw === "pass") newStatus = "Pass";
+        if (statusRaw === "pass" || statusRaw === "tested") newStatus = "Pass";
+        else if (statusRaw === "fail" || statusRaw === "failed") newStatus = "Fail";
         else if (statusRaw === "n/a" || statusRaw === "na" || statusRaw === "not applicable") newStatus = "N/A";
+        else if (statusRaw === "in progress" || statusRaw === "in_progress" || statusRaw === "inprogress") newStatus = "In Progress";
+        else if (statusRaw === "blocked") newStatus = "Blocked";
 
         const newDate = record["Date Tested"]?.trim() || current.testedDate || "";
         const newSignOff = record["Sign-Off"]?.trim() || current.signOff || "";
@@ -835,9 +839,14 @@ export default function Validation() {
 
   // Computed stats
   const allKeys = phases.flatMap((p, pIdx) => p.tests.map((_, tIdx) => testKey(pIdx, tIdx)));
+  const passCount = allKeys.filter(k => getMerged(k).status === "Pass").length;
+  const failCount = allKeys.filter(k => getMerged(k).status === "Fail").length;
   const naCount = allKeys.filter(k => getMerged(k).status === "N/A").length;
+  const inProgressCount = allKeys.filter(k => getMerged(k).status === "In Progress").length;
+  const blockedCount = allKeys.filter(k => getMerged(k).status === "Blocked").length;
+  const openCount = allKeys.length - passCount - failCount - naCount - inProgressCount - blockedCount;
   const total = allKeys.length - naCount;
-  const completed = allKeys.filter(k => getMerged(k).status === "Pass").length;
+  const completed = passCount; // "Pass" is the completed state
   const completePct = total > 0 ? Math.round((completed / total) * 100) : 0;
   return (
     <div className="min-h-screen bg-background animate-page-in">
@@ -919,21 +928,30 @@ export default function Validation() {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="w-5 h-5 text-primary" />
-                    <span className="text-sm text-foreground">{completed} of {total} tests completed</span>
-                    {naCount > 0 && (
-                      <span className="text-xs text-amber-400">({naCount} N/A)</span>
-                    )}
+                    <span className="text-sm text-foreground">{completed} of {total} tests passed</span>
+                    <span className="text-sm font-bold text-primary">{completePct}%</span>
                   </div>
-                  <span className="text-sm font-bold text-primary">{completePct}%</span>
                 </div>
                 <Progress value={completePct} className="h-2" />
+                <div className="flex flex-wrap gap-3 mt-2 text-xs">
+                  <span className="text-emerald-400 font-medium">{passCount} Pass</span>
+                  {failCount > 0 && <span className="text-red-400 font-medium">{failCount} Fail</span>}
+                  {inProgressCount > 0 && <span className="text-blue-400 font-medium">{inProgressCount} In Prog</span>}
+                  {blockedCount > 0 && <span className="text-orange-400 font-medium">{blockedCount} Blocked</span>}
+                  {naCount > 0 && <span className="text-amber-400 font-medium">{naCount} N/A</span>}
+                  <span className="text-muted-foreground">{openCount} Open</span>
+                </div>
               </div>
 
               {/* Phases — collapsible */}
               {phases.map((phase, pIdx) => {
                 const phaseKeys = phase.tests.map((_, tIdx) => testKey(pIdx, tIdx));
+                const phasePass = phaseKeys.filter(k => getMerged(k).status === "Pass").length;
+                const phaseFail = phaseKeys.filter(k => getMerged(k).status === "Fail").length;
                 const phaseNa = phaseKeys.filter(k => getMerged(k).status === "N/A").length;
-                const phaseCompleted = phaseKeys.filter(k => getMerged(k).status === "Pass").length;
+                const phaseInProg = phaseKeys.filter(k => getMerged(k).status === "In Progress").length;
+                const phaseBlocked = phaseKeys.filter(k => getMerged(k).status === "Blocked").length;
+                const phaseCompleted = phasePass; // Pass = completed
                 const phaseTotal = phase.tests.length - phaseNa;
                 const isCollapsed = !!collapsedPhases[pIdx];
                 const allDone = phaseTotal > 0 && phaseCompleted === phaseTotal;
@@ -959,7 +977,22 @@ export default function Validation() {
                           <h3 className="text-sm font-bold text-foreground mt-0.5">{phase.title}</h3>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {phaseFail > 0 && (
+                          <Badge variant="outline" className="text-xs font-semibold border-red-500/30 text-red-400">
+                            {phaseFail} Fail
+                          </Badge>
+                        )}
+                        {phaseInProg > 0 && (
+                          <Badge variant="outline" className="text-xs font-semibold border-blue-500/30 text-blue-400">
+                            {phaseInProg} In Prog
+                          </Badge>
+                        )}
+                        {phaseBlocked > 0 && (
+                          <Badge variant="outline" className="text-xs font-semibold border-orange-500/30 text-orange-400">
+                            {phaseBlocked} Blocked
+                          </Badge>
+                        )}
                         {phaseNa > 0 && (
                           <Badge variant="outline" className="text-xs font-semibold border-amber-500/30 text-amber-400">
                             {phaseNa} N/A
@@ -976,7 +1009,7 @@ export default function Validation() {
                                 : "border-border text-foreground"
                           )}
                         >
-                          {phaseCompleted}/{phaseTotal} Complete
+                          {phaseCompleted}/{phaseTotal} Pass
                         </Badge>
                       </div>
                     </button>
@@ -1018,12 +1051,24 @@ export default function Validation() {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="start" className="w-44">
                                   <DropdownMenuItem onClick={() => { bulkApplyStatus("pass"); setBulkStatusOpenPhase(null); }} className="gap-2 cursor-pointer">
-                                    <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
-                                    Mark tested
+                                    <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
+                                    Pass
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => { bulkApplyStatus("fail"); setBulkStatusOpenPhase(null); }} className="gap-2 cursor-pointer">
+                                    <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+                                    Fail
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => { bulkApplyStatus("in_progress"); setBulkStatusOpenPhase(null); }} className="gap-2 cursor-pointer">
+                                    <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
+                                    In Progress
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => { bulkApplyStatus("blocked"); setBulkStatusOpenPhase(null); }} className="gap-2 cursor-pointer">
+                                    <span className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0" />
+                                    Blocked
                                   </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => { bulkApplyStatus("na"); setBulkStatusOpenPhase(null); }} className="gap-2 cursor-pointer">
                                     <span className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
-                                    Mark N/A
+                                    N/A
                                   </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => { bulkApplyStatus("open"); setBulkStatusOpenPhase(null); }} className="gap-2 cursor-pointer">
                                     <span className="w-2 h-2 rounded-full bg-muted-foreground/40 flex-shrink-0" />
@@ -1250,27 +1295,54 @@ export default function Validation() {
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-green-500" />
-                        <span className="text-foreground">Tested</span>
+                        <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                        <span className="text-foreground">Pass</span>
                       </div>
-                      <span className="font-medium text-foreground">{completed}</span>
+                      <span className="font-medium text-emerald-400">{passCount}</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-muted-foreground/30" />
-                        <span className="text-foreground">Remaining</span>
+                    {failCount > 0 && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-red-500" />
+                          <span className="text-foreground">Fail</span>
+                        </div>
+                        <span className="font-medium text-red-400">{failCount}</span>
                       </div>
-                      <span className="font-medium text-foreground">{total - completed}</span>
-                    </div>
+                    )}
+                    {inProgressCount > 0 && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-blue-500" />
+                          <span className="text-foreground">In Progress</span>
+                        </div>
+                        <span className="font-medium text-blue-400">{inProgressCount}</span>
+                      </div>
+                    )}
+                    {blockedCount > 0 && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-orange-500" />
+                          <span className="text-foreground">Blocked</span>
+                        </div>
+                        <span className="font-medium text-orange-400">{blockedCount}</span>
+                      </div>
+                    )}
                     {naCount > 0 && (
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full bg-amber-500/40" />
-                          <span className="text-foreground">Not Applicable</span>
+                          <div className="w-3 h-3 rounded-full bg-amber-500" />
+                          <span className="text-foreground">N/A</span>
                         </div>
                         <span className="font-medium text-amber-400">{naCount}</span>
                       </div>
                     )}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-muted-foreground/30" />
+                        <span className="text-foreground">Open</span>
+                      </div>
+                      <span className="font-medium text-muted-foreground">{openCount}</span>
+                    </div>
                   </div>
 
                   {/* Next Up */}

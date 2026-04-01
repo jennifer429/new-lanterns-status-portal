@@ -336,7 +336,7 @@ export const validationResults = mysqlTable("validationResults", {
   /** Stable key: "<phaseIndex>:<testIndex>", e.g. "1:2" */
   testKey: varchar("testKey", { length: 20 }).notNull(),
   actual: text("actual"),
-  status: mysqlEnum("status", ["Pass", "Fail", "Not Tested", "Pending", "N/A"]).default("Not Tested").notNull(),
+  status: mysqlEnum("status", ["Pass", "Fail", "Not Tested", "Pending", "N/A", "In Progress", "Blocked"]).default("Not Tested").notNull(),
   signOff: varchar("signOff", { length: 255 }),
   notes: text("notes"),
   /** User-settable date for when this test was documented. Auto-populates with today's date. */
