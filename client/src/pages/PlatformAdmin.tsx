@@ -1153,8 +1153,11 @@ export default function PlatformAdmin() {
                   const tsPct = tsTotal > 0 ? Math.round((tsDone / tsTotal) * 100) : 0;
                   const vs = (orgMetrics as any)?.validationStats;
                   const vsPass = vs?.pass ?? 0;
+                  const vsInProg = vs?.inProgress ?? 0;
+                  const vsFail = vs?.fail ?? 0;
+                  const vsBlocked = vs?.blocked ?? 0;
                   const vsTotal = vs ? (vs.total - (vs.na ?? 0)) : 0;
-                  const vsPct = vsTotal > 0 ? Math.round((vsPass / vsTotal) * 100) : 0;
+                  const vsPct = vsTotal > 0 ? Math.round(((vsPass * 1.0 + vsInProg * 0.5 + vsFail * 0.25 + vsBlocked * 0.25) / vsTotal) * 100) : 0;
                   const overallPct = Math.round(qPct * 0.4 + vsPct * 0.3 + tsPct * 0.3);
                   const filesCount = orgMetrics?.files.length ?? 0;
                   const userCount = orgMetrics?.userCount ?? 0;

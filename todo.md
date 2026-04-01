@@ -2324,3 +2324,8 @@
 - [x] Ensure export and import formats are consistent — export produces .json, import detects JSON regardless of file extension
 - [x] Fix export function name — renamed handleExportCSV to handleExportData (button label was already correct as "Export")
 - [x] Updated import dialog description to be more accurate
+
+## In Progress Tests Count as 50% (Mar 31, 2026)
+- [x] Update testing progress calculation so In Progress counts as 50% instead of 0%
+- [x] Applied consistently: Home.tsx (already correct), PlatformAdmin.tsx (fixed), PartnerAdmin.tsx (fixed), Validation.tsx overall + phase-level + donut chart (fixed)
+- [x] Weights: Pass=100%, InProgress=50%, Fail=25%, Blocked=25%, N/A=excluded, Open=0%

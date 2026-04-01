@@ -361,8 +361,11 @@ export default function PartnerAdmin({ partnerName, allowedDomain }: PartnerAdmi
                               const qP = secTotal > 0 ? (secComplete / secTotal) * 100 : 0;
                               const v = orgMetrics.validationStats;
                               const vPass = v?.pass ?? 0;
+                              const vInProg = v?.inProgress ?? 0;
+                              const vFail = v?.fail ?? 0;
+                              const vBlocked = v?.blocked ?? 0;
                               const vTot = v ? (v.total - (v.na ?? 0)) : 0;
-                              const vP = vTot > 0 ? (vPass / vTot) * 100 : 0;
+                              const vP = vTot > 0 ? ((vPass * 1.0 + vInProg * 0.5 + vFail * 0.25 + vBlocked * 0.25) / vTot) * 100 : 0;
                               const t = orgMetrics.taskStats;
                               const tDone = t?.completed ?? 0;
                               const tTot = t ? (t.total - (t.notApplicable ?? 0)) : 0;

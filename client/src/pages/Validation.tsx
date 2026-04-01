@@ -846,8 +846,10 @@ export default function Validation() {
   const blockedCount = allKeys.filter(k => getMerged(k).status === "Blocked").length;
   const openCount = allKeys.length - passCount - failCount - naCount - inProgressCount - blockedCount;
   const total = allKeys.length - naCount;
-  const completed = passCount; // "Pass" is the completed state
-  const completePct = total > 0 ? Math.round((completed / total) * 100) : 0;
+  const completed = passCount; // "Pass" is the fully completed state
+  // Weighted completion: Pass=100%, InProgress=50%, Fail=25%, Blocked=25%, Open=0%
+  const weightedScore = passCount * 1.0 + inProgressCount * 0.5 + failCount * 0.25 + blockedCount * 0.25;
+  const completePct = total > 0 ? Math.round((weightedScore / total) * 100) : 0;
   return (
     <div className="min-h-screen bg-background animate-page-in">
       {/* Header */}
@@ -951,8 +953,11 @@ export default function Validation() {
                 const phaseNa = phaseKeys.filter(k => getMerged(k).status === "N/A").length;
                 const phaseInProg = phaseKeys.filter(k => getMerged(k).status === "In Progress").length;
                 const phaseBlocked = phaseKeys.filter(k => getMerged(k).status === "Blocked").length;
-                const phaseCompleted = phasePass; // Pass = completed
+                const phaseCompleted = phasePass; // Pass = fully completed
                 const phaseTotal = phase.tests.length - phaseNa;
+                // Weighted phase completion: Pass=100%, InProgress=50%, Fail=25%, Blocked=25%
+                const phaseWeightedScore = phasePass * 1.0 + phaseInProg * 0.5 + phaseFail * 0.25 + phaseBlocked * 0.25;
+                const phasePct = phaseTotal > 0 ? Math.round((phaseWeightedScore / phaseTotal) * 100) : 0;
                 const isCollapsed = !!collapsedPhases[pIdx];
                 const allDone = phaseTotal > 0 && phaseCompleted === phaseTotal;
                 const allPhaseSelected = phaseKeys.length > 0 && phaseKeys.every(k => selectedTestKeys.has(k));
@@ -1281,7 +1286,7 @@ export default function Validation() {
                         <circle
                           cx="18" cy="18" r="15.9155" fill="none"
                           stroke="hsl(142 70% 45%)" strokeWidth="3"
-                          strokeDasharray={`${total > 0 ? (completed / total) * 100 : 0} ${total > 0 ? 100 - (completed / total) * 100 : 100}`}
+                          strokeDasharray={`${completePct} ${100 - completePct}`}
                         />
                       </svg>
                       <div className="absolute inset-0 flex flex-col items-center justify-center">
