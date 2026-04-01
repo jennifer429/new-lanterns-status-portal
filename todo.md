@@ -2317,3 +2317,10 @@
 - [x] Update Home.tsx testing card with 6-status breakdown and weighted formula
 - [x] Update PlatformAdmin testing mini card with all 6 status counts
 - [x] Update CSV export/import to handle all 6 statuses
+
+## Fix Import Dialog Text (Mar 31, 2026)
+- [x] Fix file input accept filter — already accepts .json, .txt, .csv (verified)
+- [x] Fix import parsing — improved JSON detection (handles .txt/.csv containing JSON), added clear error for unrecognized formats with tip to use Export
+- [x] Ensure export and import formats are consistent — export produces .json, import detects JSON regardless of file extension
+- [x] Fix export function name — renamed handleExportCSV to handleExportData (button label was already correct as "Export")
+- [x] Updated import dialog description to be more accurate

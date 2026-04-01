@@ -1056,8 +1056,8 @@ export default function IntakeNewRedesign() {
     reader.readAsDataURL(file);
   };
 
-  // Export pipe-delimited file (excludes upload, upload-download, and workflow types)
-  const handleExportCSV = () => {
+  // Export questionnaire responses as JSON (excludes upload, upload-download, and workflow types)
+  const handleExportData = () => {
     // Build a structured JSON export so all types (contacts, multi-select, dropdowns, etc.)
     // round-trip perfectly and are human-readable / editable.
     const exportResponses: Record<string, any> = {};
@@ -1106,23 +1106,43 @@ export default function IntakeNewRedesign() {
     setIsImporting(true);
     try {
       const text = await importFile.text();
+      const trimmed = text.trimStart();
       const importedResponses: Record<string, any> = {};
 
-      // ── JSON format (new) ─────────────────────────────────────────────────
-      if (importFile.name.endsWith('.json') || text.trimStart().startsWith('{')) {
-        const payload = JSON.parse(text);
-        const src = payload.responses ?? payload; // support both { responses: {...} } and bare object
-        if (typeof src !== 'object' || src === null) throw new Error('Invalid JSON format');
-        Object.entries(src).forEach(([qid, val]) => {
-          if (val !== undefined && val !== null && val !== '') {
-            importedResponses[qid] = val;
-          }
-        });
+      // ── Detect format ──────────────────────────────────────────────────────
+      // JSON: file ends in .json, or content starts with { or [
+      const looksLikeJson = importFile.name.endsWith('.json') || trimmed.startsWith('{') || trimmed.startsWith('[');
 
-      // ── Legacy pipe-delimited (txt / csv) ────────────────────────────────
+      if (looksLikeJson) {
+        // ── JSON format ────────────────────────────────────────────────────
+        try {
+          const payload = JSON.parse(trimmed);
+          const src = payload.responses ?? payload; // support both { responses: {...} } and bare object
+          if (typeof src !== 'object' || src === null) throw new Error('Invalid JSON structure');
+          Object.entries(src).forEach(([qid, val]) => {
+            if (val !== undefined && val !== null && val !== '') {
+              importedResponses[qid] = val;
+            }
+          });
+        } catch (jsonErr) {
+          throw new Error(`Failed to parse JSON: ${jsonErr instanceof Error ? jsonErr.message : 'Invalid JSON'}`);
+        }
+
       } else {
+        // ── Legacy pipe-delimited (txt / csv) ──────────────────────────────
         const lines = text.split('\n').filter(l => l.trim());
+        if (lines.length === 0) throw new Error('File is empty');
+
         const header = lines[0] || '';
+        const isPipeDelimited = header.includes('|');
+
+        if (!isPipeDelimited) {
+          throw new Error(
+            'Unrecognized file format. Expected a .json export file or a pipe-delimited (|) .txt/.csv file. '
+            + 'Tip: Use the Export button to download a .json file, then re-import that file.'
+          );
+        }
+
         const hasOptionsColumn = header.split('|').length >= 6;
         lines.slice(1).forEach(line => {
           const parts = line.split('|');
@@ -1143,7 +1163,7 @@ export default function IntakeNewRedesign() {
       }
 
       const importCount = Object.keys(importedResponses).length;
-      if (importCount === 0) throw new Error('No responses found in file');
+      if (importCount === 0) throw new Error('No responses found in file. Make sure the file contains questionnaire data.');
 
       // Merge into state and persist to DB
       setResponses(prev => ({ ...prev, ...importedResponses }));
@@ -1699,7 +1719,7 @@ export default function IntakeNewRedesign() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleExportCSV}
+                onClick={handleExportData}
                 className="gap-2 hidden sm:flex"
               >
                 <Download className="w-4 h-4" />
@@ -2068,7 +2088,7 @@ export default function IntakeNewRedesign() {
           <DialogHeader>
             <DialogTitle>Import Questionnaire Data</DialogTitle>
             <DialogDescription>
-              Upload a <strong>.json</strong> export file to restore responses. Legacy <code>.txt</code> / <code>.csv</code> pipe-delimited files are also accepted.
+              Upload a <strong>.json</strong> export file to restore responses. You can also import legacy pipe-delimited <code>.txt</code> or <code>.csv</code> files.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
