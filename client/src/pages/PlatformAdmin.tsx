@@ -1051,7 +1051,7 @@ export default function PlatformAdmin() {
       </header>
 
       {/* Main Content */}
-      <div className="container py-8">
+      <div className="container py-5">
 
         {/* ── CONNECTIVITY MATRIX TAB ── */}
         {activeTab === "prod-dashboard" && (
@@ -1068,9 +1068,9 @@ export default function PlatformAdmin() {
 
         {activeTab === "impl-dashboard" && (
           <>
-            <div className="flex flex-col gap-3 mb-6">
+            <div className="flex flex-col gap-2 mb-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold">Admin Dashboard</h2>
+                <h2 className="text-3xl font-bold">Admin Dashboard</h2>
                 <div className="text-sm text-muted-foreground">
                   {(dashboardPartnerFilter !== null || dashboardSiteFilter !== null)
                     ? `${filteredActiveOrgs.length} of ${activeOrgs.length} organizations`
@@ -1134,9 +1134,9 @@ export default function PlatformAdmin() {
             </div>
 
             {/* Collapsible site cards with mini dashboards (all admins) */}
-            <div className="space-y-4">
+            <div className="space-y-3">
               {filteredActiveOrgs.length === 0 ? (
-                <div className="text-center py-10 text-muted-foreground text-sm italic">
+                <div className="text-center py-6 text-muted-foreground text-sm italic">
                   {activeOrgs.length === 0 ? "No active organizations" : "No organizations match the current filter"}
                 </div>
               ) : (
@@ -1161,7 +1161,7 @@ export default function PlatformAdmin() {
                   const isExpanded = expandedSiteIds.has(org.id);
 
                   return (
-                    <Card key={org.id} className="overflow-hidden border-2 border-border/80 bg-card">
+                    <Card key={org.id} className="overflow-hidden border-2 border-primary/50 bg-card shadow-md shadow-primary/5">
                       {/* Collapsible header */}
                       <button
                         onClick={() => setExpandedSiteIds(prev => {
@@ -1169,22 +1169,22 @@ export default function PlatformAdmin() {
                           next.has(org.id) ? next.delete(org.id) : next.add(org.id);
                           return next;
                         })}
-                        className="w-full px-5 py-4 flex items-center justify-between hover:bg-muted/40 transition-colors bg-muted/20"
+                        className="w-full px-5 py-3 flex items-center justify-between hover:bg-muted/40 transition-colors bg-muted/25"
                       >
                         <div className="flex items-center gap-4 min-w-0">
-                          <span className="font-semibold text-base truncate">{org.name}</span>
+                          <span className="font-bold text-lg truncate">{org.name}</span>
                           <div className="flex items-center gap-2 flex-shrink-0">
                             <Badge variant="outline" className={cn(
-                              "text-xs font-semibold border-2",
+                              "text-sm font-bold border-2 px-2.5 py-0.5",
                               overallPct === 100 ? "border-emerald-500/60 text-emerald-400" : "border-primary/60 text-primary"
                             )}>
                               {overallPct}% overall
                             </Badge>
-                            <span className="text-xs text-muted-foreground hidden sm:inline">
+                            <span className="text-sm text-muted-foreground hidden sm:inline">
                               Q: {sectionsComplete}/{totalSections} · Tests: {vsPass}/{vs?.total ?? 28} · Tasks: {tsDone}/{ts?.total ?? 0}
                             </span>
                             {isPlatformAdmin && (
-                              <span className="text-xs text-muted-foreground hidden md:inline">· {partnerName}</span>
+                              <span className="text-sm text-muted-foreground hidden md:inline">· {partnerName}</span>
                             )}
                             {filesCount > 0 && (
                               <Badge variant="secondary" className="text-xs">{filesCount} files</Badge>
@@ -1196,14 +1196,14 @@ export default function PlatformAdmin() {
 
                       {/* Expanded mini dashboard */}
                       {isExpanded && (
-                        <div className="border-t-2 border-primary/40 px-5 py-5 space-y-5 bg-background">
+                        <div className="border-t-2 border-primary/60 px-5 py-4 space-y-4 bg-background/80">
                           {/* Overall progress bar */}
                           <div>
                             <div className="flex items-center justify-between mb-1.5">
-                              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Implementation Progress</span>
-                              <span className="text-sm font-bold text-primary">{overallPct}%</span>
+                              <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Implementation Progress</span>
+                              <span className="text-lg font-bold text-primary">{overallPct}%</span>
                             </div>
-                            <div className="w-full h-2.5 bg-muted rounded-full overflow-hidden border border-border/60">
+                            <div className="w-full h-3 bg-muted rounded-full overflow-hidden border border-border/60">
                               <div
                                 className="h-full bg-primary rounded-full transition-all"
                                 style={{ width: `${overallPct}%` }}
@@ -1212,17 +1212,17 @@ export default function PlatformAdmin() {
                           </div>
 
                           {/* Three mini stat columns */}
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             {/* Questionnaire */}
-                            <div className="rounded-lg border-2 border-border bg-muted/40 p-4">
+                            <div className="rounded-lg border-2 border-border/90 bg-muted/50 p-4">
                               <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
                                   <ClipboardList className="w-4 h-4 text-primary" />
-                                  <span className="text-xs font-semibold">Questionnaire</span>
+                                  <span className="text-sm font-bold">Questionnaire</span>
                                 </div>
-                                <span className="text-base font-bold text-primary">{qPct}%</span>
+                                <span className="text-lg font-bold text-primary">{qPct}%</span>
                               </div>
-                              <p className="text-xs text-muted-foreground mb-3">{sectionsComplete}/{totalSections} sections complete</p>
+                              <p className="text-sm text-muted-foreground mb-3">{sectionsComplete}/{totalSections} sections complete</p>
                               <div className="w-full h-1.5 bg-muted rounded-full mb-3 border border-border/40">
                                 <div className="h-full bg-primary rounded-full" style={{ width: `${qPct}%` }} />
                               </div>
@@ -1235,19 +1235,19 @@ export default function PlatformAdmin() {
                             </div>
 
                             {/* Testing */}
-                            <div className="rounded-lg border-2 border-border bg-muted/40 p-4">
+                            <div className="rounded-lg border-2 border-border/90 bg-muted/50 p-4">
                               <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
                                   <TestTube2 className="w-4 h-4 text-primary" />
-                                  <span className="text-xs font-semibold">Testing</span>
+                                  <span className="text-sm font-bold">Testing</span>
                                 </div>
-                                <span className="text-base font-bold text-primary">{vsPct}%</span>
+                                <span className="text-lg font-bold text-primary">{vsPct}%</span>
                               </div>
-                              <p className="text-xs text-muted-foreground mb-3">{vsPass}/{vs?.total ?? 28} tests passed</p>
+                              <p className="text-sm text-muted-foreground mb-3">{vsPass}/{vs?.total ?? 28} tests passed</p>
                               <div className="w-full h-1.5 bg-muted rounded-full mb-2 border border-border/40">
                                 <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${vsPct}%` }} />
                               </div>
-                              <div className="flex gap-3 text-[10px] mb-3">
+                              <div className="flex gap-3 text-xs mb-3">
                                 <span className="text-emerald-400 font-semibold">{vsPass} Pass</span>
                                 <span className="text-red-400 font-semibold">{vs?.fail ?? 0} Fail</span>
                                 <span className="text-muted-foreground">{vs?.notTested ?? (vs?.total ?? 28)} Not Tested</span>
@@ -1261,19 +1261,19 @@ export default function PlatformAdmin() {
                             </div>
 
                             {/* Task List */}
-                            <div className="rounded-lg border-2 border-border bg-muted/40 p-4">
+                            <div className="rounded-lg border-2 border-border/90 bg-muted/50 p-4">
                               <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
                                   <ListChecks className="w-4 h-4 text-primary" />
-                                  <span className="text-xs font-semibold">Task List</span>
+                                  <span className="text-sm font-bold">Task List</span>
                                 </div>
-                                <span className="text-base font-bold text-primary">{tsPct}%</span>
+                                <span className="text-lg font-bold text-primary">{tsPct}%</span>
                               </div>
-                              <p className="text-xs text-muted-foreground mb-3">{tsDone}/{ts?.total ?? 0} tasks done</p>
+                              <p className="text-sm text-muted-foreground mb-3">{tsDone}/{ts?.total ?? 0} tasks done</p>
                               <div className="w-full h-1.5 bg-muted rounded-full mb-2 border border-border/40">
                                 <div className="h-full bg-primary rounded-full" style={{ width: `${tsPct}%` }} />
                               </div>
-                              <div className="flex flex-wrap gap-2 text-[10px] mb-3">
+                              <div className="flex flex-wrap gap-2 text-xs mb-3">
                                 <span className="text-emerald-400 font-semibold">{ts?.completed ?? 0} Done</span>
                                 <span className="text-amber-400 font-semibold">{ts?.inProgress ?? 0} In Prog</span>
                                 <span className="text-red-400 font-semibold">{ts?.blocked ?? 0} Blocked</span>
@@ -1291,7 +1291,7 @@ export default function PlatformAdmin() {
                           {/* Files */}
                           {orgMetrics?.files && orgMetrics.files.length > 0 && (
                             <div>
-                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Files</p>
+                              <p className="text-sm font-bold text-muted-foreground uppercase tracking-wide mb-2">Files</p>
                               <div className="space-y-1 max-h-40 overflow-y-auto">
                                 {orgMetrics.files.map((f: any) => (
                                   <a
@@ -1302,7 +1302,7 @@ export default function PlatformAdmin() {
                                     className="flex items-center gap-2 px-3 py-2 rounded border border-border/60 hover:bg-muted/30 transition-colors group"
                                   >
                                     <Download className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary flex-shrink-0 transition-colors" />
-                                    <span className="text-xs truncate flex-1">{f.fileName}</span>
+                                    <span className="text-sm truncate flex-1">{f.fileName}</span>
                                   </a>
                                 ))}
                               </div>

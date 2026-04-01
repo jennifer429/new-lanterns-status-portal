@@ -2302,3 +2302,8 @@
 - [x] Notes & Files upload feature (org_notes table, routes, UI)
 - [x] All other PR changes from 0688aee
 - [x] Fix "Rendered more hooks" error - moved useEffect above early return using ref bridge pattern
+
+## PlatformAdmin Visual Improvements - Bolder Contrast & Tighter Layout (Mar 31, 2026)
+- [x] Make card borders much bolder/more visible (border-primary/50 with purple shadow)
+- [x] Increase font sizes across the dashboard (org names text-lg, stats text-sm, percentages text-lg)
+- [x] Reduce dark empty space - tightened container py-5, card spacing space-y-3, header py-3
