@@ -1253,7 +1253,7 @@ export default function PlatformAdmin() {
                               <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs mb-3">
                                 <span className="text-emerald-400 font-semibold">{vsPass} Pass</span>
                                 {(vs?.fail ?? 0) > 0 && <span className="text-red-400 font-semibold">{vs.fail} Fail</span>}
-                                {(vs?.inProgress ?? 0) > 0 && <span className="text-blue-400 font-semibold">{vs.inProgress} In Prog</span>}
+                                {(vs?.inProgress ?? 0) > 0 && <span className="text-blue-400 font-semibold">{vs?.inProgress ?? 0} In Prog</span>}
                                 {(vs?.blocked ?? 0) > 0 && <span className="text-orange-400 font-semibold">{vs.blocked} Blocked</span>}
                                 <span className="text-muted-foreground">{vs?.notTested ?? (vs?.total ?? 28)} Open</span>
                               </div>
@@ -1280,7 +1280,7 @@ export default function PlatformAdmin() {
                               </div>
                               <div className="flex flex-wrap gap-2 text-xs mb-3">
                                 <span className="text-emerald-400 font-semibold">{ts?.completed ?? 0} Done</span>
-                                <span className="text-amber-400 font-semibold">{ts?.inProgress ?? 0} In Prog</span>
+                                <span className="text-blue-400 font-semibold">{ts?.inProgress ?? 0} In Prog</span>
                                 <span className="text-red-400 font-semibold">{ts?.blocked ?? 0} Blocked</span>
                                 <span className="text-muted-foreground">{ts ? (ts.total - tsDone - (ts.inProgress ?? 0) - (ts.blocked ?? 0) - (ts.notApplicable ?? 0)) : 0} Open</span>
                               </div>

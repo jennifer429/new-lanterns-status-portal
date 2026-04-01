@@ -616,7 +616,7 @@ export default function Implementation() {
                           </Badge>
                         )}
                         {sectionInProgress > 0 && (
-                          <Badge variant="outline" className="text-xs font-semibold border-amber-400/30 text-amber-400">
+                          <Badge variant="outline" className="text-xs font-semibold border-blue-400/30 text-blue-400">
                             {sectionInProgress} In Progress
                           </Badge>
                         )}
@@ -684,9 +684,9 @@ export default function Implementation() {
                                     <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
                                     Mark complete
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => { bulkApplyStatus("in_progress"); setBulkStatusOpenSection(null); }} className="gap-2 cursor-pointer">
-                                    <span className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
-                                    In progress
+                                   <DropdownMenuItem onClick={() => { bulkApplyStatus("in_progress"); setBulkStatusOpenSection(null); }} className="gap-2 cursor-pointer">
+                                     <span className="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0" />
+                                     In progress
                                   </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => { bulkApplyStatus("n_a"); setBulkStatusOpenSection(null); }} className="gap-2 cursor-pointer">
                                     <span className="w-2 h-2 rounded-full bg-purple-400 flex-shrink-0" />
@@ -769,7 +769,7 @@ export default function Implementation() {
 
                           const STATUS_CONFIG = {
                             open:        { label: "Open",        dot: "bg-muted-foreground/40", text: "text-muted-foreground" },
-                            in_progress: { label: "In progress", dot: "bg-amber-400",            text: "text-amber-400" },
+                            in_progress: { label: "In progress", dot: "bg-blue-400",            text: "text-blue-400" },
                             complete:    { label: "Complete",    dot: "bg-green-500",             text: "text-green-500" },
                             n_a:         { label: "N/A",         dot: "bg-purple-400",            text: "text-purple-400" },
                             blocked:     { label: "Blocked",     dot: "bg-red-500",               text: "text-red-500" },
@@ -820,9 +820,9 @@ export default function Implementation() {
                                         <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
                                         Mark complete
                                       </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => applyStatus(task.id, section.title, "in_progress")} className="gap-2 cursor-pointer">
-                                        <span className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
-                                        In progress
+                                       <DropdownMenuItem onClick={() => applyStatus(task.id, section.title, "in_progress")} className="gap-2 cursor-pointer">
+                                         <span className="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0" />
+                                         In progress
                                       </DropdownMenuItem>
                                       <DropdownMenuItem onClick={() => applyStatus(task.id, section.title, "n_a")} className="gap-2 cursor-pointer">
                                         <span className="w-2 h-2 rounded-full bg-purple-400 flex-shrink-0" />
@@ -878,7 +878,7 @@ export default function Implementation() {
                                       </DropdownMenuTrigger>
                                       <DropdownMenuContent align="start" className="w-40">
                                         <DropdownMenuItem onClick={() => applyStatus(task.id, section.title, "complete")} className="gap-2 cursor-pointer"><span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />Mark complete</DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => applyStatus(task.id, section.title, "in_progress")} className="gap-2 cursor-pointer"><span className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />In progress</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => applyStatus(task.id, section.title, "in_progress")} className="gap-2 cursor-pointer"><span className="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0" />In progress</DropdownMenuItem>
                                         <DropdownMenuItem onClick={() => applyStatus(task.id, section.title, "n_a")} className="gap-2 cursor-pointer"><span className="w-2 h-2 rounded-full bg-purple-400 flex-shrink-0" />Mark N/A</DropdownMenuItem>
                                         <DropdownMenuItem onClick={() => applyStatus(task.id, section.title, "blocked")} className="gap-2 cursor-pointer"><span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />Blocked</DropdownMenuItem>
                                         <DropdownMenuItem onClick={() => applyStatus(task.id, section.title, "open")} className="gap-2 cursor-pointer"><span className="w-2 h-2 rounded-full bg-muted-foreground/40 flex-shrink-0" />Open</DropdownMenuItem>
@@ -999,10 +999,10 @@ export default function Implementation() {
                     {inProgressCount > 0 && (
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full bg-amber-400" />
+                          <div className="w-3 h-3 rounded-full bg-blue-400" />
                           <span className="text-foreground">In Progress</span>
                         </div>
-                        <span className="font-medium text-amber-400">{inProgressCount}</span>
+                        <span className="font-medium text-blue-400">{inProgressCount}</span>
                       </div>
                     )}
                     {blockedCount > 0 && (

@@ -2334,3 +2334,8 @@
 - [x] Update Traffic Type options to: ADT, Orders, Reports, Images, Image Priors, Image Q&R
 - [x] Add legacy type migration (DICOM→Images, HL7 ORM→Orders, HL7 ORU→Reports, etc.)
 - [x] Fix table readability — bigger fonts (text-xs), fixed column widths, horizontal scroll, text wrapping instead of truncation
+
+## Bug Fixes - Testing Status Persistence, Color Consistency & Dashboard Ordering (Mar 31, 2026)
+- [x] Fix "In Progress" testing status reverting to "Failed" on page reload (Marshall example) — backend Zod enum was missing In Progress and Blocked
+- [x] Make "In Progress" colors consistent between tests and tasks (use blue everywhere)
+- [x] Make dashboard ordering consistent across all views

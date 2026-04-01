@@ -1120,7 +1120,7 @@ export default function Home() {
                     <div className="grid grid-cols-3 gap-1 mb-3">
                       {([
                         { label: "Done",    count: completedSections,    dotCls: "bg-green-500",           numCls: "text-green-500" },
-                        { label: "In Prog", count: qInProgressSections,  dotCls: "bg-amber-400",           numCls: "text-amber-400" },
+                        { label: "In Prog", count: qInProgressSections,  dotCls: "bg-blue-400",           numCls: "text-blue-400" },
                         { label: "Open",    count: qNotStartedSections,  dotCls: "bg-muted-foreground/40", numCls: "text-foreground" },
                       ] as const).map(({ label: statusLabel, count, dotCls, numCls }) => (
                         <div key={statusLabel} className="text-center">
@@ -1377,11 +1377,11 @@ export default function Home() {
                     {/* Status breakdown */}
                     <div className="grid grid-cols-5 gap-1 mb-3">
                       {([
-                        { label: "Done",  count: implCompleted,       dotCls: "bg-green-500",           numCls: "text-green-500" },
-                        { label: "In Prog", count: implInProgressCount, dotCls: "bg-amber-400",           numCls: "text-amber-400" },
-                        { label: "Blocked", count: implBlockedCount,    dotCls: "bg-red-500",             numCls: "text-red-500" },
-                        { label: "Open",  count: implOpenCount,        dotCls: "bg-muted-foreground/40", numCls: "text-foreground" },
-                        { label: "N/A",   count: implNaCount,          dotCls: "bg-yellow-700",          numCls: "text-yellow-600" },
+                        { label: "Done",    count: implCompleted,         dotCls: "bg-emerald-500",         numCls: "text-emerald-500" },
+                        { label: "In Prog", count: implInProgressCount,   dotCls: "bg-blue-500",            numCls: "text-blue-500" },
+                        { label: "Blocked", count: implBlockedCount,      dotCls: "bg-orange-500",          numCls: "text-orange-500" },
+                        { label: "N/A",     count: implNaCount,           dotCls: "bg-amber-500",           numCls: "text-amber-500" },
+                        { label: "Open",    count: implOpenCount,         dotCls: "bg-muted-foreground/40", numCls: "text-foreground" },
                       ] as const).map(({ label: statusLabel, count, dotCls, numCls }) => (
                         <div key={statusLabel} className="text-center">
                           <div className={`text-sm font-bold ${numCls}`}>{count}</div>
