@@ -2343,3 +2343,6 @@
 ## New Features - N/A for Questionnaire/Files & Architecture Thumbnail (Apr 1, 2026)
 - [x] Add N/A option to questionnaire/file uploads so sections can be skipped
 - [x] Add architecture picture thumbnail to the dashboard
+
+## Individual Question N/A (Apr 2, 2026)
+- [x] Allow users to mark individual questionnaire questions as N/A (not just entire sections)

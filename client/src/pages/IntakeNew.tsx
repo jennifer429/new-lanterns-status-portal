@@ -94,6 +94,7 @@ export default function IntakeNew() {
   const [currentSection, setCurrentSection] = useState<string | null>(null);
   const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
   const [naSections, setNaSections] = useState<Set<string>>(new Set());
+  const [naQuestions, setNaQuestions] = useState<Set<string>>(new Set());
   const [deleteFileId, setDeleteFileId] = useState<number | null>(null);
   const [deleteQuestionId, setDeleteQuestionId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -117,6 +118,7 @@ export default function IntakeNew() {
     if (existingResponses) {
       const loadedResponses: Record<string, any> = {};
       const loadedNa = new Set<string>();
+      const loadedNaQ = new Set<string>();
       existingResponses.forEach((resp) => {
         // Skip responses with null questionId (orphaned data)
         if (!resp.questionId) return;
@@ -125,6 +127,13 @@ export default function IntakeNew() {
         if (resp.questionId.startsWith('__section_na:')) {
           const sectionId = resp.questionId.replace('__section_na:', '');
           loadedNa.add(sectionId);
+          return;
+        }
+        
+        // Check for question-level N/A markers
+        if (resp.questionId.startsWith('__question_na:')) {
+          const qId = resp.questionId.replace('__question_na:', '');
+          loadedNaQ.add(qId);
           return;
         }
         
@@ -137,6 +146,7 @@ export default function IntakeNew() {
       });
       setResponses(loadedResponses);
       setNaSections(loadedNa);
+      setNaQuestions(loadedNaQ);
     }
   }, [existingResponses]);
 
@@ -251,6 +261,8 @@ export default function IntakeNew() {
     if (totalQuestions === 0) return 100;
 
     const answeredCount = section.questions.filter(q => {
+      // N/A questions count as answered
+      if (naQuestions.has(q.id)) return true;
       const value = responses[q.id];
       if (Array.isArray(value)) return value.length > 0;
       if (typeof value === 'string') return value.trim().length > 0;
@@ -353,6 +365,31 @@ export default function IntakeNew() {
     link.download = filename;
     link.click();
     URL.revokeObjectURL(url);
+  };
+
+  // Toggle question N/A
+  const toggleQuestionNa = (questionId: string) => {
+    setNaQuestions(prev => {
+      const next = new Set(prev);
+      if (next.has(questionId)) {
+        next.delete(questionId);
+      } else {
+        next.add(questionId);
+      }
+      return next;
+    });
+    // Save the N/A marker as a special response
+    const key = `__question_na:${questionId}`;
+    setResponses(prev => {
+      if (naQuestions.has(questionId)) {
+        // Removing N/A — delete the marker
+        const { [key]: _, ...rest } = prev;
+        return rest;
+      } else {
+        // Adding N/A — set the marker
+        return { ...prev, [key]: 'true' };
+      }
+    });
   };
 
   // Toggle section N/A
@@ -841,12 +878,18 @@ export default function IntakeNew() {
                     const keys = ['IW.orders_description', 'IW.images_description', 'IW.priors_description', 'IW.reports_description'];
                     const filled = keys.filter(k => { const v = responses[k]; return v && String(v).trim().length > 0; }).length;
                     return `${filled} of 4 workflows described`;
-                  })() : `${currentSectionData?.questions?.filter(q => {
-                    const value = responses[q.id];
-                    if (Array.isArray(value)) return value.length > 0;
-                    if (typeof value === 'string') return value.trim().length > 0;
-                    return value !== undefined && value !== null && value !== '';
-                  }).length || 0} of ${currentSectionData?.questions?.length || 0} questions answered`}
+                  })() : (() => {
+                    const answered = currentSectionData?.questions?.filter(q => {
+                      if (naQuestions.has(q.id)) return true;
+                      const value = responses[q.id];
+                      if (Array.isArray(value)) return value.length > 0;
+                      if (typeof value === 'string') return value.trim().length > 0;
+                      return value !== undefined && value !== null && value !== '';
+                    }).length || 0;
+                    const naCount = currentSectionData?.questions?.filter(q => naQuestions.has(q.id)).length || 0;
+                    const total = currentSectionData?.questions?.length || 0;
+                    return naCount > 0 ? `${answered} of ${total} complete (${naCount} N/A)` : `${answered} of ${total} questions answered`;
+                  })()}
                 </p>
               </div>
             </div>
@@ -900,18 +943,42 @@ export default function IntakeNew() {
               )}
             </CardHeader>
             <CardContent className="space-y-6">
-              {currentSectionData?.questions?.map((question) => (
-                <div key={question.id} className="space-y-2">
-                  <Label htmlFor={question.id} className="text-base font-medium">
-                    {question.text}
-                    <span className="text-red-500 ml-1">*</span>
-                  </Label>
-                  {question.notes && (
-                    <p className="text-sm text-muted-foreground">{question.notes}</p>
-                  )}
-                  {renderQuestion(question)}
-                </div>
-              ))}
+              {currentSectionData?.questions?.map((question) => {
+                const isQuestionNa = naQuestions.has(question.id);
+                return (
+                  <div key={question.id} className={cn("space-y-2 p-4 rounded-lg border transition-colors", isQuestionNa ? "border-amber-500/30 bg-amber-500/5 opacity-60" : "border-transparent")}>
+                    <div className="flex items-start justify-between gap-3">
+                      <Label htmlFor={question.id} className={cn("text-base font-medium flex-1", isQuestionNa && "line-through text-muted-foreground")}>
+                        {question.text}
+                        {!isQuestionNa && <span className="text-red-500 ml-1">*</span>}
+                        {isQuestionNa && <Badge className="ml-2 bg-amber-500/15 text-amber-400 border-amber-500/30 text-[10px] align-middle">N/A</Badge>}
+                      </Label>
+                      <button
+                        type="button"
+                        onClick={() => toggleQuestionNa(question.id)}
+                        className={cn(
+                          "px-2 py-1 rounded text-xs font-medium border transition-colors flex-shrink-0 mt-0.5",
+                          isQuestionNa
+                            ? "bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/25"
+                            : "text-muted-foreground border-border hover:bg-muted/50"
+                        )}
+                        title={isQuestionNa ? "Remove N/A — re-enable this question" : "Mark as N/A — skip this question"}
+                      >
+                        <Ban className="w-3 h-3 inline mr-1" />
+                        {isQuestionNa ? "Undo" : "N/A"}
+                      </button>
+                    </div>
+                    {!isQuestionNa && (
+                      <>
+                        {question.notes && (
+                          <p className="text-sm text-muted-foreground">{question.notes}</p>
+                        )}
+                        {renderQuestion(question)}
+                      </>
+                    )}
+                  </div>
+                );
+              })}
             </CardContent>
           </Card>
 
