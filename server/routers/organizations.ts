@@ -6,7 +6,7 @@ import { questionnaireSections } from "../../shared/questionnaireData";
 import { calculateProgress } from "../../shared/progressCalculation";
 import { SECTION_DEFS as TASK_SECTION_DEFS } from "../../shared/taskDefs";
 import { eq, and, desc, count, sql } from "drizzle-orm";
-// ClickUp and Linear integrations removed for simplification
+import { createCustomerFolder } from "../googleDrive";
 
 /**
  * Organizations router - handles organization CRUD and data access
@@ -34,7 +34,26 @@ export const organizationsRouter = router({
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
-      const [org] = await db.insert(organizations).values(input);
+
+      // Auto-create Google Drive folder for this customer if not provided
+      let googleDriveFolderId = input.googleDriveFolderId;
+      if (!googleDriveFolderId) {
+        try {
+          const folderId = await createCustomerFolder(input.name);
+          if (folderId) {
+            googleDriveFolderId = folderId;
+            console.log(`[Org] Created Drive folder for ${input.name}: ${folderId}`);
+          }
+        } catch (err: any) {
+          console.error(`[Org] Failed to create Drive folder for ${input.name}:`, err.message);
+          // Continue without Drive folder — files will go to root folder
+        }
+      }
+
+      const [org] = await db.insert(organizations).values({
+        ...input,
+        googleDriveFolderId: googleDriveFolderId || null,
+      });
       return { success: true, organizationId: org.insertId, slug: input.slug };
     }),
 

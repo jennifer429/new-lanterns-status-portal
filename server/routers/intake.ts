@@ -5,6 +5,7 @@ import { getDb } from "../db";
 import { intakeResponses, intakeFileAttachments, organizations, questions, questionOptions, responses, onboardingFeedback, clients, partnerTemplates } from "../../drizzle/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { uploadToGoogleDrive } from "./files";
+import { logFileActivity } from "../fileAuditLog";
 
 export const intakeRouter = router({
   /**
@@ -457,8 +458,8 @@ export const intakeRouter = router({
         const sanitizedOrgName = org.name.replace(/[^a-zA-Z0-9-]/g, '_');
         const fileName = `${sanitizedOrgName}_${sanitizedEmail}_${input.questionId}-${shortTitle}_${timestamp}.${fileExt}`;
         
-        // Upload to Google Drive
-        const fileUrl = await uploadToGoogleDrive(fileName, fileBuffer, org.name);
+        // Upload to Google Drive (per-customer folder)
+        const fileUrl = await uploadToGoogleDrive(fileName, fileBuffer, org.name, org.googleDriveFolderId);
         const s3Key = fileName; // store filename as reference
 
         // Store file info in database
@@ -472,6 +473,17 @@ export const intakeRouter = router({
           mimeType: input.mimeType,
           uploadedBy: input.userEmail,
         });
+
+        // Audit log
+        logFileActivity({
+          action: "upload",
+          userEmail: input.userEmail,
+          userRole: "user",
+          organizationName: org.name,
+          fileName: input.fileName,
+          fileUrl,
+          notes: `Questionnaire Q: ${input.questionId}`,
+        }).catch(() => {});
 
         return {
           success: true,
@@ -1028,7 +1040,7 @@ export const intakeRouter = router({
       const sanitizedOrg = org.name.replace(/[^a-zA-Z0-9-]/g, "_");
       const storedName = `${sanitizedOrg}_${sanitizedEmail}_ADHOC_${timestamp}.${fileExt}`;
 
-      const fileUrl = await uploadToGoogleDrive(storedName, fileBuffer, org.name);
+      const fileUrl = await uploadToGoogleDrive(storedName, fileBuffer, org.name, org.googleDriveFolderId);
 
       await db.insert(intakeFileAttachments).values({
         organizationId: org.id,
@@ -1040,6 +1052,17 @@ export const intakeRouter = router({
         mimeType: input.mimeType,
         uploadedBy: input.userEmail,
       });
+
+      // Audit log
+      logFileActivity({
+        action: "upload",
+        userEmail: input.userEmail,
+        userRole: ctx.user?.role || "user",
+        organizationName: org.name,
+        fileName: input.fileName,
+        fileUrl,
+        notes: "Adhoc file upload",
+      }).catch(() => {});
 
       return { success: true, fileUrl };
     }),

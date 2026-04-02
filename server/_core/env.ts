@@ -18,5 +18,5 @@ export const ENV = {
     ?? "",
   googleServiceAccountEmail: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ?? "",
   googleServiceAccountPrivateKey: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY ?? "",
-  googleDriveFolderId: process.env.GOOGLE_DRIVE_FOLDER_ID ?? "1Awi2cFLAXApN9wWVMgqslyyXy69sHVTX",
+  googleDriveFolderId: process.env.GOOGLE_DRIVE_FOLDER_ID ?? "1STogLQnTku6B0iAkAAqt7oFKFtaUy1Nu",
 };

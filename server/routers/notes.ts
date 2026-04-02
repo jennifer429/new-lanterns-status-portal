@@ -4,6 +4,7 @@ import { getDb } from "../db";
 import { orgNotes, organizations } from "../../drizzle/schema";
 import { eq, and, desc, isNull } from "drizzle-orm";
 import { uploadToGoogleDrive } from "./files";
+import { logFileActivity } from "../fileAuditLog";
 import { TRPCError } from "@trpc/server";
 
 /**
@@ -48,7 +49,7 @@ export const notesRouter = router({
       const sanitizedOrg = org.name.replace(/[^a-zA-Z0-9-]/g, "_");
       const driveFileId = `${sanitizedOrg}_${sanitizedLabel}_${timestamp}.${ext}`;
 
-      const fileUrl = await uploadToGoogleDrive(driveFileId, fileBuffer, org.name);
+      const fileUrl = await uploadToGoogleDrive(driveFileId, fileBuffer, org.name, org.googleDriveFolderId);
 
       await db.insert(orgNotes).values({
         organizationId: org.id,
@@ -61,6 +62,17 @@ export const notesRouter = router({
         mimeType: input.mimeType,
         uploadedBy: ctx.user.email || "unknown",
       });
+
+      // Audit log
+      logFileActivity({
+        action: "upload",
+        userEmail: ctx.user.email || "unknown",
+        userRole: ctx.user.role,
+        organizationName: org.name,
+        fileName: input.fileName,
+        fileUrl,
+        notes: `Note label: ${input.label}`,
+      }).catch(() => {});
 
       return { success: true, fileUrl };
     }),
@@ -106,6 +118,17 @@ export const notesRouter = router({
         mimeType: input.mimeType,
         uploadedBy: ctx.user.email || "unknown",
       });
+
+      // Audit log
+      logFileActivity({
+        action: "upload",
+        userEmail: ctx.user.email || "unknown",
+        userRole: ctx.user.role,
+        organizationName: `Partner ${input.clientId}`,
+        fileName: input.fileName,
+        fileUrl,
+        notes: `Partner note: ${input.label}`,
+      }).catch(() => {});
 
       return { success: true, fileUrl };
     }),

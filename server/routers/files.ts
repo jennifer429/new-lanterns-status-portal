@@ -1,76 +1,31 @@
 import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { fileAttachments, organizations } from "../../drizzle/schema";
+import { fileAttachments, organizations, users } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
-import { storagePut, storageGet } from "../storage";
-import { ENV } from "../_core/env";
-import { Readable } from "stream";
+import { uploadFileToDrive } from "../googleDrive";
+import { logFileActivity } from "../fileAuditLog";
 import { exec } from "child_process";
 import { promisify } from "util";
 
 const execAsync = promisify(exec);
 
 /**
- * Upload file to Google Drive and return a shareable link.
- * Requires GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY env vars.
- * Falls back to Forge storage proxy if Google credentials are not configured.
+ * Legacy wrapper — kept for backward compatibility with other routers that call uploadToGoogleDrive.
  */
 export async function uploadToGoogleDrive(
   fileName: string,
   fileBuffer: Buffer,
-  organizationName: string
+  organizationName: string,
+  orgDriveFolderId?: string | null
 ): Promise<string> {
-  // Try Google Drive API if credentials are configured
-  if (ENV.googleServiceAccountEmail && ENV.googleServiceAccountPrivateKey) {
-    const { google } = await import("googleapis");
-
-    const privateKey = ENV.googleServiceAccountPrivateKey.replace(/\\n/g, "\n");
-    const auth = new google.auth.JWT({
-      email: ENV.googleServiceAccountEmail,
-      key: privateKey,
-      scopes: ["https://www.googleapis.com/auth/drive"],
-    });
-
-    const drive = google.drive({ version: "v3", auth });
-
-    // Upload file to the configured folder
-    const uploadRes = await drive.files.create({
-      requestBody: {
-        name: fileName,
-        parents: [ENV.googleDriveFolderId],
-      },
-      media: {
-        mimeType: "application/octet-stream",
-        body: Readable.from(fileBuffer),
-      },
-      fields: "id,webViewLink",
-    });
-
-    const fileId = uploadRes.data.id;
-    if (!fileId) throw new Error("Google Drive upload returned no file ID");
-
-    // Make file readable by anyone with the link
-    await drive.permissions.create({
-      fileId,
-      requestBody: { role: "reader", type: "anyone" },
-    });
-
-    // Fetch the shareable link
-    const meta = await drive.files.get({
-      fileId,
-      fields: "webViewLink",
-    });
-
-    return meta.data.webViewLink || `https://drive.google.com/file/d/${fileId}/view`;
-  }
-
-  // Fallback: use Forge storage proxy
-  const sanitizedOrg = organizationName.replace(/[^a-zA-Z0-9-_]/g, "_");
-  const key = `uploads/${sanitizedOrg}/${fileName}`;
-  await storagePut(key, fileBuffer);
-  const { url } = await storageGet(key);
-  return url;
+  const { fileUrl } = await uploadFileToDrive(
+    fileName,
+    fileBuffer,
+    orgDriveFolderId,
+    organizationName
+  );
+  return fileUrl;
 }
 
 /**
@@ -84,7 +39,7 @@ async function attachToClickUp(
   await execAsync(
     `manus-mcp-cli tool call clickup_create_task_comment --server clickup --input '${JSON.stringify({
       task_id: taskId,
-      comment_text: `📎 File uploaded: [${fileName}](${fileUrl})`
+      comment_text: `📎 File uploaded: [${fileName}](${fileUrl})`,
     })}'`
   );
 }
@@ -100,9 +55,42 @@ async function attachToLinear(
   await execAsync(
     `manus-mcp-cli tool call create_comment --server linear --input '${JSON.stringify({
       issueId,
-      body: `📎 File uploaded: [${fileName}](${fileUrl})`
+      body: `📎 File uploaded: [${fileName}](${fileUrl})`,
     })}'`
   );
+}
+
+/**
+ * Check if user has access to an organization's files.
+ * - admin: access all
+ * - user with clientId (partner): access orgs belonging to their client
+ * - user with organizationId (customer): access only their own org
+ */
+async function checkFileAccess(
+  db: any,
+  userId: number,
+  userRole: string,
+  userClientId: number | null,
+  userOrgId: number | null,
+  targetOrgId: number
+): Promise<boolean> {
+  // Admins see everything
+  if (userRole === "admin") return true;
+
+  // Customer: only their own org
+  if (userOrgId && userOrgId === targetOrgId) return true;
+
+  // Partner: orgs belonging to their client
+  if (userClientId) {
+    const [org] = await db
+      .select({ clientId: organizations.clientId })
+      .from(organizations)
+      .where(eq(organizations.id, targetOrgId))
+      .limit(1);
+    if (org && org.clientId === userClientId) return true;
+  }
+
+  return false;
 }
 
 /**
@@ -110,7 +98,7 @@ async function attachToLinear(
  */
 export const filesRouter = router({
   /**
-   * Upload a file to Google Drive and attach links to ClickUp and Linear
+   * Upload a file to Google Drive (per-customer folder) and attach links to ClickUp and Linear
    */
   upload: protectedProcedure
     .input(
@@ -129,11 +117,22 @@ export const filesRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
+      // Access control
+      const hasAccess = await checkFileAccess(
+        db,
+        ctx.user.id,
+        ctx.user.role,
+        ctx.user.clientId ?? null,
+        ctx.user.organizationId ?? null,
+        input.organizationId
+      );
+      if (!hasAccess) throw new Error("Access denied to this organization's files");
+
       // Decode base64 file data
       const fileBuffer = Buffer.from(input.fileData, "base64");
       const fileSize = fileBuffer.length;
 
-      // Get organization name
+      // Get organization name and Drive folder ID
       const [org] = await db
         .select()
         .from(organizations)
@@ -142,9 +141,14 @@ export const filesRouter = router({
 
       if (!org) throw new Error("Organization not found");
 
-      // Upload to Google Drive
+      // Upload to Google Drive (per-customer folder)
       const fileKey = `${Date.now()}-${input.fileName}`;
-      const fileUrl = await uploadToGoogleDrive(fileKey, fileBuffer, org.name);
+      const { fileUrl, driveFileId } = await uploadFileToDrive(
+        fileKey,
+        fileBuffer,
+        org.googleDriveFolderId,
+        org.name
+      );
 
       // Save metadata to database
       const [result] = await db.insert(fileAttachments).values({
@@ -158,17 +162,32 @@ export const filesRouter = router({
         uploadedBy: ctx.user.email || "unknown",
       });
 
+      // Audit log
+      logFileActivity({
+        action: "upload",
+        userEmail: ctx.user.email || "unknown",
+        userRole: ctx.user.role,
+        organizationName: org.name,
+        fileName: input.fileName,
+        fileUrl,
+        notes: `Task: ${input.taskName}`,
+      }).catch(() => {}); // fire-and-forget
+
       // Attach to ClickUp and Linear asynchronously
       if (input.clickupTaskId) {
-        attachToClickUp(input.clickupTaskId, input.fileName, fileUrl).catch((error) => {
-          console.error("[ClickUp] Failed to attach file:", error);
-        });
+        attachToClickUp(input.clickupTaskId, input.fileName, fileUrl).catch(
+          (error) => {
+            console.error("[ClickUp] Failed to attach file:", error);
+          }
+        );
       }
 
       if (input.linearIssueId) {
-        attachToLinear(input.linearIssueId, input.fileName, fileUrl).catch((error) => {
-          console.error("[Linear] Failed to attach file:", error);
-        });
+        attachToLinear(input.linearIssueId, input.fileName, fileUrl).catch(
+          (error) => {
+            console.error("[Linear] Failed to attach file:", error);
+          }
+        );
       }
 
       return {
@@ -179,7 +198,7 @@ export const filesRouter = router({
     }),
 
   /**
-   * Get files for a specific task
+   * Get files for a specific task (with access control)
    */
   getByTask: protectedProcedure
     .input(
@@ -188,9 +207,20 @@ export const filesRouter = router({
         taskId: z.string(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
+
+      // Access control
+      const hasAccess = await checkFileAccess(
+        db,
+        ctx.user.id,
+        ctx.user.role,
+        ctx.user.clientId ?? null,
+        ctx.user.organizationId ?? null,
+        input.organizationId
+      );
+      if (!hasAccess) throw new Error("Access denied to this organization's files");
 
       const files = await db
         .select()
@@ -206,7 +236,7 @@ export const filesRouter = router({
     }),
 
   /**
-   * Delete a file
+   * Delete a file (with access control)
    */
   delete: protectedProcedure
     .input(
@@ -215,9 +245,20 @@ export const filesRouter = router({
         organizationId: z.number(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
+
+      // Access control
+      const hasAccess = await checkFileAccess(
+        db,
+        ctx.user.id,
+        ctx.user.role,
+        ctx.user.clientId ?? null,
+        ctx.user.organizationId ?? null,
+        input.organizationId
+      );
+      if (!hasAccess) throw new Error("Access denied to this organization's files");
 
       // Verify file belongs to organization before deleting
       const [file] = await db
@@ -235,8 +276,28 @@ export const filesRouter = router({
         throw new Error("File not found or access denied");
       }
 
+      // Get org name for audit log
+      const [org] = await db
+        .select({ name: organizations.name })
+        .from(organizations)
+        .where(eq(organizations.id, input.organizationId))
+        .limit(1);
+
       // Delete from database (Google Drive file remains for audit trail)
-      await db.delete(fileAttachments).where(eq(fileAttachments.id, input.fileId));
+      await db
+        .delete(fileAttachments)
+        .where(eq(fileAttachments.id, input.fileId));
+
+      // Audit log
+      logFileActivity({
+        action: "delete",
+        userEmail: ctx.user.email || "unknown",
+        userRole: ctx.user.role,
+        organizationName: org?.name || "Unknown",
+        fileName: file.fileName,
+        fileUrl: file.fileUrl,
+        notes: "File deleted from portal (Drive copy retained)",
+      }).catch(() => {});
 
       return { success: true };
     }),

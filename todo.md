@@ -2346,3 +2346,12 @@
 
 ## Individual Question N/A (Apr 2, 2026)
 - [x] Allow users to mark individual questionnaire questions as N/A (not just entire sections)
+
+## Migrate Uploads to Google Drive (Apr 2, 2026)
+- [x] Migrate all existing uploaded files from S3 to Google Drive with per-customer folders (65 files across 12 folders)
+- [x] Create customer Google Drive folder when new org is created
+- [x] Update app to upload files to customer's Drive folder going forward
+- [x] Update DB file URLs to point to new Drive locations (files uploaded to per-customer folders)
+- [x] Ensure files are retrievable from Google Drive (working links)
+- [x] Enforce file access control: partners see own customers only, admins see all, customers see own only
+- [x] Create file activity audit log that writes to Google Sheet (admin-only access)
