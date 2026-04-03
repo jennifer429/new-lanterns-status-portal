@@ -10,7 +10,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Download, Upload, CheckCircle2, Circle, LogOut, FileText, Shield, FileUp, Network, ClipboardCheck, Star, X, File, CloudUpload, Trash2, Paperclip, FileIcon, Menu, Pencil, Plus, RefreshCw, Import, FileDown, FileUp as FileUpIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Download, Upload, CheckCircle2, Circle, LogOut, FileText, Shield, FileUp, Network, ClipboardCheck, Star, X, File, CloudUpload, Trash2, Paperclip, FileIcon, Menu, Pencil, Plus, RefreshCw, Import, FileDown, FileUp as FileUpIcon, ChevronLeft, ChevronRight, Ban } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -614,6 +615,7 @@ export default function IntakeNewRedesign() {
   });
   const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
   const [unansweredQuestions, setUnansweredQuestions] = useState<Set<string>>(new Set());
+  const [naQuestions, setNaQuestions] = useState<Set<string>>(new Set());
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackRating, setFeedbackRating] = useState(0);
   const [feedbackComments, setFeedbackComments] = useState("");
@@ -758,8 +760,43 @@ export default function IntakeNewRedesign() {
         }
       });
       setResponses(loadedResponses);
+
+      // Load N/A question state from saved responses
+      const loadedNa = new Set<string>();
+      Object.keys(loadedResponses).forEach(key => {
+        if (key.startsWith('__question_na:')) {
+          const qId = key.replace('__question_na:', '');
+          if (loadedResponses[key] === 'true' || loadedResponses[key] === true) {
+            loadedNa.add(qId);
+          }
+        }
+      });
+      setNaQuestions(loadedNa);
     }
   }, [existingResponses]);
+
+  // Toggle N/A for a question
+  const toggleQuestionNa = (questionId: string) => {
+    setNaQuestions(prev => {
+      const next = new Set(prev);
+      const isNow = next.has(questionId);
+      if (isNow) {
+        next.delete(questionId);
+      } else {
+        next.add(questionId);
+      }
+      // Save to backend
+      if (slug && user?.email) {
+        saveMutation.mutate({
+          organizationSlug: slug,
+          questionId: `__question_na:${questionId}`,
+          response: isNow ? 'false' : 'true',
+          userEmail: user.email,
+        });
+      }
+      return next;
+    });
+  };
 
   // Auto-navigate to first incomplete section ONLY on first load (skipped when ?section= is present)
   // Handle deep-link query params (?section=xxx&q=yyy) from Implementation/Validation pages
@@ -925,6 +962,7 @@ export default function IntakeNewRedesign() {
       const stdQuestions = (section.questions || []).filter(q => q.type !== 'upload' && q.type !== 'upload-download' && !q.inactive);
       total += stdQuestions.length;
       answered += stdQuestions.filter(q => {
+        if (naQuestions.has(q.id)) return true;
         const r = responses[q.id];
         return r !== undefined && r !== '' && r !== null;
       }).length;
@@ -936,7 +974,7 @@ export default function IntakeNewRedesign() {
       // File uploads
       const uploadQuestions = (section.questions || []).filter(q => q.type === 'upload' || q.type === 'upload-download');
       total += uploadQuestions.length;
-      answered += uploadQuestions.filter(q => allUploadedFiles.some(f => f.questionId === q.id)).length;
+      answered += uploadQuestions.filter(q => naQuestions.has(q.id) || allUploadedFiles.some(f => f.questionId === q.id)).length;
       return total > 0 ? Math.round((answered / total) * 100) : 100;
     }
 
@@ -999,6 +1037,9 @@ export default function IntakeNewRedesign() {
     });
     
     const answered = visibleQuestions.filter(q => {
+      // N/A questions count as answered
+      if (naQuestions.has(q.id)) return true;
+
       const response = responses[q.id];
 
       // systems-list: complete if at least one system has been added
@@ -1531,6 +1572,8 @@ export default function IntakeNewRedesign() {
     const currentQuestions = currentSectionData?.questions || [];
     const unanswered = currentQuestions
       .filter(q => {
+        // N/A questions are never unanswered
+        if (naQuestions.has(q.id)) return false;
         if (q.conditionalOn) {
           const parentResponse = responses[q.conditionalOn.questionId];
           if (parentResponse !== q.conditionalOn.value) return false;
@@ -1852,16 +1895,25 @@ export default function IntakeNewRedesign() {
                         if (parentResponse !== question.conditionalOn.value) return false;
                       }
                       return true;
-                    }).map((question) => (
-                      <div key={question.id} id={`question-${question.id}`} className={question.type === 'textarea' ? 'col-span-1 md:col-span-2' : 'col-span-1'}>
-                        <Label className="mb-3 block text-base">
-                          <span className="text-purple-400 font-bold mr-2">[{question.id}]</span>
-                          {question.text}
-                        </Label>
-                        {renderQuestion(question)}
-                        {question.notes && <p className="text-xs text-muted-foreground mt-1">{question.notes}</p>}
-                      </div>
-                    ))}
+                    }).map((question) => {
+                      const isNa = naQuestions.has(question.id);
+                      return (
+                        <div key={question.id} id={`question-${question.id}`} className={`${question.type === 'textarea' ? 'col-span-1 md:col-span-2' : 'col-span-1'} ${isNa ? 'opacity-60' : ''}`}>
+                          <div className="flex items-start justify-between gap-2 mb-3">
+                            <Label className="block text-base flex-1">
+                              <span className="text-purple-400 font-bold mr-2">[{question.id}]</span>
+                              {isNa ? <span className="line-through">{question.text}</span> : question.text}
+                              {isNa && <Badge className="ml-2 bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs"><Ban className="w-3 h-3 mr-1" />N/A</Badge>}
+                            </Label>
+                            <Button type="button" variant={isNa ? 'default' : 'outline'} size="sm" className={`shrink-0 text-xs h-7 px-2 ${isNa ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'text-muted-foreground hover:text-foreground'}`} onClick={() => toggleQuestionNa(question.id)}>
+                              <Ban className="w-3 h-3 mr-1" />{isNa ? 'Undo N/A' : 'N/A'}
+                            </Button>
+                          </div>
+                          {!isNa && renderQuestion(question)}
+                          {!isNa && question.notes && <p className="text-xs text-muted-foreground mt-1">{question.notes}</p>}
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {/* Endpoint Table */}
@@ -1890,16 +1942,25 @@ export default function IntakeNewRedesign() {
                       </div>
                     </div>
                     <div className="grid grid-cols-1 gap-y-3">
-                      {currentSectionData?.questions?.filter(q => q.type === 'upload' || q.type === 'upload-download').map((question) => (
-                        <div key={question.id} id={`question-${question.id}`} className="p-3 rounded-md bg-muted/30 border border-border/40 col-span-1">
-                          <Label className="mb-2 block text-sm">
-                            <span className="text-muted-foreground font-mono text-xs mr-1.5">[{question.id}]</span>
-                            {question.text}
-                          </Label>
-                          {question.notes && <p className="text-xs text-muted-foreground mb-2">{question.notes}</p>}
-                          {renderQuestion(question)}
-                        </div>
-                      ))}
+                      {currentSectionData?.questions?.filter(q => q.type === 'upload' || q.type === 'upload-download').map((question) => {
+                        const isNa = naQuestions.has(question.id);
+                        return (
+                          <div key={question.id} id={`question-${question.id}`} className={`p-3 rounded-md bg-muted/30 border border-border/40 col-span-1 ${isNa ? 'opacity-60' : ''}`}>
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <Label className="block text-sm flex-1">
+                                <span className="text-muted-foreground font-mono text-xs mr-1.5">[{question.id}]</span>
+                                {isNa ? <span className="line-through">{question.text}</span> : question.text}
+                                {isNa && <Badge className="ml-2 bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs"><Ban className="w-3 h-3 mr-1" />N/A</Badge>}
+                              </Label>
+                              <Button type="button" variant={isNa ? 'default' : 'outline'} size="sm" className={`shrink-0 text-xs h-7 px-2 ${isNa ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'text-muted-foreground hover:text-foreground'}`} onClick={() => toggleQuestionNa(question.id)}>
+                                <Ban className="w-3 h-3 mr-1" />{isNa ? 'Undo N/A' : 'N/A'}
+                              </Button>
+                            </div>
+                            {!isNa && question.notes && <p className="text-xs text-muted-foreground mb-2">{question.notes}</p>}
+                            {!isNa && renderQuestion(question)}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -1968,6 +2029,7 @@ export default function IntakeNewRedesign() {
                       (dbTemplateMap.get(question.id) || []).length > 0;
 
                     const isUploadType = question.type === 'upload' || question.type === 'upload-download';
+                    const isNa = naQuestions.has(question.id);
 
                     return (
                       <div
@@ -1979,19 +2041,36 @@ export default function IntakeNewRedesign() {
                           isUnanswered ? 'p-4 border-2 border-red-500 rounded-lg bg-red-500/5' : ''
                         } ${
                           isUploadType && !isUnanswered ? 'p-3 rounded-md bg-muted/30 border border-border/40' : ''
+                        } ${
+                          isNa ? 'opacity-60' : ''
                         }`}
                       >
-                        <Label className="mb-2 block text-sm">
-                          <span className="text-muted-foreground font-mono text-xs mr-1.5">[{question.id}]</span>
-                          {question.text}
-                          {isUnanswered && <span className="text-red-500 ml-2 font-semibold">* Required</span>}
-                        </Label>
-                        {question.notes && isUploadType && (
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <Label className="block text-sm flex-1">
+                            <span className="text-muted-foreground font-mono text-xs mr-1.5">[{question.id}]</span>
+                            {isNa ? <span className="line-through">{question.text}</span> : question.text}
+                            {isUnanswered && <span className="text-red-500 ml-2 font-semibold">* Required</span>}
+                            {isNa && <Badge className="ml-2 bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs"><Ban className="w-3 h-3 mr-1" />N/A</Badge>}
+                          </Label>
+                          <Button
+                            type="button"
+                            variant={isNa ? 'default' : 'outline'}
+                            size="sm"
+                            className={`shrink-0 text-xs h-7 px-2 ${
+                              isNa ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'text-muted-foreground hover:text-foreground'
+                            }`}
+                            onClick={() => toggleQuestionNa(question.id)}
+                          >
+                            <Ban className="w-3 h-3 mr-1" />
+                            {isNa ? 'Undo N/A' : 'N/A'}
+                          </Button>
+                        </div>
+                        {!isNa && question.notes && isUploadType && (
                           <p className="text-xs text-muted-foreground mb-3">{question.notes}</p>
                         )}
 
-                        {renderQuestion(question)}
-                        {question.notes && !isUploadType && (
+                        {!isNa && renderQuestion(question)}
+                        {!isNa && question.notes && !isUploadType && (
                           <p className="text-xs text-muted-foreground mt-1">{question.notes}</p>
                         )}
                       </div>
