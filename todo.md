@@ -2355,3 +2355,9 @@
 - [x] Ensure files are retrievable from Google Drive (working links)
 - [x] Enforce file access control: partners see own customers only, admins see all, customers see own only
 - [x] Create file activity audit log that writes to Google Sheet (admin-only access)
+
+## Bug Fixes - N/A Counting & Connectivity Progress (Apr 3, 2026)
+- [ ] N/A questions should count as done in progress calculations
+- [ ] N/A questions should be trackable from the dashboard (show N/A count)
+- [x] Connectivity not reaching 100% for San Ramon despite added rows — progress calc was using stale responses instead of live connRows
+- [x] Connectivity section sidebar should show as done (checked) when connectivity table has rows filled in

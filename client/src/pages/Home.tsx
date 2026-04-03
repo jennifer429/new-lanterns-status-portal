@@ -1127,10 +1127,11 @@ export default function Home() {
                     </div>
 
                     {/* Status breakdown */}
-                    <div className="grid grid-cols-3 gap-1 mb-3">
+                    <div className="grid grid-cols-4 gap-1 mb-3">
                       {([
                         { label: "Done",    count: completedSections,    dotCls: "bg-green-500",           numCls: "text-green-500" },
                         { label: "In Prog", count: qInProgressSections,  dotCls: "bg-blue-400",           numCls: "text-blue-400" },
+                        { label: "N/A",     count: progress.naQuestions,  dotCls: "bg-amber-400",           numCls: "text-amber-400" },
                         { label: "Open",    count: qNotStartedSections,  dotCls: "bg-muted-foreground/40", numCls: "text-foreground" },
                       ] as const).map(({ label: statusLabel, count, dotCls, numCls }) => (
                         <div key={statusLabel} className="text-center">

@@ -32,6 +32,7 @@ export interface ProgressResult {
   sectionProgress: SectionStats;
   completedQuestions: number;
   totalQuestions: number;
+  naQuestions: number;
 }
 
 /**
@@ -55,7 +56,7 @@ function isQuestionVisible(
 /**
  * Calculate progress for an organization's intake questionnaire
  * @param questions - All questions in the questionnaire (including conditional ones)
- * @param responses - User's responses
+ * @param responses - User's responses (includes __question_na: markers for N/A questions)
  * @param files - Uploaded files
  * @returns Progress statistics including overall percentage and per-section breakdown
  */
@@ -64,6 +65,14 @@ export function calculateProgress(
   responses: Response[],
   files: FileAttachment[]
 ): ProgressResult {
+  // Extract N/A question IDs from special marker responses
+  const naQuestionIds = new Set<string | number>();
+  responses.forEach(r => {
+    if (r.questionId && typeof r.questionId === 'string' && r.questionId.startsWith('__question_na:')) {
+      const qId = r.questionId.replace('__question_na:', '');
+      naQuestionIds.add(qId);
+    }
+  });
   // Build maps for quick lookup (filter out null questionIds)
   const responseMap = new Map(
     responses.filter(r => r.questionId !== null).map(r => [r.questionId, r])
@@ -89,6 +98,12 @@ export function calculateProgress(
     }
     
     sectionStats[q.sectionTitle].total++;
+
+    // N/A questions count as completed
+    if (naQuestionIds.has(q.id) || naQuestionIds.has(String(q.id))) {
+      sectionStats[q.sectionTitle].completed++;
+      return;
+    }
     
     // For workflow sections, check for _config response
     if (q.isWorkflow) {
@@ -139,6 +154,7 @@ export function calculateProgress(
     completionPercentage,
     sectionProgress: sectionStats,
     completedQuestions,
-    totalQuestions
+    totalQuestions,
+    naQuestions: naQuestionIds.size
   };
 }

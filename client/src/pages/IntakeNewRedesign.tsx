@@ -928,13 +928,11 @@ export default function IntakeNewRedesign() {
         const r = responses[q.id];
         return r !== undefined && r !== '' && r !== null;
       }).length;
-      // Endpoints table
+      // Endpoints table — use connRows state (live Notion data), not responses['CONN.endpoints']
       total += 1;
-      try {
-        const v = responses['CONN.endpoints'];
-        const rows = v ? (typeof v === 'string' ? JSON.parse(v) : v) : [];
-        if (Array.isArray(rows) && rows.length > 0 && rows.some((r: any) => r.ip || r.sourceSystem)) answered += 1;
-      } catch { /* empty */ }
+      if (connRows.length > 0 && connRows.some((r: any) => r.sourceSystem || r.destinationSystem || r.sourceIp || r.destIp)) {
+        answered += 1;
+      }
       // File uploads
       const uploadQuestions = (section.questions || []).filter(q => q.type === 'upload' || q.type === 'upload-download');
       total += uploadQuestions.length;
