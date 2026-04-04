@@ -378,6 +378,11 @@ export const organizationsRouter = router({
           url: f.fileUrl
         }));
 
+        // Count N/A questions
+        const naQuestionCount = allResponses.filter(r => 
+          r.questionId.startsWith('__question_na:') && (r.response === 'true' || r.response === true as any)
+        ).length;
+
         // Get task completion stats for this organization
         const taskRows = await db
           .select()
@@ -405,6 +410,7 @@ export const organizationsRouter = router({
           fileCount: filesWithUrls.length,
           files: filesWithUrls,
           taskStats,
+          naQuestionCount,
         };
       })
     );

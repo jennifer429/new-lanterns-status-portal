@@ -1161,6 +1161,7 @@ export default function PlatformAdmin() {
                   const overallPct = Math.round(qPct * 0.4 + vsPct * 0.3 + tsPct * 0.3);
                   const filesCount = orgMetrics?.files.length ?? 0;
                   const userCount = orgMetrics?.userCount ?? 0;
+                  const naQCount = (orgMetrics as any)?.naQuestionCount ?? 0;
                   const isExpanded = expandedSiteIds.has(org.id);
 
                   return (
@@ -1225,7 +1226,13 @@ export default function PlatformAdmin() {
                                 </div>
                                 <span className="text-lg font-bold text-primary">{qPct}%</span>
                               </div>
-                              <p className="text-sm text-muted-foreground mb-3">{sectionsComplete}/{totalSections} sections complete</p>
+                              <p className="text-sm text-muted-foreground mb-1">{sectionsComplete}/{totalSections} sections complete</p>
+                              {naQCount > 0 && (
+                                <p className="text-xs text-amber-400 mb-2 flex items-center gap-1">
+                                  <span className="inline-block w-2 h-2 rounded-full bg-amber-500" />
+                                  {naQCount} question{naQCount !== 1 ? 's' : ''} marked N/A
+                                </p>
+                              )}
                               <div className="w-full h-1.5 bg-muted rounded-full mb-3 border border-border/40">
                                 <div className="h-full bg-primary rounded-full" style={{ width: `${qPct}%` }} />
                               </div>
@@ -1471,28 +1478,30 @@ export default function PlatformAdmin() {
             <Card className="overflow-hidden">
               <table className="w-full border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
                 <colgroup>
-                  <col style={{ width: isPlatformAdmin ? '28%' : '35%' }} />
-                  {isPlatformAdmin && <col style={{ width: '15%' }} />}
-                  <col style={{ width: '10%' }} />
-                  <col style={{ width: '8%'  }} />
-                  <col style={{ width: '10%' }} />
-                  <col style={{ width: '29%' }} />
+                  <col style={{ width: isPlatformAdmin ? '26%' : '32%' }} />
+                  {isPlatformAdmin && <col style={{ width: '14%' }} />}
+                  <col style={{ width: '9%' }} />
+                  <col style={{ width: '7%'  }} />
+                  <col style={{ width: '9%' }} />
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '28%' }} />
                 </colgroup>
                 <thead>
                   <tr className="border-b border-border/30 bg-muted/15">
-                    {['Name', ...(isPlatformAdmin ? ['Partner'] : []), 'Status', 'Users', 'Done%', ''].map((h,i) => (
+                    {['Name', ...(isPlatformAdmin ? ['Partner'] : []), 'Status', 'Users', 'Done%', 'N/A Qs', ''].map((h,i) => (
                       <th key={i} className="text-left px-3 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {activeOrgs.length === 0 ? (
-                    <tr><td colSpan={isPlatformAdmin ? 6 : 5} className="text-center py-8 text-xs text-muted-foreground italic">No active organizations</td></tr>
+                    <tr><td colSpan={isPlatformAdmin ? 7 : 6} className="text-center py-8 text-xs text-muted-foreground italic">No active organizations</td></tr>
                   ) : activeOrgs.map(org => {
                     const orgMetrics = metricsMap[org.id];
                     const partnerName = org.clientId ? clientMap[org.clientId] : "—";
                     const completionPercent = orgMetrics?.completionPercent || 0;
                     const userCount = orgMetrics?.userCount || 0;
+                    const naCount = (orgMetrics as any)?.naQuestionCount ?? 0;
                     return (
                       <tr key={org.id} className="border-b border-border/20 hover:bg-muted/20 transition-colors">
                         <td className="px-3 py-1.5 font-medium truncate">{org.name}</td>
@@ -1500,6 +1509,7 @@ export default function PlatformAdmin() {
                         <td className="px-3 py-1.5"><span className="px-1.5 py-0 rounded text-[10px] font-semibold leading-5 bg-green-500/15 text-green-400 border border-green-500/30">Active</span></td>
                         <td className="px-3 py-1.5 text-muted-foreground">{userCount}</td>
                         <td className="px-3 py-1.5 text-muted-foreground">{completionPercent}%</td>
+                        <td className="px-3 py-1.5">{naCount > 0 ? <span className="text-amber-400 font-medium">{naCount}</span> : <span className="text-muted-foreground">0</span>}</td>
                         <td className="px-2 py-1">
                           <div className="flex items-center gap-1">
                             <button onClick={() => { setEditOrgId(org.id); setEditOrgName(org.name); setEditOrgSlug(org.slug); setEditOrgClientId(org.clientId); setIsEditOrgDialogOpen(true); }}
@@ -1530,16 +1540,17 @@ export default function PlatformAdmin() {
                 <Card className="overflow-hidden">
                   <table className="w-full border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
                     <colgroup>
-                      <col style={{ width: isPlatformAdmin ? '30%' : '38%' }} />
-                      {isPlatformAdmin && <col style={{ width: '18%' }} />}
-                      <col style={{ width: '12%' }} />
-                      <col style={{ width: '10%' }} />
-                      <col style={{ width: '12%' }} />
+                      <col style={{ width: isPlatformAdmin ? '26%' : '32%' }} />
+                      {isPlatformAdmin && <col style={{ width: '14%' }} />}
+                      <col style={{ width: '9%' }} />
+                      <col style={{ width: '7%' }} />
+                      <col style={{ width: '9%' }} />
+                      <col style={{ width: '7%' }} />
                       <col style={{ width: '18%' }} />
                     </colgroup>
                     <thead>
                       <tr className="border-b border-border/30 bg-muted/15">
-                        {['Name', ...(isPlatformAdmin ? ['Partner'] : []), 'Status', 'Users', 'Done%', ''].map((h,i) => (
+                        {['Name', ...(isPlatformAdmin ? ['Partner'] : []), 'Status', 'Users', 'Done%', 'N/A Qs', ''].map((h,i) => (
                           <th key={i} className="text-left px-3 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{h}</th>
                         ))}
                       </tr>
@@ -1550,6 +1561,7 @@ export default function PlatformAdmin() {
                         const partnerName = org.clientId ? clientMap[org.clientId] : "—";
                         const completionPercent = orgMetrics?.completionPercent || 0;
                         const userCount = orgMetrics?.userCount || 0;
+                        const naCount = (orgMetrics as any)?.naQuestionCount ?? 0;
                         return (
                           <tr key={org.id} className="border-b border-border/20 hover:bg-muted/20 transition-colors opacity-80">
                             <td className="px-3 py-1.5 font-medium truncate">{org.name}</td>
@@ -1557,6 +1569,7 @@ export default function PlatformAdmin() {
                             <td className="px-3 py-1.5"><span className="px-1.5 py-0 rounded text-[10px] font-semibold leading-5 bg-blue-500/15 text-blue-400 border border-blue-500/30">Done</span></td>
                             <td className="px-3 py-1.5 text-muted-foreground">{userCount}</td>
                             <td className="px-3 py-1.5 text-muted-foreground">{completionPercent}%</td>
+                            <td className="px-3 py-1.5">{naCount > 0 ? <span className="text-amber-400 font-medium">{naCount}</span> : <span className="text-muted-foreground">0</span>}</td>
                             <td className="px-2 py-1">
                               <button onClick={() => { if (confirm(`Reopen ${org.name}?`)) reopenOrgMutation.mutate({ organizationId: org.id }); }} disabled={reopenOrgMutation.isPending}
                                 className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-border/40 hover:bg-muted/50 transition-colors">

@@ -948,6 +948,11 @@ export const adminRouter = router({
           .where(eq(intakeFileAttachments.organizationId, org.id))
           .orderBy(desc(intakeFileAttachments.createdAt));
 
+        // Count N/A questions (stored as __question_na:{questionId} = 'true')
+        const naQuestionCount = orgResponses.filter(r => 
+          r.questionId.startsWith('__question_na:') && (r.response === 'true' || r.response === true as any)
+        ).length;
+
         // Task stats
         const taskRows = await db
           .select()
@@ -997,6 +1002,7 @@ export const adminRouter = router({
           sectionProgress,
           taskStats,
           validationStats,
+          naQuestionCount,
           files: files.map(f => ({
             id: f.id,
             fileName: f.fileName,

@@ -2364,3 +2364,7 @@
 
 ## Upload Question N/A (Apr 3, 2026)
 - [x] Add N/A button to upload questions (e.g., CF.2, CF.3) so they can be skipped and count as done
+
+## N/A Question Counter on Dashboards (Apr 4, 2026)
+- [x] Add N/A question count per org to admin dashboard (table column + expanded mini card)
+- [x] Add N/A question count per org to partner dashboard (already in Home.tsx via shared progress)
