@@ -32,6 +32,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { AdminChatWidget } from "@/components/AdminChatWidget";
+import { AiAuditLog } from "@/components/AiAuditLog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,7 +51,7 @@ import {
 export default function PlatformAdmin() {
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"prod-dashboard" | "impl-dashboard" | "orgs" | "users" | "templates" | "task-templates" | "partners" | "specs" | "vendor-picklists">("impl-dashboard");
+  const [activeTab, setActiveTab] = useState<"prod-dashboard" | "impl-dashboard" | "orgs" | "users" | "templates" | "task-templates" | "partners" | "specs" | "vendor-picklists" | "audit-log">("impl-dashboard");
 
   // Template management state
   const [isUploadTemplateDialogOpen, setIsUploadTemplateDialogOpen] = useState(false);
@@ -1064,7 +1065,7 @@ export default function PlatformAdmin() {
               <DropdownMenuTrigger asChild>
                 <button
                   className={`pb-2 sm:pb-3 px-1 text-sm font-medium transition-colors relative whitespace-nowrap flex items-center gap-1 shrink-0 ${
-                    ["users", "orgs", "templates", "partners", "specs"].includes(activeTab)
+                    ["users", "orgs", "templates", "partners", "specs", "audit-log"].includes(activeTab)
                       ? "text-primary"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
@@ -1072,7 +1073,7 @@ export default function PlatformAdmin() {
                   <Settings className="w-4 h-4" />
                   Admin
                   <ChevronDown className="w-3 h-3" />
-                  {["users", "orgs", "templates", "partners", "specs"].includes(activeTab) && (
+                  {["users", "orgs", "templates", "partners", "specs", "audit-log"].includes(activeTab) && (
                     <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
                   )}
                 </button>
@@ -1097,6 +1098,11 @@ export default function PlatformAdmin() {
                 <DropdownMenuItem onClick={() => setActiveTab("vendor-picklists")} className="cursor-pointer">
                   <ListChecks className="mr-2 h-4 w-4" />
                   Vendor Picklists
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setActiveTab("audit-log")} className="cursor-pointer">
+                  <History className="mr-2 h-4 w-4" />
+                  AI Audit Log
                 </DropdownMenuItem>
                 {isPlatformAdmin && (
                   <>
@@ -3053,6 +3059,11 @@ export default function PlatformAdmin() {
               </CardContent>
             </Card>
           </>
+        )}
+
+        {/* ── AI AUDIT LOG TAB ── */}
+        {activeTab === "audit-log" && (
+          <AiAuditLog />
         )}
       </div>
 

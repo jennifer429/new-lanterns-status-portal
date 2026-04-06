@@ -2384,3 +2384,13 @@
 - [x] Harden AI router RBAC - strict partner isolation in all tool executors (no cross-partner data leakage)
 - [x] Allow partner admins (not just platform admins) to use AI chat endpoint
 - [x] Write tests for RBAC enforcement in AI router
+
+## AI Audit Logging System (Apr 6, 2026)
+- [x] Create aiAuditLogs database table schema (action, actor, target, result, metadata, timestamp)
+- [x] Push database migration for audit log table
+- [x] Add audit logging to every AI tool executor (navigate, list_orgs, list_users, create_org, create_user, get_report, extract_text)
+- [x] Log the chat conversation itself (user prompt + AI response)
+- [x] Create tRPC endpoints to query audit logs (list with filters, detail view)
+- [x] Build admin UI page to view AI audit logs with filtering
+- [x] RBAC on audit log viewing (platform admin sees all, partner admin sees only their logs)
+- [x] Write tests for audit logging

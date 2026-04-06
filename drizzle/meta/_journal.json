@@ -274,6 +274,13 @@
       "when": 1775463864475,
       "tag": "0038_youthful_fallen_one",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "5",
+      "when": 1775472817370,
+      "tag": "0039_marvelous_valeria_richards",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,23 @@
+CREATE TABLE `aiAuditLogs` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`action` varchar(100) NOT NULL,
+	`category` enum('chat','read','write','navigate','extract') NOT NULL,
+	`actorId` int,
+	`actorEmail` varchar(320),
+	`actorRole` varchar(50),
+	`clientId` int,
+	`organizationId` int,
+	`organizationSlug` varchar(100),
+	`targetUserId` int,
+	`targetUserEmail` varchar(320),
+	`userPrompt` text,
+	`aiResponse` text,
+	`toolArgs` text,
+	`toolResult` text,
+	`status` enum('success','error','denied') NOT NULL DEFAULT 'success',
+	`errorMessage` text,
+	`ipAddress` varchar(45),
+	`durationMs` int,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `aiAuditLogs_id` PRIMARY KEY(`id`)
+);

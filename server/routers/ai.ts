@@ -11,11 +11,11 @@
  *   - Every tool executor enforces ownership checks before returning data
  *   - No cross-partner data leakage is possible
  *
- * Tool-calling loop (max 3 iterations):
- *   1. Send messages + tools to LLM
- *   2. If LLM returns tool_calls, execute each tool and append results
- *   3. Call LLM again with the tool results so it can form a final answer
- *   4. Return { message, action? } to the frontend
+ * Audit logging:
+ *   - Every chat interaction is logged (user prompt + AI response)
+ *   - Every tool call is logged with arguments, result, status, and timing
+ *   - RBAC denials are logged with status="denied"
+ *   - All logs include actor, clientId, and target references for filtering
  */
 
 import { z } from "zod";
@@ -29,8 +29,9 @@ import {
   users,
   clients,
   partnerTaskTemplates,
+  aiAuditLogs,
 } from "../../drizzle/schema";
-import { eq, and, isNull, inArray } from "drizzle-orm";
+import { eq, and, isNull, inArray, desc, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
 // ---------------------------------------------------------------------------
@@ -47,27 +48,95 @@ type ToolResult = {
   name: string;
   result: unknown;
   action?: ChatAction;
+  /** Audit metadata populated by executors */
+  audit?: {
+    category: "read" | "write" | "navigate" | "extract";
+    status: "success" | "error" | "denied";
+    organizationSlug?: string;
+    organizationId?: number;
+    targetUserEmail?: string;
+    targetUserId?: number;
+    errorMessage?: string;
+  };
 };
 
 type UserContext = {
+  id?: number;
   clientId: number | null | undefined;
   email: string | null | undefined;
   role: string;
 };
 
 // ---------------------------------------------------------------------------
-// RBAC helpers
+// Audit logging helper
 // ---------------------------------------------------------------------------
 
 /**
- * Returns the set of org IDs that the current user is allowed to access.
- * Platform admins get null (meaning "all"), partner admins get their partner's orgs.
+ * Writes a single audit log row. Fire-and-forget — errors are caught and logged
+ * to console so they never break the main flow.
  */
+async function writeAuditLog(entry: {
+  action: string;
+  category: "chat" | "read" | "write" | "navigate" | "extract";
+  actorId?: number | null;
+  actorEmail?: string | null;
+  actorRole?: string | null;
+  clientId?: number | null;
+  organizationId?: number | null;
+  organizationSlug?: string | null;
+  targetUserId?: number | null;
+  targetUserEmail?: string | null;
+  userPrompt?: string | null;
+  aiResponse?: string | null;
+  toolArgs?: string | null;
+  toolResult?: string | null;
+  status: "success" | "error" | "denied";
+  errorMessage?: string | null;
+  ipAddress?: string | null;
+  durationMs?: number | null;
+}): Promise<void> {
+  try {
+    const db = await getDb();
+    if (!db) return;
+
+    // Truncate large fields to prevent DB column overflow
+    const truncate = (s: string | null | undefined, max: number) =>
+      s && s.length > max ? s.slice(0, max) + "...[truncated]" : s ?? null;
+
+    await db.insert(aiAuditLogs).values({
+      action: entry.action,
+      category: entry.category,
+      actorId: entry.actorId ?? null,
+      actorEmail: truncate(entry.actorEmail, 320),
+      actorRole: truncate(entry.actorRole, 50),
+      clientId: entry.clientId ?? null,
+      organizationId: entry.organizationId ?? null,
+      organizationSlug: truncate(entry.organizationSlug, 100),
+      targetUserId: entry.targetUserId ?? null,
+      targetUserEmail: truncate(entry.targetUserEmail, 320),
+      userPrompt: truncate(entry.userPrompt, 10000),
+      aiResponse: truncate(entry.aiResponse, 10000),
+      toolArgs: truncate(entry.toolArgs, 5000),
+      toolResult: truncate(entry.toolResult, 5000),
+      status: entry.status,
+      errorMessage: truncate(entry.errorMessage, 2000),
+      ipAddress: truncate(entry.ipAddress, 45),
+      durationMs: entry.durationMs ?? null,
+    });
+  } catch (err) {
+    console.error("[AI Audit] Failed to write audit log:", err);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// RBAC helpers
+// ---------------------------------------------------------------------------
+
 async function getAllowedOrgIds(
   db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
   ctx: UserContext
 ): Promise<number[] | null> {
-  if (!ctx.clientId) return null; // platform admin — no restriction
+  if (!ctx.clientId) return null;
   const partnerOrgs = await db
     .select({ id: organizations.id })
     .from(organizations)
@@ -75,10 +144,6 @@ async function getAllowedOrgIds(
   return partnerOrgs.map((o) => o.id);
 }
 
-/**
- * Checks whether a specific org (by slug) belongs to the current user's partner.
- * Returns the org row if allowed, or null if denied.
- */
 async function verifyOrgAccess(
   db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
   ctx: UserContext,
@@ -96,13 +161,8 @@ async function verifyOrgAccess(
     .limit(1);
 
   if (!org) return null;
-
-  // Platform admin can access any org
   if (!ctx.clientId) return org;
-
-  // Partner admin can only access their own partner's orgs
   if (org.clientId !== ctx.clientId) return null;
-
   return org;
 }
 
@@ -272,7 +332,7 @@ const TOOLS: Tool[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Tool executors — every executor enforces RBAC
+// Tool executors — every executor enforces RBAC and returns audit metadata
 // ---------------------------------------------------------------------------
 
 async function executeTool(
@@ -284,7 +344,12 @@ async function executeTool(
   try {
     args = JSON.parse(call.function.arguments);
   } catch {
-    return { callId: call.id, name: call.function.name, result: { error: "Invalid arguments" } };
+    return {
+      callId: call.id,
+      name: call.function.name,
+      result: { error: "Invalid arguments" },
+      audit: { category: "read", status: "error", errorMessage: "Invalid JSON arguments" },
+    };
   }
 
   switch (call.function.name) {
@@ -293,7 +358,6 @@ async function executeTool(
       const url = String(args.url ?? "");
       const label = String(args.label ?? url);
 
-      // RBAC: If partner admin, validate the URL doesn't reference another partner's org
       if (ctx.clientId && db) {
         const orgSlugMatch = url.match(/\/org\/([^/?#]+)/);
         if (orgSlugMatch) {
@@ -304,6 +368,12 @@ async function executeTool(
               callId: call.id,
               name: "navigate_to",
               result: { error: `Access denied: you do not have permission to view that organisation.` },
+              audit: {
+                category: "navigate",
+                status: "denied",
+                organizationSlug: targetSlug,
+                errorMessage: `RBAC denied: partner admin attempted to navigate to org "${targetSlug}" outside their partner`,
+              },
             };
           }
         }
@@ -314,12 +384,13 @@ async function executeTool(
         name: "navigate_to",
         result: { navigating_to: label, url },
         action: { type: "navigate", url },
+        audit: { category: "navigate", status: "success" },
       };
     }
 
     // -----------------------------------------------------------------------
     case "list_organizations": {
-      if (!db) return { callId: call.id, name: "list_organizations", result: { error: "DB unavailable" } };
+      if (!db) return { callId: call.id, name: "list_organizations", result: { error: "DB unavailable" }, audit: { category: "read", status: "error", errorMessage: "DB unavailable" } };
 
       const statusFilter = args.status as string | undefined;
 
@@ -335,7 +406,6 @@ async function executeTool(
         .from(organizations)
         .leftJoin(clients, eq(organizations.clientId, clients.id));
 
-      // RBAC: Partner admins ONLY see their own partner's orgs
       if (ctx.clientId) {
         rows = rows.filter((r) => r.clientId === ctx.clientId);
       }
@@ -353,22 +423,21 @@ async function executeTool(
             name: r.name,
             slug: r.slug,
             status: r.status,
-            // Only show partner name to platform admins
             ...(ctx.clientId ? {} : { partner: r.clientName }),
             admin_link: `/org/${r.slug}`,
           })),
         },
+        audit: { category: "read", status: "success" },
       };
     }
 
     // -----------------------------------------------------------------------
     case "list_users": {
-      if (!db) return { callId: call.id, name: "list_users", result: { error: "DB unavailable" } };
+      if (!db) return { callId: call.id, name: "list_users", result: { error: "DB unavailable" }, audit: { category: "read", status: "error", errorMessage: "DB unavailable" } };
 
       const neverLoggedIn = args.never_logged_in === true;
       const orgSlug = args.organization_slug as string | undefined;
 
-      // RBAC: If filtering by org slug, verify the partner owns that org
       if (orgSlug && ctx.clientId) {
         const org = await verifyOrgAccess(db, ctx, orgSlug);
         if (!org) {
@@ -376,6 +445,12 @@ async function executeTool(
             callId: call.id,
             name: "list_users",
             result: { error: `Access denied: organisation "${orgSlug}" does not belong to your partner account.` },
+            audit: {
+              category: "read",
+              status: "denied",
+              organizationSlug: orgSlug,
+              errorMessage: `RBAC denied: partner admin attempted to list users for org "${orgSlug}" outside their partner`,
+            },
           };
         }
       }
@@ -402,7 +477,6 @@ async function executeTool(
         })
         .from(users);
 
-      // RBAC: Partner admin isolation — only see users in their own partner's orgs
       if (ctx.clientId) {
         const allowedOrgIds = await getAllowedOrgIds(db, ctx);
         if (allowedOrgIds) {
@@ -432,30 +506,40 @@ async function executeTool(
             last_login: u.lastLoginAt ?? "never",
           })),
         },
+        audit: {
+          category: "read",
+          status: "success",
+          organizationSlug: orgSlug,
+          organizationId: orgId,
+        },
       };
     }
 
     // -----------------------------------------------------------------------
     case "create_organization": {
-      if (!db) return { callId: call.id, name: "create_organization", result: { error: "DB unavailable" } };
+      if (!db) return { callId: call.id, name: "create_organization", result: { error: "DB unavailable" }, audit: { category: "write", status: "error", errorMessage: "DB unavailable" } };
 
       const name = String(args.name ?? "").trim();
       const slug = String(args.slug ?? "").trim();
       if (!name || !slug) {
-        return { callId: call.id, name: "create_organization", result: { error: "name and slug are required" } };
+        return {
+          callId: call.id,
+          name: "create_organization",
+          result: { error: "name and slug are required" },
+          audit: { category: "write", status: "error", errorMessage: "Missing name or slug" },
+        };
       }
 
-      // RBAC: Partner admins create orgs under their own clientId only
       let clientId: number | undefined = ctx.clientId ?? undefined;
       if (!clientId) {
         return {
           callId: call.id,
           name: "create_organization",
           result: { error: "Platform admins must specify a partner. Please ask which partner this org belongs to, or use the admin UI." },
+          audit: { category: "write", status: "error", errorMessage: "Platform admin must specify partner for org creation" },
         };
       }
 
-      // Check slug uniqueness
       const [existing] = await db
         .select({ id: organizations.id })
         .from(organizations)
@@ -467,6 +551,7 @@ async function executeTool(
           callId: call.id,
           name: "create_organization",
           result: { error: `Slug "${slug}" is already taken. Choose a different one.` },
+          audit: { category: "write", status: "error", organizationSlug: slug, errorMessage: `Slug "${slug}" already exists` },
         };
       }
 
@@ -489,12 +574,13 @@ async function executeTool(
           admin_url: `/org/${slug}`,
         },
         action: { type: "refresh_orgs" },
+        audit: { category: "write", status: "success", organizationSlug: slug },
       };
     }
 
     // -----------------------------------------------------------------------
     case "create_user": {
-      if (!db) return { callId: call.id, name: "create_user", result: { error: "DB unavailable" } };
+      if (!db) return { callId: call.id, name: "create_user", result: { error: "DB unavailable" }, audit: { category: "write", status: "error", errorMessage: "DB unavailable" } };
 
       const email = String(args.email ?? "").trim().toLowerCase();
       const name = String(args.name ?? "").trim();
@@ -503,32 +589,46 @@ async function executeTool(
       const orgSlug = args.organization_slug as string | undefined;
 
       if (!email || !name) {
-        return { callId: call.id, name: "create_user", result: { error: "email and name required" } };
+        return {
+          callId: call.id,
+          name: "create_user",
+          result: { error: "email and name required" },
+          audit: { category: "write", status: "error", errorMessage: "Missing email or name" },
+        };
       }
 
-      // Check duplicate
       const [existingUser] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
       if (existingUser) {
-        return { callId: call.id, name: "create_user", result: { error: `User ${email} already exists.` } };
+        return {
+          callId: call.id,
+          name: "create_user",
+          result: { error: `User ${email} already exists.` },
+          audit: { category: "write", status: "error", targetUserEmail: email, errorMessage: `Duplicate email: ${email}` },
+        };
       }
 
       let orgId: number | undefined;
       let clientId: number | undefined = ctx.clientId ?? undefined;
 
       if (orgSlug) {
-        // RBAC: Verify the partner owns this org before creating a user in it
         const org = await verifyOrgAccess(db, ctx, orgSlug);
         if (!org) {
           return {
             callId: call.id,
             name: "create_user",
             result: { error: `Access denied: organisation "${orgSlug}" does not belong to your partner account.` },
+            audit: {
+              category: "write",
+              status: "denied",
+              organizationSlug: orgSlug,
+              targetUserEmail: email,
+              errorMessage: `RBAC denied: partner admin attempted to create user in org "${orgSlug}" outside their partner`,
+            },
           };
         }
         orgId = org.id;
         clientId = org.clientId ?? undefined;
       } else if (ctx.clientId) {
-        // Partner admin creating a user without specifying an org — attach to their partner
         clientId = ctx.clientId;
       }
 
@@ -554,12 +654,19 @@ async function executeTool(
           message: `User "${name}" (${email}) created${orgSlug ? ` for ${orgSlug}` : ""}. Initial password: ${password}`,
         },
         action: { type: "refresh_users" },
+        audit: {
+          category: "write",
+          status: "success",
+          organizationSlug: orgSlug,
+          organizationId: orgId,
+          targetUserEmail: email,
+        },
       };
     }
 
     // -----------------------------------------------------------------------
     case "get_completion_report": {
-      if (!db) return { callId: call.id, name: "get_completion_report", result: { error: "DB unavailable" } };
+      if (!db) return { callId: call.id, name: "get_completion_report", result: { error: "DB unavailable" }, audit: { category: "read", status: "error", errorMessage: "DB unavailable" } };
 
       const filter = (args.filter as string) ?? "all";
 
@@ -573,12 +680,10 @@ async function executeTool(
         })
         .from(organizations);
 
-      // RBAC: Partner admins ONLY see their own partner's orgs
       if (ctx.clientId) {
         allOrgs = allOrgs.filter((o) => o.clientId === ctx.clientId);
       }
 
-      // Get users per org to check login status
       const orgIds = allOrgs.map((o) => o.id);
       const allUsers = orgIds.length
         ? await db
@@ -616,6 +721,7 @@ async function executeTool(
           count: filtered.length,
           organizations: filtered,
         },
+        audit: { category: "read", status: "success" },
       };
     }
 
@@ -625,10 +731,14 @@ async function executeTool(
       const extractType = String(args.extract_type ?? "general");
 
       if (!text.trim()) {
-        return { callId: call.id, name: "extract_from_text", result: { error: "No text provided" } };
+        return {
+          callId: call.id,
+          name: "extract_from_text",
+          result: { error: "No text provided" },
+          audit: { category: "extract", status: "error", errorMessage: "Empty text" },
+        };
       }
 
-      // Use LLM to extract structured data from the text
       const extractResult = await invokeLLM({
         messages: [
           {
@@ -655,6 +765,7 @@ async function executeTool(
         callId: call.id,
         name: "extract_from_text",
         result: { extracted, extract_type: extractType },
+        audit: { category: "extract", status: "success" },
       };
     }
 
@@ -664,6 +775,7 @@ async function executeTool(
         callId: call.id,
         name: call.function.name,
         result: { error: `Unknown tool: ${call.function.name}` },
+        audit: { category: "read", status: "error", errorMessage: `Unknown tool: ${call.function.name}` },
       };
   }
 }
@@ -674,13 +786,7 @@ async function executeTool(
 
 export const aiRouter = router({
   /**
-   * Main chat endpoint. Accepts a message history and optional file content
-   * (base64 + mimeType for document parsing).
-   * Returns the assistant reply and an optional UI action.
-   *
-   * Access: admin role required (both platform admins and partner admins).
-   * RBAC is enforced at the tool-execution level — partner admins can only
-   * see/modify data belonging to their own partner (clientId).
+   * Main chat endpoint with full audit logging.
    */
   chat: protectedProcedure
     .input(
@@ -691,14 +797,14 @@ export const aiRouter = router({
             content: z.string(),
           })
         ),
-        // Optional file upload (base64 encoded)
         fileData: z.string().optional(),
         fileType: z.string().optional(),
         fileName: z.string().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
-      // Access control: only admin users can use the AI chat
+      const chatStartTime = Date.now();
+
       if (ctx.user.role !== "admin") {
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
@@ -706,7 +812,12 @@ export const aiRouter = router({
       const db = await getDb();
       const isPlatformAdmin = !ctx.user.clientId;
 
-      // ---- Build context about the user's environment ----
+      // Get IP address for audit
+      const ipAddress =
+        (ctx.req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ??
+        ctx.req.socket?.remoteAddress ??
+        null;
+
       let partnerName = "New Lantern";
       if (!isPlatformAdmin && ctx.user.clientId && db) {
         const [client] = await db
@@ -717,7 +828,7 @@ export const aiRouter = router({
         partnerName = client?.name ?? "your partner";
       }
 
-      // ---- System prompt with strict RBAC instructions ----
+      // ---- System prompt ----
       const systemPrompt = isPlatformAdmin
         ? `You are an AI assistant built into the New Lantern Implementation Portal admin panel.
 
@@ -772,7 +883,6 @@ Guidelines:
         { role: "system", content: systemPrompt },
       ];
 
-      // Attach file if provided
       if (input.fileData && input.fileType) {
         const isImage = input.fileType.startsWith("image/");
         const isPdf = input.fileType === "application/pdf";
@@ -793,7 +903,6 @@ Guidelines:
             : [{ type: "text", text: input.messages[input.messages.length - 1]?.content ?? "" }],
         });
 
-        // Skip adding the last user message again
         for (const msg of input.messages.slice(0, -1)) {
           llmMessages.push({ role: msg.role as Message["role"], content: msg.content });
         }
@@ -803,17 +912,36 @@ Guidelines:
         }
       }
 
-      // ---- Tool-calling loop (max 3 iterations) ----
+      // ---- Tool-calling loop ----
       let currentMessages = [...llmMessages];
       let finalMessage = "";
       let finalAction: ChatAction | undefined;
 
-      // Build the user context for RBAC enforcement in tool executors
       const userCtx: UserContext = {
+        id: ctx.user.id,
         clientId: ctx.user.clientId,
         email: ctx.user.email,
         role: ctx.user.role,
       };
+
+      // Extract the last user prompt for audit logging
+      const lastUserPrompt =
+        input.messages.filter((m) => m.role === "user").pop()?.content ?? "";
+
+      // Collect all tool audit entries to write after the loop
+      const toolAuditEntries: Array<{
+        action: string;
+        category: "read" | "write" | "navigate" | "extract";
+        toolArgs: string;
+        toolResult: string;
+        status: "success" | "error" | "denied";
+        organizationSlug?: string;
+        organizationId?: number;
+        targetUserEmail?: string;
+        targetUserId?: number;
+        errorMessage?: string;
+        durationMs: number;
+      }> = [];
 
       for (let iteration = 0; iteration < 3; iteration++) {
         const result = await invokeLLM({
@@ -828,29 +956,49 @@ Guidelines:
         const toolCalls = choice.message.tool_calls;
 
         if (!toolCalls || toolCalls.length === 0) {
-          // No tool call — this is the final answer
           const content = choice.message.content;
           finalMessage = typeof content === "string" ? content : JSON.stringify(content);
           break;
         }
 
-        // Execute all tool calls in parallel — each enforces RBAC
+        // Execute all tool calls — each enforces RBAC
+        const toolStartTime = Date.now();
         const toolResults = await Promise.all(
           toolCalls.map((tc) => executeTool(tc, userCtx))
         );
+        const toolDuration = Date.now() - toolStartTime;
 
-        // Capture the first action (e.g. navigate)
+        // Collect audit data from each tool result
+        for (let i = 0; i < toolResults.length; i++) {
+          const tr = toolResults[i];
+          const tc = toolCalls[i];
+          if (tr.audit) {
+            toolAuditEntries.push({
+              action: tr.name,
+              category: tr.audit.category,
+              toolArgs: tc ? tc.function.arguments : "{}",
+              toolResult: JSON.stringify(tr.result).slice(0, 5000),
+              status: tr.audit.status,
+              organizationSlug: tr.audit.organizationSlug,
+              organizationId: tr.audit.organizationId,
+              targetUserEmail: tr.audit.targetUserEmail,
+              targetUserId: tr.audit.targetUserId,
+              errorMessage: tr.audit.errorMessage,
+              durationMs: Math.round(toolDuration / toolResults.length),
+            });
+          }
+        }
+
         for (const tr of toolResults) {
           if (tr.action && !finalAction) {
             finalAction = tr.action;
           }
         }
 
-        // Append assistant message + tool results to the conversation
         currentMessages.push({
           role: "assistant",
           content: "",
-          // @ts-ignore — tool_calls field not in our Message type but supported by the API
+          // @ts-ignore
           tool_calls: toolCalls,
         } as Message);
 
@@ -868,9 +1016,227 @@ Guidelines:
         finalMessage = "I've completed the action. Let me know if you need anything else.";
       }
 
+      const totalDuration = Date.now() - chatStartTime;
+
+      // ---- Write audit logs (fire-and-forget) ----
+      // 1. Log the overall chat interaction
+      writeAuditLog({
+        action: "chat",
+        category: "chat",
+        actorId: ctx.user.id,
+        actorEmail: ctx.user.email,
+        actorRole: ctx.user.role,
+        clientId: ctx.user.clientId ?? null,
+        userPrompt: lastUserPrompt,
+        aiResponse: finalMessage,
+        status: "success",
+        ipAddress,
+        durationMs: totalDuration,
+      });
+
+      // 2. Log each tool call individually
+      for (const entry of toolAuditEntries) {
+        writeAuditLog({
+          action: entry.action,
+          category: entry.category,
+          actorId: ctx.user.id,
+          actorEmail: ctx.user.email,
+          actorRole: ctx.user.role,
+          clientId: ctx.user.clientId ?? null,
+          organizationId: entry.organizationId ?? null,
+          organizationSlug: entry.organizationSlug ?? null,
+          targetUserId: entry.targetUserId ?? null,
+          targetUserEmail: entry.targetUserEmail ?? null,
+          userPrompt: lastUserPrompt,
+          toolArgs: entry.toolArgs,
+          toolResult: entry.toolResult,
+          status: entry.status,
+          errorMessage: entry.errorMessage ?? null,
+          ipAddress,
+          durationMs: entry.durationMs,
+        });
+      }
+
       return {
         message: finalMessage,
         action: finalAction ?? null,
       };
     }),
+
+  /**
+   * Query audit logs. Platform admins see all; partner admins see only their own.
+   */
+  getAuditLogs: protectedProcedure
+    .input(
+      z.object({
+        page: z.number().min(1).default(1),
+        pageSize: z.number().min(1).max(100).default(25),
+        category: z.enum(["all", "chat", "read", "write", "navigate", "extract"]).default("all"),
+        status: z.enum(["all", "success", "error", "denied"]).default("all"),
+        actorEmail: z.string().optional(),
+        organizationSlug: z.string().optional(),
+        dateFrom: z.string().optional(), // ISO date string
+        dateTo: z.string().optional(),   // ISO date string
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+
+      const db = await getDb();
+      if (!db) return { logs: [], total: 0, page: input.page, pageSize: input.pageSize };
+
+      // Build WHERE conditions
+      const conditions: any[] = [];
+
+      // RBAC: Partner admins can only see their own logs
+      if (ctx.user.clientId) {
+        conditions.push(eq(aiAuditLogs.clientId, ctx.user.clientId));
+      }
+
+      if (input.category !== "all") {
+        conditions.push(eq(aiAuditLogs.category, input.category));
+      }
+
+      if (input.status !== "all") {
+        conditions.push(eq(aiAuditLogs.status, input.status));
+      }
+
+      if (input.actorEmail) {
+        conditions.push(eq(aiAuditLogs.actorEmail, input.actorEmail));
+      }
+
+      if (input.organizationSlug) {
+        conditions.push(eq(aiAuditLogs.organizationSlug, input.organizationSlug));
+      }
+
+      if (input.dateFrom) {
+        conditions.push(sql`${aiAuditLogs.createdAt} >= ${input.dateFrom}`);
+      }
+
+      if (input.dateTo) {
+        conditions.push(sql`${aiAuditLogs.createdAt} <= ${input.dateTo}`);
+      }
+
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+      // Get total count
+      const [countResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(aiAuditLogs)
+        .where(whereClause);
+      const total = countResult?.count ?? 0;
+
+      // Get paginated results
+      const offset = (input.page - 1) * input.pageSize;
+      const logs = await db
+        .select()
+        .from(aiAuditLogs)
+        .where(whereClause)
+        .orderBy(desc(aiAuditLogs.createdAt))
+        .limit(input.pageSize)
+        .offset(offset);
+
+      return {
+        logs,
+        total,
+        page: input.page,
+        pageSize: input.pageSize,
+      };
+    }),
+
+  /**
+   * Get a single audit log entry by ID.
+   */
+  getAuditLogDetail: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ input, ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+
+      const db = await getDb();
+      if (!db) return null;
+
+      const [log] = await db
+        .select()
+        .from(aiAuditLogs)
+        .where(eq(aiAuditLogs.id, input.id))
+        .limit(1);
+
+      if (!log) return null;
+
+      // RBAC: Partner admins can only see their own logs
+      if (ctx.user.clientId && log.clientId !== ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
+      }
+
+      return log;
+    }),
+
+  /**
+   * Get audit log summary statistics for the dashboard.
+   */
+  getAuditStats: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user.role !== "admin") {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+    }
+
+    const db = await getDb();
+    if (!db) return { totalLogs: 0, byCategory: [], byStatus: [], recentActors: [] };
+
+    const clientCondition = ctx.user.clientId
+      ? eq(aiAuditLogs.clientId, ctx.user.clientId)
+      : undefined;
+
+    // Total count
+    const [totalResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(aiAuditLogs)
+      .where(clientCondition);
+
+    // By category
+    const byCategory = await db
+      .select({
+        category: aiAuditLogs.category,
+        count: sql<number>`count(*)`,
+      })
+      .from(aiAuditLogs)
+      .where(clientCondition)
+      .groupBy(aiAuditLogs.category);
+
+    // By status
+    const byStatus = await db
+      .select({
+        status: aiAuditLogs.status,
+        count: sql<number>`count(*)`,
+      })
+      .from(aiAuditLogs)
+      .where(clientCondition)
+      .groupBy(aiAuditLogs.status);
+
+    // Recent unique actors (last 10)
+    const recentActors = await db
+      .select({
+        actorEmail: aiAuditLogs.actorEmail,
+        lastAction: sql<Date>`max(${aiAuditLogs.createdAt})`,
+        actionCount: sql<number>`count(*)`,
+      })
+      .from(aiAuditLogs)
+      .where(clientCondition)
+      .groupBy(aiAuditLogs.actorEmail)
+      .orderBy(sql`max(${aiAuditLogs.createdAt}) desc`)
+      .limit(10);
+
+    return {
+      totalLogs: totalResult?.count ?? 0,
+      byCategory,
+      byStatus,
+      recentActors,
+    };
+  }),
 });
+
+// Re-export writeAuditLog for use in other modules if needed
+export { writeAuditLog };
