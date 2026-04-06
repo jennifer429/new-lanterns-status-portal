@@ -2405,10 +2405,14 @@
 - [x] Save Notion/CRM architecture design discussion as a design doc
 
 ## Context-Aware AI Chat on Site Dashboard (Apr 6, 2026)
-- [ ] Add org-scoped tools to AI router: get_tasks, get_notes, get_questionnaire_answers, get_files, get_connectivity
-- [ ] Pass org slug/id from InlineChatPanel to AI chat endpoint when on site dashboard
-- [ ] Update system prompt for site dashboard context — AI should use org data and not reference other orgs
+- [x] Add org-scoped tools to AI router: get_tasks, get_notes, get_questionnaire_answers, get_files, get_connectivity
+- [x] Pass org slug/id from InlineChatPanel to AI chat endpoint when on site dashboard
+- [x] Update system prompt for site dashboard context — AI should use org data and not reference other orgs
 - [ ] AI should be able to read uploaded files/documents for the current org
 - [ ] Test AI can answer questions about a specific org's tasks, notes, questionnaire, connectivity
 - [x] Bug: Duplicate "Ask anything" input bars on site dashboard (InlineChatPanel + AIChatBox both show inputs)
 - [x] Bug: AI assistant on site dashboard still uses cross-org tools (list_organizations etc.) — must restrict to org-scoped tools ONLY
+- [x] Feature: Server-side PDF status report generation for site dashboard (org profile, progress stats, phase summaries)
+- [x] Feature: Server-side formatted HTML email generation for remaining tasks (nice table with task name, section, status, owner)
+- [x] Feature: Export buttons on site dashboard UI (Download PDF, Export Email) for admin users
+- [x] Feature: Email preview dialog with Copy HTML and Download HTML options
