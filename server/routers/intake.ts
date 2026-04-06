@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { intakeResponses, intakeFileAttachments, organizations, questions, questionOptions, responses, onboardingFeedback, clients, partnerTemplates, partnerTaskTemplates } from "../../drizzle/schema";
+import { intakeResponses, intakeFileAttachments, organizations, questions, questionOptions, responses, onboardingFeedback, clients, partnerTemplates, partnerTaskTemplates, orgCustomTasks } from "../../drizzle/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { uploadToGoogleDrive } from "./files";
 import { logFileActivity } from "../fileAuditLog";
@@ -1268,5 +1268,117 @@ export const intakeRouter = router({
       }
 
       return { answers: normalised };
+    }),
+
+  // ---------------------------------------------------------------------------
+  // Org-specific custom tasks (added by hospital users, not partner templates)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Get all custom tasks for an org (by slug).
+   */
+  getOrgCustomTasks: publicProcedure
+    .input(z.object({ organizationSlug: z.string() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return [];
+
+      const [org] = await db
+        .select({ id: organizations.id })
+        .from(organizations)
+        .where(eq(organizations.slug, input.organizationSlug))
+        .limit(1);
+
+      if (!org) return [];
+
+      return db
+        .select()
+        .from(orgCustomTasks)
+        .where(eq(orgCustomTasks.organizationId, org.id))
+        .orderBy(orgCustomTasks.createdAt);
+    }),
+
+  /**
+   * Add a custom task to an org's task list.
+   */
+  addOrgCustomTask: publicProcedure
+    .input(z.object({
+      organizationSlug: z.string(),
+      title: z.string().min(1).max(255),
+      description: z.string().optional(),
+      section: z.string().optional(),
+      type: z.enum(["review", "upload", "schedule", "form"]).default("review"),
+      userEmail: z.string().email().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const [org] = await db
+        .select({ id: organizations.id })
+        .from(organizations)
+        .where(eq(organizations.slug, input.organizationSlug))
+        .limit(1);
+
+      if (!org) throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+
+      const [result] = await db.insert(orgCustomTasks).values({
+        organizationId: org.id,
+        title: input.title.trim(),
+        description: input.description?.trim() || null,
+        section: input.section?.trim() || null,
+        type: input.type,
+        createdBy: input.userEmail || null,
+        isComplete: 0,
+      });
+
+      const [created] = await db
+        .select()
+        .from(orgCustomTasks)
+        .where(eq(orgCustomTasks.id, result.insertId))
+        .limit(1);
+
+      return created;
+    }),
+
+  /**
+   * Toggle completion state of a custom task.
+   */
+  toggleOrgCustomTask: publicProcedure
+    .input(z.object({ taskId: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const [task] = await db
+        .select()
+        .from(orgCustomTasks)
+        .where(eq(orgCustomTasks.id, input.taskId))
+        .limit(1);
+
+      if (!task) throw new TRPCError({ code: "NOT_FOUND", message: "Task not found" });
+
+      await db
+        .update(orgCustomTasks)
+        .set({ isComplete: task.isComplete ? 0 : 1 })
+        .where(eq(orgCustomTasks.id, input.taskId));
+
+      return { id: task.id, isComplete: !task.isComplete };
+    }),
+
+  /**
+   * Delete a custom task.
+   */
+  deleteOrgCustomTask: publicProcedure
+    .input(z.object({ taskId: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      await db
+        .delete(orgCustomTasks)
+        .where(eq(orgCustomTasks.id, input.taskId));
+
+      return { success: true };
     }),
 });
