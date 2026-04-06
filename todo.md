@@ -2378,3 +2378,9 @@
 - [ ] Skip auto-populate for generic uploads without a discrete customer tie
 - [ ] Chat assistant answers user questions and navigates them to the relevant page/section
 - [ ] Chat suggests users can paste emails or upload forms to auto-extract and populate answers
+
+## AI Chat RBAC & Partner Dashboard (Apr 6, 2026)
+- [x] Add AI chat widget to partner dashboard (Home.tsx) at the top
+- [x] Harden AI router RBAC - strict partner isolation in all tool executors (no cross-partner data leakage)
+- [x] Allow partner admins (not just platform admins) to use AI chat endpoint
+- [x] Write tests for RBAC enforcement in AI router

@@ -5,6 +5,12 @@
  * The LLM can call tools to: list/create orgs & users, generate reports,
  * navigate the UI, and summarise pasted emails or uploaded documents.
  *
+ * RBAC enforcement:
+ *   - Platform admins (clientId=null) can see all data
+ *   - Partner admins (clientId!=null) can ONLY see/modify their own partner's data
+ *   - Every tool executor enforces ownership checks before returning data
+ *   - No cross-partner data leakage is possible
+ *
  * Tool-calling loop (max 3 iterations):
  *   1. Send messages + tools to LLM
  *   2. If LLM returns tool_calls, execute each tool and append results
@@ -42,6 +48,63 @@ type ToolResult = {
   result: unknown;
   action?: ChatAction;
 };
+
+type UserContext = {
+  clientId: number | null | undefined;
+  email: string | null | undefined;
+  role: string;
+};
+
+// ---------------------------------------------------------------------------
+// RBAC helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the set of org IDs that the current user is allowed to access.
+ * Platform admins get null (meaning "all"), partner admins get their partner's orgs.
+ */
+async function getAllowedOrgIds(
+  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  ctx: UserContext
+): Promise<number[] | null> {
+  if (!ctx.clientId) return null; // platform admin — no restriction
+  const partnerOrgs = await db
+    .select({ id: organizations.id })
+    .from(organizations)
+    .where(eq(organizations.clientId, ctx.clientId));
+  return partnerOrgs.map((o) => o.id);
+}
+
+/**
+ * Checks whether a specific org (by slug) belongs to the current user's partner.
+ * Returns the org row if allowed, or null if denied.
+ */
+async function verifyOrgAccess(
+  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  ctx: UserContext,
+  orgSlug: string
+): Promise<{ id: number; clientId: number | null; name: string; slug: string } | null> {
+  const [org] = await db
+    .select({
+      id: organizations.id,
+      clientId: organizations.clientId,
+      name: organizations.name,
+      slug: organizations.slug,
+    })
+    .from(organizations)
+    .where(eq(organizations.slug, orgSlug))
+    .limit(1);
+
+  if (!org) return null;
+
+  // Platform admin can access any org
+  if (!ctx.clientId) return org;
+
+  // Partner admin can only access their own partner's orgs
+  if (org.clientId !== ctx.clientId) return null;
+
+  return org;
+}
 
 // ---------------------------------------------------------------------------
 // Tool definitions
@@ -209,12 +272,12 @@ const TOOLS: Tool[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Tool executors
+// Tool executors — every executor enforces RBAC
 // ---------------------------------------------------------------------------
 
 async function executeTool(
   call: ToolCall,
-  ctx: { user: { clientId: number | null | undefined; email: string | null | undefined; role: string } }
+  ctx: UserContext
 ): Promise<ToolResult> {
   const db = await getDb();
   let args: Record<string, unknown> = {};
@@ -229,6 +292,23 @@ async function executeTool(
     case "navigate_to": {
       const url = String(args.url ?? "");
       const label = String(args.label ?? url);
+
+      // RBAC: If partner admin, validate the URL doesn't reference another partner's org
+      if (ctx.clientId && db) {
+        const orgSlugMatch = url.match(/\/org\/([^/?#]+)/);
+        if (orgSlugMatch) {
+          const targetSlug = orgSlugMatch[1];
+          const org = await verifyOrgAccess(db, ctx, targetSlug);
+          if (!org) {
+            return {
+              callId: call.id,
+              name: "navigate_to",
+              result: { error: `Access denied: you do not have permission to view that organisation.` },
+            };
+          }
+        }
+      }
+
       return {
         callId: call.id,
         name: "navigate_to",
@@ -255,9 +335,9 @@ async function executeTool(
         .from(organizations)
         .leftJoin(clients, eq(organizations.clientId, clients.id));
 
-      // Partner admins only see their own orgs
-      if (ctx.user.clientId) {
-        rows = rows.filter((r) => r.clientId === ctx.user.clientId);
+      // RBAC: Partner admins ONLY see their own partner's orgs
+      if (ctx.clientId) {
+        rows = rows.filter((r) => r.clientId === ctx.clientId);
       }
 
       if (statusFilter && statusFilter !== "all") {
@@ -273,7 +353,8 @@ async function executeTool(
             name: r.name,
             slug: r.slug,
             status: r.status,
-            partner: r.clientName,
+            // Only show partner name to platform admins
+            ...(ctx.clientId ? {} : { partner: r.clientName }),
             admin_link: `/org/${r.slug}`,
           })),
         },
@@ -286,6 +367,18 @@ async function executeTool(
 
       const neverLoggedIn = args.never_logged_in === true;
       const orgSlug = args.organization_slug as string | undefined;
+
+      // RBAC: If filtering by org slug, verify the partner owns that org
+      if (orgSlug && ctx.clientId) {
+        const org = await verifyOrgAccess(db, ctx, orgSlug);
+        if (!org) {
+          return {
+            callId: call.id,
+            name: "list_users",
+            result: { error: `Access denied: organisation "${orgSlug}" does not belong to your partner account.` },
+          };
+        }
+      }
 
       let orgId: number | undefined;
       if (orgSlug) {
@@ -309,16 +402,14 @@ async function executeTool(
         })
         .from(users);
 
-      // Partner admin isolation
-      if (ctx.user.clientId) {
-        const partnerOrgs = await db
-          .select({ id: organizations.id })
-          .from(organizations)
-          .where(eq(organizations.clientId, ctx.user.clientId));
-        const orgIds = partnerOrgs.map((o) => o.id);
-        allUsers = allUsers.filter(
-          (u) => u.clientId === ctx.user.clientId || (u.organizationId && orgIds.includes(u.organizationId))
-        );
+      // RBAC: Partner admin isolation — only see users in their own partner's orgs
+      if (ctx.clientId) {
+        const allowedOrgIds = await getAllowedOrgIds(db, ctx);
+        if (allowedOrgIds) {
+          allUsers = allUsers.filter(
+            (u) => u.clientId === ctx.clientId || (u.organizationId && allowedOrgIds.includes(u.organizationId))
+          );
+        }
       }
 
       if (orgId) {
@@ -354,13 +445,13 @@ async function executeTool(
         return { callId: call.id, name: "create_organization", result: { error: "name and slug are required" } };
       }
 
-      // Determine clientId
-      let clientId: number | undefined = ctx.user.clientId ?? undefined;
+      // RBAC: Partner admins create orgs under their own clientId only
+      let clientId: number | undefined = ctx.clientId ?? undefined;
       if (!clientId) {
         return {
           callId: call.id,
           name: "create_organization",
-          result: { error: "Platform admins must specify a partner. Please ask which partner this org belongs to." },
+          result: { error: "Platform admins must specify a partner. Please ask which partner this org belongs to, or use the admin UI." },
         };
       }
 
@@ -422,19 +513,23 @@ async function executeTool(
       }
 
       let orgId: number | undefined;
-      let clientId: number | undefined = ctx.user.clientId ?? undefined;
+      let clientId: number | undefined = ctx.clientId ?? undefined;
 
       if (orgSlug) {
-        const [org] = await db
-          .select({ id: organizations.id, clientId: organizations.clientId })
-          .from(organizations)
-          .where(eq(organizations.slug, orgSlug))
-          .limit(1);
+        // RBAC: Verify the partner owns this org before creating a user in it
+        const org = await verifyOrgAccess(db, ctx, orgSlug);
         if (!org) {
-          return { callId: call.id, name: "create_user", result: { error: `Org "${orgSlug}" not found.` } };
+          return {
+            callId: call.id,
+            name: "create_user",
+            result: { error: `Access denied: organisation "${orgSlug}" does not belong to your partner account.` },
+          };
         }
         orgId = org.id;
         clientId = org.clientId ?? undefined;
+      } else if (ctx.clientId) {
+        // Partner admin creating a user without specifying an org — attach to their partner
+        clientId = ctx.clientId;
       }
 
       const hash = await bcrypt.hash(password, 10);
@@ -478,8 +573,9 @@ async function executeTool(
         })
         .from(organizations);
 
-      if (ctx.user.clientId) {
-        allOrgs = allOrgs.filter((o) => o.clientId === ctx.user.clientId);
+      // RBAC: Partner admins ONLY see their own partner's orgs
+      if (ctx.clientId) {
+        allOrgs = allOrgs.filter((o) => o.clientId === ctx.clientId);
       }
 
       // Get users per org to check login status
@@ -581,6 +677,10 @@ export const aiRouter = router({
    * Main chat endpoint. Accepts a message history and optional file content
    * (base64 + mimeType for document parsing).
    * Returns the assistant reply and an optional UI action.
+   *
+   * Access: admin role required (both platform admins and partner admins).
+   * RBAC is enforced at the tool-execution level — partner admins can only
+   * see/modify data belonging to their own partner (clientId).
    */
   chat: protectedProcedure
     .input(
@@ -598,6 +698,7 @@ export const aiRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      // Access control: only admin users can use the AI chat
       if (ctx.user.role !== "admin") {
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
@@ -616,15 +717,16 @@ export const aiRouter = router({
         partnerName = client?.name ?? "your partner";
       }
 
-      // ---- System prompt ----
-      const systemPrompt = `You are an AI assistant built into the New Lantern Implementation Portal admin panel.
+      // ---- System prompt with strict RBAC instructions ----
+      const systemPrompt = isPlatformAdmin
+        ? `You are an AI assistant built into the New Lantern Implementation Portal admin panel.
 
 User: ${ctx.user.email ?? "admin"}
-Role: ${isPlatformAdmin ? "Platform Admin (New Lantern staff — can see all partners and organisations)" : `Partner Admin (${partnerName} — can only see ${partnerName} organisations and users)`}
+Role: Platform Admin (New Lantern staff — can see all partners and organisations)
 
 You help admins manage the portal efficiently. You can:
-- List organisations and users
-- Create new organisations and users
+- List organisations and users across all partners
+- Create new organisations and users (must specify partner)
 - Generate reports (e.g. who hasn't logged in)
 - Navigate the user to specific pages
 - Extract data from pasted email threads or meeting notes
@@ -632,11 +734,38 @@ You help admins manage the portal efficiently. You can:
 Guidelines:
 - Be concise and action-oriented
 - When creating organisations or users, confirm the key details before proceeding unless clearly specified
-- For platform admins creating an org, you CANNOT call create_organization (they must specify which partner — ask them to use the admin UI or tell you the partner). Simply tell them to navigate to the create org page.
+- For creating an org, you CANNOT call create_organization directly (you must specify which partner). Tell them to navigate to the create org page or specify the partner.
 - Always use the appropriate tool rather than just describing what to do
 - If someone pastes an email or text, use extract_from_text to parse it
 - Format lists as markdown tables or bullet points
-- If you navigate somewhere, tell the user what you did`;
+- If you navigate somewhere, tell the user what you did`
+        : `You are an AI assistant built into the New Lantern Implementation Portal for ${partnerName}.
+
+User: ${ctx.user.email ?? "admin"}
+Role: Partner Admin (${partnerName})
+
+CRITICAL DATA BOUNDARY RULES:
+- You can ONLY access data belonging to ${partnerName}
+- You MUST NOT attempt to access, view, or modify data from any other partner
+- All tool calls automatically enforce this boundary — if you try to access another partner's data, the request will be denied
+- Never ask the user for information about other partners' organisations or users
+- If a user asks about data outside ${partnerName}, politely explain you can only help with ${partnerName} data
+
+You help ${partnerName} admins manage their portal efficiently. You can:
+- List ${partnerName}'s organisations and users
+- Create new organisations and users under ${partnerName}
+- Generate reports for ${partnerName}'s organisations
+- Navigate to ${partnerName}'s pages
+- Extract data from pasted email threads or meeting notes
+
+Guidelines:
+- Be concise and action-oriented
+- When creating organisations or users, confirm the key details before proceeding unless clearly specified
+- Always use the appropriate tool rather than just describing what to do
+- If someone pastes an email or text, use extract_from_text to parse it
+- Format lists as markdown tables or bullet points
+- If you navigate somewhere, tell the user what you did
+- Never reveal information about other partners or their organisations`;
 
       // ---- Build message list ----
       const llmMessages: Message[] = [
@@ -679,6 +808,13 @@ Guidelines:
       let finalMessage = "";
       let finalAction: ChatAction | undefined;
 
+      // Build the user context for RBAC enforcement in tool executors
+      const userCtx: UserContext = {
+        clientId: ctx.user.clientId,
+        email: ctx.user.email,
+        role: ctx.user.role,
+      };
+
       for (let iteration = 0; iteration < 3; iteration++) {
         const result = await invokeLLM({
           messages: currentMessages,
@@ -698,9 +834,9 @@ Guidelines:
           break;
         }
 
-        // Execute all tool calls in parallel
+        // Execute all tool calls in parallel — each enforces RBAC
         const toolResults = await Promise.all(
-          toolCalls.map((tc) => executeTool(tc, ctx))
+          toolCalls.map((tc) => executeTool(tc, userCtx))
         );
 
         // Capture the first action (e.g. navigate)

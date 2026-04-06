@@ -43,6 +43,7 @@ import { UserMenu } from "@/components/UserMenu";
 import { cn } from "@/lib/utils";
 import { UploadedFilesList } from "@/components/UploadedFileRow";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { AdminChatWidget } from "@/components/AdminChatWidget";
 
 // ── Progress Ring (SVG) ─────────────────────────────────────────────────────
 function ProgressRing({
@@ -1594,6 +1595,11 @@ export default function Home() {
         {/* Bottom spacer */}
         <div className="h-2" />
       </div>
+
+      {/* AI Chat Widget — only visible to admin users */}
+      {currentUser?.role === "admin" && (
+        <AdminChatWidget isPlatformAdmin={!currentUser?.clientId} />
+      )}
     </div>
   );
 }
