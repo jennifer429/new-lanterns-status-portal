@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { questions, questionOptions, organizations, users, clients, intakeFileAttachments, partnerTemplates, specifications, intakeResponses, systemVendorOptions, vendorAuditLog, taskCompletion, validationResults } from "../../drizzle/schema";
+import { questions, questionOptions, organizations, users, clients, intakeFileAttachments, partnerTemplates, specifications, intakeResponses, systemVendorOptions, vendorAuditLog, taskCompletion, validationResults, partnerTaskTemplates } from "../../drizzle/schema";
 import { SECTION_DEFS as TASK_SECTION_DEFS } from "../../shared/taskDefs";
 import { eq, and, or, desc, inArray, sql } from "drizzle-orm";
 import { uploadToGoogleDrive } from "./files";
@@ -1966,5 +1966,127 @@ export const adminRouter = router({
         .limit(limit);
 
       return logs;
+    }),
+
+  // ============================================================================
+  // PARTNER TASK TEMPLATES CRUD
+  // ============================================================================
+
+  getTaskTemplates: protectedProcedure
+    .query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const whereClause = ctx.user.clientId
+        ? and(eq(partnerTaskTemplates.clientId, ctx.user.clientId), eq(partnerTaskTemplates.isActive, 1))
+        : eq(partnerTaskTemplates.isActive, 1);
+
+      return db.select({
+        id: partnerTaskTemplates.id,
+        clientId: partnerTaskTemplates.clientId,
+        title: partnerTaskTemplates.title,
+        description: partnerTaskTemplates.description,
+        type: partnerTaskTemplates.type,
+        section: partnerTaskTemplates.section,
+        sortOrder: partnerTaskTemplates.sortOrder,
+        createdBy: partnerTaskTemplates.createdBy,
+        updatedBy: partnerTaskTemplates.updatedBy,
+        createdAt: partnerTaskTemplates.createdAt,
+        updatedAt: partnerTaskTemplates.updatedAt,
+        clientName: clients.name,
+      })
+        .from(partnerTaskTemplates)
+        .leftJoin(clients, eq(partnerTaskTemplates.clientId, clients.id))
+        .where(whereClause)
+        .orderBy(partnerTaskTemplates.clientId, partnerTaskTemplates.sortOrder, partnerTaskTemplates.id);
+    }),
+
+  createTaskTemplate: protectedProcedure
+    .input(z.object({
+      clientId: z.number(),
+      title: z.string().min(1),
+      description: z.string().optional(),
+      type: z.enum(["upload", "schedule", "form", "review"]),
+      section: z.string().optional(),
+      sortOrder: z.number().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      if (ctx.user.clientId && ctx.user.clientId !== input.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot create tasks for a different partner" });
+      }
+
+      await db.insert(partnerTaskTemplates).values({
+        clientId: input.clientId,
+        title: input.title,
+        description: input.description ?? null,
+        type: input.type,
+        section: input.section ?? null,
+        sortOrder: input.sortOrder ?? 0,
+        createdBy: ctx.user.email ?? undefined,
+        updatedBy: ctx.user.email ?? undefined,
+      });
+
+      return { success: true };
+    }),
+
+  updateTaskTemplate: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      title: z.string().min(1).optional(),
+      description: z.string().optional(),
+      type: z.enum(["upload", "schedule", "form", "review"]).optional(),
+      section: z.string().optional(),
+      sortOrder: z.number().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const [existing] = await db.select().from(partnerTaskTemplates).where(eq(partnerTaskTemplates.id, input.id)).limit(1);
+      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Task template not found" });
+      if (ctx.user.clientId && ctx.user.clientId !== existing.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot update tasks for a different partner" });
+      }
+
+      const updateData: Record<string, unknown> = { updatedBy: ctx.user.email ?? null };
+      if (input.title !== undefined) updateData.title = input.title;
+      if (input.description !== undefined) updateData.description = input.description;
+      if (input.type !== undefined) updateData.type = input.type;
+      if (input.section !== undefined) updateData.section = input.section;
+      if (input.sortOrder !== undefined) updateData.sortOrder = input.sortOrder;
+
+      await db.update(partnerTaskTemplates).set(updateData).where(eq(partnerTaskTemplates.id, input.id));
+      return { success: true };
+    }),
+
+  deleteTaskTemplate: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const [existing] = await db.select().from(partnerTaskTemplates).where(eq(partnerTaskTemplates.id, input.id)).limit(1);
+      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Task template not found" });
+      if (ctx.user.clientId && ctx.user.clientId !== existing.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot delete tasks for a different partner" });
+      }
+
+      await db.update(partnerTaskTemplates).set({ isActive: 0, updatedBy: ctx.user.email ?? null }).where(eq(partnerTaskTemplates.id, input.id));
+      return { success: true };
     }),
 });

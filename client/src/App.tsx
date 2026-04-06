@@ -29,6 +29,8 @@ function Router() {
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/admin" component={Admin} />
       <Route path="/org/admin/create" component={CreateOrganization} />
+      {/* Partner admin create org - supports any partner slug */}
+      <Route path="/org/:partner/admin/create" component={CreateOrganization} />
       {/* Unified admin page - works for all admin roles (Platform, SRV, RadOne, etc.) */}
       {/* Backend automatically filters data by the logged-in user's clientId */}
       <Route path="/org/admin/users">

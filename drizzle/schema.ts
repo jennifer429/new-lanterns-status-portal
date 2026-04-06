@@ -407,3 +407,28 @@ export const orgNotes = mysqlTable("orgNotes", {
 
 export type OrgNote = typeof orgNotes.$inferSelect;
 export type InsertOrgNote = typeof orgNotes.$inferInsert;
+
+
+/**
+ * Partner Task Templates - reusable task definitions created by partner admins.
+ * Each template represents an action item that orgs under this partner need to complete.
+ * Partners can create, edit, and delete their own task templates.
+ * These show up on the /org/:slug/tasks page for the partner's organizations.
+ */
+export const partnerTaskTemplates = mysqlTable("partnerTaskTemplates", {
+  id: int("id").autoincrement().primaryKey(),
+  clientId: int("clientId").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  type: varchar("type", { length: 50 }).notNull().default("review"), // upload | schedule | form | review
+  section: varchar("section", { length: 255 }),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  isActive: tinyint("isActive").default(1).notNull(),
+  createdBy: varchar("createdBy", { length: 320 }),
+  updatedBy: varchar("updatedBy", { length: 320 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PartnerTaskTemplate = typeof partnerTaskTemplates.$inferSelect;
+export type InsertPartnerTaskTemplate = typeof partnerTaskTemplates.$inferInsert;
