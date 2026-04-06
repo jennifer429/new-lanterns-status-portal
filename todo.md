@@ -2368,3 +2368,13 @@
 ## N/A Question Counter on Dashboards (Apr 4, 2026)
 - [x] Add N/A question count per org to admin dashboard (table column + expanded mini card)
 - [x] Add N/A question count per org to partner dashboard (already in Home.tsx via shared progress)
+
+## AI Chat Assistant (Apr 5, 2026)
+- [ ] Create persistent AI chat widget component visible on all pages
+- [ ] Add helpful proactive prompts (e.g., "Want me to upload and populate answers for you?")
+- [ ] Build backend LLM endpoint to parse uploaded documents and extract questionnaire answers
+- [ ] Wire chat uploads to LLM: parse document and populate questionnaire fields
+- [ ] Backend auto-populate: when files uploaded with clear customer association, extract answers automatically
+- [ ] Skip auto-populate for generic uploads without a discrete customer tie
+- [ ] Chat assistant answers user questions and navigates them to the relevant page/section
+- [ ] Chat suggests users can paste emails or upload forms to auto-extract and populate answers
