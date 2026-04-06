@@ -1035,4 +1035,117 @@ export const intakeRouter = router({
         .where(and(eq(partnerTemplates.clientId, org.clientId), eq(partnerTemplates.isActive, 1)))
         .orderBy(partnerTemplates.questionId);
     }),
+
+  /**
+   * Parse an uploaded document with the LLM and extract answers for the questionnaire.
+   * Supports PDF and images. Returns a map of questionId -> extracted answer.
+   */
+  parseDocumentForAutofill: publicProcedure
+    .input(z.object({
+      fileData: z.string(), // base64 encoded file content
+      mimeType: z.string(),
+      fileName: z.string(),
+    }))
+    .mutation(async ({ input }) => {
+      const { invokeLLM } = await import("../_core/llm");
+      const { questionnaireSections } = await import("../../shared/questionnaireData");
+
+      // Collect only answerable (non-upload, non-workflow) questions
+      const fillableQuestions = questionnaireSections.flatMap((section) => {
+        if (section.type === 'workflow' || !section.questions) return [];
+        return section.questions
+          .filter((q) => q.type !== 'upload' && q.type !== 'upload-download')
+          .map((q) => ({
+            id: q.id,
+            text: q.text,
+            type: q.type,
+            options: q.options ?? null,
+            section: section.title,
+          }));
+      });
+
+      const questionsPrompt = fillableQuestions.map((q) => {
+        let line = `[${q.id}] ${q.text} (type: ${q.type}`;
+        if (q.options) line += `, options: ${q.options.join(' | ')}`;
+        line += ')';
+        return line;
+      }).join('\n');
+
+      const systemPrompt =
+        `You are an expert at extracting information from medical imaging onboarding documents to pre-fill a questionnaire. ` +
+        `Analyze the provided document and extract only information that clearly maps to the questionnaire fields. ` +
+        `For dropdown fields, your answer must be one of the listed options exactly. ` +
+        `For multi-select fields, return a JSON array of selected options. ` +
+        `For date fields, use MM/DD/YYYY format. ` +
+        `Return ONLY a valid JSON object where keys are question IDs (e.g. "H.1") and values are the extracted answers as strings. ` +
+        `Omit any question for which you cannot find a clear answer in the document.`;
+
+      const userPrompt =
+        `Please analyze this document and extract information to fill out the following questionnaire fields:\n\n` +
+        `${questionsPrompt}\n\n` +
+        `Return a JSON object like:\n` +
+        `{\n  "H.1": "3",\n  "A.1": "Jane Smith, IT Director, jane@example.com",\n  "D.3": ["CT","MRI"]\n}\n\n` +
+        `Only include fields where the document contains relevant information.`;
+
+      // Build the file content block for the LLM
+      let fileContentBlock: Record<string, unknown>;
+      const { mimeType, fileData } = input;
+
+      if (mimeType.startsWith('image/')) {
+        fileContentBlock = {
+          type: 'image_url',
+          image_url: {
+            url: `data:${mimeType};base64,${fileData}`,
+            detail: 'high',
+          },
+        };
+      } else {
+        // PDF and other document types
+        fileContentBlock = {
+          type: 'file_url',
+          file_url: {
+            url: `data:${mimeType};base64,${fileData}`,
+            mime_type: mimeType === 'application/pdf' ? 'application/pdf' : 'application/pdf',
+          },
+        };
+      }
+
+      const result = await invokeLLM({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          {
+            role: 'user',
+            content: [
+              fileContentBlock as any,
+              { type: 'text', text: userPrompt },
+            ],
+          },
+        ],
+        responseFormat: { type: 'json_object' },
+      });
+
+      const rawContent = result.choices[0]?.message?.content;
+      const rawText = typeof rawContent === 'string'
+        ? rawContent
+        : JSON.stringify(rawContent ?? {});
+
+      let answers: Record<string, unknown> = {};
+      try {
+        answers = JSON.parse(rawText);
+      } catch {
+        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          try { answers = JSON.parse(jsonMatch[0]); } catch { /* leave empty */ }
+        }
+      }
+
+      // Normalise all values to strings (multi-select stays as array → JSON string stored later by the form)
+      const normalised: Record<string, string> = {};
+      for (const [id, val] of Object.entries(answers)) {
+        if (val === null || val === undefined) continue;
+        normalised[id] = Array.isArray(val) ? JSON.stringify(val) : String(val);
+      }
+
+      return { answers: normalised };
+    }),
 });
