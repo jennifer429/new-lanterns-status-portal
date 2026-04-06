@@ -320,3 +320,27 @@ export const specifications = mysqlTable("specifications", {
 
 export type Specification = typeof specifications.$inferSelect;
 export type InsertSpecification = typeof specifications.$inferInsert;
+
+/**
+ * Partner Task Templates - reusable task definitions created by partner admins.
+ * Each template represents an action item (task) that orgs under this partner need to complete.
+ * Partners can create, edit, and delete their own task templates.
+ * These show up on the /org/:slug/tasks page for the partner's organizations.
+ */
+export const partnerTaskTemplates = mysqlTable("partnerTaskTemplates", {
+  id: int("id").autoincrement().primaryKey(),
+  clientId: int("clientId").notNull(), // FK to clients.id - which partner owns this task
+  title: varchar("title", { length: 255 }).notNull(), // e.g., "Upload network diagram"
+  description: text("description"), // Detailed instructions for completing the task
+  type: varchar("type", { length: 50 }).notNull().default("review"), // upload | schedule | form | review
+  section: varchar("section", { length: 255 }), // Grouping category e.g., "Security & Permissions"
+  sortOrder: int("sortOrder").default(0).notNull(), // Display order within partner's tasks
+  isActive: tinyint("isActive").default(1).notNull(), // 1 = active, 0 = soft-deleted
+  createdBy: varchar("createdBy", { length: 320 }), // Admin email who created this task
+  updatedBy: varchar("updatedBy", { length: 320 }), // Admin email who last updated this task
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PartnerTaskTemplate = typeof partnerTaskTemplates.$inferSelect;
+export type InsertPartnerTaskTemplate = typeof partnerTaskTemplates.$inferInsert;

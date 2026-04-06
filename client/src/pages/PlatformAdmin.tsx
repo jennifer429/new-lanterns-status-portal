@@ -52,7 +52,7 @@ import {
 export default function PlatformAdmin() {
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"dashboard" | "users" | "organizations" | "templates" | "partners" | "specs">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "users" | "organizations" | "templates" | "tasks" | "partners" | "specs">("dashboard");
 
   // Template management state
   const [isUploadTemplateDialogOpen, setIsUploadTemplateDialogOpen] = useState(false);
@@ -65,7 +65,23 @@ export default function PlatformAdmin() {
   const [replaceTemplateFile, setReplaceTemplateFile] = useState<File | null>(null);
   const [replaceTemplateLabel, setReplaceTemplateLabel] = useState("");
   const [showInactiveTemplates, setShowInactiveTemplates] = useState(false);
-  
+
+  // Task template management state
+  const [isCreateTaskDialogOpen, setIsCreateTaskDialogOpen] = useState(false);
+  const [newTaskClientId, setNewTaskClientId] = useState<number | undefined>();
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskDescription, setNewTaskDescription] = useState("");
+  const [newTaskType, setNewTaskType] = useState<"upload" | "schedule" | "form" | "review">("review");
+  const [newTaskSection, setNewTaskSection] = useState("");
+  const [newTaskSortOrder, setNewTaskSortOrder] = useState(0);
+  const [isEditTaskDialogOpen, setIsEditTaskDialogOpen] = useState(false);
+  const [editTaskId, setEditTaskId] = useState<number | null>(null);
+  const [editTaskTitle, setEditTaskTitle] = useState("");
+  const [editTaskDescription, setEditTaskDescription] = useState("");
+  const [editTaskType, setEditTaskType] = useState<"upload" | "schedule" | "form" | "review">("review");
+  const [editTaskSection, setEditTaskSection] = useState("");
+  const [editTaskSortOrder, setEditTaskSortOrder] = useState(0);
+
   // User creation dialog state
   const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState("");
@@ -145,6 +161,87 @@ export default function PlatformAdmin() {
   const { data: templates, refetch: refetchTemplates } = trpc.admin.getTemplates.useQuery();
   const { data: inactiveTemplates, refetch: refetchInactiveTemplates } = trpc.admin.getInactiveTemplates.useQuery();
   const { data: specs, refetch: refetchSpecs } = trpc.admin.getSpecifications.useQuery();
+  const { data: taskTemplates, refetch: refetchTaskTemplates } = trpc.admin.getTaskTemplates.useQuery();
+
+  const createTaskMutation = trpc.admin.createTaskTemplate.useMutation({
+    onSuccess: () => {
+      toast.success("Task created successfully!");
+      setIsCreateTaskDialogOpen(false);
+      setNewTaskTitle("");
+      setNewTaskDescription("");
+      setNewTaskType("review");
+      setNewTaskSection("");
+      setNewTaskSortOrder(0);
+      setNewTaskClientId(undefined);
+      refetchTaskTemplates();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to create task");
+    },
+  });
+
+  const updateTaskMutation = trpc.admin.updateTaskTemplate.useMutation({
+    onSuccess: () => {
+      toast.success("Task updated successfully!");
+      setIsEditTaskDialogOpen(false);
+      setEditTaskId(null);
+      refetchTaskTemplates();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to update task");
+    },
+  });
+
+  const deleteTaskMutation = trpc.admin.deleteTaskTemplate.useMutation({
+    onSuccess: () => {
+      toast.success("Task deleted!");
+      refetchTaskTemplates();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to delete task");
+    },
+  });
+
+  const handleCreateTask = () => {
+    const effectiveClientId = isPlatformAdmin ? newTaskClientId : user?.clientId;
+    if (!newTaskTitle || !effectiveClientId) {
+      toast.error("Title and partner are required");
+      return;
+    }
+    createTaskMutation.mutate({
+      clientId: effectiveClientId,
+      title: newTaskTitle,
+      description: newTaskDescription || undefined,
+      type: newTaskType,
+      section: newTaskSection || undefined,
+      sortOrder: newTaskSortOrder,
+    });
+  };
+
+  const handleEditTask = (task: NonNullable<typeof taskTemplates>[0]) => {
+    setEditTaskId(task.id);
+    setEditTaskTitle(task.title);
+    setEditTaskDescription(task.description ?? "");
+    setEditTaskType(task.type as "upload" | "schedule" | "form" | "review");
+    setEditTaskSection(task.section ?? "");
+    setEditTaskSortOrder(task.sortOrder);
+    setIsEditTaskDialogOpen(true);
+  };
+
+  const handleUpdateTask = () => {
+    if (!editTaskId || !editTaskTitle) {
+      toast.error("Title is required");
+      return;
+    }
+    updateTaskMutation.mutate({
+      id: editTaskId,
+      title: editTaskTitle,
+      description: editTaskDescription || undefined,
+      type: editTaskType,
+      section: editTaskSection || undefined,
+      sortOrder: editTaskSortOrder,
+    });
+  };
 
   // Logout mutation
   const logoutMutation = trpc.auth.logout.useMutation({
@@ -891,6 +988,19 @@ export default function PlatformAdmin() {
             >
               Templates
               {activeTab === "templates" && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab("tasks")}
+              className={`pb-3 px-1 font-medium transition-colors relative ${
+                activeTab === "tasks"
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Task Templates
+              {activeTab === "tasks" && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
               )}
             </button>
@@ -2085,6 +2195,242 @@ export default function PlatformAdmin() {
                   </>
                 )}
               </CardContent>
+            </Card>
+          </>
+        )}
+
+        {activeTab === "tasks" && (
+          <>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold">Task Templates ({taskTemplates?.length || 0})</h2>
+              <Dialog open={isCreateTaskDialogOpen} onOpenChange={setIsCreateTaskDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="gap-2">
+                    <Plus className="w-4 h-4" />
+                    Add Task
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add Task Template</DialogTitle>
+                    <DialogDescription>
+                      Create a new task that organizations under this partner will need to complete.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 mt-4">
+                    {isPlatformAdmin && (
+                      <div className="space-y-2">
+                        <Label>Partner <span className="text-destructive">*</span></Label>
+                        <Select
+                          value={newTaskClientId?.toString() || ""}
+                          onValueChange={(v) => setNewTaskClientId(parseInt(v))}
+                        >
+                          <SelectTrigger><SelectValue placeholder="Select partner" /></SelectTrigger>
+                          <SelectContent>
+                            {clients?.map(c => (
+                              <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    {!isPlatformAdmin && (
+                      <div className="space-y-2">
+                        <Label>Partner</Label>
+                        <Input value={clients?.find(c => c.id === user?.clientId)?.name || "Your Partner"} disabled />
+                      </div>
+                    )}
+                    <div className="space-y-2">
+                      <Label>Title <span className="text-destructive">*</span></Label>
+                      <Input
+                        placeholder="e.g., Upload network diagram"
+                        value={newTaskTitle}
+                        onChange={(e) => setNewTaskTitle(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Description</Label>
+                      <Input
+                        placeholder="Instructions for completing this task"
+                        value={newTaskDescription}
+                        onChange={(e) => setNewTaskDescription(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Type</Label>
+                      <Select value={newTaskType} onValueChange={(v) => setNewTaskType(v as typeof newTaskType)}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="upload">Upload</SelectItem>
+                          <SelectItem value="form">Form</SelectItem>
+                          <SelectItem value="schedule">Schedule</SelectItem>
+                          <SelectItem value="review">Review</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Section / Category</Label>
+                      <Input
+                        placeholder="e.g., Security & Permissions"
+                        value={newTaskSection}
+                        onChange={(e) => setNewTaskSection(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Sort Order</Label>
+                      <Input
+                        type="number"
+                        value={newTaskSortOrder}
+                        onChange={(e) => setNewTaskSortOrder(parseInt(e.target.value) || 0)}
+                      />
+                    </div>
+                    <Button
+                      onClick={handleCreateTask}
+                      disabled={createTaskMutation.isPending}
+                      className="w-full"
+                    >
+                      {createTaskMutation.isPending ? "Creating..." : "Create Task"}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            {/* Edit Task Dialog */}
+            <Dialog open={isEditTaskDialogOpen} onOpenChange={setIsEditTaskDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Edit Task Template</DialogTitle>
+                  <DialogDescription>Update the task details.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <Label>Title <span className="text-destructive">*</span></Label>
+                    <Input
+                      value={editTaskTitle}
+                      onChange={(e) => setEditTaskTitle(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Description</Label>
+                    <Input
+                      value={editTaskDescription}
+                      onChange={(e) => setEditTaskDescription(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Type</Label>
+                    <Select value={editTaskType} onValueChange={(v) => setEditTaskType(v as typeof editTaskType)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="upload">Upload</SelectItem>
+                        <SelectItem value="form">Form</SelectItem>
+                        <SelectItem value="schedule">Schedule</SelectItem>
+                        <SelectItem value="review">Review</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Section / Category</Label>
+                    <Input
+                      value={editTaskSection}
+                      onChange={(e) => setEditTaskSection(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Sort Order</Label>
+                    <Input
+                      type="number"
+                      value={editTaskSortOrder}
+                      onChange={(e) => setEditTaskSortOrder(parseInt(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleUpdateTask}
+                      disabled={updateTaskMutation.isPending}
+                      className="flex-1"
+                    >
+                      {updateTaskMutation.isPending ? "Saving..." : "Save Changes"}
+                    </Button>
+                    <Button variant="outline" onClick={() => setIsEditTaskDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Task Templates Table */}
+            <Card>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {isPlatformAdmin && <TableHead>Partner</TableHead>}
+                    <TableHead>Title</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Section</TableHead>
+                    <TableHead>Order</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(!taskTemplates || taskTemplates.length === 0) && (
+                    <TableRow>
+                      <TableCell colSpan={isPlatformAdmin ? 6 : 5} className="text-center text-muted-foreground py-8">
+                        No task templates yet. Click "Add Task" to create your first one.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {taskTemplates?.map(task => (
+                    <TableRow key={task.id}>
+                      {isPlatformAdmin && (
+                        <TableCell className="text-sm">{task.clientName || `Client #${task.clientId}`}</TableCell>
+                      )}
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{task.title}</p>
+                          {task.description && (
+                            <p className="text-xs text-muted-foreground mt-0.5 max-w-sm truncate">{task.description}</p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="capitalize">{task.type}</Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {task.section || "—"}
+                      </TableCell>
+                      <TableCell className="text-sm">{task.sortOrder}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditTask(task)}
+                          >
+                            <Edit className="w-3 h-3 mr-1" />
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-destructive hover:bg-destructive/10"
+                            onClick={() => {
+                              if (confirm(`Delete task "${task.title}"?`)) {
+                                deleteTaskMutation.mutate({ id: task.id });
+                              }
+                            }}
+                            disabled={deleteTaskMutation.isPending}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </Card>
           </>
         )}

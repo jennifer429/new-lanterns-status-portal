@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { intakeResponses, intakeFileAttachments, organizations, questions, questionOptions, responses, onboardingFeedback, clients, partnerTemplates } from "../../drizzle/schema";
+import { intakeResponses, intakeFileAttachments, organizations, questions, questionOptions, responses, onboardingFeedback, clients, partnerTemplates, partnerTaskTemplates } from "../../drizzle/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { uploadToGoogleDrive } from "../utils/googleDrive";
 
@@ -1147,5 +1147,33 @@ export const intakeRouter = router({
       }
 
       return { answers: normalised };
+    }),
+
+  /**
+   * Get task templates for an organization (looked up by org slug → clientId → tasks)
+   * Used by the Tasks page to show the partner-defined action items for an org.
+   */
+  getTaskTemplatesForOrg: publicProcedure
+    .input(z.object({ organizationSlug: z.string() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return [];
+
+      const [org] = await db
+        .select({ id: organizations.id, clientId: organizations.clientId })
+        .from(organizations)
+        .where(eq(organizations.slug, input.organizationSlug))
+        .limit(1);
+
+      if (!org?.clientId) return [];
+
+      return db
+        .select()
+        .from(partnerTaskTemplates)
+        .where(and(
+          eq(partnerTaskTemplates.clientId, org.clientId),
+          eq(partnerTaskTemplates.isActive, 1)
+        ))
+        .orderBy(partnerTaskTemplates.sortOrder, partnerTaskTemplates.id);
     }),
 });

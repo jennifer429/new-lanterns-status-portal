@@ -1,5 +1,5 @@
 /**
- * Tasks Page - Shows all generated action items from questionnaire
+ * Tasks Page - Shows partner-defined action items for this organization
  */
 
 import { Button } from "@/components/ui/button";
@@ -9,67 +9,35 @@ import { Progress } from "@/components/ui/progress";
 import { CheckCircle2, Circle, FileText, Calendar, Upload, ArrowLeft } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { useState } from "react";
-
-// Mock tasks - in production these would come from the database based on questionnaire responses
-const mockTasks = [
-  {
-    id: "1",
-    title: "Upload network diagram",
-    description: "Provide a diagram showing your current network topology including VLANs, subnets, and firewall rules",
-    type: "upload",
-    status: "pending",
-    section: "Security & Permissions",
-  },
-  {
-    id: "2",
-    title: "Provide PACS configuration export",
-    description: "Export your current PACS system configuration file",
-    type: "upload",
-    status: "pending",
-    section: "Systems",
-  },
-  {
-    id: "3",
-    title: "Schedule network assessment call",
-    description: "Book a 30-minute call with our network team to review your infrastructure",
-    type: "schedule",
-    status: "pending",
-    section: "Data & Integration",
-  },
-  {
-    id: "4",
-    title: "Complete HL7 interface specifications",
-    description: "Fill out the HL7 interface requirements form with your EMR details",
-    type: "form",
-    status: "pending",
-    section: "Data & Integration",
-  },
-  {
-    id: "5",
-    title: "Review user access requirements",
-    description: "Provide a list of users who will need access to the PACS system",
-    type: "review",
-    status: "pending",
-    section: "User Configuration",
-  },
-];
+import { trpc } from "@/lib/trpc";
 
 export default function Tasks() {
   const [, params] = useRoute("/org/:slug/tasks");
   const orgSlug = params?.slug || "demo";
-  
-  const [tasks, setTasks] = useState(mockTasks);
-  
-  const completedTasks = tasks.filter(t => t.status === "complete").length;
-  const totalTasks = tasks.length;
-  const completionPercentage = Math.round((completedTasks / totalTasks) * 100);
 
-  const toggleTaskStatus = (taskId: string) => {
-    setTasks(prev => prev.map(task => 
-      task.id === taskId 
-        ? { ...task, status: task.status === "complete" ? "pending" : "complete" }
-        : task
-    ));
+  const { data: templateTasks, isLoading } = trpc.intake.getTaskTemplatesForOrg.useQuery(
+    { organizationSlug: orgSlug },
+    { enabled: !!orgSlug }
+  );
+
+  // Local completion state (tracked in UI; backend taskCompletion table can be used for persistence later)
+  const [completedIds, setCompletedIds] = useState<Set<number>>(new Set());
+
+  const tasks = templateTasks ?? [];
+  const completedTasks = completedIds.size;
+  const totalTasks = tasks.length;
+  const completionPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+  const toggleTaskStatus = (taskId: number) => {
+    setCompletedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(taskId)) {
+        next.delete(taskId);
+      } else {
+        next.add(taskId);
+      }
+      return next;
+    });
   };
 
   const getTaskIcon = (type: string) => {
@@ -87,8 +55,8 @@ export default function Tasks() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    if (status === "complete") {
+  const getStatusBadge = (completed: boolean) => {
+    if (completed) {
       return <Badge className="bg-green-600 hover:bg-green-500">Complete</Badge>;
     }
     return <Badge variant="outline" className="border-yellow-500 text-yellow-400">Pending</Badge>;
@@ -144,49 +112,68 @@ export default function Tasks() {
             </p>
           </div>
 
-          {tasks.map(task => (
-            <Card 
-              key={task.id}
-              className={`cursor-pointer transition-all hover:border-primary/50 ${
-                task.status === "complete" ? "opacity-60" : ""
-              }`}
-              onClick={() => toggleTaskStatus(task.id)}
-            >
-              <CardHeader>
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-3 flex-1">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      task.status === "complete" 
-                        ? "bg-green-600/20 text-green-400" 
-                        : "bg-primary/20 text-primary"
-                    }`}>
-                      {task.status === "complete" ? (
-                        <CheckCircle2 className="w-5 h-5" />
-                      ) : (
-                        getTaskIcon(task.type)
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <CardTitle className="text-lg">{task.title}</CardTitle>
-                      </div>
-                      <CardDescription className="text-sm">
-                        {task.description}
-                      </CardDescription>
-                      <div className="mt-2">
-                        <Badge variant="outline" className="text-xs">
-                          {task.section}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex-shrink-0">
-                    {getStatusBadge(task.status)}
-                  </div>
-                </div>
-              </CardHeader>
+          {isLoading && (
+            <p className="text-muted-foreground text-center py-8">Loading tasks...</p>
+          )}
+
+          {!isLoading && tasks.length === 0 && (
+            <Card className="border-dashed">
+              <CardContent className="py-12 text-center text-muted-foreground">
+                No tasks have been defined yet. Contact your partner administrator.
+              </CardContent>
             </Card>
-          ))}
+          )}
+
+          {tasks.map(task => {
+            const isComplete = completedIds.has(task.id);
+            return (
+              <Card
+                key={task.id}
+                className={`cursor-pointer transition-all hover:border-primary/50 ${
+                  isComplete ? "opacity-60" : ""
+                }`}
+                onClick={() => toggleTaskStatus(task.id)}
+              >
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3 flex-1">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        isComplete
+                          ? "bg-green-600/20 text-green-400"
+                          : "bg-primary/20 text-primary"
+                      }`}>
+                        {isComplete ? (
+                          <CheckCircle2 className="w-5 h-5" />
+                        ) : (
+                          getTaskIcon(task.type)
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <CardTitle className="text-lg">{task.title}</CardTitle>
+                        </div>
+                        {task.description && (
+                          <CardDescription className="text-sm">
+                            {task.description}
+                          </CardDescription>
+                        )}
+                        {task.section && (
+                          <div className="mt-2">
+                            <Badge variant="outline" className="text-xs">
+                              {task.section}
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex-shrink-0">
+                      {getStatusBadge(isComplete)}
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+            );
+          })}
         </div>
 
         {/* Help Section */}

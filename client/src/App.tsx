@@ -32,16 +32,12 @@ function Router() {
       <Route path="/org/admin">
         {() => <PlatformAdmin />}
       </Route>
-      <Route path="/org/SRV/admin/users">
+      {/* Partner admin routes - :partner can be any partner slug (SRV, RadOne, etc.) */}
+      <Route path="/org/:partner/admin/create" component={CreateOrganization} />
+      <Route path="/org/:partner/admin/users">
         {() => <PlatformAdmin />}
       </Route>
-      <Route path="/org/SRV/admin">
-        {() => <PlatformAdmin />}
-      </Route>
-      <Route path="/org/RadOne/admin/users">
-        {() => <PlatformAdmin />}
-      </Route>
-      <Route path="/org/RadOne/admin">
+      <Route path="/org/:partner/admin">
         {() => <PlatformAdmin />}
       </Route>
       <Route path="/org/:slug/intake" component={IntakeNewRedesign} />

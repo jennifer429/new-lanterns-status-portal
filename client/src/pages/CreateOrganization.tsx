@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,11 +17,15 @@ import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 
 /**
- * Create Organization Page - Platform admins only
- * Form to create a new hospital/organization under a partner (client)
+ * Create Organization Page
+ * Works for platform admins (must select a partner) and partner admins (auto-uses their clientId)
  */
 export default function CreateOrganization() {
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
+  const isPartnerAdmin = !!user?.clientId;
+  const backUrl = isPartnerAdmin ? `/org/admin` : "/org/admin";
+
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [contactName, setContactName] = useState("");
@@ -28,11 +33,13 @@ export default function CreateOrganization() {
   const [contactPhone, setContactPhone] = useState("");
   const [clientId, setClientId] = useState<number | undefined>();
 
-  const { data: clients } = trpc.admin.getAllClients.useQuery();
+  const { data: clients } = trpc.admin.getAllClients.useQuery(undefined, {
+    enabled: !isPartnerAdmin,
+  });
   const createOrgMutation = trpc.admin.createOrganization.useMutation({
     onSuccess: () => {
       toast.success("Organization created successfully!");
-      setLocation("/org/admin");
+      setLocation(backUrl);
     },
     onError: (error) => {
       toast.error(error.message || "Failed to create organization");
@@ -42,13 +49,15 @@ export default function CreateOrganization() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!name || !slug || !clientId) {
+    const effectiveClientId = isPartnerAdmin ? user?.clientId : clientId;
+
+    if (!name || !slug || !effectiveClientId) {
       toast.error("Please fill in all required fields");
       return;
     }
 
     createOrgMutation.mutate({
-      clientId,
+      clientId: effectiveClientId,
       name,
       slug,
       contactName: contactName || undefined,
@@ -78,7 +87,7 @@ export default function CreateOrganization() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setLocation("/org/admin")}
+              onClick={() => setLocation(backUrl)}
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
@@ -104,27 +113,29 @@ export default function CreateOrganization() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Partner Selection */}
-              <div className="space-y-2">
-                <Label htmlFor="clientId">
-                  Partner <span className="text-destructive">*</span>
-                </Label>
-                <Select
-                  value={clientId?.toString()}
-                  onValueChange={(value) => setClientId(parseInt(value))}
-                >
-                  <SelectTrigger id="clientId">
-                    <SelectValue placeholder="Select a partner" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clients?.map((client) => (
-                      <SelectItem key={client.id} value={client.id.toString()}>
-                        {client.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Partner Selection - only shown for platform admins */}
+              {!isPartnerAdmin && (
+                <div className="space-y-2">
+                  <Label htmlFor="clientId">
+                    Partner <span className="text-destructive">*</span>
+                  </Label>
+                  <Select
+                    value={clientId?.toString()}
+                    onValueChange={(value) => setClientId(parseInt(value))}
+                  >
+                    <SelectTrigger id="clientId">
+                      <SelectValue placeholder="Select a partner" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clients?.map((client) => (
+                        <SelectItem key={client.id} value={client.id.toString()}>
+                          {client.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {/* Organization Name */}
               <div className="space-y-2">
@@ -199,7 +210,7 @@ export default function CreateOrganization() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setLocation("/org/admin")}
+                  onClick={() => setLocation(backUrl)}
                 >
                   Cancel
                 </Button>
