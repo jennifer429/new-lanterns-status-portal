@@ -32,6 +32,7 @@ import { toast } from "sonner";
 
 type InlineChatPanelProps = {
   isPlatformAdmin?: boolean;
+  orgSlug?: string;
 };
 
 const PLATFORM_ADMIN_PROMPTS = [
@@ -48,8 +49,18 @@ const PARTNER_ADMIN_PROMPTS = [
   "Show my completion status",
 ];
 
+const ORG_SCOPED_PROMPTS = [
+  "What is the project status?",
+  "Show me the questionnaire responses",
+  "What tasks are still pending?",
+  "Show the connectivity details",
+  "What files have been uploaded?",
+  "Show the validation test results",
+];
+
 export function InlineChatPanel({
   isPlatformAdmin = false,
+  orgSlug,
 }: InlineChatPanelProps) {
   const [, setLocation] = useLocation();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -103,6 +114,7 @@ export function InlineChatPanel({
       fileData: pendingFile?.data,
       fileType: pendingFile?.type,
       fileName: pendingFile?.name,
+      orgSlug: orgSlug,
     });
 
     setPendingFile(null);
@@ -135,9 +147,11 @@ export function InlineChatPanel({
     e.target.value = "";
   };
 
-  const suggestedPrompts = isPlatformAdmin
-    ? PLATFORM_ADMIN_PROMPTS
-    : PARTNER_ADMIN_PROMPTS;
+  const suggestedPrompts = orgSlug
+    ? ORG_SCOPED_PROMPTS
+    : isPlatformAdmin
+      ? PLATFORM_ADMIN_PROMPTS
+      : PARTNER_ADMIN_PROMPTS;
 
   return (
     <div
@@ -266,6 +280,7 @@ export function InlineChatPanel({
             suggestedPrompts={
               messages.length === 0 ? suggestedPrompts : undefined
             }
+            hideInput
           />
         </div>
       )}

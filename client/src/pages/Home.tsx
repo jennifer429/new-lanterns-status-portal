@@ -670,7 +670,7 @@ export default function Home() {
 
         {/* ── AI Assistant (always visible for admin users) ── */}
         {currentUser?.role === "admin" && (
-          <InlineChatPanel isPlatformAdmin={!currentUser?.clientId} />
+          <InlineChatPanel isPlatformAdmin={!currentUser?.clientId} orgSlug={orgSlug} />
         )}
 
         {/* ═══════════════════════════════════════════════════════════════════

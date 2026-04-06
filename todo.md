@@ -2403,3 +2403,12 @@
 - [x] Tighten site dashboard spacing — reduce padding/gaps to fit on one screen
 - [x] Improve site dashboard mobile responsiveness
 - [x] Save Notion/CRM architecture design discussion as a design doc
+
+## Context-Aware AI Chat on Site Dashboard (Apr 6, 2026)
+- [ ] Add org-scoped tools to AI router: get_tasks, get_notes, get_questionnaire_answers, get_files, get_connectivity
+- [ ] Pass org slug/id from InlineChatPanel to AI chat endpoint when on site dashboard
+- [ ] Update system prompt for site dashboard context — AI should use org data and not reference other orgs
+- [ ] AI should be able to read uploaded files/documents for the current org
+- [ ] Test AI can answer questions about a specific org's tasks, notes, questionnaire, connectivity
+- [x] Bug: Duplicate "Ask anything" input bars on site dashboard (InlineChatPanel + AIChatBox both show inputs)
+- [x] Bug: AI assistant on site dashboard still uses cross-org tools (list_organizations etc.) — must restrict to org-scoped tools ONLY

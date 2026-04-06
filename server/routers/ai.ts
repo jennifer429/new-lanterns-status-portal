@@ -30,9 +30,21 @@ import {
   clients,
   partnerTaskTemplates,
   aiAuditLogs,
+  intakeResponses,
+  intakeFileAttachments,
+  taskCompletion,
+  fileAttachments,
+  validationResults,
+  orgNotes,
+  sectionProgress,
+  activityFeed,
+  questions,
 } from "../../drizzle/schema";
 import { eq, and, isNull, inArray, desc, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
+import { questionnaireSections } from "../../shared/questionnaireData";
+import { SECTION_DEFS as TASK_SECTION_DEFS } from "../../shared/taskDefs";
+import { fetchConnectivityForOrg } from "../connectivityHelpers";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -332,12 +344,102 @@ const TOOLS: Tool[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Tool executors — every executor enforces RBAC and returns audit metadata
+// Org-scoped tools — only available when viewing a specific site dashboard
+// ---------------------------------------------------------------------------
+const ORG_SCOPED_TOOLS: Tool[] = [
+  {
+    type: "function",
+    function: {
+      name: "get_org_profile",
+      description:
+        "Get the full profile and progress summary for the current organization. Includes contact info, dates, section progress, implementation task status, and activity feed.",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_questionnaire_responses",
+      description:
+        "Get all intake questionnaire responses for the current organization. Returns question text, section, and the response value. Use this to answer questions about what the client has filled in.",
+      parameters: {
+        type: "object",
+        properties: {
+          section: {
+            type: "string",
+            description:
+              "Optional section filter: org-info, connectivity, integration-workflows, config-files, hl7-dicom. Omit to get all.",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_tasks",
+      description:
+        "Get the implementation task checklist status for the current organization. Returns each task with its completion, in-progress, blocked, and N/A status, plus notes and target dates.",
+      parameters: {
+        type: "object",
+        properties: {
+          section: {
+            type: "string",
+            description:
+              "Optional section filter: network, hl7, config, templates, training, testing, prod-validation. Omit to get all.",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_files",
+      description:
+        "List all uploaded files for the current organization — includes both task file attachments and intake questionnaire file attachments, plus project notes/call notes.",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_connectivity",
+      description:
+        "Get the network connectivity table for the current organization from Notion. Shows VPN tunnels, DICOM endpoints, HL7 ports, IP addresses, AE titles, and test/prod environment status.",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_validation_results",
+      description:
+        "Get the end-to-end validation test results for the current organization. Shows pass/fail/pending status for each test phase.",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+    },
+  },
+];
+// ---------------------------------------------------------------------------
+// Tool executorss — every executor enforces RBAC and returns audit metadata
 // ---------------------------------------------------------------------------
 
 async function executeTool(
   call: ToolCall,
-  ctx: UserContext
+  ctx: UserContext,
+  orgSlug?: string | null
 ): Promise<ToolResult> {
   const db = await getDb();
   let args: Record<string, unknown> = {};
@@ -770,6 +872,309 @@ async function executeTool(
     }
 
     // -----------------------------------------------------------------------
+    // ORG-SCOPED TOOLS — require orgSlug to be set
+    // -----------------------------------------------------------------------
+    case "get_org_profile": {
+      if (!orgSlug) return { callId: call.id, name: "get_org_profile", result: { error: "No organization context" }, audit: { category: "read", status: "error", errorMessage: "No orgSlug" } };
+      if (!db) return { callId: call.id, name: "get_org_profile", result: { error: "DB unavailable" }, audit: { category: "read", status: "error", errorMessage: "DB unavailable" } };
+      const org = await verifyOrgAccess(db, ctx, orgSlug);
+      if (!org) return { callId: call.id, name: "get_org_profile", result: { error: "Access denied or org not found" }, audit: { category: "read", status: "denied", organizationSlug: orgSlug, errorMessage: "RBAC denied" } };
+
+      // Fetch full org record
+      const [fullOrg] = await db.select().from(organizations).where(eq(organizations.id, org.id)).limit(1);
+
+      // Section progress
+      const sections = await db.select().from(sectionProgress).where(eq(sectionProgress.organizationId, org.id));
+
+      // Task completion summary
+      const tasks = await db.select().from(taskCompletion).where(eq(taskCompletion.organizationId, org.id));
+      const taskSummary = {
+        total: TASK_SECTION_DEFS.reduce((s, sec) => s + sec.tasks.length, 0),
+        completed: tasks.filter(t => t.completed === 1).length,
+        inProgress: tasks.filter(t => t.inProgress === 1).length,
+        blocked: tasks.filter(t => t.blocked === 1).length,
+        notApplicable: tasks.filter(t => t.notApplicable === 1).length,
+      };
+
+      // Recent activity
+      const recentActivity = await db.select().from(activityFeed)
+        .where(eq(activityFeed.organizationId, org.id))
+        .orderBy(desc(activityFeed.createdAt))
+        .limit(10);
+
+      return {
+        callId: call.id,
+        name: "get_org_profile",
+        result: {
+          organization: {
+            name: fullOrg?.name,
+            slug: fullOrg?.slug,
+            contactName: fullOrg?.contactName,
+            contactEmail: fullOrg?.contactEmail,
+            contactPhone: fullOrg?.contactPhone,
+            startDate: fullOrg?.startDate,
+            goalDate: fullOrg?.goalDate,
+            status: fullOrg?.status,
+          },
+          sectionProgress: sections.map(s => ({
+            section: s.sectionName,
+            status: s.status,
+            progress: s.progress,
+            expectedEnd: s.expectedEnd,
+          })),
+          taskSummary,
+          recentActivity: recentActivity.map(a => ({
+            source: a.source,
+            author: a.author,
+            message: a.message,
+            date: a.createdAt,
+          })),
+        },
+        audit: { category: "read", status: "success", organizationSlug: orgSlug, organizationId: org.id },
+      };
+    }
+    // -----------------------------------------------------------------------
+    case "get_questionnaire_responses": {
+      if (!orgSlug) return { callId: call.id, name: "get_questionnaire_responses", result: { error: "No organization context" }, audit: { category: "read", status: "error", errorMessage: "No orgSlug" } };
+      if (!db) return { callId: call.id, name: "get_questionnaire_responses", result: { error: "DB unavailable" }, audit: { category: "read", status: "error", errorMessage: "DB unavailable" } };
+      const qOrg = await verifyOrgAccess(db, ctx, orgSlug);
+      if (!qOrg) return { callId: call.id, name: "get_questionnaire_responses", result: { error: "Access denied" }, audit: { category: "read", status: "denied", organizationSlug: orgSlug, errorMessage: "RBAC denied" } };
+
+      const sectionFilter = args.section as string | undefined;
+
+      // Get all responses
+      const responses = await db.select({
+        questionId: intakeResponses.questionId,
+        section: intakeResponses.section,
+        response: intakeResponses.response,
+        fileUrl: intakeResponses.fileUrl,
+        updatedBy: intakeResponses.updatedBy,
+        updatedAt: intakeResponses.updatedAt,
+      }).from(intakeResponses).where(eq(intakeResponses.organizationId, qOrg.id));
+
+      // Build a question lookup from the questionnaire template
+      const questionLookup: Record<string, { text: string; section: string }> = {};
+      for (const sec of questionnaireSections) {
+        if (sec.questions) {
+          for (const q of sec.questions) {
+            questionLookup[q.id] = { text: q.text, section: sec.title };
+          }
+        }
+      }
+
+      // Enrich responses with question text
+      let enriched = responses.map(r => ({
+        questionId: r.questionId,
+        questionText: questionLookup[r.questionId]?.text ?? r.questionId,
+        section: questionLookup[r.questionId]?.section ?? r.section,
+        response: r.response,
+        hasFile: !!r.fileUrl,
+        updatedBy: r.updatedBy,
+      }));
+
+      // Apply section filter if provided
+      if (sectionFilter) {
+        const filterNorm = sectionFilter.toLowerCase();
+        enriched = enriched.filter(r => {
+          const secNorm = r.section.toLowerCase().replace(/[^a-z0-9]/g, "-");
+          return secNorm.includes(filterNorm) || filterNorm.includes(secNorm);
+        });
+      }
+
+      // Get file attachments for this org
+      const intakeFiles = await db.select({
+        questionId: intakeFileAttachments.questionId,
+        fileName: intakeFileAttachments.fileName,
+        fileUrl: intakeFileAttachments.fileUrl,
+      }).from(intakeFileAttachments).where(eq(intakeFileAttachments.organizationId, qOrg.id));
+
+      return {
+        callId: call.id,
+        name: "get_questionnaire_responses",
+        result: {
+          organizationName: qOrg.name,
+          responseCount: enriched.length,
+          responses: enriched.slice(0, 100), // Limit to avoid token overflow
+          fileAttachments: intakeFiles.slice(0, 50),
+        },
+        audit: { category: "read", status: "success", organizationSlug: orgSlug, organizationId: qOrg.id },
+      };
+    }
+    // -----------------------------------------------------------------------
+    case "get_tasks": {
+      if (!orgSlug) return { callId: call.id, name: "get_tasks", result: { error: "No organization context" }, audit: { category: "read", status: "error", errorMessage: "No orgSlug" } };
+      if (!db) return { callId: call.id, name: "get_tasks", result: { error: "DB unavailable" }, audit: { category: "read", status: "error", errorMessage: "DB unavailable" } };
+      const tOrg = await verifyOrgAccess(db, ctx, orgSlug);
+      if (!tOrg) return { callId: call.id, name: "get_tasks", result: { error: "Access denied" }, audit: { category: "read", status: "denied", organizationSlug: orgSlug, errorMessage: "RBAC denied" } };
+
+      const taskSectionFilter = args.section as string | undefined;
+      const completionRows = await db.select().from(taskCompletion).where(eq(taskCompletion.organizationId, tOrg.id));
+      const completionMap = new Map(completionRows.map(r => [r.taskId, r]));
+
+      let sections = TASK_SECTION_DEFS;
+      if (taskSectionFilter) {
+        sections = sections.filter(s => s.id === taskSectionFilter);
+      }
+
+      const result = sections.map(sec => ({
+        section: sec.title,
+        sectionId: sec.id,
+        duration: sec.duration,
+        tasks: sec.tasks.map(t => {
+          const c = completionMap.get(t.id);
+          return {
+            taskId: t.id,
+            title: t.title,
+            description: t.description,
+            completed: c?.completed === 1,
+            inProgress: c?.inProgress === 1,
+            blocked: c?.blocked === 1,
+            notApplicable: c?.notApplicable === 1,
+            targetDate: c?.targetDate ?? null,
+            notes: c?.notes ?? null,
+          };
+        }),
+      }));
+
+      return {
+        callId: call.id,
+        name: "get_tasks",
+        result: { organizationName: tOrg.name, sections: result },
+        audit: { category: "read", status: "success", organizationSlug: orgSlug, organizationId: tOrg.id },
+      };
+    }
+    // -----------------------------------------------------------------------
+    case "get_files": {
+      if (!orgSlug) return { callId: call.id, name: "get_files", result: { error: "No organization context" }, audit: { category: "read", status: "error", errorMessage: "No orgSlug" } };
+      if (!db) return { callId: call.id, name: "get_files", result: { error: "DB unavailable" }, audit: { category: "read", status: "error", errorMessage: "DB unavailable" } };
+      const fOrg = await verifyOrgAccess(db, ctx, orgSlug);
+      if (!fOrg) return { callId: call.id, name: "get_files", result: { error: "Access denied" }, audit: { category: "read", status: "denied", organizationSlug: orgSlug, errorMessage: "RBAC denied" } };
+
+      // Task file attachments
+      const taskFiles = await db.select({
+        id: fileAttachments.id,
+        taskId: fileAttachments.taskId,
+        fileName: fileAttachments.fileName,
+        fileUrl: fileAttachments.fileUrl,
+        fileSize: fileAttachments.fileSize,
+        mimeType: fileAttachments.mimeType,
+        uploadedBy: fileAttachments.uploadedBy,
+        createdAt: fileAttachments.createdAt,
+      }).from(fileAttachments).where(eq(fileAttachments.organizationId, fOrg.id));
+
+      // Intake file attachments
+      const intakeFiles = await db.select({
+        id: intakeFileAttachments.id,
+        questionId: intakeFileAttachments.questionId,
+        fileName: intakeFileAttachments.fileName,
+        fileUrl: intakeFileAttachments.fileUrl,
+        fileSize: intakeFileAttachments.fileSize,
+        mimeType: intakeFileAttachments.mimeType,
+        uploadedBy: intakeFileAttachments.uploadedBy,
+        createdAt: intakeFileAttachments.createdAt,
+      }).from(intakeFileAttachments).where(eq(intakeFileAttachments.organizationId, fOrg.id));
+
+      // Project notes / call notes
+      const notes = await db.select({
+        id: orgNotes.id,
+        label: orgNotes.label,
+        fileName: orgNotes.fileName,
+        fileUrl: orgNotes.fileUrl,
+        fileSize: orgNotes.fileSize,
+        mimeType: orgNotes.mimeType,
+        uploadedBy: orgNotes.uploadedBy,
+        createdAt: orgNotes.createdAt,
+      }).from(orgNotes).where(eq(orgNotes.organizationId, fOrg.id));
+
+      return {
+        callId: call.id,
+        name: "get_files",
+        result: {
+          organizationName: fOrg.name,
+          taskFiles: taskFiles.map(f => ({ ...f, source: "task" })),
+          intakeFiles: intakeFiles.map(f => ({ ...f, source: "intake" })),
+          projectNotes: notes.map(n => ({ ...n, source: "notes" })),
+          totalCount: taskFiles.length + intakeFiles.length + notes.length,
+        },
+        audit: { category: "read", status: "success", organizationSlug: orgSlug, organizationId: fOrg.id },
+      };
+    }
+    // -----------------------------------------------------------------------
+    case "get_connectivity": {
+      if (!orgSlug) return { callId: call.id, name: "get_connectivity", result: { error: "No organization context" }, audit: { category: "read", status: "error", errorMessage: "No orgSlug" } };
+      if (!db) return { callId: call.id, name: "get_connectivity", result: { error: "DB unavailable" }, audit: { category: "read", status: "error", errorMessage: "DB unavailable" } };
+      const cOrg = await verifyOrgAccess(db, ctx, orgSlug);
+      if (!cOrg) return { callId: call.id, name: "get_connectivity", result: { error: "Access denied" }, audit: { category: "read", status: "denied", organizationSlug: orgSlug, errorMessage: "RBAC denied" } };
+
+      const connData = await fetchConnectivityForOrg(orgSlug, cOrg.name);
+
+      return {
+        callId: call.id,
+        name: "get_connectivity",
+        result: {
+          organizationName: cOrg.name,
+          configured: connData.configured,
+          rowCount: connData.rows.length,
+          rows: connData.rows.map(r => ({
+            trafficType: r.trafficType,
+            sourceSystem: r.sourceSystem,
+            destinationSystem: r.destinationSystem,
+            sourceIp: r.sourceIp,
+            sourcePort: r.sourcePort,
+            destIp: r.destIp,
+            destPort: r.destPort,
+            sourceAeTitle: r.sourceAeTitle,
+            destAeTitle: r.destAeTitle,
+            envTest: r.envTest,
+            envProd: r.envProd,
+            notes: r.notes,
+            status: r.status,
+          })),
+          error: connData.error,
+        },
+        audit: { category: "read", status: "success", organizationSlug: orgSlug, organizationId: cOrg.id },
+      };
+    }
+    // -----------------------------------------------------------------------
+    case "get_validation_results": {
+      if (!orgSlug) return { callId: call.id, name: "get_validation_results", result: { error: "No organization context" }, audit: { category: "read", status: "error", errorMessage: "No orgSlug" } };
+      if (!db) return { callId: call.id, name: "get_validation_results", result: { error: "DB unavailable" }, audit: { category: "read", status: "error", errorMessage: "DB unavailable" } };
+      const vOrg = await verifyOrgAccess(db, ctx, orgSlug);
+      if (!vOrg) return { callId: call.id, name: "get_validation_results", result: { error: "Access denied" }, audit: { category: "read", status: "denied", organizationSlug: orgSlug, errorMessage: "RBAC denied" } };
+
+      const valResults = await db.select().from(validationResults)
+        .where(eq(validationResults.organizationId, vOrg.id));
+
+      const summary = {
+        total: valResults.length,
+        pass: valResults.filter(r => r.status === "Pass").length,
+        fail: valResults.filter(r => r.status === "Fail").length,
+        pending: valResults.filter(r => r.status === "Pending").length,
+        notTested: valResults.filter(r => r.status === "Not Tested").length,
+        inProgress: valResults.filter(r => r.status === "In Progress").length,
+        blocked: valResults.filter(r => r.status === "Blocked").length,
+        na: valResults.filter(r => r.status === "N/A").length,
+      };
+
+      return {
+        callId: call.id,
+        name: "get_validation_results",
+        result: {
+          organizationName: vOrg.name,
+          summary,
+          results: valResults.map(r => ({
+            testKey: r.testKey,
+            status: r.status,
+            actual: r.actual,
+            notes: r.notes,
+            signOff: r.signOff,
+            testedDate: r.testedDate,
+          })),
+        },
+        audit: { category: "read", status: "success", organizationSlug: orgSlug, organizationId: vOrg.id },
+      };
+    }
+    // -----------------------------------------------------------------------
     default:
       return {
         callId: call.id,
@@ -800,6 +1205,7 @@ export const aiRouter = router({
         fileData: z.string().optional(),
         fileType: z.string().optional(),
         fileName: z.string().optional(),
+        orgSlug: z.string().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -878,9 +1284,33 @@ Guidelines:
 - If you navigate somewhere, tell the user what you did
 - Never reveal information about other partners or their organisations`;
 
+      // ---- Org-scoped system prompt (when viewing a specific site dashboard) ----
+      const isOrgScoped = !!input.orgSlug;
+      let orgScopedPrompt = "";
+      if (isOrgScoped && db) {
+        const [scopedOrg] = await db
+          .select({ id: organizations.id, name: organizations.name, slug: organizations.slug })
+          .from(organizations)
+          .where(eq(organizations.slug, input.orgSlug!))
+          .limit(1);
+        if (scopedOrg) {
+          orgScopedPrompt = `\n\nIMPORTANT CONTEXT: You are currently viewing the site dashboard for "${scopedOrg.name}" (slug: ${scopedOrg.slug}).
+You ONLY have access to tools that fetch data for THIS organization. You cannot list other organizations, create users, or access any cross-org data.
+When the user asks about questionnaire responses, project notes, tasks, files, connectivity, validation results, or any data — use the org-scoped tools (get_org_profile, get_questionnaire_responses, get_tasks, get_files, get_connectivity, get_validation_results) to look up the answer.
+Do NOT say you cannot access data. Always try the appropriate tool first.
+You are scoped ENTIRELY to this one site. You have NO visibility into other organizations whatsoever.
+Be specific and cite actual data from the tool results in your answers.`;
+        }
+      }
+
+      const finalSystemPrompt = systemPrompt + orgScopedPrompt;
+
+      // Choose which tools to provide based on context
+      const activeTools = isOrgScoped ? ORG_SCOPED_TOOLS : TOOLS;
+
       // ---- Build message list ----
       const llmMessages: Message[] = [
-        { role: "system", content: systemPrompt },
+        { role: "system", content: finalSystemPrompt },
       ];
 
       if (input.fileData && input.fileType) {
@@ -946,7 +1376,7 @@ Guidelines:
       for (let iteration = 0; iteration < 3; iteration++) {
         const result = await invokeLLM({
           messages: currentMessages,
-          tools: TOOLS,
+          tools: activeTools,
           toolChoice: "auto",
         });
 
@@ -964,7 +1394,7 @@ Guidelines:
         // Execute all tool calls — each enforces RBAC
         const toolStartTime = Date.now();
         const toolResults = await Promise.all(
-          toolCalls.map((tc) => executeTool(tc, userCtx))
+          toolCalls.map((tc) => executeTool(tc, userCtx, input.orgSlug))
         );
         const toolDuration = Date.now() - toolStartTime;
 
