@@ -2394,3 +2394,12 @@
 - [x] Build admin UI page to view AI audit logs with filtering
 - [x] RBAC on audit log viewing (platform admin sees all, partner admin sees only their logs)
 - [x] Write tests for audit logging
+
+## AI Chat Inline Panel & Dashboard Navigation (Apr 6, 2026)
+- [x] Redesign AdminChatWidget from floating overlay to inline panel component
+- [x] Place inline AI chat at the top of the partner dashboard (always visible)
+- [x] Make org names clickable on partner dashboard to navigate to site dashboard
+- [x] Make org names clickable on admin dashboard to navigate to site dashboard
+- [x] Tighten site dashboard spacing — reduce padding/gaps to fit on one screen
+- [x] Improve site dashboard mobile responsiveness
+- [x] Save Notion/CRM architecture design discussion as a design doc

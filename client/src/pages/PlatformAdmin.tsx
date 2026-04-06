@@ -1249,7 +1249,7 @@ export default function PlatformAdmin() {
                         className="w-full px-5 py-3 flex items-center justify-between hover:bg-muted/40 transition-colors bg-muted/25"
                       >
                         <div className="flex items-center gap-4 min-w-0">
-                          <span className="font-bold text-lg truncate">{org.name}</span>
+                          <button onClick={(e) => { e.stopPropagation(); setLocation(`/org/${org.slug}`); }} className="font-bold text-lg truncate text-primary hover:underline cursor-pointer text-left">{org.name}</button>
                           <div className="flex items-center gap-2 flex-shrink-0">
                             <Badge variant="outline" className={cn(
                               "text-sm font-bold border-2 px-2.5 py-0.5",
@@ -1577,7 +1577,7 @@ export default function PlatformAdmin() {
                     const naCount = (orgMetrics as any)?.naQuestionCount ?? 0;
                     return (
                       <tr key={org.id} className="border-b border-border/20 hover:bg-muted/20 transition-colors">
-                        <td className="px-3 py-1.5 font-medium truncate">{org.name}</td>
+                        <td className="px-3 py-1.5 font-medium truncate"><button onClick={() => setLocation(`/org/${org.slug}`)} className="text-primary hover:underline cursor-pointer text-left">{org.name}</button></td>
                         {isPlatformAdmin && <td className="px-3 py-1.5 text-muted-foreground truncate">{partnerName}</td>}
                         <td className="px-3 py-1.5"><span className="px-1.5 py-0 rounded text-[10px] font-semibold leading-5 bg-green-500/15 text-green-400 border border-green-500/30">Active</span></td>
                         <td className="px-3 py-1.5 text-muted-foreground">{userCount}</td>
@@ -1637,7 +1637,7 @@ export default function PlatformAdmin() {
                         const naCount = (orgMetrics as any)?.naQuestionCount ?? 0;
                         return (
                           <tr key={org.id} className="border-b border-border/20 hover:bg-muted/20 transition-colors opacity-80">
-                            <td className="px-3 py-1.5 font-medium truncate">{org.name}</td>
+                            <td className="px-3 py-1.5 font-medium truncate"><button onClick={() => setLocation(`/org/${org.slug}`)} className="text-primary hover:underline cursor-pointer text-left">{org.name}</button></td>
                             {isPlatformAdmin && <td className="px-3 py-1.5 text-muted-foreground truncate">{partnerName}</td>}
                             <td className="px-3 py-1.5"><span className="px-1.5 py-0 rounded text-[10px] font-semibold leading-5 bg-blue-500/15 text-blue-400 border border-blue-500/30">Done</span></td>
                             <td className="px-3 py-1.5 text-muted-foreground">{userCount}</td>
@@ -1682,7 +1682,7 @@ export default function PlatformAdmin() {
                         const partnerName = org.clientId ? clientMap[org.clientId] : "—";
                         return (
                           <tr key={org.id} className="border-b border-border/20 hover:bg-muted/20 transition-colors opacity-60">
-                            <td className="px-3 py-1.5 font-medium truncate">{org.name}</td>
+                            <td className="px-3 py-1.5 font-medium truncate"><button onClick={() => setLocation(`/org/${org.slug}`)} className="text-muted-foreground hover:underline cursor-pointer text-left">{org.name}</button></td>
                             {isPlatformAdmin && <td className="px-3 py-1.5 text-muted-foreground truncate">{partnerName}</td>}
                             <td className="px-3 py-1.5"><span className="px-1.5 py-0 rounded text-[10px] font-semibold leading-5 bg-muted/40 text-muted-foreground border border-border/40">Inactive</span></td>
                             <td className="px-2 py-1">
@@ -3159,7 +3159,7 @@ function HL7OrgCard({
     <Card className="border-border bg-card">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-semibold">{org.name}</CardTitle>
+          <CardTitle className="text-base font-semibold"><button onClick={() => setLocation(`/org/${org.slug}`)} className="text-primary hover:underline cursor-pointer text-left">{org.name}</button></CardTitle>
           <div className="flex gap-1.5">
             <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${ordersComplete ? "bg-green-500/15 text-green-400" : "bg-muted text-muted-foreground"}`}>
               Orders {ordersComplete ? "✓" : "—"}
@@ -3838,7 +3838,7 @@ function ConnectivityMatrix({ orgs }: { orgs: ConnectivityOrg[] }) {
                 <th className="text-left py-3 px-4 font-semibold text-muted-foreground w-44 min-w-[11rem] border-r border-border bg-card">Detail</th>
                 {filteredOrgs.map(org => (
                   <th key={org.id} className="text-left py-3 px-4 min-w-[10rem] border-r border-border last:border-r-0 bg-card">
-                    <span className="font-bold block leading-tight">{org.name}</span>
+                    <button onClick={() => setLocation(`/org/${org.id}`)} className="font-bold block leading-tight text-primary hover:underline cursor-pointer text-left">{org.name}</button>
                     {org.partnerName && <span className="text-xs font-normal text-muted-foreground">{org.partnerName}</span>}
                     {archDiagramByOrg[org.id] && (
                       <button

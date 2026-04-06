@@ -43,7 +43,7 @@ import { UserMenu } from "@/components/UserMenu";
 import { cn } from "@/lib/utils";
 import { UploadedFilesList } from "@/components/UploadedFileRow";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { AdminChatWidget } from "@/components/AdminChatWidget";
+import { InlineChatPanel } from "@/components/InlineChatPanel";
 
 // ── Progress Ring (SVG) ─────────────────────────────────────────────────────
 function ProgressRing({
@@ -666,18 +666,23 @@ export default function Home() {
       <PhiDisclaimer />
 
       {/* Dashboard Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 space-y-3">
+      <div className="max-w-7xl mx-auto px-3 sm:px-5 py-2 space-y-2">
+
+        {/* ── AI Assistant (always visible for admin users) ── */}
+        {currentUser?.role === "admin" && (
+          <InlineChatPanel isPlatformAdmin={!currentUser?.clientId} />
+        )}
 
         {/* ═══════════════════════════════════════════════════════════════════
             TOP ROW: 3 Expandable Resource Cards
             ═══════════════════════════════════════════════════════════════════ */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
 
           {/* ── 1. Connectivity Card ── */}
           <Card className="card-elevated overflow-hidden">
             <button
               onClick={() => setConnectivityOpen(!connectivityOpen)}
-              className="w-full px-4 py-3 flex items-center justify-between hover:bg-accent/30 transition-colors"
+              className="w-full px-3 py-2 flex items-center justify-between hover:bg-accent/30 transition-colors"
             >
               <div className="flex items-center gap-2.5">
                 <div className="p-1.5 rounded-lg bg-primary/10">
@@ -749,7 +754,7 @@ export default function Home() {
           <Card className="card-elevated overflow-hidden">
             <button
               onClick={() => setArchitectureOpen(!architectureOpen)}
-              className="w-full px-4 py-3 flex items-center justify-between hover:bg-accent/30 transition-colors"
+              className="w-full px-3 py-2 flex items-center justify-between hover:bg-accent/30 transition-colors"
             >
               <div className="flex items-center gap-2.5">
                 <div className="p-1.5 rounded-lg bg-primary/10">
@@ -871,7 +876,7 @@ export default function Home() {
           <Card className="card-elevated overflow-hidden">
             <button
               onClick={() => setSpecsOpen(!specsOpen)}
-              className="w-full px-4 py-3 flex items-center justify-between hover:bg-accent/30 transition-colors"
+              className="w-full px-3 py-2 flex items-center justify-between hover:bg-accent/30 transition-colors"
             >
               <div className="flex items-center gap-2.5">
                 <div className="p-1.5 rounded-lg bg-primary/10">
@@ -965,17 +970,17 @@ export default function Home() {
         <Card className="card-elevated overflow-hidden">
           {/* Top accent gradient */}
           <div className="h-1 bg-gradient-to-r from-primary via-primary/60 to-emerald-500/40" />
-          <CardContent className="p-4">
-            <div className="flex flex-col md:flex-row items-center gap-4">
+          <CardContent className="p-3">
+            <div className="flex flex-col md:flex-row items-center gap-3">
               {/* Progress Ring */}
-              <ProgressRing value={overallPct} size={90} stroke={7} />
+              <ProgressRing value={overallPct} size={72} stroke={6} />
 
               {/* Stats */}
               <div className="flex-1 text-center md:text-left">
-                <h2 className="text-lg font-bold tracking-tight mb-0.5">
+                <h2 className="text-base font-bold tracking-tight mb-0.5">
                   Implementation Progress
                 </h2>
-                <p className="text-xs text-muted-foreground mb-3">
+                <p className="text-xs text-muted-foreground mb-2">
                   {overallPct === 100
                     ? "All phases complete — ready for go-live."
                     : overallPct > 0
@@ -983,7 +988,7 @@ export default function Home() {
                       : "Get started by filling out the questionnaire."}
                 </p>
 
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-1.5">
                   {[
                     { label: "Questionnaire", count: `${completedSections}/${totalSections}`, pct: Math.round(qPct), done: qDone },
                     { label: "Tests Passed", count: `${valCompleted + valNaCount}/${valTotal}`, pct: Math.round(vPct), done: vPct >= 100 },
@@ -992,7 +997,7 @@ export default function Home() {
                     <div
                       key={stat.label}
                       className={cn(
-                        "text-center p-2 rounded-lg border transition-colors",
+                        "text-center p-1.5 rounded-lg border transition-colors",
                         stat.done
                           ? "bg-emerald-500/10 border-emerald-500/20"
                           : "bg-muted/20 border-border/30"
@@ -1059,7 +1064,7 @@ export default function Home() {
         {/* ═══════════════════════════════════════════════════════════════════
             WORKFLOW PHASE CARDS
             ═══════════════════════════════════════════════════════════════════ */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           {/* Questionnaire card — merged with section summary */}
           {(() => {
             const qPctCard = totalSections > 0 ? Math.round((completedSections / totalSections) * 100) : 0;
@@ -1083,7 +1088,7 @@ export default function Home() {
                           : "bg-gradient-to-r from-muted-foreground/20 to-muted-foreground/10"
                     )}
                   />
-                  <CardContent className="p-4 pt-5">
+                  <CardContent className="p-3 pt-3.5">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <div
@@ -1215,7 +1220,7 @@ export default function Home() {
                           : "bg-gradient-to-r from-muted-foreground/20 to-muted-foreground/10"
                     )}
                   />
-                  <CardContent className="p-4 pt-5">
+                  <CardContent className="p-3 pt-3.5">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <div
@@ -1342,7 +1347,7 @@ export default function Home() {
                           : "bg-gradient-to-r from-muted-foreground/20 to-muted-foreground/10"
                     )}
                   />
-                  <CardContent className="p-4 pt-5">
+                  <CardContent className="p-3 pt-3.5">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <div
@@ -1596,10 +1601,7 @@ export default function Home() {
         <div className="h-2" />
       </div>
 
-      {/* AI Chat Widget — only visible to admin users */}
-      {currentUser?.role === "admin" && (
-        <AdminChatWidget isPlatformAdmin={!currentUser?.clientId} />
-      )}
+
     </div>
   );
 }
