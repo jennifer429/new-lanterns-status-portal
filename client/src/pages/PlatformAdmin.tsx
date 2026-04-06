@@ -31,6 +31,7 @@ import { TYPE_COLORS, type IntegrationSystem } from "@/components/IntegrationWor
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { AdminChatWidget } from "@/components/AdminChatWidget";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -3054,6 +3055,9 @@ export default function PlatformAdmin() {
           </>
         )}
       </div>
+
+      {/* AI Chat Widget — fixed bottom-right floating assistant */}
+      <AdminChatWidget isPlatformAdmin={!user?.clientId} />
     </div>
   );
 }

@@ -13,6 +13,7 @@ import { validationRouter } from "./routers/validation";
 import { implementationRouter } from "./routers/implementation";
 import { connectivityRouter } from "./routers/connectivity";
 import { notesRouter } from "./routers/notes";
+import { aiRouter } from "./routers/ai";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -41,6 +42,7 @@ export const appRouter = router({
   implementation: implementationRouter,
   connectivity: connectivityRouter,
   notes: notesRouter,
+  ai: aiRouter,
 });
 
 export type AppRouter = typeof appRouter;
