@@ -12,7 +12,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Download, Upload, CheckCircle2, Circle, Clock, ArrowLeft, ChevronRight, Trash2, LogOut, Home, Ban } from "lucide-react";
+import { Loader2, Download, Upload, CheckCircle2, Circle, Clock, ArrowLeft, ChevronRight, Trash2, LogOut, Home, Ban, Sparkles, FileText, X } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -98,6 +100,13 @@ export default function IntakeNew() {
   const [deleteFileId, setDeleteFileId] = useState<number | null>(null);
   const [deleteQuestionId, setDeleteQuestionId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const autofillInputRef = useRef<HTMLInputElement>(null);
+
+  // AI auto-fill state
+  const [autofillLoading, setAutofillLoading] = useState(false);
+  const [autofillAnswers, setAutofillAnswers] = useState<Record<string, string> | null>(null);
+  const [autofillSelected, setAutofillSelected] = useState<Record<string, boolean>>({});
+  const [autofillFileName, setAutofillFileName] = useState<string>("");
   const { user } = useAuth();
   const logoutMutation = trpc.auth.logout.useMutation();
 
@@ -175,6 +184,66 @@ export default function IntakeNew() {
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [responses, slug]);
+
+  // AI document autofill mutation
+  const parseDocumentMutation = trpc.intake.parseDocumentForAutofill.useMutation();
+
+  const handleAutofillUpload = useCallback(async (file: File) => {
+    setAutofillLoading(true);
+    setAutofillFileName(file.name);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const result = e.target?.result as string;
+          // Strip the data URL prefix (e.g. "data:application/pdf;base64,")
+          resolve(result.split(',')[1] ?? '');
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const { answers } = await parseDocumentMutation.mutateAsync({
+        fileData: base64,
+        mimeType: file.type || 'application/octet-stream',
+        fileName: file.name,
+      });
+
+      if (Object.keys(answers).length === 0) {
+        alert("No questionnaire answers could be extracted from this document. Try a different file.");
+        return;
+      }
+
+      // Default: all extracted answers selected
+      setAutofillAnswers(answers);
+      setAutofillSelected(Object.fromEntries(Object.keys(answers).map((k) => [k, true])));
+    } catch (err) {
+      console.error("Autofill failed:", err);
+      alert("Failed to extract answers from the document. Please try again.");
+    } finally {
+      setAutofillLoading(false);
+      // Reset file input so same file can be re-uploaded
+      if (autofillInputRef.current) autofillInputRef.current.value = '';
+    }
+  }, [parseDocumentMutation]);
+
+  const handleAutofillApply = useCallback(() => {
+    if (!autofillAnswers) return;
+    const toApply: Record<string, any> = {};
+    for (const [id, val] of Object.entries(autofillAnswers)) {
+      if (!autofillSelected[id]) continue;
+      // Multi-select values are stored as JSON strings; parse them back to arrays
+      try {
+        const parsed = JSON.parse(val);
+        toApply[id] = parsed;
+      } catch {
+        toApply[id] = val;
+      }
+    }
+    setResponses((prev) => ({ ...prev, ...toApply }));
+    setAutofillAnswers(null);
+    setAutofillSelected({});
+  }, [autofillAnswers, autofillSelected]);
 
   // File upload mutation
   const uploadFileMutation = trpc.files.upload.useMutation();
@@ -425,6 +494,12 @@ export default function IntakeNew() {
     if (progress > 0) return "in-progress";
     return "not-started";
   };
+
+  // Flat map of questionId -> question text (for autofill review dialog)
+  const questionLabelMap: Record<string, string> = {};
+  questionnaireData.forEach((s) => {
+    s.questions?.forEach((q) => { questionLabelMap[q.id] = q.text; });
+  });
 
   // Get status icon
   const getStatusIcon = (status: string) => {
@@ -788,6 +863,54 @@ export default function IntakeNew() {
 
             {/* Right: Progress Panel */}
             <div className="space-y-4">
+              {/* AI Auto-fill Card */}
+              <Card className="border-2 border-dashed border-purple-300 bg-purple-50/50 dark:bg-purple-950/20 dark:border-purple-800">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base text-purple-700 dark:text-purple-300">
+                    <Sparkles className="w-4 h-4" />
+                    AI Auto-fill
+                  </CardTitle>
+                  <CardDescription>
+                    Upload a document (PDF, image) and AI will pre-fill the questionnaire for you.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <input
+                    ref={autofillInputRef}
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.tiff"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleAutofillUpload(file);
+                    }}
+                  />
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 border-purple-400 text-purple-700 hover:bg-purple-100 dark:text-purple-300 dark:border-purple-700 dark:hover:bg-purple-900/30"
+                    disabled={autofillLoading}
+                    onClick={() => autofillInputRef.current?.click()}
+                  >
+                    {autofillLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Analyzing…
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="w-4 h-4" />
+                        Upload Document
+                      </>
+                    )}
+                  </Button>
+                  {autofillLoading && autofillFileName && (
+                    <p className="text-xs text-muted-foreground mt-2 truncate">
+                      Reading {autofillFileName}…
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
               <Card className="sticky top-24">
                 <CardHeader>
                   <CardTitle>Overall Progress</CardTitle>
@@ -1010,6 +1133,96 @@ export default function IntakeNew() {
           </div>
         </div>
       )}
+
+      {/* AI Auto-fill Review Dialog */}
+      <Dialog open={autofillAnswers !== null} onOpenChange={(open) => {
+        if (!open) { setAutofillAnswers(null); setAutofillSelected({}); }
+      }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-purple-600" />
+              Review Auto-filled Answers
+            </DialogTitle>
+            <DialogDescription>
+              AI extracted the following answers from <strong>{autofillFileName}</strong>.
+              Deselect any you don't want to apply, then click Apply.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex items-center justify-between text-sm py-1 border-b">
+            <span className="text-muted-foreground">
+              {Object.values(autofillSelected).filter(Boolean).length} of {Object.keys(autofillSelected).length} selected
+            </span>
+            <div className="flex gap-2">
+              <Button size="sm" variant="ghost" onClick={() =>
+                setAutofillSelected(Object.fromEntries(Object.keys(autofillSelected).map((k) => [k, true])))
+              }>Select all</Button>
+              <Button size="sm" variant="ghost" onClick={() =>
+                setAutofillSelected(Object.fromEntries(Object.keys(autofillSelected).map((k) => [k, false])))
+              }>Deselect all</Button>
+            </div>
+          </div>
+
+          <ScrollArea className="max-h-[50vh] pr-3">
+            <div className="space-y-3">
+              {autofillAnswers && Object.entries(autofillAnswers).map(([id, val]) => {
+                const label = questionLabelMap[id] ?? id;
+                const displayVal = (() => {
+                  try {
+                    const parsed = JSON.parse(val);
+                    return Array.isArray(parsed) ? parsed.join(', ') : val;
+                  } catch { return val; }
+                })();
+                return (
+                  <div
+                    key={id}
+                    className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                      autofillSelected[id]
+                        ? 'bg-purple-50 border-purple-200 dark:bg-purple-950/30 dark:border-purple-700'
+                        : 'bg-muted/30 border-transparent opacity-50'
+                    }`}
+                    onClick={() => setAutofillSelected((prev) => ({ ...prev, [id]: !prev[id] }))}
+                  >
+                    <Checkbox
+                      checked={autofillSelected[id] ?? false}
+                      onCheckedChange={(checked) =>
+                        setAutofillSelected((prev) => ({ ...prev, [id]: !!checked }))
+                      }
+                      onClick={(e) => e.stopPropagation()}
+                      className="mt-0.5 shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-mono font-bold text-purple-600 dark:text-purple-400">{id}</span>
+                        <span className="text-xs text-muted-foreground truncate">{label}</span>
+                      </div>
+                      <p className="text-sm font-medium break-words">{displayVal}</p>
+                    </div>
+                    {responses[id] && (
+                      <span className="text-xs text-orange-500 shrink-0 mt-0.5">overwrites</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => { setAutofillAnswers(null); setAutofillSelected({}); }}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-purple-600 hover:bg-purple-700 text-white gap-2"
+              disabled={!Object.values(autofillSelected).some(Boolean)}
+              onClick={handleAutofillApply}
+            >
+              <Sparkles className="w-4 h-4" />
+              Apply {Object.values(autofillSelected).filter(Boolean).length} answers
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteFileId !== null} onOpenChange={(open) => {
