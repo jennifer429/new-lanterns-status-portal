@@ -1,15 +1,12 @@
-import { trpc } from "@/lib/trpc";
+import type { inferRouterOutputs } from "@trpc/server";
+import type { AppRouter } from "../../../../server/routers";
 
-// Infer types from tRPC query returns
-type OrgsQuery = ReturnType<typeof trpc.admin.getAllOrganizations.useQuery>;
-type ClientsQuery = ReturnType<typeof trpc.admin.getAllClients.useQuery>;
-type UsersQuery = ReturnType<typeof trpc.admin.getAllUsers.useQuery>;
-type MetricsQuery = ReturnType<typeof trpc.admin.getAdminSummary.useQuery>;
+type RouterOutput = inferRouterOutputs<AppRouter>;
 
-export type Org = NonNullable<OrgsQuery["data"]>[number];
-export type Client = NonNullable<ClientsQuery["data"]>[number];
-export type AdminUser = NonNullable<UsersQuery["data"]>[number];
-export type Metric = NonNullable<MetricsQuery["data"]>[number];
+export type Org = RouterOutput["admin"]["getAllOrganizations"][number];
+export type Client = RouterOutput["admin"]["getAllClients"][number];
+export type AdminUser = RouterOutput["admin"]["getAllUsers"][number];
+export type Metric = RouterOutput["admin"]["getAdminSummary"][number];
 
 export type SharedAdminProps = {
   isPlatformAdmin: boolean;
@@ -19,5 +16,3 @@ export type SharedAdminProps = {
   allUsers: AdminUser[];
   refetchUsers: () => void;
 };
-
-
