@@ -212,6 +212,20 @@ export default function PlatformAdmin() {
     onError: (error: any) => toast.error(error.message || "Failed to delete task"),
   });
 
+  const { data: orgCustomTasksForPartner, refetch: refetchOrgCustomTasks } =
+    trpc.admin.getOrgCustomTasksForPartner.useQuery(undefined, {
+      enabled: activeTab === "task-templates",
+    });
+
+  const promoteMutation = trpc.admin.promoteCustomTaskToTemplate.useMutation({
+    onSuccess: () => {
+      toast.success("Task promoted to template — it will now appear for all active sites.");
+      refetchTaskTemplates();
+      refetchOrgCustomTasks();
+    },
+    onError: (error: any) => toast.error(error.message || "Failed to promote task"),
+  });
+
   const handleCreateTask = () => {
     const effectiveClientId = isPlatformAdmin ? newTaskClientId : user?.clientId;
     if (!newTaskTitle || !effectiveClientId) { toast.error("Title and partner are required"); return; }
@@ -2451,6 +2465,54 @@ export default function PlatformAdmin() {
                 </Card>
               ))}
             </div>
+
+            {/* Org-added custom tasks — partner can promote any to their template */}
+            {orgCustomTasksForPartner && orgCustomTasksForPartner.length > 0 && (
+              <div className="mt-10">
+                <div className="mb-4">
+                  <h3 className="text-lg font-semibold">Site-Added Tasks</h3>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    Tasks added by individual sites. Promote any to your template to push it to all active implementations.
+                  </p>
+                </div>
+                <div className="space-y-3">
+                  {orgCustomTasksForPartner.map((task) => (
+                    <Card key={task.id} className="border-dashed">
+                      <CardContent className="py-4 flex items-center justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-muted-foreground mb-0.5">{task.orgName}</p>
+                          <p className="font-medium truncate">{task.title}</p>
+                          {task.description && (
+                            <p className="text-xs text-muted-foreground truncate">{task.description}</p>
+                          )}
+                          <div className="flex gap-2 mt-1">
+                            <Badge variant="outline" className="capitalize text-xs">{task.type}</Badge>
+                            {task.section && <Badge variant="outline" className="text-xs">{task.section}</Badge>}
+                            <Badge variant={task.isComplete ? "default" : "outline"} className={cn("text-xs", task.isComplete ? "bg-green-600" : "")}>
+                              {task.isComplete ? "Done at site" : "Pending"}
+                            </Badge>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-shrink-0 gap-1.5"
+                          disabled={promoteMutation.isPending}
+                          onClick={() => {
+                            if (confirm(`Promote "${task.title}" to your template? It will appear for all active sites.`)) {
+                              promoteMutation.mutate({ orgCustomTaskId: task.id });
+                            }
+                          }}
+                        >
+                          <ListChecks className="w-3 h-3" />
+                          Promote to all sites
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
           </>
         )}
 

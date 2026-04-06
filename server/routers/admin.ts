@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { questions, questionOptions, organizations, users, clients, intakeFileAttachments, partnerTemplates, specifications, intakeResponses, systemVendorOptions, vendorAuditLog, taskCompletion, validationResults, partnerTaskTemplates } from "../../drizzle/schema";
+import { questions, questionOptions, organizations, users, clients, intakeFileAttachments, partnerTemplates, specifications, intakeResponses, systemVendorOptions, vendorAuditLog, taskCompletion, validationResults, partnerTaskTemplates, orgCustomTasks } from "../../drizzle/schema";
 import { SECTION_DEFS as TASK_SECTION_DEFS } from "../../shared/taskDefs";
 import { eq, and, or, desc, inArray, sql } from "drizzle-orm";
 import { uploadToGoogleDrive } from "./files";
@@ -2088,5 +2088,102 @@ export const adminRouter = router({
 
       await db.update(partnerTaskTemplates).set({ isActive: 0, updatedBy: ctx.user.email ?? null }).where(eq(partnerTaskTemplates.id, input.id));
       return { success: true };
+    }),
+
+  /**
+   * List all org-added custom tasks across orgs belonging to this partner.
+   * Platform admins see all; partner admins see only their own orgs.
+   */
+  getOrgCustomTasksForPartner: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+    const db = await getDb();
+    if (!db) return [];
+
+    // Resolve which org IDs are in scope
+    let orgFilter = await db.select({ id: organizations.id, name: organizations.name, slug: organizations.slug, clientId: organizations.clientId }).from(organizations);
+    if (ctx.user.clientId) {
+      orgFilter = orgFilter.filter((o) => o.clientId === ctx.user.clientId);
+    }
+
+    if (orgFilter.length === 0) return [];
+
+    const orgIds = orgFilter.map((o) => o.id);
+    const orgMap = Object.fromEntries(orgFilter.map((o) => [o.id, o]));
+
+    const tasks = await db
+      .select()
+      .from(orgCustomTasks)
+      .where(inArray(orgCustomTasks.organizationId, orgIds))
+      .orderBy(orgCustomTasks.organizationId, orgCustomTasks.createdAt);
+
+    return tasks.map((t) => ({
+      ...t,
+      orgName: orgMap[t.organizationId]?.name ?? "Unknown",
+      orgSlug: orgMap[t.organizationId]?.slug ?? "",
+    }));
+  }),
+
+  /**
+   * Promote an org custom task into the partner's task template,
+   * making it visible to all active orgs under this partner.
+   */
+  promoteCustomTaskToTemplate: protectedProcedure
+    .input(z.object({ orgCustomTaskId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      // Load the custom task
+      const [customTask] = await db
+        .select()
+        .from(orgCustomTasks)
+        .where(eq(orgCustomTasks.id, input.orgCustomTaskId))
+        .limit(1);
+
+      if (!customTask) throw new TRPCError({ code: "NOT_FOUND", message: "Custom task not found" });
+
+      // Verify partner admin can only promote tasks from their orgs
+      if (ctx.user.clientId) {
+        const [org] = await db
+          .select({ clientId: organizations.clientId })
+          .from(organizations)
+          .where(eq(organizations.id, customTask.organizationId))
+          .limit(1);
+        if (!org || org.clientId !== ctx.user.clientId) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Cannot promote tasks from other partners' orgs" });
+        }
+      }
+
+      // Determine which clientId the template should belong to
+      const [org] = await db
+        .select({ clientId: organizations.clientId })
+        .from(organizations)
+        .where(eq(organizations.id, customTask.organizationId))
+        .limit(1);
+
+      if (!org?.clientId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Org is not associated with a partner" });
+      }
+
+      // Get the next sort order
+      const existing = await db
+        .select({ sortOrder: partnerTaskTemplates.sortOrder })
+        .from(partnerTaskTemplates)
+        .where(eq(partnerTaskTemplates.clientId, org.clientId));
+      const maxSort = existing.reduce((m, r) => Math.max(m, r.sortOrder ?? 0), 0);
+
+      const [result] = await db.insert(partnerTaskTemplates).values({
+        clientId: org.clientId,
+        title: customTask.title,
+        description: customTask.description ?? null,
+        type: customTask.type,
+        section: customTask.section ?? null,
+        sortOrder: maxSort + 10,
+        isActive: 1,
+        createdBy: ctx.user.email ?? null,
+      });
+
+      return { success: true, templateId: result.insertId };
     }),
 });
