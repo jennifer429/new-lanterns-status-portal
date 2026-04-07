@@ -19,11 +19,14 @@ import Validation from "./pages/Validation";
 import Workflows from "./pages/Workflows";
 import Specifications from "./pages/Specifications";
 import Connectivity from "./pages/Connectivity";
+import BookingPage from "./pages/BookingPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
+      {/* Public invitation-only booking page — no auth required */}
+      <Route path="/book/:token" component={BookingPage} />
       <Route path="/login" component={Login} />
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />

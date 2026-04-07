@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp, AlertTriangle, AlertCircle, Info, Image, CheckSquare, BarChart3, Copy, Check, Clock, ChevronLeft, ChevronRight, Settings, ChevronDown, ListChecks, TestTube2, History, Search, X } from "lucide-react";
+import { ClipboardList, Users, FileText, TrendingUp, CheckCircle2, Circle, ExternalLink, Download, Upload, Plus, Mail, Edit, RotateCcw, LogOut, UserCircle, FileUp, AlertTriangle, AlertCircle, Info, Image, CheckSquare, BarChart3, Copy, Check, Clock, ChevronLeft, ChevronRight, Settings, ChevronDown, ListChecks, TestTube2, History, Search, X, Loader2 } from "lucide-react";
 import { questionnaireSections } from "@shared/questionnaireData";
 import { TYPE_COLORS, type IntegrationSystem } from "@/components/IntegrationWorkflows";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -41,6 +41,290 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+// ---------------------------------------------------------------------------
+// Training Invites Tab
+// ---------------------------------------------------------------------------
+
+function TrainingInvitesTab() {
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [prefillName, setPrefillName] = useState("");
+  const [prefillEmail, setPrefillEmail] = useState("");
+  const [prefillOrg, setPrefillOrg] = useState("");
+  const [note, setNote] = useState("");
+  const [expiresInDays, setExpiresInDays] = useState<string>("30");
+  const [copiedToken, setCopiedToken] = useState<string | null>(null);
+
+  const invitesQuery = trpc.booking.listInvitations.useQuery();
+  const submissionsQuery = trpc.booking.listSubmissions.useQuery();
+  const createMutation = trpc.booking.createInvitation.useMutation({
+    onSuccess() {
+      invitesQuery.refetch();
+      setIsCreateOpen(false);
+      setPrefillName("");
+      setPrefillEmail("");
+      setPrefillOrg("");
+      setNote("");
+      setExpiresInDays("30");
+      toast.success("Invitation created — copy the link and send it via Pylon!");
+    },
+    onError(err) {
+      toast.error(err.message || "Failed to create invitation");
+    },
+  });
+  const revokeMutation = trpc.booking.revokeInvitation.useMutation({
+    onSuccess() {
+      invitesQuery.refetch();
+      toast.success("Invitation revoked");
+    },
+  });
+
+  function getBookingUrl(token: string) {
+    return `${window.location.origin}/book/${token}`;
+  }
+
+  function copyLink(token: string) {
+    navigator.clipboard.writeText(getBookingUrl(token)).then(() => {
+      setCopiedToken(token);
+      setTimeout(() => setCopiedToken(null), 2000);
+    });
+  }
+
+  function getStatus(inv: { usedAt: Date | null; revokedAt: Date | null; expiresAt: Date | null }) {
+    if (inv.revokedAt) return { label: "Revoked", color: "bg-red-500/15 text-red-400 border-red-500/30" };
+    if (inv.usedAt) return { label: "Used", color: "bg-green-500/15 text-green-400 border-green-500/30" };
+    if (inv.expiresAt && new Date(inv.expiresAt) < new Date()) {
+      return { label: "Expired", color: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30" };
+    }
+    return { label: "Pending", color: "bg-purple-500/15 text-purple-400 border-purple-500/30" };
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header row */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-white">Training Invites</h2>
+          <p className="text-white/50 text-sm mt-0.5">
+            Create invitation-only booking links to share via Pylon.
+          </p>
+        </div>
+        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-purple-600 hover:bg-purple-500 text-white gap-2">
+              <Plus className="h-4 w-4" />
+              New Invite
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="bg-[#1a1230] border-white/10 text-white max-w-md">
+            <DialogHeader>
+              <DialogTitle>Create Training Invite</DialogTitle>
+              <DialogDescription className="text-white/50">
+                Generate a unique booking link to share via Pylon. Optionally pre-fill contact details.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-1.5">
+                <Label className="text-white/70 text-sm">Recipient name (optional)</Label>
+                <Input
+                  placeholder="Jane Smith"
+                  value={prefillName}
+                  onChange={(e) => setPrefillName(e.target.value)}
+                  className="bg-white/5 border-white/15 text-white placeholder:text-white/30"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-white/70 text-sm">Recipient email (optional)</Label>
+                <Input
+                  type="email"
+                  placeholder="jane@hospital.com"
+                  value={prefillEmail}
+                  onChange={(e) => setPrefillEmail(e.target.value)}
+                  className="bg-white/5 border-white/15 text-white placeholder:text-white/30"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-white/70 text-sm">Organization (optional)</Label>
+                <Input
+                  placeholder="General Hospital"
+                  value={prefillOrg}
+                  onChange={(e) => setPrefillOrg(e.target.value)}
+                  className="bg-white/5 border-white/15 text-white placeholder:text-white/30"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-white/70 text-sm">Internal note (optional)</Label>
+                <Input
+                  placeholder="e.g. Megan's invite to UCSF follow-up"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  className="bg-white/5 border-white/15 text-white placeholder:text-white/30"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-white/70 text-sm">Expires in (days)</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  placeholder="30"
+                  value={expiresInDays}
+                  onChange={(e) => setExpiresInDays(e.target.value)}
+                  className="bg-white/5 border-white/15 text-white placeholder:text-white/30"
+                />
+                <p className="text-white/30 text-xs">Leave blank for no expiry.</p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" onClick={() => setIsCreateOpen(false)} className="text-white/60">
+                Cancel
+              </Button>
+              <Button
+                onClick={() =>
+                  createMutation.mutate({
+                    prefillName: prefillName || undefined,
+                    prefillEmail: prefillEmail || undefined,
+                    prefillOrg: prefillOrg || undefined,
+                    note: note || undefined,
+                    expiresInDays: expiresInDays ? parseInt(expiresInDays) : undefined,
+                  })
+                }
+                disabled={createMutation.isPending}
+                className="bg-purple-600 hover:bg-purple-500 text-white"
+              >
+                {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create Invite"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Invitations table */}
+      <Card className="bg-white/5 border-white/10">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base text-white">Invitations</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {invitesQuery.isLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 text-purple-500 animate-spin" />
+            </div>
+          ) : !invitesQuery.data?.length ? (
+            <div className="text-center py-10 text-white/40">
+              No invitations yet. Create one and share it via Pylon.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {invitesQuery.data.map((inv) => {
+                const status = getStatus(inv);
+                const isActive = !inv.revokedAt && !inv.usedAt && (!inv.expiresAt || new Date(inv.expiresAt) >= new Date());
+                return (
+                  <div
+                    key={inv.id}
+                    className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/8 hover:border-white/15 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-white font-medium text-sm truncate">
+                          {inv.prefillName || inv.prefillEmail || "—"}
+                        </span>
+                        {inv.prefillOrg && (
+                          <span className="text-white/40 text-xs truncate">· {inv.prefillOrg}</span>
+                        )}
+                      </div>
+                      {inv.note && <p className="text-white/40 text-xs truncate">{inv.note}</p>}
+                      <p className="text-white/30 text-xs mt-0.5">
+                        Created {new Date(inv.createdAt).toLocaleDateString()}
+                        {inv.expiresAt && ` · Expires ${new Date(inv.expiresAt).toLocaleDateString()}`}
+                        {inv.usedAt && ` · Used ${new Date(inv.usedAt).toLocaleDateString()}`}
+                      </p>
+                    </div>
+                    <div className={`text-xs px-2 py-0.5 rounded-full border font-medium shrink-0 ${status.color}`}>
+                      {status.label}
+                    </div>
+                    {isActive && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-white/60 hover:text-white hover:bg-white/10 gap-1.5 text-xs shrink-0"
+                        onClick={() => copyLink(inv.token)}
+                      >
+                        {copiedToken === inv.token ? (
+                          <><Check className="h-3.5 w-3.5 text-green-400" /> Copied!</>
+                        ) : (
+                          <><Copy className="h-3.5 w-3.5" /> Copy Link</>
+                        )}
+                      </Button>
+                    )}
+                    {isActive && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-red-400/60 hover:text-red-400 hover:bg-red-500/10 text-xs shrink-0"
+                        onClick={() => revokeMutation.mutate({ id: inv.id })}
+                        disabled={revokeMutation.isPending}
+                      >
+                        Revoke
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Submissions table */}
+      <Card className="bg-white/5 border-white/10">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base text-white">Completed Bookings</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {submissionsQuery.isLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 text-purple-500 animate-spin" />
+            </div>
+          ) : !submissionsQuery.data?.length ? (
+            <div className="text-center py-10 text-white/40">No bookings submitted yet.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-white/40 text-xs border-b border-white/10">
+                    <th className="text-left pb-2 font-medium">Name</th>
+                    <th className="text-left pb-2 font-medium">Email</th>
+                    <th className="text-left pb-2 font-medium">Type</th>
+                    <th className="text-left pb-2 font-medium">Date</th>
+                    <th className="text-left pb-2 font-medium">Time</th>
+                    <th className="text-left pb-2 font-medium">Submitted</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {submissionsQuery.data.map((s) => (
+                    <tr key={s.id} className="border-b border-white/5 hover:bg-white/3 transition-colors">
+                      <td className="py-2.5 text-white">{s.fullName}</td>
+                      <td className="py-2.5 text-white/70">{s.email}</td>
+                      <td className="py-2.5">
+                        <span className="capitalize text-purple-300 text-xs bg-purple-500/15 px-2 py-0.5 rounded-full">
+                          {s.trainingType}
+                        </span>
+                      </td>
+                      <td className="py-2.5 text-white/70">{s.selectedDate}</td>
+                      <td className="py-2.5 text-white/70">{s.selectedTime}</td>
+                      <td className="py-2.5 text-white/40 text-xs">
+                        {new Date(s.createdAt).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 /**
  * Unified Admin Dashboard
  * Works for all admin roles:
@@ -51,7 +335,7 @@ import {
 export default function PlatformAdmin() {
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"prod-dashboard" | "impl-dashboard" | "orgs" | "users" | "templates" | "task-templates" | "partners" | "specs" | "vendor-picklists" | "audit-log">("impl-dashboard");
+  const [activeTab, setActiveTab] = useState<"prod-dashboard" | "impl-dashboard" | "orgs" | "users" | "templates" | "task-templates" | "partners" | "specs" | "vendor-picklists" | "audit-log" | "training-invites">("impl-dashboard");
 
   // Template management state
   const [isUploadTemplateDialogOpen, setIsUploadTemplateDialogOpen] = useState(false);
@@ -1103,6 +1387,10 @@ export default function PlatformAdmin() {
                 <DropdownMenuItem onClick={() => setActiveTab("audit-log")} className="cursor-pointer">
                   <History className="mr-2 h-4 w-4" />
                   AI Audit Log
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveTab("training-invites")} className="cursor-pointer">
+                  <Mail className="mr-2 h-4 w-4" />
+                  Training Invites
                 </DropdownMenuItem>
                 {isPlatformAdmin && (
                   <>
@@ -3064,6 +3352,11 @@ export default function PlatformAdmin() {
         {/* ── AI AUDIT LOG TAB ── */}
         {activeTab === "audit-log" && (
           <AiAuditLog />
+        )}
+
+        {/* ── TRAINING INVITES TAB ── */}
+        {activeTab === "training-invites" && (
+          <TrainingInvitesTab />
         )}
       </div>
 

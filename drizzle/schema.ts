@@ -478,3 +478,48 @@ export const aiAuditLogs = mysqlTable("aiAuditLogs", {
 
 export type AiAuditLog = typeof aiAuditLogs.$inferSelect;
 export type InsertAiAuditLog = typeof aiAuditLogs.$inferInsert;
+
+/**
+ * Booking Invitations — invitation-only access tokens for the training booking page.
+ * Admins create an invitation (optionally pre-filling name/email/org), copy the link,
+ * and send it via Pylon (or any channel). The token gates access to /book/:token.
+ */
+export const bookingInvitations = mysqlTable("bookingInvitations", {
+  id: int("id").autoincrement().primaryKey(),
+  token: varchar("token", { length: 64 }).notNull().unique(), // URL-safe random token
+  /** Optional pre-fill values shown on the booking form */
+  prefillName: varchar("prefillName", { length: 255 }),
+  prefillEmail: varchar("prefillEmail", { length: 320 }),
+  prefillOrg: varchar("prefillOrg", { length: 255 }),
+  /** Invitation metadata */
+  note: text("note"), // Internal note for the admin (e.g., "Megan's invite to UCSF")
+  expiresAt: timestamp("expiresAt"), // null = never expires
+  usedAt: timestamp("usedAt"), // null = not yet used
+  revokedAt: timestamp("revokedAt"), // null = still valid
+  createdBy: varchar("createdBy", { length: 320 }).notNull(), // Admin email
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type BookingInvitation = typeof bookingInvitations.$inferSelect;
+export type InsertBookingInvitation = typeof bookingInvitations.$inferInsert;
+
+/**
+ * Booking Submissions — completed bookings submitted via the invitation-gated form.
+ */
+export const bookingSubmissions = mysqlTable("bookingSubmissions", {
+  id: int("id").autoincrement().primaryKey(),
+  invitationId: int("invitationId").notNull(), // FK to bookingInvitations.id
+  fullName: varchar("fullName", { length: 255 }).notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  organization: varchar("organization", { length: 255 }),
+  phone: varchar("phone", { length: 50 }),
+  trainingType: mysqlEnum("trainingType", ["admin", "technologist"]).notNull(),
+  selectedDate: varchar("selectedDate", { length: 20 }).notNull(), // YYYY-MM-DD
+  selectedTime: varchar("selectedTime", { length: 20 }).notNull(), // e.g. "10:00 AM"
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type BookingSubmission = typeof bookingSubmissions.$inferSelect;
+export type InsertBookingSubmission = typeof bookingSubmissions.$inferInsert;
