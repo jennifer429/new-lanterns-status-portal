@@ -436,7 +436,7 @@ export function UsersTab({ isPlatformAdmin, orgs, clients, allUsers, refetchUser
                             </button>
                             <button onClick={() => { if (confirm(`Deactivate ${u.name}?`)) deactivateUserMutation.mutate({ userId: u.id }); }}
                               className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-border/40 text-muted-foreground hover:bg-muted/50 transition-colors">
-                              Off
+                              Deactivate
                             </button>
                           </div>
                         </td>
@@ -481,10 +481,16 @@ export function UsersTab({ isPlatformAdmin, orgs, clients, allUsers, refetchUser
                             <span className="px-1.5 py-0 rounded text-[10px] font-semibold leading-5 border bg-muted/30 text-muted-foreground border-border/40">{u.role}</span>
                           </td>
                           <td className="px-2 py-1">
-                            <button onClick={() => handleReactivateUser(u)}
-                              className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-border/40 hover:bg-muted/50 transition-colors">
-                              <RotateCcw className="w-2.5 h-2.5" /> Reactivate
-                            </button>
+                            <div className="flex gap-1">
+                              <button onClick={() => handleEditUser(u)}
+                                className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-border/40 hover:bg-muted/50 transition-colors">
+                                <Edit className="w-2.5 h-2.5" /> Edit
+                              </button>
+                              <button onClick={() => handleReactivateUser(u)}
+                                className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-border/40 hover:bg-muted/50 transition-colors">
+                                <RotateCcw className="w-2.5 h-2.5" /> Activate
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );

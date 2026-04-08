@@ -2419,3 +2419,10 @@
 - [x] Bug: Fix mobile/phone view of Organizations tab - tables overflow on small screens
 - [x] Bug: Fix mobile/phone view of Users tab - tables overflow on small screens
 - [x] Bug: Fix mobile view of Admin Dashboard - org names truncating, cards oversized with wasted space
+- [x] Fix: Remove DONE% and N/A QS columns from Organizations table
+- [x] Fix: Remove Complete button from Organizations table actions
+- [x] Fix: Standardize org actions to Edit/Deactivate (active) and Edit/Activate (inactive)
+- [x] Fix: Rename "Off" to "Deactivate" in Users table for consistency
+- [x] Fix: Add Edit button to inactive/deactivated users
+- [x] Fix: Add Edit button to completed orgs (Edit | Reopen)
+- [x] Fix: Add Edit button to deactivated orgs (Edit | Activate)
