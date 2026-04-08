@@ -2416,3 +2416,5 @@
 - [x] Feature: Server-side formatted HTML email generation for remaining tasks (nice table with task name, section, status, owner)
 - [x] Feature: Export buttons on site dashboard UI (Download PDF, Export Email) for admin users
 - [x] Feature: Email preview dialog with Copy HTML and Download HTML options
+- [x] Bug: Fix mobile/phone view of Organizations tab - tables overflow on small screens
+- [x] Bug: Fix mobile/phone view of Users tab - tables overflow on small screens
