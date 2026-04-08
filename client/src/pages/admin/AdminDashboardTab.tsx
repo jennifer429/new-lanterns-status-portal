@@ -66,8 +66,8 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics }: A
           <>
             <div className="flex flex-col gap-2 mb-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-3xl font-bold">Admin Dashboard</h2>
-                <div className="text-sm text-muted-foreground">
+                <h2 className="text-2xl sm:text-3xl font-bold">Admin Dashboard</h2>
+                <div className="text-xs sm:text-sm text-muted-foreground">
                   {(dashboardPartnerFilter !== null || dashboardSiteFilter !== null)
                     ? `${filteredActiveOrgs.length} of ${activeOrgs.length} organizations`
                     : `${activeOrgs.length} active organizations`}
@@ -85,7 +85,7 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics }: A
                       setDashboardSiteFilter(null);
                     }}
                   >
-                    <SelectTrigger className="h-8 text-xs w-44">
+                    <SelectTrigger className="h-8 text-xs w-36 sm:w-44">
                       <SelectValue placeholder="All Partners" />
                     </SelectTrigger>
                     <SelectContent>
@@ -104,7 +104,7 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics }: A
                   value={dashboardSiteFilter === null ? "all" : String(dashboardSiteFilter)}
                   onValueChange={(v) => setDashboardSiteFilter(v === "all" ? null : Number(v))}
                 >
-                  <SelectTrigger className="h-8 text-xs w-48">
+                  <SelectTrigger className="h-8 text-xs w-36 sm:w-48">
                     <SelectValue placeholder="All Sites" />
                   </SelectTrigger>
                   <SelectContent>
@@ -169,11 +169,11 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics }: A
                           next.has(org.id) ? next.delete(org.id) : next.add(org.id);
                           return next;
                         })}
-                        className="w-full px-5 py-3 flex items-center justify-between hover:bg-muted/40 transition-colors bg-muted/25"
+                        className="w-full px-3 sm:px-5 py-3 flex items-center justify-between hover:bg-muted/40 transition-colors bg-muted/25"
                       >
-                        <div className="flex items-center gap-4 min-w-0">
-                          <span className="font-bold text-lg truncate">{org.name}</span>
-                          <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 min-w-0 text-left">
+                          <span className="font-bold text-base sm:text-lg">{org.name}</span>
+                          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
                             <Badge variant="outline" className={cn(
                               "text-sm font-bold border-2 px-2.5 py-0.5",
                               overallPct === 100 ? "border-emerald-500/60 text-emerald-400" : "border-primary/60 text-primary"
@@ -194,9 +194,9 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics }: A
                         <ChevronDown className={cn("w-5 h-5 text-muted-foreground flex-shrink-0 transition-transform duration-200", isExpanded && "rotate-180")} />
                       </button>
 
-                      {/* Expanded mini dashboard */}
+                          {/* Expanded mini dashboard */}
                       {isExpanded && (
-                        <div className="border-t-2 border-primary/60 px-5 py-4 space-y-4 bg-background/80">
+                        <div className="border-t-2 border-primary/60 px-3 sm:px-5 py-4 space-y-4 bg-background/80">
                           {/* Overall progress bar */}
                           <div>
                             <div className="flex items-center justify-between mb-1.5">

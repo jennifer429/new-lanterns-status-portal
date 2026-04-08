@@ -2418,3 +2418,4 @@
 - [x] Feature: Email preview dialog with Copy HTML and Download HTML options
 - [x] Bug: Fix mobile/phone view of Organizations tab - tables overflow on small screens
 - [x] Bug: Fix mobile/phone view of Users tab - tables overflow on small screens
+- [x] Bug: Fix mobile view of Admin Dashboard - org names truncating, cards oversized with wasted space
