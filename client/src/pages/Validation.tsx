@@ -847,7 +847,9 @@ export default function Validation() {
   const openCount = allKeys.length - passCount - failCount - naCount - inProgressCount - blockedCount;
   const total = allKeys.length - naCount;
   const completed = passCount; // "Pass" is the fully completed state
-  const completePct = total > 0 ? Math.round((passCount / total) * 100) : 0;
+  // Weighted: Pass=100%, InProgress=50%, Fail=25%, Blocked=25%; N/A excluded from total
+  const weightedScore = passCount + inProgressCount * 0.5 + failCount * 0.25 + blockedCount * 0.25;
+  const completePct = total > 0 ? Math.round((weightedScore / total) * 100) : 0;
   return (
     <div className="min-h-screen bg-background animate-page-in">
       {/* Header */}

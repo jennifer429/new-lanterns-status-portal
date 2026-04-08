@@ -276,7 +276,8 @@ export default function Admin() {
                           <span className="text-3xl font-bold text-purple-400">
                             {(() => {
                               const applicable = org.taskStats.total - (org.taskStats.notApplicable ?? 0);
-                              return applicable > 0 ? Math.round((org.taskStats.completed / applicable) * 100) : 0;
+                              const weighted = org.taskStats.completed + (org.taskStats.inProgress ?? 0) * 0.5 + (org.taskStats.blocked ?? 0) * 0.25;
+                              return applicable > 0 ? Math.round((weighted / applicable) * 100) : 0;
                             })()}%
                           </span>
                           <span className="text-xs text-gray-400">Complete</span>
