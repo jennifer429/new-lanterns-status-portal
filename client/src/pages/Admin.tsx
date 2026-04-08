@@ -57,16 +57,16 @@ export default function Admin() {
     <div className="min-h-screen bg-gradient-to-br from-purple-950 via-slate-900 to-purple-950 animate-page-in">
       {/* Header */}
       <header className="border-b border-purple-500/20 bg-black/30 backdrop-blur-md sticky top-0 z-50">
-        <div className="container py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-12" />
-              <div>
-                <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
-                <p className="text-sm text-purple-300 mt-1">PACS Implementation Portal</p>
+        <div className="container py-3 sm:py-6">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+              <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-8 sm:h-12 shrink-0" />
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-2xl font-bold text-white leading-tight">Admin Dashboard</h1>
+                <p className="text-xs sm:text-sm text-purple-300 hidden sm:block mt-0.5">PACS Implementation Portal</p>
               </div>
             </div>
-            
+
             <UserMenu />
           </div>
         </div>
@@ -78,24 +78,23 @@ export default function Admin() {
       {/* Main Content */}
       <div className="container py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="bg-black/40 border border-purple-500/20 mb-6">
+          <TabsList className="bg-black/40 border border-purple-500/20 mb-6 h-auto flex-wrap gap-1 p-1">
             <TabsTrigger value="dashboard" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-gray-300">
-              <Activity className="w-4 h-4 mr-2" />
-              Dashboard
+              <Activity className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Dashboard</span>
             </TabsTrigger>
             <TabsTrigger value="users" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-gray-300">
-              <Users className="w-4 h-4 mr-2" />
-              Users
+              <Users className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Users</span>
             </TabsTrigger>
             <TabsTrigger value="files" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-gray-300">
-              <FileText className="w-4 h-4 mr-2" />
-              Files
+              <FileText className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Files</span>
             </TabsTrigger>
             <TabsTrigger value="update-organizations" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-gray-300">
-              <Building2 className="w-4 h-4 mr-2" />
-              Update Organizations
+              <Building2 className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Update Organizations</span>
             </TabsTrigger>
-
           </TabsList>
 
           <TabsContent value="dashboard">
@@ -275,9 +274,11 @@ export default function Admin() {
                         <h3 className="text-white font-semibold text-sm mb-2">Task Summary</h3>
                         <div className="flex items-center gap-3 mb-2">
                           <span className="text-3xl font-bold text-purple-400">
-                            {org.taskStats.total > 0
-                              ? Math.round(((org.taskStats.completed * 1.0 + org.taskStats.notApplicable * 1.0 + org.taskStats.inProgress * 0.5 + org.taskStats.blocked * 0.25) / org.taskStats.total) * 100)
-                              : 0}%
+                            {(() => {
+                              const applicable = org.taskStats.total - (org.taskStats.notApplicable ?? 0);
+                              const weighted = org.taskStats.completed + (org.taskStats.inProgress ?? 0) * 0.5 + (org.taskStats.blocked ?? 0) * 0.25;
+                              return applicable > 0 ? Math.round((weighted / applicable) * 100) : 0;
+                            })()}%
                           </span>
                           <span className="text-xs text-gray-400">Complete</span>
                         </div>

@@ -112,7 +112,7 @@ export function OrganizationManagement() {
   return (
     <Card className="border-purple-500/20 bg-black/40 backdrop-blur-xl">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
           <div>
             <CardTitle className="text-white text-xl">Update Organizations</CardTitle>
             <CardDescription className="text-gray-300">
@@ -121,7 +121,7 @@ export function OrganizationManagement() {
           </div>
           <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-purple-600 hover:bg-purple-500 text-white">
+              <Button className="bg-purple-600 hover:bg-purple-500 text-white w-full sm:w-auto">
                 <Plus className="w-4 h-4 mr-2" />
                 Create New Organization
               </Button>
@@ -170,9 +170,9 @@ export function OrganizationManagement() {
       <CardContent className="p-0">
         <table className="w-full border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
           <colgroup>
-            <col style={{ width: '40%' }} />
-            <col style={{ width: '40%' }} />
-            <col style={{ width: '20%' }} />
+            <col style={{ width: '42%' }} />
+            <col style={{ width: '26%' }} />
+            <col style={{ width: '32%' }} />
           </colgroup>
           <thead>
             <tr className="border-b border-purple-500/20 bg-purple-950/20">
@@ -193,13 +193,13 @@ export function OrganizationManagement() {
                   </td>
                   <td className="px-4 py-2 text-gray-400 font-mono truncate">{org.slug}</td>
                   <td className="px-3 py-1.5">
-                    <div className="flex items-center justify-end gap-1">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-1">
                       <button onClick={() => openEditDialog(org)}
-                        className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] text-purple-300 hover:text-white border border-purple-500/30 hover:bg-purple-600 transition-colors">
+                        className="flex items-center justify-center gap-1 px-2 py-0.5 rounded text-[10px] text-purple-300 hover:text-white border border-purple-500/30 hover:bg-purple-600 transition-colors">
                         <Edit className="w-2.5 h-2.5" /> Rename
                       </button>
                       <button onClick={() => openDeleteDialog(org)}
-                        className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] text-red-400/70 hover:text-white border border-red-500/20 hover:bg-red-600 transition-colors">
+                        className="flex items-center justify-center gap-1 px-2 py-0.5 rounded text-[10px] text-red-400/70 hover:text-white border border-red-500/20 hover:bg-red-600 transition-colors">
                         <Trash2 className="w-2.5 h-2.5" /> Remove
                       </button>
                     </div>

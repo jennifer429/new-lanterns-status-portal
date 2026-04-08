@@ -609,14 +609,16 @@ export default function Home() {
     })
     .slice(0, 3);
 
-  // Weighted progress: Done=100%, N/A=100%, InProgress=50%, Blocked=25%, Open=0%
+  // Weighted progress: Done=100%, InProgress=50%, Blocked=25%, Open=0%; N/A excluded from denominator
   // Implementation weighted progress
-  const implWeightedScore = implTotal > 0
-    ? ((implCompleted * 1.0 + implNaCount * 1.0 + implInProgressCount * 0.5 + implBlockedCount * 0.25) / implTotal) * 100
+  const implApplicable = implTotal - implNaCount;
+  const implWeightedScore = implApplicable > 0
+    ? ((implCompleted + implInProgressCount * 0.5 + implBlockedCount * 0.25) / implApplicable) * 100
     : 0;
-  // Validation weighted progress (Pass=100%, Fail=25%, N/A=100%, InProgress=50%, Blocked=25%, NotTested=0%)
-  const valWeightedScore = 28 > 0
-    ? ((valCompleted * 1.0 + valNaCount * 1.0 + valFailedCount * 0.25 + valInProgressCount * 0.5 + valBlockedCount * 0.25) / 28) * 100
+  // Validation weighted progress (Pass=100%, Fail=25%, InProgress=50%, Blocked=25%; N/A excluded)
+  const valApplicable = 28 - valNaCount;
+  const valWeightedScore = valApplicable > 0
+    ? ((valCompleted + valFailedCount * 0.25 + valInProgressCount * 0.5 + valBlockedCount * 0.25) / valApplicable) * 100
     : 0;
   // Overall progress (weighted: questionnaire 40%, testing 30%, implementation 30%)
   const qPct = totalSections > 0 ? (completedSections / totalSections) * 100 : 0;
@@ -1008,8 +1010,8 @@ export default function Home() {
                 <div className="grid grid-cols-3 gap-1.5">
                   {[
                     { label: "Questionnaire", count: `${completedSections}/${totalSections}`, pct: Math.round(qPct), done: qDone },
-                    { label: "Tests Passed", count: `${valCompleted + valNaCount}/${valTotal}`, pct: Math.round(vPct), done: vPct >= 100 },
-                    { label: "Tasks Done", count: `${implCompleted + implNaCount}/${implTotal}`, pct: Math.round(iPct), done: iPct >= 100 },
+                    { label: "Tests Passed", count: `${valCompleted}/${valApplicable}`, pct: Math.round(vPct), done: vPct >= 100 },
+                    { label: "Tasks Done", count: `${implCompleted}/${implApplicable}`, pct: Math.round(iPct), done: iPct >= 100 },
                   ].map((stat) => (
                     <div
                       key={stat.label}
@@ -1423,7 +1425,7 @@ export default function Home() {
           {/* Task List card — merged with task summary */}
           {(() => {
             // Weighted: Done=100%, N/A=100%, InProgress=50%, Blocked=25%, Open=0%
-            const pct = implTotal > 0 ? Math.round(((implCompleted * 1.0 + implNaCount * 1.0 + implInProgressCount * 0.5 + implBlockedCount * 0.25) / implTotal) * 100) : 0;
+            const pct = Math.round(iPct);
             const isDone = pct >= 100;
             const label = isDone ? "View" : implCompleted > 0 ? "Continue" : "Start";
             return (
@@ -1471,7 +1473,7 @@ export default function Home() {
                     {/* Progress bar */}
                     <div className="mb-3">
                       <div className="flex items-center justify-between text-xs mb-1.5">
-                        <span className="text-muted-foreground">{implCompleted + implNaCount}/{implTotal} complete</span>
+                        <span className="text-muted-foreground">{implCompleted}/{implApplicable} tasks done</span>
                         <span className={cn("font-semibold", isDone ? "text-emerald-400" : "text-foreground")}>{pct}%</span>
                       </div>
                       <div className="h-2 bg-muted/40 rounded-full overflow-hidden">

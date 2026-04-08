@@ -486,7 +486,8 @@ export default function Implementation() {
   const completed = allTaskIds.filter(id => getMerged(id).completed && !getMerged(id).notApplicable).length;
   const inProgressCount = allTaskIds.filter(id => getMerged(id).inProgress && !getMerged(id).notApplicable).length;
   const blockedCount = allTaskIds.filter(id => getMerged(id).blocked && !getMerged(id).notApplicable).length;
-  const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+  const weightedScore = completed + inProgressCount * 0.5 + blockedCount * 0.25;
+  const pct = total > 0 ? Math.round((weightedScore / total) * 100) : 0;
   return (
     <div className="min-h-screen bg-background animate-page-in">
       {/* Header */}
@@ -977,7 +978,7 @@ export default function Implementation() {
                         <circle
                           cx="18" cy="18" r="15.9155" fill="none"
                           stroke="hsl(var(--primary))" strokeWidth="3"
-                          strokeDasharray={`${total > 0 ? (completed / total) * 100 : 0} ${total > 0 ? 100 - (completed / total) * 100 : 100}`}
+                          strokeDasharray={`${pct} ${100 - pct}`}
                         />
                       </svg>
                       <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -1019,7 +1020,7 @@ export default function Implementation() {
                         <div className="w-3 h-3 rounded-full bg-muted-foreground/30" />
                         <span className="text-foreground">Open</span>
                       </div>
-                      <span className="font-medium text-foreground">{total - completed}</span>
+                      <span className="font-medium text-foreground">{total - completed - inProgressCount - blockedCount}</span>
                     </div>
                     {naCount > 0 && (
                       <div className="flex items-center justify-between">
