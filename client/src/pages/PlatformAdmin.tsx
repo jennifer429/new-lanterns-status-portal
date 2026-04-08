@@ -17,9 +17,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ClipboardList, Users, FileText, TrendingUp, Download, LogOut, Settings, ChevronDown, ListChecks } from "lucide-react";
+import { ClipboardList, Users, FileText, Download, LogOut, Settings, ChevronDown, ListChecks, History } from "lucide-react";
 import { toast } from "sonner";
 import { AdminChatWidget } from "@/components/AdminChatWidget";
+import { AiAuditLog } from "@/components/AiAuditLog";
 import { ConnectivityMatrix } from "./admin/ConnectivityMatrix";
 import { AdminDashboardTab } from "./admin/AdminDashboardTab";
 import { OrgsTab } from "./admin/OrgsTab";
@@ -30,7 +31,7 @@ import { PartnersTab } from "./admin/PartnersTab";
 import { SpecsTab } from "./admin/SpecsTab";
 import { VendorPicklistsTab } from "./admin/VendorPicklistsTab";
 
-type Tab = "prod-dashboard" | "impl-dashboard" | "orgs" | "users" | "templates" | "task-templates" | "partners" | "specs" | "vendor-picklists";
+type Tab = "prod-dashboard" | "impl-dashboard" | "orgs" | "users" | "templates" | "task-templates" | "partners" | "specs" | "vendor-picklists" | "audit-log";
 
 function getPartnerDisplayName(user: any, clients?: any[]): string {
   if (!user?.clientId) return "Platform";
@@ -75,7 +76,6 @@ export default function PlatformAdmin() {
 
   const handleExportAll = () => {
     const lines = ["Type,Name,Email,Organization,Partner,Role,Status,Completion %,Last Login"];
-    const clientMap = clients?.reduce((acc, c) => { acc[c.id] = c.name; return acc; }, {} as Record<number, string>) || {};
     orgs?.forEach(org => {
       const orgMetrics = metrics?.find(m => m.organizationId === org.id);
       const partnerName = org.clientId && clients ? clients.find(c => c.id === org.clientId)?.name || "N/A" : "N/A";
@@ -117,6 +117,8 @@ export default function PlatformAdmin() {
     refetchUsers,
   };
 
+  const adminTabs: Tab[] = ["users", "orgs", "templates", "task-templates", "partners", "specs", "vendor-picklists", "audit-log"];
+
   return (
     <div className="min-h-screen bg-background animate-page-in">
       {/* Header */}
@@ -128,12 +130,14 @@ export default function PlatformAdmin() {
             </div>
             <div className="flex-1 flex flex-col items-center justify-center min-w-0">
               <h1 className="text-lg sm:text-3xl font-bold text-foreground truncate">{headerTitle}</h1>
-              <p className="text-sm text-muted-foreground mt-0.5">{headerSubtitle}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 truncate max-w-[200px] sm:max-w-none">
+                {headerSubtitle}
+              </p>
             </div>
-            <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm" onClick={handleExportAll} className="gap-2">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Button variant="outline" size="sm" onClick={handleExportAll} className="gap-2 px-2 sm:px-3">
                 <Download className="w-4 h-4" />
-                Export All
+                <span className="hidden sm:inline">Export All</span>
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -180,11 +184,11 @@ export default function PlatformAdmin() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className={`pb-2 sm:pb-3 px-1 text-sm font-medium transition-colors relative whitespace-nowrap flex items-center gap-1 shrink-0 ${["users", "orgs", "templates", "task-templates", "partners", "specs", "vendor-picklists"].includes(activeTab) ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}>
+                <button className={`pb-2 sm:pb-3 px-1 text-sm font-medium transition-colors relative whitespace-nowrap flex items-center gap-1 shrink-0 ${adminTabs.includes(activeTab) ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}>
                   <Settings className="w-4 h-4" />
                   Admin
                   <ChevronDown className="w-3 h-3" />
-                  {["users", "orgs", "templates", "task-templates", "partners", "specs", "vendor-picklists"].includes(activeTab) && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
+                  {adminTabs.includes(activeTab) && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-48">
@@ -202,6 +206,10 @@ export default function PlatformAdmin() {
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setActiveTab("vendor-picklists")} className="cursor-pointer">
                   <ListChecks className="mr-2 h-4 w-4" />Vendor Picklists
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setActiveTab("audit-log")} className="cursor-pointer">
+                  <History className="mr-2 h-4 w-4" />AI Audit Log
                 </DropdownMenuItem>
                 {isPlatformAdmin && (
                   <>
@@ -233,30 +241,15 @@ export default function PlatformAdmin() {
             }))}
           />
         )}
-        {activeTab === "impl-dashboard" && (
-          <AdminDashboardTab {...sharedProps} metrics={metrics} />
-        )}
-        {activeTab === "orgs" && (
-          <OrgsTab {...sharedProps} metrics={metrics} />
-        )}
-        {activeTab === "users" && (
-          <UsersTab {...sharedProps} />
-        )}
-        {activeTab === "task-templates" && (
-          <TaskTemplatesTab isPlatformAdmin={isPlatformAdmin} clients={clients || []} />
-        )}
-        {activeTab === "templates" && (
-          <TemplatesTab isPlatformAdmin={isPlatformAdmin} clients={clients || []} />
-        )}
-        {activeTab === "partners" && isPlatformAdmin && (
-          <PartnersTab clients={clients || []} orgs={orgs || []} refetchOrgs={refetchOrgs} />
-        )}
-        {activeTab === "specs" && isPlatformAdmin && (
-          <SpecsTab />
-        )}
-        {activeTab === "vendor-picklists" && (
-          <VendorPicklistsTab />
-        )}
+        {activeTab === "impl-dashboard" && <AdminDashboardTab {...sharedProps} metrics={metrics} />}
+        {activeTab === "orgs" && <OrgsTab {...sharedProps} metrics={metrics} />}
+        {activeTab === "users" && <UsersTab {...sharedProps} />}
+        {activeTab === "task-templates" && <TaskTemplatesTab isPlatformAdmin={isPlatformAdmin} clients={clients || []} />}
+        {activeTab === "templates" && <TemplatesTab isPlatformAdmin={isPlatformAdmin} clients={clients || []} />}
+        {activeTab === "partners" && isPlatformAdmin && <PartnersTab clients={clients || []} orgs={orgs || []} refetchOrgs={refetchOrgs} />}
+        {activeTab === "specs" && isPlatformAdmin && <SpecsTab />}
+        {activeTab === "vendor-picklists" && <VendorPicklistsTab />}
+        {activeTab === "audit-log" && <AiAuditLog />}
       </div>
 
       <AdminChatWidget isPlatformAdmin={!user?.clientId} />

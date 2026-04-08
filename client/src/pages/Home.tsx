@@ -30,6 +30,9 @@ import {
   Maximize2,
   Upload,
   FolderOpen,
+  FileDown,
+  Mail,
+  Printer,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Link, useRoute } from "wouter";
@@ -43,6 +46,19 @@ import { UserMenu } from "@/components/UserMenu";
 import { cn } from "@/lib/utils";
 import { UploadedFilesList } from "@/components/UploadedFileRow";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { InlineChatPanel } from "@/components/InlineChatPanel";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // ── Progress Ring (SVG) ─────────────────────────────────────────────────────
 function ProgressRing({
@@ -293,6 +309,8 @@ export default function Home() {
   const [adhocUploading, setAdhocUploading] = useState(false);
   const [notesLabel, setNotesLabel] = useState("Call Notes");
   const [notesCustomLabel, setNotesCustomLabel] = useState("");
+  const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
+  const [exportLoading, setExportLoading] = useState<"pdf" | "email" | null>(null);
 
   // Fetch organization data
   const { data: organization, isLoading: orgLoading } =
@@ -665,18 +683,23 @@ export default function Home() {
       <PhiDisclaimer />
 
       {/* Dashboard Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 space-y-3">
+      <div className="max-w-7xl mx-auto px-3 sm:px-5 py-2 space-y-2">
+
+        {/* ── AI Assistant (always visible for admin users) ── */}
+        {currentUser?.role === "admin" && (
+          <InlineChatPanel isPlatformAdmin={!currentUser?.clientId} orgSlug={orgSlug} />
+        )}
 
         {/* ═══════════════════════════════════════════════════════════════════
             TOP ROW: 3 Expandable Resource Cards
             ═══════════════════════════════════════════════════════════════════ */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
 
           {/* ── 1. Connectivity Card ── */}
           <Card className="card-elevated overflow-hidden">
             <button
               onClick={() => setConnectivityOpen(!connectivityOpen)}
-              className="w-full px-4 py-3 flex items-center justify-between hover:bg-accent/30 transition-colors"
+              className="w-full px-3 py-2 flex items-center justify-between hover:bg-accent/30 transition-colors"
             >
               <div className="flex items-center gap-2.5">
                 <div className="p-1.5 rounded-lg bg-primary/10">
@@ -748,7 +771,7 @@ export default function Home() {
           <Card className="card-elevated overflow-hidden">
             <button
               onClick={() => setArchitectureOpen(!architectureOpen)}
-              className="w-full px-4 py-3 flex items-center justify-between hover:bg-accent/30 transition-colors"
+              className="w-full px-3 py-2 flex items-center justify-between hover:bg-accent/30 transition-colors"
             >
               <div className="flex items-center gap-2.5">
                 <div className="p-1.5 rounded-lg bg-primary/10">
@@ -870,7 +893,7 @@ export default function Home() {
           <Card className="card-elevated overflow-hidden">
             <button
               onClick={() => setSpecsOpen(!specsOpen)}
-              className="w-full px-4 py-3 flex items-center justify-between hover:bg-accent/30 transition-colors"
+              className="w-full px-3 py-2 flex items-center justify-between hover:bg-accent/30 transition-colors"
             >
               <div className="flex items-center gap-2.5">
                 <div className="p-1.5 rounded-lg bg-primary/10">
@@ -964,17 +987,17 @@ export default function Home() {
         <Card className="card-elevated overflow-hidden">
           {/* Top accent gradient */}
           <div className="h-1 bg-gradient-to-r from-primary via-primary/60 to-emerald-500/40" />
-          <CardContent className="p-4">
-            <div className="flex flex-col md:flex-row items-center gap-4">
+          <CardContent className="p-3">
+            <div className="flex flex-col md:flex-row items-center gap-3">
               {/* Progress Ring */}
-              <ProgressRing value={overallPct} size={90} stroke={7} />
+              <ProgressRing value={overallPct} size={72} stroke={6} />
 
               {/* Stats */}
               <div className="flex-1 text-center md:text-left">
-                <h2 className="text-lg font-bold tracking-tight mb-0.5">
+                <h2 className="text-base font-bold tracking-tight mb-0.5">
                   Implementation Progress
                 </h2>
-                <p className="text-xs text-muted-foreground mb-3">
+                <p className="text-xs text-muted-foreground mb-2">
                   {overallPct === 100
                     ? "All phases complete — ready for go-live."
                     : overallPct > 0
@@ -982,7 +1005,7 @@ export default function Home() {
                       : "Get started by filling out the questionnaire."}
                 </p>
 
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-1.5">
                   {[
                     { label: "Questionnaire", count: `${completedSections}/${totalSections}`, pct: Math.round(qPct), done: qDone },
                     { label: "Tests Passed", count: `${valCompleted + valNaCount}/${valTotal}`, pct: Math.round(vPct), done: vPct >= 100 },
@@ -991,7 +1014,7 @@ export default function Home() {
                     <div
                       key={stat.label}
                       className={cn(
-                        "text-center p-2 rounded-lg border transition-colors",
+                        "text-center p-1.5 rounded-lg border transition-colors",
                         stat.done
                           ? "bg-emerald-500/10 border-emerald-500/20"
                           : "bg-muted/20 border-border/30"
@@ -1056,9 +1079,90 @@ export default function Home() {
         </Card>
 
         {/* ═══════════════════════════════════════════════════════════════════
+            EXPORT ACTIONS (admin only)
+            ═══════════════════════════════════════════════════════════════════ */}
+        {currentUser?.role === "admin" && (
+          <div className="flex items-center justify-end gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs gap-1.5 border-border/50 hover:bg-accent/30"
+                  disabled={exportLoading !== null}
+                >
+                  {exportLoading ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <FileDown className="w-3.5 h-3.5" />
+                  )}
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={async () => {
+                    setExportLoading("pdf");
+                    try {
+                      const res = await fetch(
+                        `/api/trpc/exports.statusReport?input=${encodeURIComponent(JSON.stringify({ organizationSlug: orgSlug }))}`
+                      );
+                      const json = await res.json();
+                      const result = json?.result?.data;
+                      if (!result?.html) throw new Error("No data");
+                      // Open in new window for print-to-PDF
+                      const win = window.open("", "_blank");
+                      if (win) {
+                        win.document.write(result.html);
+                        win.document.close();
+                        // Auto-trigger print dialog after a short delay
+                        setTimeout(() => win.print(), 600);
+                      }
+                      toast.success("Status report opened — use Print to save as PDF");
+                    } catch (e) {
+                      toast.error("Failed to generate status report");
+                    } finally {
+                      setExportLoading(null);
+                    }
+                  }}
+                >
+                  <Printer className="w-4 h-4 mr-2" />
+                  Print Status Report (PDF)
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={async () => {
+                    setExportLoading("email");
+                    try {
+                      const res = await fetch(
+                        `/api/trpc/exports.taskEmail?input=${encodeURIComponent(JSON.stringify({ organizationSlug: orgSlug }))}`
+                      );
+                      const json = await res.json();
+                      const result = json?.result?.data;
+                      if (!result?.html) throw new Error("No data");
+                      // Store the HTML for preview
+                      (window as any).__emailPreviewHtml = result.html;
+                      (window as any).__emailPreviewFilename = result.filename;
+                      setEmailPreviewOpen(true);
+                      toast.success("Email preview ready");
+                    } catch (e) {
+                      toast.error("Failed to generate email");
+                    } finally {
+                      setExportLoading(null);
+                    }
+                  }}
+                >
+                  <Mail className="w-4 h-4 mr-2" />
+                  Remaining Tasks Email
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════════
             WORKFLOW PHASE CARDS
             ═══════════════════════════════════════════════════════════════════ */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           {/* Questionnaire card — merged with section summary */}
           {(() => {
             const qPctCard = totalSections > 0 ? Math.round((completedSections / totalSections) * 100) : 0;
@@ -1082,7 +1186,7 @@ export default function Home() {
                           : "bg-gradient-to-r from-muted-foreground/20 to-muted-foreground/10"
                     )}
                   />
-                  <CardContent className="p-4 pt-5">
+                  <CardContent className="p-3 pt-3.5">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <div
@@ -1214,7 +1318,7 @@ export default function Home() {
                           : "bg-gradient-to-r from-muted-foreground/20 to-muted-foreground/10"
                     )}
                   />
-                  <CardContent className="p-4 pt-5">
+                  <CardContent className="p-3 pt-3.5">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <div
@@ -1341,7 +1445,7 @@ export default function Home() {
                           : "bg-gradient-to-r from-muted-foreground/20 to-muted-foreground/10"
                     )}
                   />
-                  <CardContent className="p-4 pt-5">
+                  <CardContent className="p-3 pt-3.5">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <div
@@ -1591,9 +1695,68 @@ export default function Home() {
           )}
         </Card>
 
-        {/* Bottom spacer */}
+          {/* Bottom spacer */}
         <div className="h-2" />
       </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          EMAIL PREVIEW DIALOG
+          ═══════════════════════════════════════════════════════════════════ */}
+      <Dialog open={emailPreviewOpen} onOpenChange={setEmailPreviewOpen}>
+        <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="w-5 h-5" />
+              Remaining Tasks Email Preview
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto border border-border rounded-lg bg-white">
+            <iframe
+              srcDoc={(typeof window !== 'undefined' && (window as any).__emailPreviewHtml) || ''}
+              className="w-full h-full min-h-[500px] border-0"
+              title="Email Preview"
+            />
+          </div>
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                // Copy HTML to clipboard
+                const html = (window as any).__emailPreviewHtml;
+                if (html) {
+                  navigator.clipboard.writeText(html).then(() => {
+                    toast.success("Email HTML copied to clipboard");
+                  });
+                }
+              }}
+            >
+              Copy HTML
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                // Download as HTML file
+                const html = (window as any).__emailPreviewHtml;
+                const filename = (window as any).__emailPreviewFilename || 'remaining-tasks.html';
+                if (html) {
+                  const blob = new Blob([html], { type: 'text/html' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = filename;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  toast.success(`Downloaded ${filename}`);
+                }
+              }}
+            >
+              <Download className="w-4 h-4 mr-1.5" />
+              Download HTML
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

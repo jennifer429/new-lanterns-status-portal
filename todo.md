@@ -2378,3 +2378,43 @@
 - [ ] Skip auto-populate for generic uploads without a discrete customer tie
 - [ ] Chat assistant answers user questions and navigates them to the relevant page/section
 - [ ] Chat suggests users can paste emails or upload forms to auto-extract and populate answers
+
+## AI Chat RBAC & Partner Dashboard (Apr 6, 2026)
+- [x] Add AI chat widget to partner dashboard (Home.tsx) at the top
+- [x] Harden AI router RBAC - strict partner isolation in all tool executors (no cross-partner data leakage)
+- [x] Allow partner admins (not just platform admins) to use AI chat endpoint
+- [x] Write tests for RBAC enforcement in AI router
+
+## AI Audit Logging System (Apr 6, 2026)
+- [x] Create aiAuditLogs database table schema (action, actor, target, result, metadata, timestamp)
+- [x] Push database migration for audit log table
+- [x] Add audit logging to every AI tool executor (navigate, list_orgs, list_users, create_org, create_user, get_report, extract_text)
+- [x] Log the chat conversation itself (user prompt + AI response)
+- [x] Create tRPC endpoints to query audit logs (list with filters, detail view)
+- [x] Build admin UI page to view AI audit logs with filtering
+- [x] RBAC on audit log viewing (platform admin sees all, partner admin sees only their logs)
+- [x] Write tests for audit logging
+
+## AI Chat Inline Panel & Dashboard Navigation (Apr 6, 2026)
+- [x] Redesign AdminChatWidget from floating overlay to inline panel component
+- [x] Place inline AI chat at the top of the partner dashboard (always visible)
+- [x] Make org names clickable on partner dashboard to navigate to site dashboard
+- [x] Make org names clickable on admin dashboard to navigate to site dashboard
+- [x] Tighten site dashboard spacing — reduce padding/gaps to fit on one screen
+- [x] Improve site dashboard mobile responsiveness
+- [x] Save Notion/CRM architecture design discussion as a design doc
+
+## Context-Aware AI Chat on Site Dashboard (Apr 6, 2026)
+- [x] Add org-scoped tools to AI router: get_tasks, get_notes, get_questionnaire_answers, get_files, get_connectivity
+- [x] Pass org slug/id from InlineChatPanel to AI chat endpoint when on site dashboard
+- [x] Update system prompt for site dashboard context — AI should use org data and not reference other orgs
+- [ ] AI should be able to read uploaded files/documents for the current org
+- [ ] Test AI can answer questions about a specific org's tasks, notes, questionnaire, connectivity
+- [x] Bug: Duplicate "Ask anything" input bars on site dashboard (InlineChatPanel + AIChatBox both show inputs)
+- [x] Bug: AI assistant on site dashboard still uses cross-org tools (list_organizations etc.) — must restrict to org-scoped tools ONLY
+- [x] Feature: Server-side PDF status report generation for site dashboard (org profile, progress stats, phase summaries)
+- [x] Feature: Server-side formatted HTML email generation for remaining tasks (nice table with task name, section, status, owner)
+- [x] Feature: Export buttons on site dashboard UI (Download PDF, Export Email) for admin users
+- [x] Feature: Email preview dialog with Copy HTML and Download HTML options
+- [x] Bug: Fix mobile/phone view of Organizations tab - tables overflow on small screens
+- [x] Bug: Fix mobile/phone view of Users tab - tables overflow on small screens

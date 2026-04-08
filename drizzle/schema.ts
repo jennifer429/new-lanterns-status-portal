@@ -452,3 +452,49 @@ export const orgCustomTasks = mysqlTable("orgCustomTasks", {
 
 export type OrgCustomTask = typeof orgCustomTasks.$inferSelect;
 export type InsertOrgCustomTask = typeof orgCustomTasks.$inferInsert;
+
+/**
+ * AI Audit Logs - comprehensive logging for all AI assistant actions.
+ * Every tool call, chat interaction, and data mutation initiated through the AI
+ * is recorded here for compliance, debugging, and accountability.
+ *
+ * RBAC: Platform admins see all logs. Partner admins see only logs where clientId matches.
+ */
+export const aiAuditLogs = mysqlTable("aiAuditLogs", {
+  id: int("id").autoincrement().primaryKey(),
+  /** The tool/action that was executed (e.g., "chat", "create_organization", "list_users") */
+  action: varchar("action", { length: 100 }).notNull(),
+  /** High-level category for filtering */
+  category: mysqlEnum("category", ["chat", "read", "write", "navigate", "extract"]).notNull(),
+  /** The user who triggered the action */
+  actorId: int("actorId"), // FK to users.id
+  actorEmail: varchar("actorEmail", { length: 320 }),
+  actorRole: varchar("actorRole", { length: 50 }), // "admin" role name
+  /** Partner isolation: which client (partner) this action belongs to */
+  clientId: int("clientId"), // FK to clients.id — null for platform admins
+  /** Optional target references */
+  organizationId: int("organizationId"), // If the action targeted a specific org
+  organizationSlug: varchar("organizationSlug", { length: 100 }), // Slug for easy display
+  targetUserId: int("targetUserId"), // If the action targeted a specific user
+  targetUserEmail: varchar("targetUserEmail", { length: 320 }),
+  /** The user's prompt / input that triggered this action */
+  userPrompt: text("userPrompt"),
+  /** The AI's response text */
+  aiResponse: text("aiResponse"),
+  /** Tool call arguments (JSON) */
+  toolArgs: text("toolArgs"),
+  /** Tool call result (JSON, truncated if large) */
+  toolResult: text("toolResult"),
+  /** Whether the action succeeded or failed */
+  status: mysqlEnum("status", ["success", "error", "denied"]).default("success").notNull(),
+  /** Error message if the action failed */
+  errorMessage: text("errorMessage"),
+  /** IP address of the request (for security auditing) */
+  ipAddress: varchar("ipAddress", { length: 45 }),
+  /** Duration of the action in milliseconds */
+  durationMs: int("durationMs"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AiAuditLog = typeof aiAuditLogs.$inferSelect;
+export type InsertAiAuditLog = typeof aiAuditLogs.$inferInsert;
