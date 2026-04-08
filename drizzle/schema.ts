@@ -434,6 +434,26 @@ export type PartnerTaskTemplate = typeof partnerTaskTemplates.$inferSelect;
 export type InsertPartnerTaskTemplate = typeof partnerTaskTemplates.$inferInsert;
 
 /**
+ * Org-specific custom tasks — added by hospital users to their own task list.
+ * These are per-org and do NOT affect the partner's template for other sites.
+ */
+export const orgCustomTasks = mysqlTable("orgCustomTasks", {
+  id: int("id").autoincrement().primaryKey(),
+  organizationId: int("organizationId").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  type: varchar("type", { length: 50 }).notNull().default("review"),
+  section: varchar("section", { length: 255 }),
+  isComplete: tinyint("isComplete").default(0).notNull(),
+  createdBy: varchar("createdBy", { length: 320 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type OrgCustomTask = typeof orgCustomTasks.$inferSelect;
+export type InsertOrgCustomTask = typeof orgCustomTasks.$inferInsert;
+
+/**
  * AI Audit Logs - comprehensive logging for all AI assistant actions.
  * Every tool call, chat interaction, and data mutation initiated through the AI
  * is recorded here for compliance, debugging, and accountability.
