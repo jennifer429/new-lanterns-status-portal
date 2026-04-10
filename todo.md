@@ -2426,3 +2426,15 @@
 - [x] Fix: Add Edit button to inactive/deactivated users
 - [x] Fix: Add Edit button to completed orgs (Edit | Reopen)
 - [x] Fix: Add Edit button to deactivated orgs (Edit | Activate)
+
+## External API Layer (for Claude/automation access)
+- [x] External API: Add EXTERNAL_API_KEY env secret + bearer token auth middleware
+- [x] External API: Add invitedAt and inviteToken columns to users table + migrate
+- [x] External API: Create /api/external router with shared auth guard
+- [x] External API: Build GET /api/external/invites/pending (uninvited users with org dashboard URLs)
+- [x] External API: Build POST /api/external/invites/mark-sent (marks users as invited)
+- [x] External API: Build POST /api/external/set-password (user sets password via invite token link)
+- [x] External API: Write tests for external API endpoints
+- [x] External API: Build GET /api/external/orgs (list all orgs with dashboard URLs)
+- [x] External API: Add SetPassword frontend page (/set-password?token=xxx)
+- [ ] External API: Document API endpoints for Claude usage

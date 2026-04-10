@@ -41,6 +41,9 @@ async function startServer() {
   registerAuthRoutes(app);
   // Webhook endpoints
   registerWebhooks(app);
+  // External API (for Claude/automation — bearer token auth)
+  const { registerExternalApi } = await import("../external/index");
+  registerExternalApi(app);
   // tRPC API
   app.use(
     "/api/trpc",

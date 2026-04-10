@@ -11,6 +11,7 @@ import IntakeNewRedesign from "./pages/IntakeNewRedesign";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import SetPassword from "./pages/SetPassword";
 import Tasks from "./pages/Tasks";
 import IntakeComplete from "./pages/IntakeComplete";
 import CreateOrganization from "./pages/CreateOrganization";
@@ -27,6 +28,7 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
+      <Route path="/set-password" component={SetPassword} />
       <Route path="/admin" component={Admin} />
       <Route path="/org/admin/create" component={CreateOrganization} />
       {/* Partner admin create org - supports any partner slug */}
