@@ -2438,3 +2438,11 @@
 - [x] External API: Build GET /api/external/orgs (list all orgs with dashboard URLs)
 - [x] External API: Add SetPassword frontend page (/set-password?token=xxx)
 - [ ] External API: Document API endpoints for Claude usage
+
+## Admin Tables: Search, Sort, Export, Import
+- [x] Build shared DataTable component with real-time search (autofill, no enter), column sorting, CSV export
+- [x] Refactor UsersTab to use DataTable with search/sort/export
+- [x] Refactor OrgsTab to use DataTable with search/sort/export
+- [x] Refactor PartnersTab to use DataTable with search/sort/export
+- [x] Build CSV import UI for bulk user creation (client-side, uses existing createUser mutation)
+- [ ] Write tests for CSV import endpoint
