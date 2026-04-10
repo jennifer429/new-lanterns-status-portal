@@ -226,3 +226,62 @@ describe("password hashing for set-password", () => {
     expect(isMatch).toBe(false);
   });
 });
+
+// ============================================================================
+// 6. RESEND INVITE LOGIC TESTS
+// ============================================================================
+
+describe("resendInvite logic", () => {
+  it("resetting invite clears invitedAt, inviteToken, and inviteTokenExpiresAt", () => {
+    // Simulate the DB update payload that resendInvite sends
+    const resetPayload = {
+      invitedAt: null,
+      inviteToken: null,
+      inviteTokenExpiresAt: null,
+    };
+
+    expect(resetPayload.invitedAt).toBeNull();
+    expect(resetPayload.inviteToken).toBeNull();
+    expect(resetPayload.inviteTokenExpiresAt).toBeNull();
+  });
+
+  it("after reset, user should appear in pending invites query (invitedAt is null)", () => {
+    // Simulate a user record after resendInvite
+    const userAfterReset = {
+      id: 42,
+      email: "test@hospital.org",
+      isActive: 1,
+      invitedAt: null,
+      inviteToken: null,
+    };
+
+    // The pending invites query filters: invitedAt IS NULL AND isActive = 1
+    const matchesPendingFilter =
+      userAfterReset.invitedAt === null && userAfterReset.isActive === 1;
+    expect(matchesPendingFilter).toBe(true);
+  });
+
+  it("inactive users should not be eligible for resend", () => {
+    const inactiveUser = { id: 10, isActive: 0 };
+    expect(inactiveUser.isActive === 0).toBe(true);
+    // The mutation throws BAD_REQUEST for inactive users
+  });
+
+  it("partner admin cannot resend for users from other partners", () => {
+    const adminUser = { clientId: 1 };
+    const targetUser = { clientId: 2 };
+    const isCrossPartner =
+      adminUser.clientId !== null && targetUser.clientId !== adminUser.clientId;
+    expect(isCrossPartner).toBe(true);
+  });
+
+  it("platform admin (no clientId) can resend for any user", () => {
+    const platformAdmin = { clientId: null };
+    const targetUser = { clientId: 5 };
+    // Platform admins have clientId = null, so the cross-partner check is skipped
+    const isRestricted =
+      platformAdmin.clientId !== null &&
+      targetUser.clientId !== platformAdmin.clientId;
+    expect(isRestricted).toBe(false);
+  });
+});

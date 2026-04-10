@@ -19,7 +19,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Edit, RotateCcw, Upload } from "lucide-react";
+import { Plus, Edit, RotateCcw, Upload, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { AdminDataTable, type Column } from "@/components/AdminDataTable";
@@ -117,6 +117,13 @@ export function UsersTab({ isPlatformAdmin, orgs, clients, allUsers, refetchUser
   const deactivateUserMutation = trpc.admin.deactivateUser.useMutation({
     onSuccess: () => { toast.success("User deactivated successfully!"); refetchUsers(); },
     onError: (error: any) => toast.error(error.message || "Failed to deactivate user"),
+  });
+
+  const resendInviteMutation = trpc.admin.resendInvite.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Invite queued for ${data.email}. It will be sent on the next automation run.`);
+    },
+    onError: (error: any) => toast.error(error.message || "Failed to resend invite"),
   });
 
   // ── Handlers ───────────────────────────────────────────────────────────────
@@ -628,6 +635,16 @@ export function UsersTab({ isPlatformAdmin, orgs, clients, allUsers, refetchUser
               <button onClick={() => handleEditUser(u)}
                 className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-border/40 hover:bg-muted/50 transition-colors">
                 <Edit className="w-2.5 h-2.5" /> Edit
+              </button>
+              <button
+                onClick={() => {
+                  if (confirm(`Resend invite to ${u.email}? This will queue a new invitation email.`)) {
+                    resendInviteMutation.mutate({ userId: u.id });
+                  }
+                }}
+                disabled={resendInviteMutation.isPending}
+                className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-primary/30 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50">
+                <Send className="w-2.5 h-2.5" /> Resend Invite
               </button>
               <button onClick={() => { if (confirm(`Deactivate ${u.name}?`)) deactivateUserMutation.mutate({ userId: u.id }); }}
                 className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-border/40 text-muted-foreground hover:bg-muted/50 transition-colors">

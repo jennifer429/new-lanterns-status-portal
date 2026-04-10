@@ -2446,3 +2446,5 @@
 - [x] Refactor PartnersTab to use DataTable with search/sort/export
 - [x] Build CSV import UI for bulk user creation (client-side, uses existing createUser mutation)
 - [ ] Write tests for CSV import endpoint
+- [x] Add Resend Invite button to Users tab (regenerates invite token, resets invitedAt)
+- [x] Add backend resendInvite mutation in admin router

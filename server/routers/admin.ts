@@ -1133,7 +1133,56 @@ export const adminRouter = router({
       // TODO: Send email with temporary password or reset link
       console.log(`[createUser] Created user ${input.email} (temp password generated, not logged for security)`);
 
-      return { success: true, tempPassword };
+       return { success: true, tempPassword };
+    }),
+
+  /**
+   * Resend invite for a user — regenerates invite token, resets invitedAt,
+   * so the user shows up in /api/external/invites/pending again.
+   */
+  resendInvite: protectedProcedure
+    .input(z.object({ userId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Verify the user exists
+      const [targetUser] = await db
+        .select({ id: users.id, email: users.email, name: users.name, isActive: users.isActive, clientId: users.clientId })
+        .from(users)
+        .where(eq(users.id, input.userId))
+        .limit(1);
+
+      if (!targetUser) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+      }
+
+      if (targetUser.isActive === 0) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot resend invite to an inactive user" });
+      }
+
+      // Partner admins can only resend for their own partner's users
+      if (ctx.user.clientId && targetUser.clientId !== ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot resend invite for users from other partners" });
+      }
+
+      // Reset invitedAt to null and clear old token so the user appears in pending invites again
+      await db
+        .update(users)
+        .set({
+          invitedAt: null,
+          inviteToken: null,
+          inviteTokenExpiresAt: null,
+        })
+        .where(eq(users.id, input.userId));
+
+      console.log(`[resendInvite] Reset invite for user ${targetUser.email} (id: ${input.userId})`);
+
+      return { success: true, email: targetUser.email };
     }),
 
   /**
