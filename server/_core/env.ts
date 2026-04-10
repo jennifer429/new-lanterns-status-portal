@@ -21,4 +21,6 @@ export const ENV = {
   googleDriveFolderId: process.env.GOOGLE_DRIVE_FOLDER_ID ?? "1STogLQnTku6B0iAkAAqt7oFKFtaUy1Nu",
   siteBaseUrl: process.env.SITE_BASE_URL ?? "https://newlantern.us.com",
   externalApiKey: process.env.EXTERNAL_API_KEY ?? "",
+  gmailUser: process.env.GMAIL_USER ?? "",
+  gmailAppPassword: process.env.GMAIL_APP_PASSWORD ?? "",
 };
