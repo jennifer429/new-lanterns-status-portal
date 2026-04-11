@@ -507,21 +507,6 @@ export type InsertAiAuditLog = typeof aiAuditLogs.$inferInsert;
 // ============================================================================
 
 /**
- * Partner Document Categories — custom categories created by each partner
- * (e.g., "Informational", "Procedural", "Operational", "Training").
- * Each partner manages their own set of categories independently.
- */
-export const partnerDocCategories = mysqlTable("partnerDocCategories", {
-  id: int("id").autoincrement().primaryKey(),
-  clientId: int("clientId").notNull(), // FK to clients.id — which partner owns this category
-  name: varchar("name", { length: 255 }).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
-
-export type PartnerDocCategory = typeof partnerDocCategories.$inferSelect;
-export type InsertPartnerDocCategory = typeof partnerDocCategories.$inferInsert;
-
-/**
  * Partner Documents — operational and procedural documents uploaded by partners.
  * Scoped to a client (partner). All organizations under that partner can view/download.
  * Partners can upload, edit metadata, and delete. Org users can only view/download.
