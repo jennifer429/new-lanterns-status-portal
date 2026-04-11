@@ -5,9 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -43,21 +41,16 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  Plus,
-  Edit,
   X,
   Eye,
   Clock,
-  User,
   FolderOpen,
-  Tag,
 } from "lucide-react";
 import { toast } from "sonner";
 
 type SortDir = "asc" | "desc";
-type SortField = "title" | "categoryName" | "uploadedByName" | "createdAt" | "size";
+type SortField = "title" | "partnerName" | "uploadedByName" | "createdAt" | "size";
 
-/** Get an icon for a file based on its MIME type */
 function getFileIcon(mimeType: string) {
   if (mimeType.startsWith("image/")) return <FileImage className="w-5 h-5 text-blue-500" />;
   if (mimeType.includes("spreadsheet") || mimeType.includes("csv") || mimeType.includes("excel"))
@@ -68,14 +61,12 @@ function getFileIcon(mimeType: string) {
   return <File className="w-5 h-5 text-muted-foreground" />;
 }
 
-/** Format file size */
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-/** Format date */
 function formatDate(date: string | Date | null): string {
   if (!date) return "—";
   return new Date(date).toLocaleDateString("en-US", {
@@ -99,12 +90,15 @@ function formatDateTime(date: string | Date | null): string {
 export default function ProceduralLibrary() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const isPlatformAdmin = isAdmin && !user?.clientId;
 
   // Data queries
   const { data: documents = [], refetch: refetchDocs } =
     trpc.proceduralLibrary.listDocuments.useQuery();
-  const { data: categories = [], refetch: refetchCategories } =
-    trpc.proceduralLibrary.listCategories.useQuery();
+  const { data: allClients = [] } = trpc.admin.getAllClients.useQuery(
+    undefined,
+    { enabled: isPlatformAdmin }
+  );
 
   // Mutations
   const uploadMutation = trpc.proceduralLibrary.uploadDocument.useMutation({
@@ -127,53 +121,20 @@ export default function ProceduralLibrary() {
 
   const logAuditMutation = trpc.proceduralLibrary.logAudit.useMutation();
 
-  const createCategoryMutation = trpc.proceduralLibrary.createCategory.useMutation({
-    onSuccess: () => {
-      toast.success("Category created");
-      refetchCategories();
-      setNewCategoryName("");
-    },
-    onError: (err) => toast.error(err.message),
-  });
-
-  const updateCategoryMutation = trpc.proceduralLibrary.updateCategory.useMutation({
-    onSuccess: () => {
-      toast.success("Category updated");
-      refetchCategories();
-      refetchDocs(); // category names may have changed
-      setEditCategoryId(null);
-    },
-    onError: (err) => toast.error(err.message),
-  });
-
-  const deleteCategoryMutation = trpc.proceduralLibrary.deleteCategory.useMutation({
-    onSuccess: () => {
-      toast.success("Category deleted");
-      refetchCategories();
-      refetchDocs();
-    },
-    onError: (err) => toast.error(err.message),
-  });
-
   // Search & filter state
   const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [partnerFilter, setPartnerFilter] = useState<string>("all");
   const [sortField, setSortField] = useState<SortField>("createdAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   // Upload dialog state
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [uploadTitle, setUploadTitle] = useState("");
-  const [uploadDescription, setUploadDescription] = useState("");
-  const [uploadCategoryId, setUploadCategoryId] = useState<string>("none");
+  const [uploadClientId, setUploadClientId] = useState<string>(
+    user?.clientId ? String(user.clientId) : ""
+  );
   const [uploadFile, setUploadFile] = useState<globalThis.File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Category management state
-  const [isCategoryMgmtOpen, setIsCategoryMgmtOpen] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState("");
-  const [editCategoryId, setEditCategoryId] = useState<number | null>(null);
-  const [editCategoryName, setEditCategoryName] = useState("");
 
   // Audit trail dialog state
   const [auditDocId, setAuditDocId] = useState<number | null>(null);
@@ -190,8 +151,7 @@ export default function ProceduralLibrary() {
 
   const resetUploadForm = () => {
     setUploadTitle("");
-    setUploadDescription("");
-    setUploadCategoryId("none");
+    setUploadClientId(user?.clientId ? String(user.clientId) : "");
     setUploadFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -219,27 +179,22 @@ export default function ProceduralLibrary() {
   const filteredDocs = useMemo(() => {
     let result = [...documents];
 
-    // Search filter (title, description, filename, uploader)
+    // Search filter
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
         (doc) =>
           doc.title.toLowerCase().includes(q) ||
-          (doc.description && doc.description.toLowerCase().includes(q)) ||
           doc.filename.toLowerCase().includes(q) ||
           doc.uploadedByName.toLowerCase().includes(q) ||
-          doc.categoryName.toLowerCase().includes(q)
+          ("partnerName" in doc && typeof doc.partnerName === "string" && doc.partnerName.toLowerCase().includes(q))
       );
     }
 
-    // Category filter
-    if (categoryFilter !== "all") {
-      if (categoryFilter === "uncategorized") {
-        result = result.filter((doc) => !doc.categoryId);
-      } else {
-        const catId = parseInt(categoryFilter);
-        result = result.filter((doc) => doc.categoryId === catId);
-      }
+    // Partner filter (platform admins only)
+    if (partnerFilter !== "all") {
+      const cId = parseInt(partnerFilter);
+      result = result.filter((doc) => doc.clientId === cId);
     }
 
     // Sort
@@ -249,15 +204,17 @@ export default function ProceduralLibrary() {
         case "title":
           cmp = a.title.localeCompare(b.title);
           break;
-        case "categoryName":
-          cmp = a.categoryName.localeCompare(b.categoryName);
+        case "partnerName": {
+          const aName = "partnerName" in a ? (a as any).partnerName : "";
+          const bName = "partnerName" in b ? (b as any).partnerName : "";
+          cmp = aName.localeCompare(bName);
           break;
+        }
         case "uploadedByName":
           cmp = a.uploadedByName.localeCompare(b.uploadedByName);
           break;
         case "createdAt":
-          cmp =
-            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
           break;
         case "size":
           cmp = a.size - b.size;
@@ -267,12 +224,27 @@ export default function ProceduralLibrary() {
     });
 
     return result;
-  }, [documents, searchQuery, categoryFilter, sortField, sortDir]);
+  }, [documents, searchQuery, partnerFilter, sortField, sortDir]);
+
+  // Unique partners from documents (for the filter dropdown)
+  const partnerOptions = useMemo(() => {
+    const map = new Map<number, string>();
+    documents.forEach((doc) => {
+      if ("partnerName" in doc && typeof doc.partnerName === "string") {
+        map.set(doc.clientId, doc.partnerName);
+      }
+    });
+    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [documents]);
 
   // Upload handler
   const handleUpload = useCallback(async () => {
     if (!uploadFile || !uploadTitle.trim()) {
       toast.error("Please provide a title and select a file");
+      return;
+    }
+    if (isPlatformAdmin && !uploadClientId) {
+      toast.error("Please select a partner");
       return;
     }
 
@@ -281,15 +253,14 @@ export default function ProceduralLibrary() {
       const base64 = (reader.result as string).split(",")[1];
       uploadMutation.mutate({
         title: uploadTitle.trim(),
-        description: uploadDescription.trim() || undefined,
-        categoryId: uploadCategoryId === "none" ? null : parseInt(uploadCategoryId),
         fileName: uploadFile.name,
         fileData: base64,
         mimeType: uploadFile.type || "application/octet-stream",
+        ...(isPlatformAdmin && uploadClientId ? { clientId: parseInt(uploadClientId) } : {}),
       });
     };
     reader.readAsDataURL(uploadFile);
-  }, [uploadFile, uploadTitle, uploadDescription, uploadCategoryId, uploadMutation]);
+  }, [uploadFile, uploadTitle, uploadClientId, isPlatformAdmin, uploadMutation]);
 
   // Download handler (logs audit)
   const handleDownload = (doc: (typeof documents)[0]) => {
@@ -329,32 +300,21 @@ export default function ProceduralLibrary() {
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm">
         <div className="container py-4 sm:py-6">
-          <div className="flex items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <FolderOpen className="w-5 h-5 sm:w-6 sm:h-6 text-primary shrink-0" />
               <div className="min-w-0">
-                <h1 className="text-lg sm:text-2xl font-bold text-foreground">Procedural Library</h1>
+                <h1 className="text-lg sm:text-2xl font-bold text-foreground truncate">Procedural Library</h1>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 truncate">
                   Operational and procedural documents
                 </p>
               </div>
             </div>
             {isAdmin && (
-              <div className="flex items-center gap-2 shrink-0">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsCategoryMgmtOpen(true)}
-                  className="gap-1.5 px-2 sm:px-3"
-                >
-                  <Tag className="w-4 h-4 shrink-0" />
-                  <span className="hidden sm:inline">Manage Categories</span>
-                </Button>
-                <Button size="sm" onClick={() => setIsUploadOpen(true)} className="gap-1.5 px-2 sm:px-3">
-                  <Upload className="w-4 h-4 shrink-0" />
-                  <span className="hidden sm:inline">Upload Document</span>
-                </Button>
-              </div>
+              <Button size="sm" onClick={() => setIsUploadOpen(true)} className="gap-1.5 h-8 sm:h-9 px-2 sm:px-3 shrink-0">
+                <Upload className="w-4 h-4 shrink-0" />
+                <span className="hidden sm:inline">Upload Document</span>
+              </Button>
             )}
           </div>
         </div>
@@ -366,26 +326,27 @@ export default function ProceduralLibrary() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Search documents by title, description, filename, or uploader..."
+              placeholder="Search documents by title, filename, or uploader..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
             />
           </div>
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-full sm:w-[200px]">
-              <SelectValue placeholder="All Categories" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              <SelectItem value="uncategorized">Uncategorized</SelectItem>
-              {categories.map((cat) => (
-                <SelectItem key={cat.id} value={String(cat.id)}>
-                  {cat.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {isPlatformAdmin && partnerOptions.length > 1 && (
+            <Select value={partnerFilter} onValueChange={setPartnerFilter}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue placeholder="All Partners" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Partners</SelectItem>
+                {partnerOptions.map(([id, name]) => (
+                  <SelectItem key={id} value={String(id)}>
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
         <div className="flex items-center justify-between mt-2">
           <span className="text-sm text-muted-foreground">
@@ -444,11 +405,10 @@ export default function ProceduralLibrary() {
                       <div className="shrink-0 mt-0.5">{getFileIcon(doc.mimeType)}</div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm text-foreground truncate">{doc.title}</p>
-                        {doc.description && (
-                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{doc.description}</p>
-                        )}
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
-                          <Badge variant="outline" className="text-[10px]">{doc.categoryName}</Badge>
+                          {"partnerName" in doc && (
+                            <Badge variant="secondary" className="text-[10px]">{(doc as any).partnerName}</Badge>
+                          )}
                           <span className="text-[11px] text-muted-foreground">{formatDate(doc.createdAt)}</span>
                           <span className="text-[11px] text-muted-foreground">{formatSize(doc.size)}</span>
                         </div>
@@ -490,11 +450,13 @@ export default function ProceduralLibrary() {
                           Document Name <SortIcon field="title" />
                         </button>
                       </TableHead>
-                      <TableHead>
-                        <button className="flex items-center font-medium hover:text-foreground transition-colors" onClick={() => handleSort("categoryName")}>
-                          Category <SortIcon field="categoryName" />
-                        </button>
-                      </TableHead>
+                      {isPlatformAdmin && (
+                        <TableHead>
+                          <button className="flex items-center font-medium hover:text-foreground transition-colors" onClick={() => handleSort("partnerName")}>
+                            Partner <SortIcon field="partnerName" />
+                          </button>
+                        </TableHead>
+                      )}
                       <TableHead>
                         <button className="flex items-center font-medium hover:text-foreground transition-colors" onClick={() => handleSort("uploadedByName")}>
                           Uploaded By <SortIcon field="uploadedByName" />
@@ -520,15 +482,16 @@ export default function ProceduralLibrary() {
                         <TableCell>
                           <div>
                             <p className="font-medium text-foreground">{doc.title}</p>
-                            {doc.description && (
-                              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{doc.description}</p>
-                            )}
                             <p className="text-xs text-muted-foreground/60 mt-0.5">{doc.filename}</p>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-xs">{doc.categoryName}</Badge>
-                        </TableCell>
+                        {isPlatformAdmin && (
+                          <TableCell>
+                            <Badge variant="secondary" className="text-xs">
+                              {(doc as any).partnerName}
+                            </Badge>
+                          </TableCell>
+                        )}
                         <TableCell className="text-sm text-muted-foreground">{doc.uploadedByName}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">{formatDate(doc.createdAt)}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">{formatSize(doc.size)}</TableCell>
@@ -572,6 +535,39 @@ export default function ProceduralLibrary() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-2">
+            {/* Partner selector for platform admins */}
+            {isPlatformAdmin && (
+              <div>
+                <Label htmlFor="upload-partner">Partner *</Label>
+                <Select value={uploadClientId} onValueChange={setUploadClientId}>
+                  <SelectTrigger id="upload-partner">
+                    <SelectValue placeholder="Select a partner" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allClients
+                      .filter((c) => c.status === "active")
+                      .map((c) => (
+                        <SelectItem key={c.id} value={String(c.id)}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Partner name display for partner admins */}
+            {!isPlatformAdmin && user?.clientId && (
+              <div>
+                <Label>Partner</Label>
+                <Input
+                  value={allClients.find((c) => c.id === user.clientId)?.name ?? "Your Partner"}
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+            )}
+
             <div>
               <Label htmlFor="upload-title">Title *</Label>
               <Input
@@ -580,32 +576,6 @@ export default function ProceduralLibrary() {
                 value={uploadTitle}
                 onChange={(e) => setUploadTitle(e.target.value)}
               />
-            </div>
-            <div>
-              <Label htmlFor="upload-desc">Description</Label>
-              <Textarea
-                id="upload-desc"
-                placeholder="Brief description of this document..."
-                value={uploadDescription}
-                onChange={(e) => setUploadDescription(e.target.value)}
-                rows={3}
-              />
-            </div>
-            <div>
-              <Label htmlFor="upload-category">Category</Label>
-              <Select value={uploadCategoryId} onValueChange={setUploadCategoryId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Uncategorized</SelectItem>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={String(cat.id)}>
-                      {cat.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
             <div>
               <Label>File *</Label>
@@ -675,127 +645,16 @@ export default function ProceduralLibrary() {
               </Button>
               <Button
                 onClick={handleUpload}
-                disabled={uploadMutation.isPending || !uploadFile || !uploadTitle.trim()}
+                disabled={
+                  uploadMutation.isPending ||
+                  !uploadFile ||
+                  !uploadTitle.trim() ||
+                  (isPlatformAdmin && !uploadClientId)
+                }
               >
                 {uploadMutation.isPending ? "Uploading..." : "Upload"}
               </Button>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* ====== CATEGORY MANAGEMENT DIALOG ====== */}
-      <Dialog open={isCategoryMgmtOpen} onOpenChange={setIsCategoryMgmtOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Manage Categories</DialogTitle>
-            <DialogDescription>
-              Create, rename, or delete document categories.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 mt-2">
-            {/* Create new */}
-            <div className="flex gap-2">
-              <Input
-                placeholder="New category name..."
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && newCategoryName.trim()) {
-                    createCategoryMutation.mutate({ name: newCategoryName.trim() });
-                  }
-                }}
-              />
-              <Button
-                size="sm"
-                disabled={!newCategoryName.trim() || createCategoryMutation.isPending}
-                onClick={() => createCategoryMutation.mutate({ name: newCategoryName.trim() })}
-              >
-                <Plus className="w-4 h-4" />
-              </Button>
-            </div>
-
-            <Separator />
-
-            {/* Existing categories */}
-            {categories.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No categories yet. Create one above.
-              </p>
-            ) : (
-              <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                {categories.map((cat) => (
-                  <div
-                    key={cat.id}
-                    className="flex items-center justify-between p-2 rounded-md border border-border"
-                  >
-                    {editCategoryId === cat.id ? (
-                      <div className="flex items-center gap-2 flex-1">
-                        <Input
-                          value={editCategoryName}
-                          onChange={(e) => setEditCategoryName(e.target.value)}
-                          className="h-8"
-                          autoFocus
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && editCategoryName.trim()) {
-                              updateCategoryMutation.mutate({
-                                id: cat.id,
-                                name: editCategoryName.trim(),
-                              });
-                            }
-                            if (e.key === "Escape") setEditCategoryId(null);
-                          }}
-                        />
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() =>
-                            updateCategoryMutation.mutate({
-                              id: cat.id,
-                              name: editCategoryName.trim(),
-                            })
-                          }
-                          disabled={!editCategoryName.trim()}
-                        >
-                          Save
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setEditCategoryId(null)}
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <>
-                        <span className="text-sm font-medium">{cat.name}</span>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => {
-                              setEditCategoryId(cat.id);
-                              setEditCategoryName(cat.name);
-                            }}
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => deleteCategoryMutation.mutate({ id: cat.id })}
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </DialogContent>
       </Dialog>

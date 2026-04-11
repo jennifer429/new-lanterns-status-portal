@@ -4,18 +4,18 @@ import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import {
   partnerDocuments,
-  partnerDocCategories,
   partnerDocAudit,
   organizations,
+  clients,
 } from "../../drizzle/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { uploadToGoogleDrive } from "./files";
 
 /**
  * Procedural Library router — partner-scoped document management.
  *
- * Partners (admins with clientId) can upload, edit metadata, and delete documents.
- * Platform admins can do everything for any partner.
+ * Partners (admins with clientId) can upload, edit, and delete their own documents.
+ * Platform admins can do everything for any partner (must select which partner).
  * Org users (regular users with organizationId) can view and download their partner's documents.
  *
  * All documents are stored in Google Drive; metadata + audit trail live in the database.
@@ -36,135 +36,40 @@ function resolveClientId(user: { role: string; clientId: number | null; organiza
 
 export const proceduralLibraryRouter = router({
   // ============================================================================
-  // CATEGORIES — CRUD for partner admins
-  // ============================================================================
-
-  /** List categories for a partner */
-  listCategories: protectedProcedure
-    .input(z.object({ clientId: z.number().optional() }).optional())
-    .query(async ({ ctx, input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
-
-      let targetClientId: number | null = null;
-
-      if (ctx.user.clientId) {
-        targetClientId = ctx.user.clientId;
-      } else if (ctx.user.role === "admin" && input?.clientId) {
-        targetClientId = input.clientId;
-      } else if (ctx.user.organizationId) {
-        // Org user — look up their org's clientId
-        const [org] = await db.select({ clientId: organizations.clientId })
-          .from(organizations)
-          .where(eq(organizations.id, ctx.user.organizationId));
-        targetClientId = org?.clientId ?? null;
-      }
-
-      if (!targetClientId) {
-        return [];
-      }
-
-      return db.select()
-        .from(partnerDocCategories)
-        .where(eq(partnerDocCategories.clientId, targetClientId))
-        .orderBy(partnerDocCategories.name);
-    }),
-
-  /** Create a category */
-  createCategory: protectedProcedure
-    .input(z.object({
-      name: z.string().min(1).max(255),
-      clientId: z.number().optional(),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
-
-      const targetClientId = resolveClientId(ctx.user, input.clientId);
-      if (!targetClientId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "No partner access" });
-      }
-      // Only admins can create categories
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Only admins can manage categories" });
-      }
-
-      await db.insert(partnerDocCategories).values({
-        clientId: targetClientId,
-        name: input.name,
-      });
-      return { success: true };
-    }),
-
-  /** Rename a category */
-  updateCategory: protectedProcedure
-    .input(z.object({
-      id: z.number(),
-      name: z.string().min(1).max(255),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
-
-      const [cat] = await db.select().from(partnerDocCategories).where(eq(partnerDocCategories.id, input.id));
-      if (!cat) throw new TRPCError({ code: "NOT_FOUND", message: "Category not found" });
-
-      // Partner admin can only edit their own categories
-      if (ctx.user.clientId && cat.clientId !== ctx.user.clientId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Not your category" });
-      }
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Only admins can manage categories" });
-      }
-
-      await db.update(partnerDocCategories)
-        .set({ name: input.name })
-        .where(eq(partnerDocCategories.id, input.id));
-      return { success: true };
-    }),
-
-  /** Delete a category (sets documents in that category to uncategorized) */
-  deleteCategory: protectedProcedure
-    .input(z.object({ id: z.number() }))
-    .mutation(async ({ ctx, input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
-
-      const [cat] = await db.select().from(partnerDocCategories).where(eq(partnerDocCategories.id, input.id));
-      if (!cat) throw new TRPCError({ code: "NOT_FOUND", message: "Category not found" });
-
-      if (ctx.user.clientId && cat.clientId !== ctx.user.clientId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Not your category" });
-      }
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Only admins can manage categories" });
-      }
-
-      // Unlink documents from this category
-      await db.update(partnerDocuments)
-        .set({ categoryId: null })
-        .where(eq(partnerDocuments.categoryId, input.id));
-
-      await db.delete(partnerDocCategories).where(eq(partnerDocCategories.id, input.id));
-      return { success: true };
-    }),
-
-  // ============================================================================
   // DOCUMENTS — list, upload, delete
   // ============================================================================
 
-  /** List documents for a partner (with category info and audit counts) */
+  /** List documents. Platform admins see all docs; partner admins see their own; org users see their partner's. */
   listDocuments: protectedProcedure
     .input(z.object({ clientId: z.number().optional() }).optional())
     .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
+      const isPlatformAdmin = ctx.user.role === "admin" && !ctx.user.clientId;
+
+      // Platform admin with no filter → return ALL documents across all partners
+      if (isPlatformAdmin && !input?.clientId) {
+        const docs = await db.select()
+          .from(partnerDocuments)
+          .orderBy(desc(partnerDocuments.createdAt));
+
+        // Fetch all clients to map names
+        const allClients = await db.select().from(clients);
+        const clientMap = new Map(allClients.map(c => [c.id, c.name]));
+
+        return docs.map(doc => ({
+          ...doc,
+          partnerName: clientMap.get(doc.clientId) ?? "Unknown",
+        }));
+      }
+
+      // Platform admin with filter, or partner admin, or org user
       let targetClientId: number | null = null;
 
       if (ctx.user.clientId) {
         targetClientId = ctx.user.clientId;
-      } else if (ctx.user.role === "admin" && input?.clientId) {
+      } else if (isPlatformAdmin && input?.clientId) {
         targetClientId = input.clientId;
       } else if (ctx.user.organizationId) {
         const [org] = await db.select({ clientId: organizations.clientId })
@@ -177,22 +82,18 @@ export const proceduralLibraryRouter = router({
         return [];
       }
 
-      // Fetch documents
       const docs = await db.select()
         .from(partnerDocuments)
         .where(eq(partnerDocuments.clientId, targetClientId))
         .orderBy(desc(partnerDocuments.createdAt));
 
-      // Fetch categories for this partner (to join client-side)
-      const categories = await db.select()
-        .from(partnerDocCategories)
-        .where(eq(partnerDocCategories.clientId, targetClientId));
-
-      const catMap = new Map(categories.map(c => [c.id, c.name]));
+      // Get partner name
+      const [client] = await db.select().from(clients).where(eq(clients.id, targetClientId));
+      const partnerName = client?.name ?? "Unknown";
 
       return docs.map(doc => ({
         ...doc,
-        categoryName: doc.categoryId ? catMap.get(doc.categoryId) ?? "Uncategorized" : "Uncategorized",
+        partnerName,
       }));
     }),
 
@@ -200,12 +101,10 @@ export const proceduralLibraryRouter = router({
   uploadDocument: protectedProcedure
     .input(z.object({
       title: z.string().min(1).max(500),
-      description: z.string().max(2000).optional(),
-      categoryId: z.number().nullable().optional(),
       fileName: z.string(),
       fileData: z.string(), // base64
       mimeType: z.string(),
-      clientId: z.number().optional(),
+      clientId: z.number().optional(), // required for platform admins
     }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
@@ -213,7 +112,7 @@ export const proceduralLibraryRouter = router({
 
       const targetClientId = resolveClientId(ctx.user, input.clientId);
       if (!targetClientId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "No partner access" });
+        throw new TRPCError({ code: "BAD_REQUEST", message: "A partner must be selected" });
       }
       if (ctx.user.role !== "admin") {
         throw new TRPCError({ code: "FORBIDDEN", message: "Only admins can upload documents" });
@@ -230,11 +129,11 @@ export const proceduralLibraryRouter = router({
       // Insert metadata
       const [inserted] = await db.insert(partnerDocuments).values({
         clientId: targetClientId,
-        categoryId: input.categoryId ?? null,
+        categoryId: null,
         title: input.title,
-        description: input.description ?? null,
+        description: null,
         filename: input.fileName,
-        driveFileId: driveFileName, // Store the drive filename as reference
+        driveFileId: driveFileName,
         url: fileUrl,
         mimeType: input.mimeType,
         size: fileBuffer.length,
