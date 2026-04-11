@@ -17,7 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ClipboardList, Users, FileText, Download, LogOut, Settings, ChevronDown, ListChecks, History } from "lucide-react";
+import { ClipboardList, Users, FileText, Download, LogOut, Settings, ChevronDown, ListChecks, History, FolderOpen } from "lucide-react";
 import { toast } from "sonner";
 import { AdminChatWidget } from "@/components/AdminChatWidget";
 import { AiAuditLog } from "@/components/AiAuditLog";
@@ -30,8 +30,14 @@ import { TemplatesTab } from "./admin/TemplatesTab";
 import { PartnersTab } from "./admin/PartnersTab";
 import { SpecsTab } from "./admin/SpecsTab";
 import { VendorPicklistsTab } from "./admin/VendorPicklistsTab";
+import ProceduralLibrary from "./ProceduralLibrary";
 
-type Tab = "prod-dashboard" | "impl-dashboard" | "orgs" | "users" | "templates" | "task-templates" | "partners" | "specs" | "vendor-picklists" | "audit-log";
+/** Thin wrapper that renders ProceduralLibrary inline within the admin layout */
+function ProceduralLibraryEmbed() {
+  return <ProceduralLibrary />;
+}
+
+type Tab = "prod-dashboard" | "impl-dashboard" | "orgs" | "users" | "templates" | "task-templates" | "partners" | "specs" | "vendor-picklists" | "audit-log" | "library";
 
 function getPartnerDisplayName(user: any, clients?: any[]): string {
   if (!user?.clientId) return "Platform";
@@ -117,7 +123,7 @@ export default function PlatformAdmin() {
     refetchUsers,
   };
 
-  const adminTabs: Tab[] = ["users", "orgs", "templates", "task-templates", "partners", "specs", "vendor-picklists", "audit-log"];
+  const adminTabs: Tab[] = ["users", "orgs", "templates", "task-templates", "partners", "specs", "vendor-picklists", "library", "audit-log"];
 
   return (
     <div className="min-h-screen bg-background animate-page-in">
@@ -207,6 +213,9 @@ export default function PlatformAdmin() {
                 <DropdownMenuItem onClick={() => setActiveTab("vendor-picklists")} className="cursor-pointer">
                   <ListChecks className="mr-2 h-4 w-4" />Vendor Picklists
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveTab("library")} className="cursor-pointer">
+                  <FolderOpen className="mr-2 h-4 w-4" />Procedural Library
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setActiveTab("audit-log")} className="cursor-pointer">
                   <History className="mr-2 h-4 w-4" />AI Audit Log
@@ -250,6 +259,7 @@ export default function PlatformAdmin() {
         {activeTab === "specs" && isPlatformAdmin && <SpecsTab />}
         {activeTab === "vendor-picklists" && <VendorPicklistsTab />}
         {activeTab === "audit-log" && <AiAuditLog />}
+        {activeTab === "library" && <ProceduralLibraryEmbed />}
       </div>
 
       <AdminChatWidget isPlatformAdmin={!user?.clientId} />

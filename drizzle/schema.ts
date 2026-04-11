@@ -501,3 +501,63 @@ export const aiAuditLogs = mysqlTable("aiAuditLogs", {
 
 export type AiAuditLog = typeof aiAuditLogs.$inferSelect;
 export type InsertAiAuditLog = typeof aiAuditLogs.$inferInsert;
+
+// ============================================================================
+// Partner Procedural Library
+// ============================================================================
+
+/**
+ * Partner Document Categories — custom categories created by each partner
+ * (e.g., "Informational", "Procedural", "Operational", "Training").
+ * Each partner manages their own set of categories independently.
+ */
+export const partnerDocCategories = mysqlTable("partnerDocCategories", {
+  id: int("id").autoincrement().primaryKey(),
+  clientId: int("clientId").notNull(), // FK to clients.id — which partner owns this category
+  name: varchar("name", { length: 255 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PartnerDocCategory = typeof partnerDocCategories.$inferSelect;
+export type InsertPartnerDocCategory = typeof partnerDocCategories.$inferInsert;
+
+/**
+ * Partner Documents — operational and procedural documents uploaded by partners.
+ * Scoped to a client (partner). All organizations under that partner can view/download.
+ * Partners can upload, edit metadata, and delete. Org users can only view/download.
+ */
+export const partnerDocuments = mysqlTable("partnerDocuments", {
+  id: int("id").autoincrement().primaryKey(),
+  clientId: int("clientId").notNull(), // FK to clients.id — which partner owns this document
+  categoryId: int("categoryId"), // FK to partnerDocCategories.id — nullable for uncategorized
+  title: varchar("title", { length: 500 }).notNull(), // Document title
+  description: text("description"), // Description of what the document is
+  filename: varchar("filename", { length: 500 }).notNull(), // Original filename
+  driveFileId: varchar("driveFileId", { length: 255 }), // Google Drive file ID
+  url: varchar("url", { length: 2000 }).notNull(), // Google Drive shareable URL
+  mimeType: varchar("mimeType", { length: 255 }).notNull(),
+  size: int("size").notNull(), // File size in bytes
+  uploadedById: int("uploadedById").notNull(), // FK to users.id — who uploaded
+  uploadedByName: varchar("uploadedByName", { length: 255 }).notNull(), // Denormalized for display
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PartnerDocument = typeof partnerDocuments.$inferSelect;
+export type InsertPartnerDocument = typeof partnerDocuments.$inferInsert;
+
+/**
+ * Partner Document Audit Log — tracks who uploaded, viewed, or downloaded each document.
+ * Provides a full audit trail for compliance and visibility.
+ */
+export const partnerDocAudit = mysqlTable("partnerDocAudit", {
+  id: int("id").autoincrement().primaryKey(),
+  documentId: int("documentId").notNull(), // FK to partnerDocuments.id
+  userId: int("userId").notNull(), // FK to users.id — who performed the action
+  userName: varchar("userName", { length: 255 }).notNull(), // Denormalized for display
+  userEmail: varchar("userEmail", { length: 320 }).notNull(), // Denormalized for display
+  action: mysqlEnum("action", ["upload", "view", "download"]).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PartnerDocAudit = typeof partnerDocAudit.$inferSelect;
+export type InsertPartnerDocAudit = typeof partnerDocAudit.$inferInsert;

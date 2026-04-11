@@ -2448,3 +2448,27 @@
 - [ ] Write tests for CSV import endpoint
 - [x] Add Resend Invite button to Users tab (regenerates invite token, resets invitedAt)
 - [x] Add backend resendInvite mutation in admin router
+
+## Partner Procedural Library
+- [x] Schema: partner_doc_categories table (id, clientId, name, createdAt)
+- [x] Schema: partner_documents table (id, clientId, categoryId, title, description, filename, driveFileId, url, mimeType, size, uploadedById, uploadedByName, createdAt)
+- [x] Schema: partner_doc_audit table (id, documentId, userId, userName, userEmail, action: upload|view|download, createdAt)
+- [x] Push schema migration
+- [x] Backend: CRUD for partner doc categories (partner admins + platform admins)
+- [x] Backend: upload document with title, description, category (partner admins + platform admins) — uploads to Google Drive
+- [x] Backend: list documents by partner with category filter (partner-scoped)
+- [x] Backend: delete document (partner admins + platform admins only)
+- [x] Backend: log audit events (upload, view, download) with user info
+- [x] Backend: get audit trail for a document
+- [x] Frontend: Procedural Library page with real-time search (no enter), category filter, sortable table
+- [x] Frontend: open in new tab (view) with audit logging
+- [x] Frontend: download button with audit logging
+- [x] Frontend: upload dialog with title, description, category fields
+- [x] Frontend: category management UI for partner admins (custom categories)
+- [x] Frontend: audit trail view (who uploaded, viewed, downloaded)
+- [x] Navigation: add to UserMenu for site dashboard users
+- [x] Navigation: add tab to partner dashboard (Admin dropdown)
+- [x] Navigation: add route to App.tsx (/org/:slug/library + /org/admin/library + /org/:slug/admin/library)
+- [x] Ensure partner isolation: each partner only sees their own files
+- [x] Ensure org users can only view/download, not upload or delete
+- [x] Write tests for procedural library procedures (17 tests passing)
