@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useCallback } from "react";
+import { useMemo, useState, useRef, useCallback, type DragEvent } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -182,6 +182,9 @@ export default function ProceduralLibrary() {
     { enabled: auditDocId !== null }
   );
 
+  // Drag-and-drop state
+  const [isDragging, setIsDragging] = useState(false);
+
   // Delete confirmation
   const [deleteDocId, setDeleteDocId] = useState<number | null>(null);
 
@@ -300,39 +303,59 @@ export default function ProceduralLibrary() {
     window.open(doc.url, "_blank");
   };
 
+  // Drag-and-drop handlers for upload zone
+  const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) setUploadFile(file);
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm">
-        <div className="container py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <FolderOpen className="w-6 h-6 text-primary" />
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">Procedural Library</h1>
-                <p className="text-sm text-muted-foreground mt-0.5">
+        <div className="container py-4 sm:py-6">
+          <div className="flex items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <FolderOpen className="w-5 h-5 sm:w-6 sm:h-6 text-primary shrink-0" />
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-2xl font-bold text-foreground">Procedural Library</h1>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 truncate">
                   Operational and procedural documents
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              {isAdmin && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsCategoryMgmtOpen(true)}
-                  >
-                    <Tag className="w-4 h-4 mr-1.5" />
-                    Manage Categories
-                  </Button>
-                  <Button size="sm" onClick={() => setIsUploadOpen(true)}>
-                    <Upload className="w-4 h-4 mr-1.5" />
-                    Upload Document
-                  </Button>
-                </>
-              )}
-            </div>
+            {isAdmin && (
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsCategoryMgmtOpen(true)}
+                  className="gap-1.5 px-2 sm:px-3"
+                >
+                  <Tag className="w-4 h-4 shrink-0" />
+                  <span className="hidden sm:inline">Manage Categories</span>
+                </Button>
+                <Button size="sm" onClick={() => setIsUploadOpen(true)} className="gap-1.5 px-2 sm:px-3">
+                  <Upload className="w-4 h-4 shrink-0" />
+                  <span className="hidden sm:inline">Upload Document</span>
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -364,17 +387,39 @@ export default function ProceduralLibrary() {
             </SelectContent>
           </Select>
         </div>
-        <div className="mt-2 text-sm text-muted-foreground">
-          {filteredDocs.length} document{filteredDocs.length !== 1 ? "s" : ""}
-          {searchQuery && ` matching "${searchQuery}"`}
+        <div className="flex items-center justify-between mt-2">
+          <span className="text-sm text-muted-foreground">
+            {filteredDocs.length} document{filteredDocs.length !== 1 ? "s" : ""}
+            {searchQuery && ` matching "${searchQuery}"`}
+          </span>
+          {/* Mobile sort control */}
+          <div className="sm:hidden">
+            <Select value={`${sortField}-${sortDir}`} onValueChange={(val) => {
+              const [f, d] = val.split("-") as [SortField, SortDir];
+              setSortField(f);
+              setSortDir(d);
+            }}>
+              <SelectTrigger className="h-8 text-xs w-[130px]">
+                <SelectValue placeholder="Sort by..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="createdAt-desc">Newest first</SelectItem>
+                <SelectItem value="createdAt-asc">Oldest first</SelectItem>
+                <SelectItem value="title-asc">Title A-Z</SelectItem>
+                <SelectItem value="title-desc">Title Z-A</SelectItem>
+                <SelectItem value="size-desc">Largest</SelectItem>
+                <SelectItem value="size-asc">Smallest</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
-      {/* Documents Table */}
+      {/* Documents */}
       <div className="container pb-8">
-        <Card>
-          <CardContent className="p-0">
-            {filteredDocs.length === 0 ? (
+        {filteredDocs.length === 0 ? (
+          <Card>
+            <CardContent className="p-0">
               <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
                 <FileText className="w-12 h-12 mb-3 opacity-40" />
                 <p className="text-lg font-medium">No documents found</p>
@@ -386,138 +431,135 @@ export default function ProceduralLibrary() {
                     : "Try adjusting your search or filter."}
                 </p>
               </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12"></TableHead>
-                    <TableHead>
-                      <button
-                        className="flex items-center font-medium hover:text-foreground transition-colors"
-                        onClick={() => handleSort("title")}
-                      >
-                        Document Name
-                        <SortIcon field="title" />
-                      </button>
-                    </TableHead>
-                    <TableHead>
-                      <button
-                        className="flex items-center font-medium hover:text-foreground transition-colors"
-                        onClick={() => handleSort("categoryName")}
-                      >
-                        Category
-                        <SortIcon field="categoryName" />
-                      </button>
-                    </TableHead>
-                    <TableHead>
-                      <button
-                        className="flex items-center font-medium hover:text-foreground transition-colors"
-                        onClick={() => handleSort("uploadedByName")}
-                      >
-                        Uploaded By
-                        <SortIcon field="uploadedByName" />
-                      </button>
-                    </TableHead>
-                    <TableHead>
-                      <button
-                        className="flex items-center font-medium hover:text-foreground transition-colors"
-                        onClick={() => handleSort("createdAt")}
-                      >
-                        Date
-                        <SortIcon field="createdAt" />
-                      </button>
-                    </TableHead>
-                    <TableHead>
-                      <button
-                        className="flex items-center font-medium hover:text-foreground transition-colors"
-                        onClick={() => handleSort("size")}
-                      >
-                        Size
-                        <SortIcon field="size" />
-                      </button>
-                    </TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredDocs.map((doc) => (
-                    <TableRow key={doc.id} className="group">
-                      <TableCell>{getFileIcon(doc.mimeType)}</TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium text-foreground">{doc.title}</p>
-                          {doc.description && (
-                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                              {doc.description}
-                            </p>
-                          )}
-                          <p className="text-xs text-muted-foreground/60 mt-0.5">
-                            {doc.filename}
-                          </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            {/* Mobile card layout */}
+            <div className="sm:hidden space-y-2">
+              {filteredDocs.map((doc) => (
+                <Card key={doc.id}>
+                  <CardContent className="p-3">
+                    <div className="flex items-start gap-3">
+                      <div className="shrink-0 mt-0.5">{getFileIcon(doc.mimeType)}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm text-foreground truncate">{doc.title}</p>
+                        {doc.description && (
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{doc.description}</p>
+                        )}
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
+                          <Badge variant="outline" className="text-[10px]">{doc.categoryName}</Badge>
+                          <span className="text-[11px] text-muted-foreground">{formatDate(doc.createdAt)}</span>
+                          <span className="text-[11px] text-muted-foreground">{formatSize(doc.size)}</span>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-xs">
-                          {doc.categoryName}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {doc.uploadedByName}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatDate(doc.createdAt)}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatSize(doc.size)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleView(doc)}
-                            title="Open in new tab"
-                          >
-                            <ExternalLink className="w-4 h-4" />
+                        <p className="text-[11px] text-muted-foreground/60 mt-1 truncate">{doc.filename}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 mt-2 pt-2 border-t border-border/30">
+                      <Button variant="ghost" size="sm" onClick={() => handleView(doc)} className="h-7 text-xs gap-1">
+                        <ExternalLink className="w-3.5 h-3.5" /> Open
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDownload(doc)} className="h-7 text-xs gap-1">
+                        <Download className="w-3.5 h-3.5" /> Download
+                      </Button>
+                      {isAdmin && (
+                        <>
+                          <Button variant="ghost" size="sm" onClick={() => setAuditDocId(doc.id)} className="h-7 text-xs gap-1 ml-auto">
+                            <Eye className="w-3.5 h-3.5" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDownload(doc)}
-                            title="Download"
-                          >
-                            <Download className="w-4 h-4" />
+                          <Button variant="ghost" size="sm" onClick={() => setDeleteDocId(doc.id)} className="h-7 text-xs gap-1 text-destructive hover:text-destructive">
+                            <Trash2 className="w-3.5 h-3.5" />
                           </Button>
-                          {isAdmin && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setAuditDocId(doc.id)}
-                                title="View audit trail"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setDeleteDocId(doc.id)}
-                                title="Delete"
-                                className="text-destructive hover:text-destructive"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
+                        </>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Desktop table layout */}
+            <Card className="hidden sm:block">
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12"></TableHead>
+                      <TableHead>
+                        <button className="flex items-center font-medium hover:text-foreground transition-colors" onClick={() => handleSort("title")}>
+                          Document Name <SortIcon field="title" />
+                        </button>
+                      </TableHead>
+                      <TableHead>
+                        <button className="flex items-center font-medium hover:text-foreground transition-colors" onClick={() => handleSort("categoryName")}>
+                          Category <SortIcon field="categoryName" />
+                        </button>
+                      </TableHead>
+                      <TableHead>
+                        <button className="flex items-center font-medium hover:text-foreground transition-colors" onClick={() => handleSort("uploadedByName")}>
+                          Uploaded By <SortIcon field="uploadedByName" />
+                        </button>
+                      </TableHead>
+                      <TableHead>
+                        <button className="flex items-center font-medium hover:text-foreground transition-colors" onClick={() => handleSort("createdAt")}>
+                          Date <SortIcon field="createdAt" />
+                        </button>
+                      </TableHead>
+                      <TableHead>
+                        <button className="flex items-center font-medium hover:text-foreground transition-colors" onClick={() => handleSort("size")}>
+                          Size <SortIcon field="size" />
+                        </button>
+                      </TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredDocs.map((doc) => (
+                      <TableRow key={doc.id} className="group">
+                        <TableCell>{getFileIcon(doc.mimeType)}</TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium text-foreground">{doc.title}</p>
+                            {doc.description && (
+                              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{doc.description}</p>
+                            )}
+                            <p className="text-xs text-muted-foreground/60 mt-0.5">{doc.filename}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">{doc.categoryName}</Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{doc.uploadedByName}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{formatDate(doc.createdAt)}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{formatSize(doc.size)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleView(doc)} title="Open in new tab">
+                              <ExternalLink className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleDownload(doc)} title="Download">
+                              <Download className="w-4 h-4" />
+                            </Button>
+                            {isAdmin && (
+                              <>
+                                <Button variant="ghost" size="sm" onClick={() => setAuditDocId(doc.id)} title="View audit trail">
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={() => setDeleteDocId(doc.id)} title="Delete" className="text-destructive hover:text-destructive">
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
       {/* ====== UPLOAD DIALOG ====== */}
@@ -566,19 +608,60 @@ export default function ProceduralLibrary() {
               </Select>
             </div>
             <div>
-              <Label htmlFor="upload-file">File *</Label>
-              <Input
-                id="upload-file"
+              <Label>File *</Label>
+              <input
                 type="file"
                 ref={fileInputRef}
                 onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
-                className="cursor-pointer"
+                className="hidden"
               />
-              {uploadFile && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  {uploadFile.name} ({formatSize(uploadFile.size)})
-                </p>
-              )}
+              <div
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`mt-1.5 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 cursor-pointer transition-colors ${
+                  isDragging
+                    ? "border-primary bg-primary/5"
+                    : uploadFile
+                      ? "border-green-500/50 bg-green-500/5"
+                      : "border-border hover:border-muted-foreground/50 hover:bg-muted/20"
+                }`}
+              >
+                {uploadFile ? (
+                  <div className="flex items-center gap-2 text-sm">
+                    {getFileIcon(uploadFile.type || "application/octet-stream")}
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{uploadFile.name}</p>
+                      <p className="text-xs text-muted-foreground">{formatSize(uploadFile.size)}</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="shrink-0 h-7 w-7 p-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setUploadFile(null);
+                        if (fileInputRef.current) fileInputRef.current.value = "";
+                      }}
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <Upload className="w-8 h-8 text-muted-foreground/50" />
+                    <div className="text-center">
+                      <p className="text-sm font-medium text-muted-foreground">
+                        Drag & drop a file here
+                      </p>
+                      <p className="text-xs text-muted-foreground/70 mt-0.5">
+                        or click to browse
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button

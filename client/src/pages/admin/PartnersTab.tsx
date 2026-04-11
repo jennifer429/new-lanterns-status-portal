@@ -162,13 +162,13 @@ export function PartnersTab({ clients, orgs, refetchOrgs }: PartnersTabProps) {
 
   return (
     <>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold">Partners ({allClients.length})</h2>
+      <div className="flex items-center justify-between gap-2 mb-6">
+        <h2 className="text-xl sm:text-2xl font-bold shrink-0">Partners ({allClients.length})</h2>
         <Dialog open={isCreatePartnerDialogOpen} onOpenChange={setIsCreatePartnerDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="w-4 h-4" />
-              Add Partner
+            <Button size="sm" className="gap-1.5 px-2 sm:px-3 shrink-0">
+              <Plus className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline">Add Partner</span>
             </Button>
           </DialogTrigger>
           <DialogContent>
@@ -246,6 +246,7 @@ export function PartnersTab({ clients, orgs, refetchOrgs }: PartnersTabProps) {
         exportFilename="partners"
         searchPlaceholder="Search partners..."
         emptyMessage="No partners yet. Create a partner to start organizing your clients."
+        minWidth={750}
         renderActions={(c) => (
           <div className="flex gap-1">
             <button onClick={() => handleEditPartner(c)}
