@@ -236,13 +236,13 @@ export function OrgsTab({ isPlatformAdmin, orgs, clients, refetchOrgs, metrics }
 
   return (
     <>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold">Organization Management</h2>
+      <div className="flex items-center justify-between gap-2 mb-6">
+        <h2 className="text-xl sm:text-2xl font-bold shrink-0">Organization Management</h2>
         <Dialog open={isCreateOrgDialogOpen} onOpenChange={setIsCreateOrgDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Organization
+            <Button size="sm" className="gap-1.5 px-2 sm:px-3 shrink-0">
+              <Plus className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline">Add Organization</span>
             </Button>
           </DialogTrigger>
           <DialogContent>

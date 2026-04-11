@@ -19,7 +19,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Edit, RotateCcw, Upload, Send } from "lucide-react";
+import { Plus, Edit, RotateCcw, Upload, Send, Ban } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { AdminDataTable, type Column } from "@/components/AdminDataTable";
@@ -395,8 +395,8 @@ export function UsersTab({ isPlatformAdmin, orgs, clients, allUsers, refetchUser
 
   return (
     <>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold">User Management</h2>
+      <div className="flex items-center justify-between gap-2 mb-6">
+        <h2 className="text-xl sm:text-2xl font-bold shrink-0">User Management</h2>
         <div className="flex items-center gap-2">
           {/* CSV Import */}
           <input
@@ -406,17 +406,17 @@ export function UsersTab({ isPlatformAdmin, orgs, clients, allUsers, refetchUser
             className="hidden"
             onChange={handleFileSelect}
           />
-          <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-            <Upload className="w-4 h-4 mr-2" />
-            Import CSV
+          <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="gap-1.5 px-2 sm:px-3">
+            <Upload className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">Import CSV</span>
           </Button>
 
           {/* Create User */}
           <Dialog open={isCreateUserDialogOpen} onOpenChange={setIsCreateUserDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Create User
+              <Button size="sm" className="gap-1.5 px-2 sm:px-3">
+                <Plus className="w-4 h-4 shrink-0" />
+                <span className="hidden sm:inline">Create User</span>
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -630,11 +630,13 @@ export function UsersTab({ isPlatformAdmin, orgs, clients, allUsers, refetchUser
           exportFilename="active-users"
           searchPlaceholder="Search users..."
           emptyMessage="No active users"
+          minWidth={isPlatformAdmin ? 850 : 700}
           renderActions={(u) => (
-            <div className="flex gap-1">
+            <div className="flex items-center gap-1">
               <button onClick={() => handleEditUser(u)}
+                title="Edit"
                 className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-border/40 hover:bg-muted/50 transition-colors">
-                <Edit className="w-2.5 h-2.5" /> Edit
+                <Edit className="w-2.5 h-2.5" /> <span className="hidden sm:inline">Edit</span>
               </button>
               <button
                 onClick={() => {
@@ -643,12 +645,14 @@ export function UsersTab({ isPlatformAdmin, orgs, clients, allUsers, refetchUser
                   }
                 }}
                 disabled={resendInviteMutation.isPending}
+                title="Resend Invite"
                 className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-primary/30 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50">
-                <Send className="w-2.5 h-2.5" /> Resend Invite
+                <Send className="w-2.5 h-2.5" /> <span className="hidden sm:inline">Resend Invite</span>
               </button>
               <button onClick={() => { if (confirm(`Deactivate ${u.name}?`)) deactivateUserMutation.mutate({ userId: u.id }); }}
+                title="Deactivate"
                 className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-border/40 text-muted-foreground hover:bg-muted/50 transition-colors">
-                Deactivate
+                <Ban className="w-2.5 h-2.5 sm:hidden shrink-0" /><span className="hidden sm:inline">Deactivate</span>
               </button>
             </div>
           )}
@@ -666,6 +670,7 @@ export function UsersTab({ isPlatformAdmin, orgs, clients, allUsers, refetchUser
           exportFilename="inactive-users"
           searchPlaceholder="Search inactive users..."
           emptyMessage="No inactive users"
+          minWidth={isPlatformAdmin ? 700 : 550}
           renderActions={(u) => (
             <div className="flex gap-1">
               <button onClick={() => handleEditUser(u)}

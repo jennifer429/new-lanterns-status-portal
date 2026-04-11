@@ -42,6 +42,8 @@ interface AdminDataTableProps<T> {
   showSearch?: boolean;
   /** Empty state message */
   emptyMessage?: string;
+  /** Minimum table width in px for horizontal scroll on mobile (default 600) */
+  minWidth?: number;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -57,6 +59,7 @@ export function AdminDataTable<T>({
   searchPlaceholder = "Search...",
   showSearch = true,
   emptyMessage = "No data",
+  minWidth = 600,
 }: AdminDataTableProps<T>) {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortKey, setSortKey] = useState<string | null>(null);
@@ -168,7 +171,7 @@ export function AdminDataTable<T>({
   return (
     <Card className="overflow-hidden">
       {/* Toolbar: title + search + export */}
-      <div className="px-4 py-2.5 border-b border-border/30 bg-muted/10 flex items-center justify-between gap-3">
+      <div className="px-3 sm:px-4 py-2 sm:py-2.5 border-b border-border/30 bg-muted/10 flex flex-wrap items-center justify-between gap-2 sm:gap-3">
         {title && (
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">
             {title}
@@ -182,7 +185,7 @@ export function AdminDataTable<T>({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={searchPlaceholder}
-                className="pl-7 h-7 text-xs w-[200px]"
+                className="pl-7 h-7 text-xs w-[140px] sm:w-[200px]"
               />
             </div>
           )}
@@ -194,76 +197,78 @@ export function AdminDataTable<T>({
               className="h-7 text-xs gap-1"
             >
               <Download className="w-3 h-3" />
-              Export
+              <span className="hidden sm:inline">Export</span>
             </Button>
           )}
         </div>
       </div>
 
-      {/* Table */}
-      <table
-        className="w-full border-collapse text-xs"
-        style={{ tableLayout: "fixed" }}
-      >
-        <colgroup>
-          {allColumns.map((col) => (
-            <col key={col.key} style={{ width: col.width }} />
-          ))}
-        </colgroup>
-        <thead>
-          <tr className="border-b border-border/30 bg-muted/15">
-            {allColumns.map((col) => {
-              const isSortable = col.sortable !== false && col.key !== "__actions";
-              return (
-                <th
-                  key={col.key}
-                  className={`text-left px-3 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide ${
-                    isSortable
-                      ? "cursor-pointer select-none hover:text-foreground transition-colors"
-                      : ""
-                  }`}
-                  onClick={isSortable ? () => handleSort(col.key) : undefined}
-                >
-                  <span className="flex items-center gap-1">
-                    {col.label}
-                    {isSortable && <SortIcon colKey={col.key} />}
-                  </span>
-                </th>
-              );
-            })}
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.length === 0 ? (
-            <tr>
-              <td
-                colSpan={allColumns.length}
-                className="text-center py-8 text-xs text-muted-foreground italic"
-              >
-                {searchQuery ? `No results for "${searchQuery}"` : emptyMessage}
-              </td>
+      {/* Table — horizontal scroll on mobile */}
+      <div className="overflow-x-auto">
+        <table
+          className="w-full border-collapse text-xs"
+          style={{ minWidth }}
+        >
+          <colgroup>
+            {allColumns.map((col) => (
+              <col key={col.key} style={{ width: col.width }} />
+            ))}
+          </colgroup>
+          <thead>
+            <tr className="border-b border-border/30 bg-muted/15">
+              {allColumns.map((col) => {
+                const isSortable = col.sortable !== false && col.key !== "__actions";
+                return (
+                  <th
+                    key={col.key}
+                    className={`text-left px-3 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide ${
+                      isSortable
+                        ? "cursor-pointer select-none hover:text-foreground transition-colors"
+                        : ""
+                    }`}
+                    onClick={isSortable ? () => handleSort(col.key) : undefined}
+                  >
+                    <span className="flex items-center gap-1 whitespace-nowrap">
+                      {col.label}
+                      {isSortable && <SortIcon colKey={col.key} />}
+                    </span>
+                  </th>
+                );
+              })}
             </tr>
-          ) : (
-            sorted.map((row) => (
-              <tr
-                key={getRowKey(row)}
-                className={`border-b border-border/20 hover:bg-muted/20 transition-colors ${
-                  rowClassName ? rowClassName(row) : ""
-                }`}
-              >
-                {columns.map((col) => (
-                  <td key={col.key} className="px-3 py-1.5 truncate">
-                    {col.render ? col.render(row) : (col.getValue(row) ?? "—")}
-                  </td>
-                ))}
-                {renderActions && (
-                  <td className="px-2 py-1">{renderActions(row)}</td>
-                )}
+          </thead>
+          <tbody>
+            {sorted.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={allColumns.length}
+                  className="text-center py-8 text-xs text-muted-foreground italic"
+                >
+                  {searchQuery ? `No results for "${searchQuery}"` : emptyMessage}
+                </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : (
+              sorted.map((row) => (
+                <tr
+                  key={getRowKey(row)}
+                  className={`border-b border-border/20 hover:bg-muted/20 transition-colors ${
+                    rowClassName ? rowClassName(row) : ""
+                  }`}
+                >
+                  {columns.map((col) => (
+                    <td key={col.key} className="px-3 py-1.5 truncate">
+                      {col.render ? col.render(row) : (col.getValue(row) ?? "—")}
+                    </td>
+                  ))}
+                  {renderActions && (
+                    <td className="px-2 py-1 whitespace-nowrap">{renderActions(row)}</td>
+                  )}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {/* Footer with count */}
       {sorted.length > 0 && searchQuery && (
