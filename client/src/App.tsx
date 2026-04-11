@@ -43,19 +43,7 @@ function Router() {
         {() => <PlatformAdmin />}
       </Route>
       <Route path="/org/admin/library" component={ProceduralLibrary} />
-      <Route path="/org/SRV/admin/users">
-        {() => <PlatformAdmin />}
-      </Route>
-      <Route path="/org/SRV/admin">
-        {() => <PlatformAdmin />}
-      </Route>
-      <Route path="/org/RadOne/admin/users">
-        {() => <PlatformAdmin />}
-      </Route>
-      <Route path="/org/RadOne/admin">
-        {() => <PlatformAdmin />}
-      </Route>
-      {/* Generic partner admin routes - supports any partner slug (e.g. /org/rads-inc/admin) */}
+      {/* Partner admin routes - :slug matches any partner (SRV, RadOne, etc.) */}
       <Route path="/org/:slug/admin/users">
         {() => <PlatformAdmin />}
       </Route>
