@@ -130,24 +130,22 @@ export default function PlatformAdmin() {
       {/* Header */}
       <header className="header-glass sticky top-0 z-50">
         <div className="container py-3 sm:py-6">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-              <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-8 sm:h-12 shrink-0" />
-            </div>
-            <div className="flex-1 flex flex-col items-center justify-center min-w-0">
-              <h1 className="text-lg sm:text-3xl font-bold text-foreground truncate">{headerTitle}</h1>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 truncate max-w-[200px] sm:max-w-none">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-8 sm:h-12 shrink-0" />
+            <div className="flex-1 min-w-0 text-center">
+              <h1 className="text-base sm:text-3xl font-bold text-foreground truncate">{headerTitle}</h1>
+              <p className="text-[11px] sm:text-sm text-muted-foreground mt-0.5 truncate">
                 {headerSubtitle}
               </p>
             </div>
-            <div className="flex items-center gap-2 sm:gap-3">
-              <Button variant="outline" size="sm" onClick={handleExportAll} className="gap-2 px-2 sm:px-3">
+            <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+              <Button variant="outline" size="sm" onClick={handleExportAll} className="gap-2 h-8 sm:h-9 px-2 sm:px-3">
                 <Download className="w-4 h-4" />
                 <span className="hidden sm:inline">Export All</span>
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="h-10 w-10 rounded-full bg-purple-600 border-purple-400 hover:bg-purple-500 text-white font-semibold">
+                  <Button variant="outline" className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-purple-600 border-purple-400 hover:bg-purple-500 text-white font-semibold text-xs sm:text-sm">
                     {user?.name ? getInitials(user.name) : "AD"}
                   </Button>
                 </DropdownMenuTrigger>
@@ -172,17 +170,17 @@ export default function PlatformAdmin() {
           </div>
 
           {/* Tab Navigation */}
-          <div className="flex items-center gap-4 mt-4 sm:mt-6 border-b border-border overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="flex items-center gap-2 sm:gap-4 mt-3 sm:mt-6 border-b border-border overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
             <button
               onClick={() => setActiveTab("prod-dashboard")}
-              className={`pb-2 sm:pb-3 px-1 text-sm font-medium transition-colors relative whitespace-nowrap flex items-center gap-1.5 shrink-0 ${activeTab === "prod-dashboard" ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+              className={`pb-2 sm:pb-3 px-1 text-xs sm:text-sm font-medium transition-colors relative whitespace-nowrap flex items-center gap-1.5 shrink-0 ${activeTab === "prod-dashboard" ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
             >
               Connectivity Matrix
               {activeTab === "prod-dashboard" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
             </button>
             <button
               onClick={() => setActiveTab("impl-dashboard")}
-              className={`pb-2 sm:pb-3 px-1 text-sm font-medium transition-colors relative whitespace-nowrap shrink-0 ${activeTab === "impl-dashboard" ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+              className={`pb-2 sm:pb-3 px-1 text-xs sm:text-sm font-medium transition-colors relative whitespace-nowrap shrink-0 ${activeTab === "impl-dashboard" ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
             >
               Admin Dashboard
               {activeTab === "impl-dashboard" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
@@ -190,7 +188,7 @@ export default function PlatformAdmin() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className={`pb-2 sm:pb-3 px-1 text-sm font-medium transition-colors relative whitespace-nowrap flex items-center gap-1 shrink-0 ${adminTabs.includes(activeTab) ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}>
+                <button className={`pb-2 sm:pb-3 px-1 text-xs sm:text-sm font-medium transition-colors relative whitespace-nowrap flex items-center gap-1 shrink-0 ${adminTabs.includes(activeTab) ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}>
                   <Settings className="w-4 h-4" />
                   Admin
                   <ChevronDown className="w-3 h-3" />
