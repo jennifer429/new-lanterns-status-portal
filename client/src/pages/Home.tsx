@@ -5,8 +5,8 @@
  * Designed to fit in a single viewport without scrolling.
  */
 
-import { useRoute } from "wouter";
-import { useState } from "react";
+import { useRoute, useLocation } from "wouter";
+import { useState, useEffect } from "react";
 import { PhiDisclaimer } from "@/components/PhiDisclaimer";
 import { UserMenu } from "@/components/UserMenu";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -29,6 +29,8 @@ export default function Home() {
   const [, paramsNew] = useRoute("/org/:clientSlug/:slug");
   const [, paramsOld] = useRoute("/org/:slug");
   const orgSlug = paramsNew?.slug || paramsOld?.slug || "demo";
+  const clientSlug = paramsNew?.clientSlug || "";
+  const [, setLocation] = useLocation();
   const { user: currentUser } = useAuth();
 
   // UI state — expand/lightbox/dialog toggles only
@@ -40,6 +42,13 @@ export default function Home() {
   const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
 
   const data = useHomeData(orgSlug);
+
+  // Redirect legacy /org/:slug URLs to canonical /org/:clientSlug/:slug
+  useEffect(() => {
+    if (!clientSlug && data.organization?.clientSlug) {
+      setLocation(`/org/${data.organization.clientSlug}/${orgSlug}`, { replace: true });
+    }
+  }, [clientSlug, data.organization?.clientSlug, orgSlug, setLocation]);
 
   if (data.orgLoading) {
     return (
