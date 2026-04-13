@@ -60,6 +60,7 @@ function Router() {
       <Route path="/org/:clientSlug/:slug/connectivity" component={Connectivity} />
       <Route path="/org/:clientSlug/:slug/tasks" component={Tasks} />
       <Route path="/org/:clientSlug/:slug/complete" component={IntakeComplete} />
+      <Route path="/org/:clientSlug/:slug/library" component={ProceduralLibrary} />
       <Route path="/org/:clientSlug/:slug" component={Home} />
       {/* Legacy single-slug routes (backward compatible) */}
       <Route path="/org/:slug/intake" component={IntakeNewRedesign} />

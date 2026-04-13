@@ -27,7 +27,7 @@ export const intakeRouter = router({
           name: organizations.name,
           slug: organizations.slug,
           clientId: organizations.clientId,
-          partnerName: sql<string>`COALESCE(clients.name, 'RadOne')`,
+          partnerName: sql<string>`COALESCE(clients.name, '')`,
         })
         .from(organizations)
         .leftJoin(sql`clients`, sql`organizations.clientId = clients.id`)
@@ -751,7 +751,6 @@ export const intakeRouter = router({
     }),
 
   /**
-<<<<<<< HEAD
    * Upload an adhoc file (meeting notes, transcripts, etc.) from the dashboard
    */
   uploadAdhocFile: publicProcedure
