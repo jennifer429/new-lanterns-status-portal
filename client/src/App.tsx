@@ -41,18 +41,6 @@ function Router() {
       <Route path="/org/admin">
         {() => <PlatformAdmin />}
       </Route>
-      <Route path="/org/SRV/admin/users">
-        {() => <PlatformAdmin />}
-      </Route>
-      <Route path="/org/SRV/admin">
-        {() => <PlatformAdmin />}
-      </Route>
-      <Route path="/org/RadOne/admin/users">
-        {() => <PlatformAdmin />}
-      </Route>
-      <Route path="/org/RadOne/admin">
-        {() => <PlatformAdmin />}
-      </Route>
       {/* Generic partner admin routes - supports any partner slug (e.g. /org/rads-inc/admin) */}
       <Route path="/org/:slug/admin/users">
         {() => <PlatformAdmin />}

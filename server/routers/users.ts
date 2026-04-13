@@ -5,7 +5,7 @@
 import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
-import { getDb } from "../db";
+import { requireDb } from "../db";
 import { users, organizations } from "../../drizzle/schema";
 import { eq, desc } from "drizzle-orm";
 import bcrypt from "bcrypt";
@@ -19,8 +19,7 @@ export const usersRouter = router({
       throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
     }
 
-    const db = await getDb();
-    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+    const db = await requireDb();
 
     const allUsers = await db
       .select({
@@ -60,8 +59,7 @@ export const usersRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const db = await requireDb();
 
       // Check if email already exists
       const [existing] = await db
@@ -116,8 +114,7 @@ export const usersRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const db = await requireDb();
 
       // Check if user exists
       const [user] = await db
@@ -186,8 +183,7 @@ export const usersRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const db = await requireDb();
 
       // Check if user exists
       const [user] = await db

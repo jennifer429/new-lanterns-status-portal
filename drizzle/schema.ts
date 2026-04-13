@@ -196,8 +196,8 @@ export type QuestionOption = typeof questionOptions.$inferSelect;
 export type InsertQuestionOption = typeof questionOptions.$inferInsert;
 
 /**
- * Legacy intake responses table - kept for migration reference, will be removed after migration
- * @deprecated Use questions and responses tables instead
+ * Intake responses - primary storage for questionnaire answers.
+ * Keyed by questionId varchar (e.g. "H.1", "CF.2") matching questionnaireData.ts section/question IDs.
  */
 export const intakeResponses = mysqlTable("intakeResponses", {
   id: int("id").autoincrement().primaryKey(),

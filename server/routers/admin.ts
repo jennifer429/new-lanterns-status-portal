@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
-import { getDb } from "../db";
+import { getDb, requireDb } from "../db";
 import { questions, questionOptions, organizations, users, clients, intakeFileAttachments, partnerTemplates, specifications, intakeResponses, systemVendorOptions, vendorAuditLog, taskCompletion, validationResults, partnerTaskTemplates, orgCustomTasks } from "../../drizzle/schema";
 import { SECTION_DEFS as TASK_SECTION_DEFS } from "../../shared/taskDefs";
 import { eq, and, or, desc, inArray, sql } from "drizzle-orm";
@@ -25,8 +25,7 @@ export const adminRouter = router({
       throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
     }
 
-    const db = await getDb();
-    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    const db = await requireDb();
 
     const allQuestions = await db
       .select()
@@ -78,8 +77,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Check if questionId already exists
       const existing = await db
@@ -121,8 +119,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       const { id, ...updates } = input;
 
@@ -141,8 +138,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Delete associated options first
       await db.delete(questionOptions).where(eq(questionOptions.questionId, input.id));
@@ -167,8 +163,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       return await db
         .select()
@@ -195,8 +190,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       const [newOption] = await db.insert(questionOptions).values(input);
 
@@ -221,8 +215,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       const { id, ...updates } = input;
 
@@ -241,8 +234,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       await db.delete(questionOptions).where(eq(questionOptions.id, input.id));
 
@@ -264,8 +256,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Update display order for each option
       for (let i = 0; i < input.optionIds.length; i++) {
@@ -290,8 +281,7 @@ export const adminRouter = router({
       throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
     }
 
-    const db = await getDb();
-    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    const db = await requireDb();
 
     // Platform admins see all clients, partner admins see only their own
     if (ctx.user.clientId) {
@@ -318,8 +308,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Check if slug already exists
       const existing = await db.select().from(clients).where(eq(clients.slug, input.slug)).limit(1);
@@ -355,8 +344,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Check the client exists
       const [existing] = await db.select().from(clients).where(eq(clients.id, input.id)).limit(1);
@@ -392,8 +380,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       const [existing] = await db.select().from(clients).where(eq(clients.id, input.id)).limit(1);
       if (!existing) {
@@ -416,8 +403,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       const [existing] = await db.select().from(clients).where(eq(clients.id, input.id)).limit(1);
       if (!existing) {
@@ -448,8 +434,7 @@ export const adminRouter = router({
       throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
     }
 
-    const db = await getDb();
-    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    const db = await requireDb();
 
     // Debug logging
     console.log('[getAllOrganizations] User:', ctx.user.email, 'clientId:', ctx.user.clientId, 'role:', ctx.user.role);
@@ -475,8 +460,7 @@ export const adminRouter = router({
       throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
     }
 
-    const db = await getDb();
-    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    const db = await requireDb();
 
     let accessibleOrgs;
     if (ctx.user.clientId) {
@@ -517,8 +501,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Verify caller can access this org
       const [org] = await db.select().from(organizations).where(eq(organizations.id, input.organizationId)).limit(1);
@@ -568,8 +551,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Verify all org IDs are accessible
       const uniqueOrgIds = Array.from(new Set(input.rows.map(r => r.organizationId)));
@@ -636,8 +618,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Partner admins can only create orgs for their own partner
       // Platform admins must specify clientId
@@ -691,8 +672,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       const { id, ...updates } = input;
 
@@ -711,8 +691,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Note: In production, you might want to soft-delete or archive instead
       // This will cascade delete users and responses associated with this org
@@ -734,8 +713,7 @@ export const adminRouter = router({
       throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
     }
 
-    const db = await getDb();
-    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    const db = await requireDb();
 
     // Join files with organizations to filter by clientId
     const files = await db
@@ -778,8 +756,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Get file details first to check access
       const [file] = await db
@@ -824,8 +801,7 @@ export const adminRouter = router({
       throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
     }
 
-    const db = await getDb();
-    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    const db = await requireDb();
 
     // Get all organizations (filtered by clientId if applicable)
     let orgs;
@@ -1024,8 +1000,7 @@ export const adminRouter = router({
       throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
     }
 
-    const db = await getDb();
-    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    const db = await requireDb();
 
     // Platform admins see all users, partner admins see only their partner's users
     let allUsers;
@@ -1093,8 +1068,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Cannot create users for other partners" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Check if user already exists
       const existingUser = await db
@@ -1147,8 +1121,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Verify the user exists
       const [targetUser] = await db
@@ -1195,8 +1168,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Get the organization to check permissions
       const [org] = await db.select().from(organizations).where(eq(organizations.id, input.organizationId));
@@ -1228,8 +1200,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Get the organization to check permissions
       const [org] = await db.select().from(organizations).where(eq(organizations.id, input.organizationId));
@@ -1261,8 +1232,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Get the organization to check permissions
       const [org] = await db.select().from(organizations).where(eq(organizations.id, input.organizationId));
@@ -1294,8 +1264,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Get the organization to check permissions
       const [org] = await db.select().from(organizations).where(eq(organizations.id, input.organizationId));
@@ -1327,8 +1296,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Get the user to check permissions
       const [targetUser] = await db.select().from(users).where(eq(users.id, input.userId));
@@ -1365,8 +1333,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Get the user to check permissions
       const [targetUser] = await db.select().from(users).where(eq(users.id, input.userId));
@@ -1399,8 +1366,7 @@ export const adminRouter = router({
       throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
     }
 
-    const db = await getDb();
-    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    const db = await requireDb();
 
     if (ctx.user.clientId) {
       // Partner admin: only see their own active templates
@@ -1423,8 +1389,7 @@ export const adminRouter = router({
       throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
     }
 
-    const db = await getDb();
-    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    const db = await requireDb();
 
     if (ctx.user.clientId) {
       return await db.select().from(partnerTemplates)
@@ -1443,8 +1408,7 @@ export const adminRouter = router({
   getTemplatesByClient: protectedProcedure
     .input(z.object({ clientId: z.number() }))
     .query(async ({ ctx, input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       return await db.select().from(partnerTemplates)
         .where(and(eq(partnerTemplates.clientId, input.clientId), eq(partnerTemplates.isActive, 1)))
@@ -1475,8 +1439,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Cannot upload templates for other partners" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Check if an active template already exists for this question+client
       const [existing] = await db.select().from(partnerTemplates)
@@ -1537,8 +1500,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Get existing template
       const [existing] = await db.select().from(partnerTemplates)
@@ -1591,8 +1553,7 @@ export const adminRouter = router({
    * Get all active specifications (available to all authenticated users)
    */
   getSpecifications: protectedProcedure.query(async ({ ctx }) => {
-    const db = await getDb();
-    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    const db = await requireDb();
 
     return await db.select().from(specifications)
       .where(eq(specifications.isActive, 1))
@@ -1618,8 +1579,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       const fileBuffer = Buffer.from(input.fileData, "base64");
 
@@ -1661,8 +1621,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       await db.update(specifications)
         .set({
@@ -1685,8 +1644,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       await db.update(specifications)
         .set({ isActive: 0 })
@@ -1708,8 +1666,7 @@ export const adminRouter = router({
       throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
     }
 
-    const db = await getDb();
-    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    const db = await requireDb();
 
     const allOptions = await db.select().from(systemVendorOptions)
       .orderBy(systemVendorOptions.systemType, systemVendorOptions.vendorName);
@@ -1721,8 +1678,7 @@ export const adminRouter = router({
    * Get active vendor options for the intake form (public for authenticated users)
    */
   getActiveVendorOptions: protectedProcedure.query(async ({ ctx }) => {
-    const db = await getDb();
-    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    const db = await requireDb();
 
     const activeOptions = await db.select().from(systemVendorOptions)
       .where(eq(systemVendorOptions.isActive, 1))
@@ -1759,8 +1715,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Get max displayOrder for this system type
       const existing = await db.select().from(systemVendorOptions)
@@ -1800,8 +1755,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Get current value for audit log
       const [current] = await db.select().from(systemVendorOptions)
@@ -1839,8 +1793,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Get current value for audit log
       const [currentToggle] = await db.select().from(systemVendorOptions)
@@ -1875,8 +1828,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Get current value for audit log
       const [currentDel] = await db.select().from(systemVendorOptions)
@@ -1912,8 +1864,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       const values = input.vendors.map((v, i) => ({
         systemType: input.systemType,
@@ -1947,8 +1898,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Check if already seeded
       const existing = await db.select().from(systemVendorOptions);
@@ -2006,8 +1956,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       const limit = input?.limit ?? 50;
       const logs = await db.select().from(vendorAuditLog)
@@ -2026,8 +1975,7 @@ export const adminRouter = router({
       if (ctx.user.role !== "admin") {
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       const whereClause = ctx.user.clientId
         ? and(eq(partnerTaskTemplates.clientId, ctx.user.clientId), eq(partnerTaskTemplates.isActive, 1))
@@ -2066,8 +2014,7 @@ export const adminRouter = router({
       if (ctx.user.role !== "admin") {
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       if (ctx.user.clientId && ctx.user.clientId !== input.clientId) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Cannot create tasks for a different partner" });
@@ -2100,8 +2047,7 @@ export const adminRouter = router({
       if (ctx.user.role !== "admin") {
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       const [existing] = await db.select().from(partnerTaskTemplates).where(eq(partnerTaskTemplates.id, input.id)).limit(1);
       if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Task template not found" });
@@ -2126,8 +2072,7 @@ export const adminRouter = router({
       if (ctx.user.role !== "admin") {
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       const [existing] = await db.select().from(partnerTaskTemplates).where(eq(partnerTaskTemplates.id, input.id)).limit(1);
       if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Task template not found" });
@@ -2180,8 +2125,7 @@ export const adminRouter = router({
     .input(z.object({ orgCustomTaskId: z.number() }))
     .mutation(async ({ input, ctx }) => {
       if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const db = await requireDb();
 
       // Load the custom task
       const [customTask] = await db
