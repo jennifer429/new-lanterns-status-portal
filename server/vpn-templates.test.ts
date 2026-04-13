@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { questionnaireSections } from '../shared/questionnaireData';
+import { questionnaireSections } from '@shared/questionnaireData';
 
 describe('VPN Template Configuration', () => {
   it('should have VPN question E.1 as upload-download type', () => {

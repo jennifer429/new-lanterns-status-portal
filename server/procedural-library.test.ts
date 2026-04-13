@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Mock getDb
+// Mock requireDb
 const mockDb = {
   select: vi.fn().mockReturnThis(),
   from: vi.fn().mockReturnThis(),
@@ -15,7 +15,7 @@ const mockDb = {
 };
 
 vi.mock("./db", () => ({
-  getDb: vi.fn().mockResolvedValue(mockDb),
+  requireDb: vi.fn().mockResolvedValue(mockDb),
 }));
 
 describe("Procedural Library - resolveClientId helper", () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateProgress } from '../shared/progressCalculation';
+import { calculateProgress } from '@shared/progressCalculation';
 
 describe('Progress Calculation', () => {
   it('should calculate 0% when no questions are answered', () => {

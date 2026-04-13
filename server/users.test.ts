@@ -1,5 +1,11 @@
 /**
  * User Management Tests
+ *
+ * The users router uses adminDbProcedure, which requires:
+ * 1. An authenticated user with role "admin" in context
+ * 2. A valid database connection (injected by the middleware)
+ *
+ * Tests create a caller with an admin context so the middleware passes.
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
@@ -8,6 +14,28 @@ import { getDb } from "./db";
 import { users } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcrypt";
+
+/** Build a minimal tRPC context that satisfies adminDbProcedure */
+function adminContext() {
+  return {
+    user: {
+      id: 1,
+      openId: "test-admin",
+      email: "admin@newlantern.ai",
+      name: "Test Admin",
+      role: "admin" as const,
+      clientId: null,
+      organizationId: null,
+      isActive: 1,
+      loginMethod: "password",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      lastSignedIn: new Date(),
+    },
+    req: { protocol: "https", headers: {} } as any,
+    res: { clearCookie: () => {}, cookie: () => {} } as any,
+  };
+}
 
 describe("User Management", () => {
   const testEmail = `test-user-${Date.now()}@example.com`;
@@ -22,7 +50,7 @@ describe("User Management", () => {
   });
 
   it("should create a new user", async () => {
-    const caller = appRouter.createCaller({} as any);
+    const caller = appRouter.createCaller(adminContext() as any);
 
     const result = await caller.users.create({
       email: testEmail,
@@ -44,7 +72,7 @@ describe("User Management", () => {
   });
 
   it("should reject duplicate email", async () => {
-    const caller = appRouter.createCaller({} as any);
+    const caller = appRouter.createCaller(adminContext() as any);
 
     // Create first user
     await caller.users.create({
@@ -68,7 +96,7 @@ describe("User Management", () => {
   });
 
   it("should list all users", async () => {
-    const caller = appRouter.createCaller({} as any);
+    const caller = appRouter.createCaller(adminContext() as any);
 
     // Create test user
     await caller.users.create({
@@ -91,7 +119,7 @@ describe("User Management", () => {
   });
 
   it("should update user information", async () => {
-    const caller = appRouter.createCaller({} as any);
+    const caller = appRouter.createCaller(adminContext() as any);
 
     // Create test user
     await caller.users.create({
@@ -122,7 +150,7 @@ describe("User Management", () => {
   });
 
   it("should update user password", async () => {
-    const caller = appRouter.createCaller({} as any);
+    const caller = appRouter.createCaller(adminContext() as any);
 
     // Create test user
     await caller.users.create({
@@ -155,7 +183,7 @@ describe("User Management", () => {
   });
 
   it("should delete user", async () => {
-    const caller = appRouter.createCaller({} as any);
+    const caller = appRouter.createCaller(adminContext() as any);
 
     // Create test user
     await caller.users.create({
@@ -180,7 +208,7 @@ describe("User Management", () => {
   });
 
   it("should reject deleting non-existent user", async () => {
-    const caller = appRouter.createCaller({} as any);
+    const caller = appRouter.createCaller(adminContext() as any);
 
     await expect(
       caller.users.delete({ id: 999999 })

@@ -6,7 +6,7 @@ import { describe, it, expect } from "vitest";
  */
 
 // Import the functions we're testing
-import { transformSectionProgress } from "../client/src/lib/adminUtils";
+import { transformSectionProgress } from "@/lib/adminUtils";
 
 describe("Admin Utilities", () => {
   describe("transformSectionProgress", () => {
