@@ -14,7 +14,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { CheckCircle2, Circle, FileText, Calendar, Upload, ArrowLeft, Plus, X, Loader2 } from "lucide-react";
-import { Link, useRoute } from "wouter";
+import { Link } from "wouter";
+import { useOrgParams } from "@/hooks/useOrgParams";
 import { useState } from "react";
 import { PageBreadcrumb } from "@/components/PageBreadcrumb";
 import { trpc } from "@/lib/trpc";
@@ -28,9 +29,7 @@ type Section = {
 };
 
 export default function Tasks() {
-  const [, params] = useRoute("/org/:clientSlug/:slug/tasks");
-  const clientSlug = params?.clientSlug || "";
-  const orgSlug = params?.slug || "demo";
+  const { clientSlug, slug: orgSlug, orgPath } = useOrgParams("tasks");
   const { user } = useAuth();
 
   const utils = trpc.useUtils();
@@ -144,7 +143,7 @@ export default function Tasks() {
               </div>
             </div>
             <Button variant="outline" size="sm" asChild>
-              <Link href={`/org/${clientSlug}/${orgSlug}`}>
+              <Link href={orgPath}>
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Dashboard
               </Link>
@@ -152,7 +151,7 @@ export default function Tasks() {
           </div>
         </div>
       </header>
-      <PageBreadcrumb orgSlug={orgSlug} items={[{ label: "Action Items" }]} />
+      <PageBreadcrumb orgPath={orgPath} items={[{ label: "Action Items" }]} />
 
       <div className="container py-8 max-w-4xl">
         {/* Progress */}

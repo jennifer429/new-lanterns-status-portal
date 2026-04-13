@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, Circle, ArrowLeft, ArrowRight } from "lucide-react";
-import { useRoute, Link } from "wouter";
+import { Link } from "wouter";
+import { useOrgParams } from "@/hooks/useOrgParams";
 import { PageBreadcrumb } from "@/components/PageBreadcrumb";
 
 // System type colors (consistent with Architecture page)
@@ -78,8 +79,7 @@ const workflows: WorkflowData[] = [
 ];
 
 export default function Workflows() {
-  const [, params] = useRoute("/org/:slug/workflows");
-  const orgSlug = params?.slug || "demo";
+  const { clientSlug, slug: orgSlug, orgPath } = useOrgParams("workflows");
 
   const filledCount = workflows.filter((w) => w.filled).length;
   const totalCount = workflows.length;
@@ -97,13 +97,13 @@ export default function Workflows() {
               <p className="text-xs text-muted-foreground">Integration Workflows</p>
             </div>
           </div>
-          <Link href={`/org/${orgSlug}`} className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 shrink-0">
+          <Link href={orgPath} className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 shrink-0">
             <ArrowLeft className="w-4 h-4" />
             <span className="hidden sm:inline">Back to Dashboard</span>
           </Link>
         </div>
       </header>
-      <PageBreadcrumb orgSlug={orgSlug} items={[{ label: "Workflows" }]} />
+      <PageBreadcrumb orgPath={orgPath} items={[{ label: "Workflows" }]} />
 
       {/* Main content */}
       <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
@@ -214,13 +214,13 @@ export default function Workflows() {
 
         {/* Navigation footer */}
         <div className="flex items-center justify-between pt-4 border-t border-border/40">
-          <Link href={`/org/${orgSlug}/architecture`}>
+          <Link href={`${orgPath}/architecture`}>
             <Button variant="ghost" className="gap-2 text-primary hover:text-primary">
               <ArrowLeft className="w-4 h-4" />
               Back to Architecture
             </Button>
           </Link>
-          <Link href={`/org/${orgSlug}/intake`}>
+          <Link href={`${orgPath}/intake`}>
             <Button className="gap-2">
               Back to Intake Overview
               <ArrowRight className="w-4 h-4" />

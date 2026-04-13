@@ -43,7 +43,8 @@ import {
   AlertCircle,
   ChevronUp,
 } from "lucide-react";
-import { useRoute, Link } from "wouter";
+import { Link } from "wouter";
+import { useOrgParams } from "@/hooks/useOrgParams";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { UserMenu } from "@/components/UserMenu";
@@ -173,8 +174,7 @@ function StatusBadge({
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function Implementation() {
-  const [, params] = useRoute("/org/:slug/implement");
-  const slug = params?.slug || "demo";
+  const { clientSlug, slug, orgPath } = useOrgParams("implement");
   const { user } = useAuth();
 
   const { data: organization } = trpc.organizations.getBySlug.useQuery(
@@ -523,7 +523,7 @@ export default function Implementation() {
             </button>
             <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={handleImportCSV} />
             <div className="w-px h-5 bg-border/40 mx-1" />
-            <Link href={`/org/${slug}`} className="text-sm text-foreground hover:text-primary transition-colors font-medium whitespace-nowrap">
+            <Link href={orgPath} className="text-sm text-foreground hover:text-primary transition-colors font-medium whitespace-nowrap">
               Site Dashboard
             </Link>
             {user?.role === "admin" && (
@@ -535,7 +535,7 @@ export default function Implementation() {
           </div>
         </div>
       </header>
-      <PageBreadcrumb orgSlug={slug || ""} items={[{ label: "Task List" }]} />
+      <PageBreadcrumb orgPath={orgPath} items={[{ label: "Task List" }]} />
 
       {/* Import status banner */}
       {importStatus && (
@@ -764,8 +764,8 @@ export default function Implementation() {
                           const { completed: done, notApplicable: isNA, completedAt, owner, targetDate, notes } = getMerged(task.id);
                           const taskStatus = getTaskStatus(task.id);
                           const notesOpen = !!expandedNotes[task.id];
-                          const intakeHref = task.intakeLink ? `/org/${slug}${task.intakeLink}` : null;
-                          const specHref = task.specLink ? `/org/${slug}${task.specLink}` : null;
+                          const intakeHref = task.intakeLink ? `${orgPath}${task.intakeLink}` : null;
+                          const specHref = task.specLink ? `${orgPath}${task.specLink}` : null;
                           const isSelected = selectedTaskIds.has(task.id);
 
                           const STATUS_CONFIG = {
