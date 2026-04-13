@@ -33,9 +33,7 @@
 │   ├── routers.ts        # Root tRPC router (merges all sub-routers)
 │   ├── db.ts             # Database connection (Drizzle + MySQL)
 │   ├── webhooks.ts       # Express webhook endpoints (Zapier/Linear)
-│   ├── linear.ts         # Linear integration (MCP CLI) — UNUSED, candidate for removal
-│   ├── clickup.ts        # ClickUp integration (MCP CLI) — UNUSED, candidate for removal
-│   ├── notion.ts         # Notion integration (API client) — UNUSED, candidate for removal
+│   ├── notion.ts         # Notion integration (API client) — used by connectivity router
 │   ├── storage.ts        # Forge/S3 file storage
 │   └── *.test.ts         # Server tests
 ├── shared/               # Types & logic shared client↔server
@@ -285,9 +283,7 @@ Pages are split into focused sub-components:
 | LLM | `server/_core/llm.ts` | AI message/tool types | Active |
 | Whisper | `server/_core/voiceTranscription.ts` | Audio transcription | Active |
 | Google Maps | `server/_core/map.ts` | Map API requests | Active |
-| Linear | `server/linear.ts` | Post/get comments on issues via MCP CLI | **Unused** |
-| ClickUp | `server/clickup.ts` | Create tasks in ClickUp lists via MCP CLI | **Unused** |
-| Notion | `server/notion.ts` | Intake response sync, file uploads | **Unused** |
+| Notion | `server/notion.ts` | Connectivity sync (used by connectivity router) | Active |
 | Zapier | `server/webhooks.ts` | Express endpoint for Linear comment forwarding | Legacy |
 
 ## Utilities
