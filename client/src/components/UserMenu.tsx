@@ -105,7 +105,7 @@ export function UserMenu() {
             setLocation(orgPath(window.location.pathname, "library"));
           }}>
             <FolderOpen className="w-4 h-4 mr-2" />
-            Procedural Library
+            Document Library
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setChangePasswordOpen(true)}>

@@ -69,10 +69,10 @@
 | `/admin` | `client/src/pages/Admin.tsx` | Legacy admin (deprecated) |
 | `/org/admin/create` | `client/src/pages/CreateOrganization.tsx` | Org creation wizard |
 | `/org/admin`, `/org/admin/users` | `client/src/pages/PlatformAdmin.tsx` | Platform admin console |
-| `/org/admin/library` | `client/src/pages/ProceduralLibrary.tsx` | Admin procedural library |
+| `/org/admin/library` | `client/src/pages/ProceduralLibrary.tsx` | Admin document library |
 | `/org/:partner/admin/create` | `client/src/pages/CreateOrganization.tsx` | Partner admin org creation |
 | `/org/:slug/admin`, `/org/:slug/admin/users` | `client/src/pages/PlatformAdmin.tsx` | Partner admin console |
-| `/org/:slug/admin/library` | `client/src/pages/ProceduralLibrary.tsx` | Partner procedural library |
+| `/org/:slug/admin/library` | `client/src/pages/ProceduralLibrary.tsx` | Partner document library |
 | `/org/:clientSlug/:slug` | `client/src/pages/Home.tsx` | Main org dashboard |
 | `/org/:clientSlug/:slug/intake` | `client/src/pages/IntakeNewRedesign.tsx` | Intake questionnaire |
 | `/org/:clientSlug/:slug/implement` | `client/src/pages/Implementation.tsx` | Implementation tracking |
@@ -82,7 +82,7 @@
 | `/org/:clientSlug/:slug/connectivity` | `client/src/pages/Connectivity.tsx` | Network connectivity |
 | `/org/:clientSlug/:slug/tasks` | `client/src/pages/Tasks.tsx` | Task management + CSV |
 | `/org/:clientSlug/:slug/complete` | `client/src/pages/IntakeComplete.tsx` | Completion screen |
-| `/org/:clientSlug/:slug/library` | `client/src/pages/ProceduralLibrary.tsx` | Procedural document library |
+| `/org/:clientSlug/:slug/library` | `client/src/pages/ProceduralLibrary.tsx` | Customer document library (view/download only) |
 | `/org/:slug` | `client/src/pages/Home.tsx` | **Legacy** — auto-redirects to `/org/:clientSlug/:slug` |
 | `/org/:slug/:subPage` | `LegacySubPageRedirect` | **Legacy** — auto-redirects to `/org/:clientSlug/:slug/:subPage` |
 | `/404` | `client/src/pages/NotFound.tsx` | 404 page |
@@ -170,7 +170,7 @@ where URLs degrade into nonsense like `/org/intake/implement`.
 | **notes** | `server/routers/notes.ts` | Org notes (labeled file uploads) CRUD |
 | **ai** | `server/routers/ai.ts` | AI chat and tool execution with audit logging |
 | **exports** | `server/routers/exports.ts` | Data export endpoints (CSV, PDF) |
-| **proceduralLibrary** | `server/routers/proceduralLibrary.ts` | Partner document library CRUD, download URLs, audit trail |
+| **proceduralLibrary** | `server/routers/proceduralLibrary.ts` | Document Library CRUD, download URLs, audit trail (see Business Rules) |
 | **webhooks** | `server/routers/webhooks.ts` | `linearComment`, `clickupComment` |
 
 ## Database Tables (drizzle/schema.ts)
@@ -198,8 +198,8 @@ where URLs degrade into nonsense like `/org/intake/implement`.
 | `partnerTaskTemplates` | Reusable task definitions created by partner admins |
 | `orgCustomTasks` | Org-specific custom tasks added by hospital users |
 | `aiAuditLogs` | AI assistant action logs (chat, tool calls, mutations) |
-| `partnerDocuments` | Procedural library documents scoped to partners |
-| `partnerDocAudit` | Audit trail for procedural library document access |
+| `partnerDocuments` | Document Library files scoped to partners |
+| `partnerDocAudit` | Document Library audit trail (admin-only access) |
 | `intakeResponses` | Legacy intake responses (deprecated) |
 | `intakeFileAttachments` | Legacy file attachments (deprecated) |
 
@@ -337,6 +337,32 @@ Pages are split into focused sub-components:
 ### Add/modify admin features
 1. Backend: `server/routers/admin.ts`
 2. Frontend: `client/src/pages/PlatformAdmin.tsx`
+
+## Business Rules & Permissions
+
+### Document Library (`proceduralLibrary` router)
+
+Customer-facing document library where partners share operational docs with their org sites.
+UI label: **"Document Library"**. Route: `/library`. DB tables: `partnerDocuments`, `partnerDocAudit`.
+
+| Action | Platform Admin | Partner Admin | Org User (Customer) |
+|--------|:-:|:-:|:-:|
+| View document list | All partners | Own partner only | Own partner only |
+| Preview / open document | Yes | Yes | Yes |
+| Download document | Yes | Yes | Yes |
+| Upload document | Yes (must select partner) | Yes (own partner) | **No** |
+| Delete document | Yes | Own partner only | **No** |
+| View audit trail | Yes | Yes (own partner) | **No** |
+| Filter by partner | Yes | No | No |
+
+**Role definitions:**
+- **Platform Admin**: `user.role === "admin" && !user.clientId` — New Lantern staff
+- **Partner Admin**: `user.role === "admin" && user.clientId !== null` — e.g. RadOne, SRV staff
+- **Org User (Customer)**: `user.role !== "admin"` with `organizationId` — hospital/clinic staff
+
+**Key enforcement points:**
+- Backend: `server/routers/proceduralLibrary.ts` — upload/delete require `admin` role; audit trail requires `admin` role; document access scoped by `clientId`
+- Frontend: `client/src/pages/ProceduralLibrary.tsx` — upload/delete/audit buttons conditionally rendered for `isAdmin`
 
 ## NPM Scripts
 

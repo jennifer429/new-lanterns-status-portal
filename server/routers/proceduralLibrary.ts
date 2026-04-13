@@ -13,11 +13,13 @@ import { uploadToGoogleDrive } from "./files";
 import { storageGet } from "../storage";
 
 /**
- * Procedural Library router — partner-scoped document management.
+ * Document Library router — partner-scoped document management.
  *
- * Partners (admins with clientId) can upload, edit, and delete their own documents.
- * Platform admins can do everything for any partner (must select which partner).
- * Org users (regular users with organizationId) can view and download their partner's documents.
+ * See CLAUDE.md "Business Rules & Permissions > Document Library" for the full
+ * permissions matrix. Summary:
+ *   - Platform admins: full access across all partners
+ *   - Partner admins: upload/delete/audit for own partner only
+ *   - Org users (customers): view + download only, no upload/delete/audit
  *
  * All documents are stored in Google Drive; metadata + audit trail live in the database.
  */
@@ -255,28 +257,23 @@ export const proceduralLibraryRouter = router({
       }
     }),
 
-  /** Get audit trail for a specific document */
+  /** Get audit trail for a specific document (admin only) */
   getAuditTrail: protectedProcedure
     .input(z.object({ documentId: z.number() }))
     .query(async ({ ctx, input }) => {
       const db = await requireDb();
 
-      // Verify user has access to this document's partner
+      // Only admins can view audit trails
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Only admins can view audit trails" });
+      }
+
       const [doc] = await db.select().from(partnerDocuments).where(eq(partnerDocuments.id, input.documentId));
       if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Document not found" });
 
+      // Partner admins can only see audit trails for their own partner's documents
       if (ctx.user.clientId && doc.clientId !== ctx.user.clientId) {
-        // Check if org user belongs to this partner
-        if (ctx.user.organizationId) {
-          const [org] = await db.select({ clientId: organizations.clientId })
-            .from(organizations)
-            .where(eq(organizations.id, ctx.user.organizationId));
-          if (!org || org.clientId !== doc.clientId) {
-            throw new TRPCError({ code: "FORBIDDEN", message: "No access to this document" });
-          }
-        } else {
-          throw new TRPCError({ code: "FORBIDDEN", message: "No access to this document" });
-        }
+        throw new TRPCError({ code: "FORBIDDEN", message: "No access to this document" });
       }
 
       return db.select()
