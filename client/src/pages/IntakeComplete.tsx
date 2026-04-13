@@ -1,11 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2 } from "lucide-react";
-import { useRoute, useLocation } from "wouter";
+import { useLocation } from "wouter";
+import { useOrgParams } from "@/hooks/useOrgParams";
 
 export default function IntakeComplete() {
-  const [, params] = useRoute("/org/:slug/complete");
-  const slug = params?.slug;
+  const { orgPath } = useOrgParams("complete");
   const [, setLocation] = useLocation();
 
   return (
@@ -34,7 +34,7 @@ export default function IntakeComplete() {
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => setLocation(`/org/${slug}/intake`)}
+              onClick={() => setLocation(`${orgPath}/intake`)}
             >
               Review My Responses
             </Button>

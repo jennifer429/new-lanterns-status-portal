@@ -51,7 +51,7 @@ function Router() {
         {() => <PlatformAdmin />}
       </Route>
       <Route path="/org/:slug/admin/library" component={ProceduralLibrary} />
-      {/* New client-level org routes (/org/:clientSlug/:orgSlug) */}
+      {/* Org routes — all require partner prefix: /org/:clientSlug/:orgSlug */}
       <Route path="/org/:clientSlug/:slug/intake" component={IntakeNewRedesign} />
       <Route path="/org/:clientSlug/:slug/implement" component={Implementation} />
       <Route path="/org/:clientSlug/:slug/validation" component={Validation} />
@@ -60,18 +60,8 @@ function Router() {
       <Route path="/org/:clientSlug/:slug/connectivity" component={Connectivity} />
       <Route path="/org/:clientSlug/:slug/tasks" component={Tasks} />
       <Route path="/org/:clientSlug/:slug/complete" component={IntakeComplete} />
+      <Route path="/org/:clientSlug/:slug/library" component={ProceduralLibrary} />
       <Route path="/org/:clientSlug/:slug" component={Home} />
-      {/* Legacy single-slug routes (backward compatible) */}
-      <Route path="/org/:slug/intake" component={IntakeNewRedesign} />
-      <Route path="/org/:slug/implement" component={Implementation} />
-      <Route path="/org/:slug/validation" component={Validation} />
-      <Route path="/org/:slug/workflows" component={Workflows} />
-      <Route path="/org/:slug/specs" component={Specifications} />
-      <Route path="/org/:slug/connectivity" component={Connectivity} />
-      <Route path="/org/:slug/library" component={ProceduralLibrary} />
-      <Route path="/org/:slug/complete" component={IntakeComplete} />
-      <Route path="/org/:slug/tasks" component={Tasks} />
-      <Route path="/org/:slug" component={Home} />
       <Route path="/">{() => { window.location.href = '/login'; return null; }}</Route>
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

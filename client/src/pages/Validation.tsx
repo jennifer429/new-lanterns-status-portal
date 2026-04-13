@@ -45,7 +45,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useRoute, Link } from "wouter";
+import { Link } from "wouter";
+import { useOrgParams } from "@/hooks/useOrgParams";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import { UserMenu } from "@/components/UserMenu";
@@ -463,7 +464,7 @@ function RelatedAnswers({
         return (
           <Link
             key={rq.questionId}
-            href={`/org/${slug}/intake?section=${rq.sectionId}&q=${rq.questionId}`}
+            href={`${orgPath}/intake?section=${rq.sectionId}&q=${rq.questionId}`}
             className={cn(
               "inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs border transition-colors",
               hasAnswer
@@ -494,8 +495,7 @@ function RelatedAnswers({
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function Validation() {
-  const [, params] = useRoute("/org/:slug/validation");
-  const slug = params?.slug || "demo";
+  const { clientSlug, slug, orgPath } = useOrgParams("validation");
   const { user } = useAuth();
 
   const { data: organization } = trpc.organizations.getBySlug.useQuery(
@@ -885,7 +885,7 @@ export default function Validation() {
             </button>
             <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={handleImportCSV} />
             <div className="w-px h-5 bg-border/40 mx-1" />
-            <Link href={`/org/${slug}`} className="text-sm text-foreground hover:text-primary transition-colors font-medium whitespace-nowrap">
+            <Link href={orgPath} className="text-sm text-foreground hover:text-primary transition-colors font-medium whitespace-nowrap">
               Site Dashboard
             </Link>
             {user?.role === "admin" && (
@@ -897,7 +897,7 @@ export default function Validation() {
           </div>
         </div>
       </header>
-      <PageBreadcrumb orgSlug={slug || ""} items={[{ label: "Testing Checklist" }]} />
+      <PageBreadcrumb orgPath={orgPath} items={[{ label: "Testing Checklist" }]} />
 
       {/* Import status banner */}
       {importStatus && (

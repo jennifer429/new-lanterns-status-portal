@@ -17,12 +17,13 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Link, useParams } from "wouter";
+import { Link } from "wouter";
+import { useOrgParams } from "@/hooks/useOrgParams";
 import { PageBreadcrumb } from "@/components/PageBreadcrumb";
 
 export default function Connectivity() {
   const { user } = useAuth();
-  const { slug: orgSlug } = useParams<{ slug: string }>();
+  const { clientSlug, slug: orgSlug, orgPath } = useOrgParams("connectivity");
 
   // Fetch organization
   const { data: organization } = trpc.organizations.getBySlug.useQuery(
@@ -122,7 +123,7 @@ export default function Connectivity() {
           </div>
           {/* Right: back + user menu */}
           <div className="flex items-center gap-2">
-            <Link href={`/org/${orgSlug}`}>
+            <Link href={orgPath}>
               <Button variant="outline" size="sm" className="gap-1.5 shrink-0">
                 <ArrowLeft className="w-4 h-4" />
                 <span className="hidden sm:inline">Dashboard</span>
@@ -132,7 +133,7 @@ export default function Connectivity() {
           </div>
         </div>
       </header>
-      <PageBreadcrumb orgSlug={orgSlug} items={[{ label: "Connectivity Matrix" }]} />
+      <PageBreadcrumb orgPath={orgPath} items={[{ label: "Connectivity Matrix" }]} />
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
