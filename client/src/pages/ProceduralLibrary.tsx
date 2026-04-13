@@ -319,7 +319,7 @@ export default function ProceduralLibrary() {
           <div className="flex items-center gap-3 min-w-0">
             <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-8 flex-shrink-0" />
             <div className="hidden sm:block border-l border-border/40 pl-3 min-w-0">
-              <div className="text-sm font-bold tracking-tight truncate">Procedural Library</div>
+              <div className="text-sm font-bold tracking-tight truncate">Document Library</div>
               <p className="text-xs text-muted-foreground truncate">
                 Operational and procedural documents
               </p>
@@ -554,7 +554,7 @@ export default function ProceduralLibrary() {
           <DialogHeader>
             <DialogTitle>Upload Document</DialogTitle>
             <DialogDescription>
-              Add an operational or procedural document to the library.
+              Add a document to the library.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-2">

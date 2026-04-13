@@ -212,7 +212,7 @@ export default function PlatformAdmin() {
                   <ListChecks className="mr-2 h-4 w-4" />Vendor Picklists
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setActiveTab("library")} className="cursor-pointer">
-                  <FolderOpen className="mr-2 h-4 w-4" />Procedural Library
+                  <FolderOpen className="mr-2 h-4 w-4" />Document Library
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setActiveTab("audit-log")} className="cursor-pointer">
