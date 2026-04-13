@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
-import { getDb } from "../db";
+import { requireDb } from "../db";
 import { organizations, clients, sectionProgress, taskCompletion, activityFeed, users, intakeResponses, questions, responses, intakeFileAttachments } from "../../drizzle/schema";
 import { questionnaireSections } from "../../shared/questionnaireData";
 import { calculateProgress } from "../../shared/progressCalculation";
@@ -32,8 +32,7 @@ export const organizationsRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      const db = await requireDb();
 
       // Auto-create Google Drive folder for this customer if not provided
       let googleDriveFolderId = input.googleDriveFolderId;
@@ -63,8 +62,7 @@ export const organizationsRouter = router({
   getBySlug: publicProcedure
     .input(z.object({ slug: z.string() }))
     .query(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      const db = await requireDb();
       const [org] = await db
         .select()
         .from(organizations)
@@ -97,8 +95,7 @@ export const organizationsRouter = router({
   getProgress: publicProcedure
     .input(z.object({ organizationId: z.number() }))
     .query(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      const db = await requireDb();
       const progress = await db
         .select()
         .from(sectionProgress)
@@ -126,8 +123,7 @@ export const organizationsRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      const db = await requireDb();
       // Check if section progress exists
       const [existing] = await db
         .select()
@@ -173,8 +169,7 @@ export const organizationsRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      const db = await requireDb();
       // Check if task completion exists
       const [existing] = await db
         .select()
@@ -247,8 +242,7 @@ export const organizationsRouter = router({
    * Filters by user's clientId for access control
    */
   list: publicProcedure.query(async ({ ctx }) => {
-    const db = await getDb();
-    if (!db) throw new Error("Database not available");
+    const db = await requireDb();
     
     // Filter by user's clientId for access control
     if (ctx.user?.clientId) {
@@ -265,8 +259,7 @@ export const organizationsRouter = router({
   getActivityFeed: publicProcedure
     .input(z.object({ organizationId: z.number() }))
     .query(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      const db = await requireDb();
       const activities = await db
         .select()
         .from(activityFeed)
@@ -280,8 +273,7 @@ export const organizationsRouter = router({
    * Filters by user's clientId for access control
    */
   getMetrics: publicProcedure.query(async ({ ctx }) => {
-    const db = await getDb();
-    if (!db) throw new Error("Database not available");
+    const db = await requireDb();
 
     // Filter organizations by user's clientId and exclude inactive
     // If user has no clientId (super admin), show all active organizations
@@ -422,8 +414,7 @@ export const organizationsRouter = router({
    * Get all organizations (for admin management)
    */
   getAll: publicProcedure.query(async () => {
-    const db = await getDb();
-    if (!db) throw new Error("Database not available");
+    const db = await requireDb();
     const allOrgs = await db
       .select()
       .from(organizations)
@@ -443,8 +434,7 @@ export const organizationsRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      const db = await requireDb();
       await db
         .update(organizations)
         .set({ name: input.name })
@@ -462,8 +452,7 @@ export const organizationsRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      const db = await requireDb();
       await db
         .update(organizations)
         .set({ status: "inactive" })
@@ -483,8 +472,7 @@ export const organizationsRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      const db = await requireDb();
 
       // Get organization with Linear issue ID
       const [org] = await db

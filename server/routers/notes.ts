@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
-import { getDb } from "../db";
+import { requireDb } from "../db";
 import { orgNotes, organizations } from "../../drizzle/schema";
 import { eq, and, desc, isNull } from "drizzle-orm";
 import { uploadToGoogleDrive } from "./files";
@@ -27,8 +27,7 @@ export const notesRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       const [org] = await db
         .select()
@@ -91,8 +90,7 @@ export const notesRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Partner users can only upload to their own clientId; platform admins can upload to any
       if (ctx.user.clientId && ctx.user.clientId !== input.clientId) {
@@ -139,8 +137,7 @@ export const notesRouter = router({
   listByOrg: protectedProcedure
     .input(z.object({ organizationSlug: z.string() }))
     .query(async ({ input, ctx }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       const [org] = await db
         .select()
@@ -166,8 +163,7 @@ export const notesRouter = router({
   listByClient: protectedProcedure
     .input(z.object({ clientId: z.number() }))
     .query(async ({ input, ctx }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       if (ctx.user.clientId && ctx.user.clientId !== input.clientId) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
@@ -191,8 +187,7 @@ export const notesRouter = router({
   delete: protectedProcedure
     .input(z.object({ noteId: z.number() }))
     .mutation(async ({ input, ctx }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       const [note] = await db
         .select()

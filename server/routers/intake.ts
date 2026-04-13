@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { publicProcedure, router } from "../_core/trpc";
-import { getDb } from "../db";
-import { intakeResponses, intakeFileAttachments, organizations, questions, questionOptions, responses, onboardingFeedback, clients, partnerTemplates, partnerTaskTemplates, orgCustomTasks } from "../../drizzle/schema";
+import { getDb, requireDb } from "../db";
+import { intakeResponses, intakeFileAttachments, organizations, questions, onboardingFeedback, clients, partnerTemplates, partnerTaskTemplates, orgCustomTasks } from "../../drizzle/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { uploadToGoogleDrive } from "./files";
 import { logFileActivity } from "../fileAuditLog";
@@ -18,8 +18,7 @@ export const intakeRouter = router({
       })
     )
     .query(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Get organization with partner info via LEFT JOIN
       const result = await db
@@ -51,8 +50,7 @@ export const intakeRouter = router({
       })
     )
     .query(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Get organization by slug
       const [org] = await db
@@ -83,8 +81,7 @@ export const intakeRouter = router({
       })
     )
     .query(async ({ input, ctx }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Get organization by slug
       let org;
@@ -147,8 +144,7 @@ export const intakeRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Get organization by slug
       let org;
@@ -221,8 +217,7 @@ export const intakeRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Get organization by slug
       let org;
@@ -303,8 +298,7 @@ export const intakeRouter = router({
       })
     )
     .query(async ({ input, ctx }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Get organization by slug
       let org;
@@ -392,8 +386,7 @@ export const intakeRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Get organization by slug
       let org;
@@ -499,249 +492,6 @@ export const intakeRouter = router({
       }
     }),
 
-  /**
-   * Get all questions from database
-   */
-  getAllQuestions: publicProcedure.query(async () => {
-    const db = await getDb();
-    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    
-    const allQuestions = await db
-      .select()
-      .from(questions)
-      .orderBy(questions.sectionId, questions.questionNumber);
-    
-    return allQuestions;
-  }),
-
-  /**
-   * Get responses from new schema (with org name and user email)
-   */
-  getResponsesNew: publicProcedure
-    .input(z.object({ organizationId: z.number() }))
-    .query(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-      
-      // Get organization
-      const [org] = await db
-        .select()
-        .from(organizations)
-        .where(eq(organizations.id, input.organizationId))
-        .limit(1);
-      
-      if (!org) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
-      }
-      
-      // Get responses with organization name
-      const responsesData = await db
-        .select()
-        .from(responses)
-        .where(eq(responses.organizationId, input.organizationId));
-      
-      // Include organization name
-      const responsesWithOrgName = responsesData.map(r => ({
-        ...r,
-        organizationName: org.name,
-        organizationSlug: org.slug,
-      }));
-      
-      return responsesWithOrgName;
-    }),
-
-  /**
-   * Save response with user email tracking
-   */
-  saveResponseNew: publicProcedure
-    .input(
-      z.object({
-        organizationId: z.number(),
-        questionId: z.number(),
-        response: z.string().optional(),
-        fileUrl: z.string().optional(),
-        userEmail: z.string().email(),
-      })
-    )
-    .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-      
-      // Check if response exists
-      const [existing] = await db
-        .select()
-        .from(responses)
-        .where(
-          and(
-            eq(responses.organizationId, input.organizationId),
-            eq(responses.questionId, input.questionId)
-          )
-        )
-        .limit(1);
-      
-      if (existing) {
-        // Update with new user email and timestamp
-        await db
-          .update(responses)
-          .set({
-            response: input.response,
-            fileUrl: input.fileUrl,
-            userEmail: input.userEmail,
-            // updatedAt automatically set by onUpdateNow()
-          })
-          .where(eq(responses.id, existing.id));
-        
-        return { success: true, responseId: existing.id, action: 'updated' };
-      } else {
-        // Insert new response
-        const [newResponse] = await db.insert(responses).values({
-          organizationId: input.organizationId,
-          questionId: input.questionId,
-          response: input.response,
-          fileUrl: input.fileUrl,
-          userEmail: input.userEmail,
-          // createdAt and updatedAt automatically set
-        });
-        
-        return { success: true, responseId: newResponse.insertId, action: 'created' };
-      }
-    }),
-
-  /**
-   * Get completion metrics with org name
-   */
-  getCompletionMetricsNew: publicProcedure
-    .input(z.object({ organizationId: z.number() }))
-    .query(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-      
-      // Get organization
-      const [org] = await db
-        .select()
-        .from(organizations)
-        .where(eq(organizations.id, input.organizationId))
-        .limit(1);
-      
-      if (!org) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
-      }
-      
-      // Get total question count
-      const [totalResult] = await db
-        .select({ count: sql<number>`COUNT(*)` })
-        .from(questions);
-      const totalQuestions = totalResult?.count || 0;
-      
-      // Get completed responses count
-      const [completedResult] = await db
-        .select({ count: sql<number>`COUNT(*)` })
-        .from(responses)
-        .where(
-          and(
-            eq(responses.organizationId, input.organizationId),
-            sql`${responses.response} IS NOT NULL AND ${responses.response} != ''`
-          )
-        );
-      const completedQuestions = completedResult?.count || 0;
-      
-      const completionPercentage = totalQuestions > 0
-        ? Math.round((completedQuestions / totalQuestions) * 100)
-        : 0;
-      
-      // Get section breakdown
-      const allQuestions = await db.select().from(questions);
-      const allResponses = await db
-        .select()
-        .from(responses)
-        .where(eq(responses.organizationId, input.organizationId));
-      
-      const responseMap = new Map();
-      allResponses.forEach(r => responseMap.set(r.questionId, r));
-      
-      const sectionStats: Record<string, { total: number; completed: number; percentage: number }> = {};
-      
-      allQuestions.forEach(q => {
-        if (!sectionStats[q.sectionTitle]) {
-          sectionStats[q.sectionTitle] = { total: 0, completed: 0, percentage: 0 };
-        }
-        
-        sectionStats[q.sectionTitle].total++;
-        
-        const resp = responseMap.get(q.id);
-        if (resp && resp.response && resp.response !== '') {
-          sectionStats[q.sectionTitle].completed++;
-        }
-      });
-      
-      Object.keys(sectionStats).forEach(sectionTitle => {
-        const stats = sectionStats[sectionTitle];
-        stats.percentage = stats.total > 0
-          ? Math.round((stats.completed / stats.total) * 100)
-          : 0;
-      });
-      
-      return {
-        organizationName: org.name,
-        organizationSlug: org.slug,
-        totalQuestions,
-        completedQuestions,
-        completionPercentage,
-        sectionStats,
-      };
-    }),
-
-  /**
-   * Get all questions with their options from question_options table
-   */
-  getQuestionsWithOptions: publicProcedure.query(async () => {
-    const db = await getDb();
-    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
-    // Get all questions
-    const allQuestions = await db.select().from(questions).orderBy(questions.sectionId, questions.questionNumber);
-
-    // Get all options
-    const allOptions = await db.select().from(questionOptions).where(eq(questionOptions.isActive, 1)).orderBy(questionOptions.displayOrder);
-
-    // Group options by questionId
-    const optionsByQuestion = allOptions.reduce((acc, option) => {
-      if (!acc[option.questionId]) {
-        acc[option.questionId] = [];
-      }
-      acc[option.questionId].push(option);
-      return acc;
-    }, {} as Record<number, typeof allOptions>);
-
-    // Attach options to questions
-    const questionsWithOptions = allQuestions.map(q => ({
-      ...q,
-      optionsArray: optionsByQuestion[q.id] || [],
-    }));
-
-    return questionsWithOptions;
-  }),
-
-  /**
-   * Get options for a specific question
-   */
-  getQuestionOptions: publicProcedure
-    .input(z.object({ questionId: z.number() }))
-    .query(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
-      const options = await db
-        .select()
-        .from(questionOptions)
-        .where(and(
-          eq(questionOptions.questionId, input.questionId),
-          eq(questionOptions.isActive, 1)
-        ))
-        .orderBy(questionOptions.displayOrder);
-
-      return options;
-    }),
 
   /**
    * Get uploaded files for a specific organization and question
@@ -754,8 +504,7 @@ export const intakeRouter = router({
       })
     )
     .query(async ({ input, ctx }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Get organization by slug
       let org;
@@ -804,8 +553,7 @@ export const intakeRouter = router({
       })
     )
     .query(async ({ input, ctx }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Get organization by slug
       let org;
@@ -900,8 +648,7 @@ export const intakeRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Get organization by slug
       let org;
@@ -959,8 +706,7 @@ export const intakeRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Get organization by slug
       const [org] = await db
@@ -991,8 +737,7 @@ export const intakeRouter = router({
   getTemplatesForOrg: publicProcedure
     .input(z.object({ organizationSlug: z.string() }))
     .query(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       // Get the org to find its clientId
       const [org] = await db.select().from(organizations)
@@ -1020,8 +765,7 @@ export const intakeRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       const [org] = await db
         .select()
@@ -1074,8 +818,7 @@ export const intakeRouter = router({
   getAdhocFiles: publicProcedure
     .input(z.object({ organizationSlug: z.string() }))
     .query(async ({ input, ctx }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       const [org] = await db
         .select()
@@ -1104,8 +847,7 @@ export const intakeRouter = router({
    * Get active vendor options grouped by system type (for intake form dropdowns)
    */
   getActiveVendorOptions: publicProcedure.query(async () => {
-    const db = await getDb();
-    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    const db = await requireDb();
 
     const { systemVendorOptions } = await import("../../drizzle/schema");
     const activeOptions = await db.select().from(systemVendorOptions)
@@ -1311,8 +1053,7 @@ export const intakeRouter = router({
       userEmail: z.string().email().optional(),
     }))
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       const [org] = await db
         .select({ id: organizations.id })
@@ -1347,8 +1088,7 @@ export const intakeRouter = router({
   toggleOrgCustomTask: publicProcedure
     .input(z.object({ taskId: z.number() }))
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       const [task] = await db
         .select()
@@ -1372,8 +1112,7 @@ export const intakeRouter = router({
   deleteOrgCustomTask: publicProcedure
     .input(z.object({ taskId: z.number() }))
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       await db
         .delete(orgCustomTasks)
