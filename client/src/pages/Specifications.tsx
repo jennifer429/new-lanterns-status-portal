@@ -56,7 +56,7 @@ export default function Specifications() {
     return cats;
   }, [filteredSpecs]);
 
-  const orgName = organization?.name || "Your Organization";
+  const orgName = organization?.name || "";
   const partnerName = organization?.clientName || "";
 
   return (

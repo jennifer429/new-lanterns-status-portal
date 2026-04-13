@@ -235,6 +235,7 @@ export default function IntakeNewRedesign() {
 
       {/* Left Sidebar */}
       <IntakeSidebar
+        clientSlug={clientSlug}
         slug={slug}
         sidebarOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -281,7 +282,7 @@ export default function IntakeNewRedesign() {
                     }
                   }}
                   organizationId={org?.id ?? 0}
-                  onBack={() => setLocation(`/org/${slug}`)}
+                  onBack={() => setLocation(clientSlug ? `/org/${clientSlug}/${slug}` : `/org/${slug}`)}
                   onContinue={() => {
                     const idx = questionnaireSections.findIndex((s) => s.id === currentSection);
                     if (idx < questionnaireSections.length - 1) {

@@ -7,6 +7,7 @@ import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 
 interface ConnectivityCardProps {
+  clientSlug: string;
   orgSlug: string;
   connRows: ConnectivityRow[];
   onConnChange: (rows: ConnectivityRow[]) => void;
@@ -17,6 +18,7 @@ interface ConnectivityCardProps {
 }
 
 export function ConnectivityCard({
+  clientSlug,
   orgSlug,
   connRows,
   onConnChange,
@@ -76,7 +78,7 @@ export function ConnectivityCard({
             ) : (
               <div className="text-center py-4">
                 <p className="text-xs text-muted-foreground mb-2">No connectivity data yet</p>
-                <Link href={`/org/${orgSlug}/intake`}>
+                <Link href={`/org/${clientSlug}/${orgSlug}/intake`}>
                   <Button size="sm" variant="outline" className="text-xs h-7">
                     <ArrowRight className="w-3 h-3 mr-1" /> Add in Questionnaire
                   </Button>
@@ -86,7 +88,7 @@ export function ConnectivityCard({
           </div>
           {connRows.length > 0 && (
             <div className="px-3 pb-2 flex items-center justify-end gap-2">
-              <Link href={`/org/${orgSlug}/intake`}>
+              <Link href={`/org/${clientSlug}/${orgSlug}/intake`}>
                 <Button size="sm" variant="ghost" className="text-xs h-7 text-muted-foreground">
                   <ExternalLink className="w-3 h-3 mr-1" /> Full View
                 </Button>

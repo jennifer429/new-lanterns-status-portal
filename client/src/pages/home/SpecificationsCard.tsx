@@ -6,6 +6,7 @@ import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 
 interface SpecificationsCardProps {
+  clientSlug: string;
   orgSlug: string;
   specs: any[];
   specsByCategory: Map<string, any[]>;
@@ -15,6 +16,7 @@ interface SpecificationsCardProps {
 }
 
 export function SpecificationsCard({
+  clientSlug,
   orgSlug,
   specs,
   specsByCategory,
@@ -102,7 +104,7 @@ export function SpecificationsCard({
             )}
           </div>
           <div className="px-3 pb-2 flex items-center justify-end">
-            <Link href={`/org/${orgSlug}/specs`}>
+            <Link href={`/org/${clientSlug}/${orgSlug}/specs`}>
               <Button size="sm" variant="ghost" className="text-xs h-7 text-muted-foreground">
                 <ExternalLink className="w-3 h-3 mr-1" /> View All
               </Button>

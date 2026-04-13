@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { VAL_TEST_NAMES } from "@/hooks/useHomeData";
 
 interface TestingPhaseCardProps {
+  clientSlug: string;
   orgSlug: string;
   valTotal: number;
   valCompleted: number;
@@ -20,6 +21,7 @@ interface TestingPhaseCardProps {
 }
 
 export function TestingPhaseCard({
+  clientSlug,
   orgSlug,
   valTotal,
   valCompleted,
@@ -48,7 +50,7 @@ export function TestingPhaseCard({
   });
 
   return (
-    <Link href={`/org/${orgSlug}/validation`}>
+    <Link href={`/org/${clientSlug}/${orgSlug}/validation`}>
       <Card
         className={cn(
           "card-elevated card-clickable relative overflow-hidden cursor-pointer group",

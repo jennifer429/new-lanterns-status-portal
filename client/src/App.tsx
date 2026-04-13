@@ -1,7 +1,7 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Route, Switch, useRoute, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
@@ -21,6 +21,40 @@ import Workflows from "./pages/Workflows";
 import Specifications from "./pages/Specifications";
 import Connectivity from "./pages/Connectivity";
 import ProceduralLibrary from "./pages/ProceduralLibrary";
+import { trpc } from "@/lib/trpc";
+import { useEffect } from "react";
+
+/**
+ * Redirect legacy 2-segment sub-page URLs to canonical 3-segment URLs.
+ * e.g. /org/boulder/intake → /org/RadOne/boulder/intake
+ *
+ * Without this, /org/boulder/intake matches /org/:clientSlug/:slug (Home)
+ * with clientSlug="boulder" and slug="intake", producing broken navigation.
+ */
+function LegacySubPageRedirect({ subPath }: { subPath: string }) {
+  const [, params] = useRoute(`/org/:slug/${subPath}`);
+  const [, setLocation] = useLocation();
+  const slug = params?.slug ?? "";
+  const { data: org } = trpc.organizations.getBySlug.useQuery(
+    { slug },
+    { enabled: !!slug }
+  );
+
+  useEffect(() => {
+    if (org?.clientSlug) {
+      setLocation(`/org/${org.clientSlug}/${slug}/${subPath}`, { replace: true });
+    }
+  }, [org?.clientSlug, slug, subPath, setLocation]);
+
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="text-center space-y-3">
+        <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent mx-auto" />
+        <p className="text-sm text-muted-foreground">Redirecting...</p>
+      </div>
+    </div>
+  );
+}
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -61,6 +95,21 @@ function Router() {
       <Route path="/org/:clientSlug/:slug/tasks" component={Tasks} />
       <Route path="/org/:clientSlug/:slug/complete" component={IntakeComplete} />
       <Route path="/org/:clientSlug/:slug/library" component={ProceduralLibrary} />
+      {/*
+       * Legacy sub-page redirects — catch old 2-segment URLs like /org/boulder/intake
+       * and redirect to canonical /org/:clientSlug/:slug/:subPath.
+       * These MUST appear before the generic /org/:clientSlug/:slug route
+       * to avoid mismatching (e.g. treating "intake" as an orgSlug).
+       */}
+      <Route path="/org/:slug/intake">{() => <LegacySubPageRedirect subPath="intake" />}</Route>
+      <Route path="/org/:slug/implement">{() => <LegacySubPageRedirect subPath="implement" />}</Route>
+      <Route path="/org/:slug/validation">{() => <LegacySubPageRedirect subPath="validation" />}</Route>
+      <Route path="/org/:slug/workflows">{() => <LegacySubPageRedirect subPath="workflows" />}</Route>
+      <Route path="/org/:slug/specs">{() => <LegacySubPageRedirect subPath="specs" />}</Route>
+      <Route path="/org/:slug/connectivity">{() => <LegacySubPageRedirect subPath="connectivity" />}</Route>
+      <Route path="/org/:slug/tasks">{() => <LegacySubPageRedirect subPath="tasks" />}</Route>
+      <Route path="/org/:slug/complete">{() => <LegacySubPageRedirect subPath="complete" />}</Route>
+      <Route path="/org/:slug/library">{() => <LegacySubPageRedirect subPath="library" />}</Route>
       <Route path="/org/:clientSlug/:slug" component={Home} />
       {/* Legacy route — redirects to canonical /org/:clientSlug/:slug via Home's useEffect */}
       <Route path="/org/:slug" component={Home} />

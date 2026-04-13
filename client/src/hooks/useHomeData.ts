@@ -314,7 +314,7 @@ export function useHomeData(orgSlug: string) {
     // Org
     organization,
     orgLoading,
-    orgName: organization?.name || "Your Organization",
+    orgName: organization?.name || "",
     partnerName: organization?.clientName || "",
 
     // Files

@@ -1,6 +1,9 @@
 import { useMemo, useState, useRef, useCallback, type DragEvent } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useRoute } from "wouter";
+import { Link } from "wouter";
+import { UserMenu } from "@/components/UserMenu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,6 +44,7 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  ArrowLeft,
   X,
   Eye,
   Clock,
@@ -91,6 +95,15 @@ export default function ProceduralLibrary() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const isPlatformAdmin = isAdmin && !user?.clientId;
+
+  // Detect route context for back navigation
+  const [, orgParams] = useRoute("/org/:clientSlug/:slug/library");
+  const [, partnerAdminParams] = useRoute("/org/:slug/admin/library");
+  const backPath = orgParams
+    ? `/org/${orgParams.clientSlug}/${orgParams.slug}`
+    : partnerAdminParams
+      ? `/org/${partnerAdminParams.slug}/admin`
+      : "/org/admin";
 
   // Data queries
   const { data: documents = [], refetch: refetchDocs } =
@@ -299,26 +312,33 @@ export default function ProceduralLibrary() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm">
-        <div className="container py-4 sm:py-6">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-              <FolderOpen className="w-5 h-5 sm:w-6 sm:h-6 text-primary shrink-0" />
-              <div className="min-w-0">
-                <h1 className="text-lg sm:text-2xl font-bold text-foreground truncate">Procedural Library</h1>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 truncate">
-                  Operational and procedural documents
-                </p>
-              </div>
+    <div className="min-h-screen bg-background animate-page-in">
+      {/* ── Glass Header ── */}
+      <header className="header-glass sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-8 flex-shrink-0" />
+            <div className="hidden sm:block border-l border-border/40 pl-3 min-w-0">
+              <div className="text-sm font-bold tracking-tight truncate">Procedural Library</div>
+              <p className="text-xs text-muted-foreground truncate">
+                Operational and procedural documents
+              </p>
             </div>
+          </div>
+          <div className="flex items-center gap-2">
             {isAdmin && (
               <Button size="sm" onClick={() => setIsUploadOpen(true)} className="gap-1.5 h-8 sm:h-9 px-2 sm:px-3 shrink-0">
                 <Upload className="w-4 h-4 shrink-0" />
                 <span className="hidden sm:inline">Upload Document</span>
               </Button>
             )}
+            <Link href={backPath}>
+              <Button variant="outline" size="sm" className="gap-1.5 shrink-0">
+                <ArrowLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">Back</span>
+              </Button>
+            </Link>
+            <UserMenu />
           </div>
         </div>
       </header>
