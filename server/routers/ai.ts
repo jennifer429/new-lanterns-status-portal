@@ -23,7 +23,7 @@ import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
 import type { Message, Tool, ToolCall } from "../_core/llm";
-import { getDb } from "../db";
+import { requireDb } from "../db";
 import {
   organizations,
   users,
@@ -42,8 +42,8 @@ import {
 } from "../../drizzle/schema";
 import { eq, and, isNull, inArray, desc, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
-import { questionnaireSections } from "../../shared/questionnaireData";
-import { SECTION_DEFS as TASK_SECTION_DEFS } from "../../shared/taskDefs";
+import { questionnaireSections } from "@shared/questionnaireData";
+import { SECTION_DEFS as TASK_SECTION_DEFS } from "@shared/taskDefs";
 import { fetchConnectivityForOrg } from "../connectivityHelpers";
 
 // ---------------------------------------------------------------------------
@@ -108,8 +108,7 @@ async function writeAuditLog(entry: {
   durationMs?: number | null;
 }): Promise<void> {
   try {
-    const db = await getDb();
-    if (!db) return;
+    const db = await requireDb();
 
     // Truncate large fields to prevent DB column overflow
     const truncate = (s: string | null | undefined, max: number) =>
@@ -145,7 +144,7 @@ async function writeAuditLog(entry: {
 // ---------------------------------------------------------------------------
 
 async function getAllowedOrgIds(
-  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  db: Awaited<ReturnType<typeof requireDb>>,
   ctx: UserContext
 ): Promise<number[] | null> {
   if (!ctx.clientId) return null;
@@ -157,7 +156,7 @@ async function getAllowedOrgIds(
 }
 
 async function verifyOrgAccess(
-  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  db: Awaited<ReturnType<typeof requireDb>>,
   ctx: UserContext,
   orgSlug: string
 ): Promise<{ id: number; clientId: number | null; name: string; slug: string } | null> {
@@ -441,7 +440,7 @@ async function executeTool(
   ctx: UserContext,
   orgSlug?: string | null
 ): Promise<ToolResult> {
-  const db = await getDb();
+  const db = await requireDb();
   let args: Record<string, unknown> = {};
   try {
     args = JSON.parse(call.function.arguments);
@@ -1215,7 +1214,7 @@ export const aiRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
+      const db = await requireDb();
       const isPlatformAdmin = !ctx.user.clientId;
 
       // Get IP address for audit
@@ -1514,8 +1513,7 @@ Be specific and cite actual data from the tool results in your answers.`;
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) return { logs: [], total: 0, page: input.page, pageSize: input.pageSize };
+      const db = await requireDb();
 
       // Build WHERE conditions
       const conditions: any[] = [];
@@ -1586,8 +1584,7 @@ Be specific and cite actual data from the tool results in your answers.`;
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
       }
 
-      const db = await getDb();
-      if (!db) return null;
+      const db = await requireDb();
 
       const [log] = await db
         .select()
@@ -1613,8 +1610,7 @@ Be specific and cite actual data from the tool results in your answers.`;
       throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
     }
 
-    const db = await getDb();
-    if (!db) return { totalLogs: 0, byCategory: [], byStatus: [], recentActors: [] };
+    const db = await requireDb();
 
     const clientCondition = ctx.user.clientId
       ? eq(aiAuditLogs.clientId, ctx.user.clientId)

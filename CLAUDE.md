@@ -33,14 +33,12 @@
 │   ├── routers.ts        # Root tRPC router (merges all sub-routers)
 │   ├── db.ts             # Database connection (Drizzle + MySQL)
 │   ├── webhooks.ts       # Express webhook endpoints (Zapier/Linear)
-│   ├── linear.ts         # Linear integration (MCP CLI)
-│   ├── clickup.ts        # ClickUp integration (MCP CLI)
-│   ├── notion.ts         # Notion integration (API client)
+│   ├── notion.ts         # Notion integration (API client) — used by connectivity router
 │   ├── storage.ts        # Forge/S3 file storage
-│   └── *.test.ts         # Server tests (19 files)
+│   └── *.test.ts         # Server tests
 ├── shared/               # Types & logic shared client↔server
 ├── drizzle/              # DB schema + migrations
-│   ├── schema.ts         # All table definitions (18 tables)
+│   ├── schema.ts         # All table definitions (25 tables)
 │   └── relations.ts      # (Currently empty — no relations defined)
 └── scripts/              # DB seeding & migration scripts
 ```
@@ -67,11 +65,14 @@
 | `/login` | `client/src/pages/Login.tsx` | OAuth login |
 | `/forgot-password` | `client/src/pages/ForgotPassword.tsx` | Password recovery |
 | `/reset-password` | `client/src/pages/ResetPassword.tsx` | Password reset |
+| `/set-password` | `client/src/pages/SetPassword.tsx` | Set password (from invite) |
 | `/admin` | `client/src/pages/Admin.tsx` | Legacy admin (deprecated) |
 | `/org/admin/create` | `client/src/pages/CreateOrganization.tsx` | Org creation wizard |
 | `/org/admin`, `/org/admin/users` | `client/src/pages/PlatformAdmin.tsx` | Platform admin console |
-| `/org/:partnerSlug/admin/create` | `client/src/pages/CreateOrganization.tsx` | Partner admin org creation |
-| `/org/:partnerSlug/admin`, `/org/:partnerSlug/admin/users` | `client/src/pages/PlatformAdmin.tsx` | Partner admin console |
+| `/org/admin/library` | `client/src/pages/ProceduralLibrary.tsx` | Admin procedural library |
+| `/org/:partner/admin/create` | `client/src/pages/CreateOrganization.tsx` | Partner admin org creation |
+| `/org/:slug/admin`, `/org/:slug/admin/users` | `client/src/pages/PlatformAdmin.tsx` | Partner admin console |
+| `/org/:slug/admin/library` | `client/src/pages/ProceduralLibrary.tsx` | Partner procedural library |
 | `/org/:clientSlug/:slug` | `client/src/pages/Home.tsx` | Main org dashboard |
 | `/org/:clientSlug/:slug/intake` | `client/src/pages/IntakeNewRedesign.tsx` | Intake questionnaire |
 | `/org/:clientSlug/:slug/implement` | `client/src/pages/Implementation.tsx` | Implementation tracking |
@@ -166,6 +167,10 @@ where URLs degrade into nonsense like `/org/intake/implement`.
 | **validation** | `server/routers/validation.ts` | `getResults`, `updateResult` |
 | **implementation** | `server/routers/implementation.ts` | `getTasks`, `updateTask` |
 | **connectivity** | `server/routers/connectivity.ts` | `getForOrg`, `syncToNotion`, `createRow`, `updateRow`, `archiveRow` |
+| **notes** | `server/routers/notes.ts` | Org notes (labeled file uploads) CRUD |
+| **ai** | `server/routers/ai.ts` | AI chat and tool execution with audit logging |
+| **exports** | `server/routers/exports.ts` | Data export endpoints (CSV, PDF) |
+| **proceduralLibrary** | `server/routers/proceduralLibrary.ts` | Partner document library CRUD, download URLs, audit trail |
 | **webhooks** | `server/routers/webhooks.ts` | `linearComment`, `clickupComment` |
 
 ## Database Tables (drizzle/schema.ts)
@@ -189,6 +194,12 @@ where URLs degrade into nonsense like `/org/intake/implement`.
 | `specifications` | Global spec documents (title, category, s3Key) |
 | `systemVendorOptions` | Admin picklist for system vendors (systemType, vendorName) |
 | `vendorAuditLog` | Audit trail for vendor picklist changes |
+| `orgNotes` | Labeled file uploads from org/partner dashboards |
+| `partnerTaskTemplates` | Reusable task definitions created by partner admins |
+| `orgCustomTasks` | Org-specific custom tasks added by hospital users |
+| `aiAuditLogs` | AI assistant action logs (chat, tool calls, mutations) |
+| `partnerDocuments` | Procedural library documents scoped to partners |
+| `partnerDocAudit` | Audit trail for procedural library document access |
 | `intakeResponses` | Legacy intake responses (deprecated) |
 | `intakeFileAttachments` | Legacy file attachments (deprecated) |
 
@@ -219,29 +230,35 @@ where URLs degrade into nonsense like `/org/intake/implement`.
 
 | Component | Purpose |
 |-----------|---------|
-| `DashboardLayout.tsx` | Main layout with sidebar navigation and auth menu |
-| `DashboardLayoutSkeleton.tsx` | Loading skeleton for dashboard layout |
-| `IntakeForm.tsx` | Questionnaire form with multi-section wizard |
-| `FileUpload.tsx` | File upload with loading states and callbacks |
-| `FileList.tsx` | File list with download/delete functionality |
+| `AIChatBox.tsx` | AI chat interface with streaming (Streamdown) |
+| `AdminChatWidget.tsx` | Admin-facing AI chat widget |
+| `AdminDataTable.tsx` | Reusable admin data table component |
+| `AiAuditLog.tsx` | AI audit log viewer |
+| `ConnectivityTable.tsx` | Editable connectivity table with traffic types/IP config |
+| `ErrorBoundary.tsx` | React error boundary with reset |
 | `FilePreviewItem.tsx` | File preview card with metadata |
-| `UploadedFileRow.tsx` | File display row with preview/download/remove |
 | `FilesManagement.tsx` | Admin file management across orgs |
+| `InlineChatPanel.tsx` | Inline AI chat panel |
+| `IntegrationWorkflows.tsx` | Integration workflow form with system type selectors |
+| `OrganizationManagement.tsx` | Org settings: view, create, rename |
+| `PageBreadcrumb.tsx` | Breadcrumb navigation with Home icon |
+| `PhiDisclaimer.tsx` | PHI (Protected Health Information) warning banner |
+| `UploadedFileRow.tsx` | File display row with preview/download/remove |
 | `UserManagement.tsx` | User CRUD with role assignment |
 | `UserMenu.tsx` | Top-right user dropdown (password change, sign out) |
-| `OrganizationManagement.tsx` | Org settings: view, create, rename |
-| `ConnectivityTable.tsx` | Editable connectivity table with traffic types/IP config |
 | `WorkflowDiagram.tsx` | Swimlane workflow visualization (Orders/Images/Priors/Reports) |
-| `IntegrationWorkflows.tsx` | Integration workflow form with system type selectors |
-| `ActivityFeed.tsx` | Timeline of org activity with reply functionality |
-| `AIChatBox.tsx` | AI chat interface with streaming (Streamdown) |
-| `ManusDialog.tsx` | Manus onboarding dialog |
-| `Map.tsx` | Google Maps integration |
-| `PhiDisclaimer.tsx` | PHI (Protected Health Information) warning banner |
-| `WizardCompletion.tsx` | Wizard completion celebration screen |
-| `PageBreadcrumb.tsx` | Breadcrumb navigation with Home icon |
-| `ProgressLogo.tsx` | SVG progress indicator logo (0-100) |
-| `ErrorBoundary.tsx` | React error boundary with reset |
+| `connectivity/` | Desktop table, mobile cards, import dialog, inline editing cells |
+| `workflow/` | Individual swimlane diagrams (Orders, Images, Priors, Reports) |
+
+### Page Sub-Components
+
+Pages are split into focused sub-components:
+
+| Directory | Contents |
+|-----------|---------|
+| `pages/admin/` | `OrgsTab`, `UsersTab`, `PartnersTab`, `TemplatesTab`, `SpecsTab`, `VendorPicklistsTab`, `TaskTemplatesTab`, `AdminDashboardTab`, `ConnectivityMatrix` |
+| `pages/home/` | `ProgressHero`, `QuestionnairePhaseCard`, `TaskListPhaseCard`, `TestingPhaseCard`, `WorkflowPhaseCard`, `ConnectivityCard`, `SpecificationsCard`, `DocumentsCard`, `ArchitectureCard` |
+| `pages/intake/` | `QuestionRenderer`, `IntakeSidebar`, `IntakeHeader`, `ImportDialog`, `FeedbackModal`, `ArchitectureOverview`, `SystemEditRow`, `MobileBottomNav` |
 
 ### UI Components (`client/src/components/ui/`)
 52 Shadcn/ui components (Radix-based). Key ones: button, card, dialog, form, input, select, table, tabs, sidebar, sheet, badge, alert, progress, skeleton, dropdown-menu, command (combobox), toast (sonner).
@@ -255,25 +272,19 @@ where URLs degrade into nonsense like `/org/intake/implement`.
 | `_core/errors.ts` | HttpError class, constructors (BadRequest, Unauthorized, Forbidden, NotFound) |
 | `taskDefs.ts` | Section/task definitions (TaskDef, SectionDef, SECTION_DEFS) for implementation workflow |
 | `progressCalculation.ts` | Intake progress calculation with conditional visibility |
-| `intake-questions.ts` | Real PACS implementation questionnaire from intake spreadsheet |
-| `questionnaireData.ts` | RadOne New Site Onboarding Questionnaire (6 sections) |
-| `questionnaire-data.ts` | Question data structure with QuestionOption interface (from Google Sheet) |
-| `wizard-data.ts` | Wizard-style questionnaire with step-by-step yes/no + conditional logic |
-| `workflowQuestions.ts` | Workflow-specific questions (9 sections, 4 visual workflow diagrams) |
+| `questionnaireData.ts` | Onboarding questionnaire definitions (6 sections) |
 
 ## Third-Party Integrations
 
-| Integration | Server File | Purpose |
-|-------------|-------------|---------|
-| Linear | `server/linear.ts` | Post/get comments on issues via MCP CLI |
-| ClickUp | `server/clickup.ts` | Create tasks in ClickUp lists via MCP CLI |
-| Notion | `server/notion.ts` | Intake response sync, file uploads (radone orgs) |
-| Google Drive | `server/routers/files.ts` | File storage (googleapis) |
-| S3 / Forge | `server/storage.ts` | File storage with pre-signed URLs (Biz storage proxy) |
-| Whisper | `server/_core/voiceTranscription.ts` | Audio transcription |
-| LLM | `server/_core/llm.ts` | AI message/tool types |
-| Google Maps | `server/_core/map.ts` | Map API requests |
-| Zapier | `server/webhooks.ts` | Express endpoint for Linear comment forwarding |
+| Integration | Server File | Purpose | Status |
+|-------------|-------------|---------|--------|
+| S3 / Forge | `server/storage.ts` | File storage with pre-signed URLs | Active |
+| Google Drive | `server/routers/files.ts` | File storage (googleapis) | Active |
+| LLM | `server/_core/llm.ts` | AI message/tool types | Active |
+| Whisper | `server/_core/voiceTranscription.ts` | Audio transcription | Active |
+| Google Maps | `server/_core/map.ts` | Map API requests | Active |
+| Notion | `server/notion.ts` | Connectivity sync (used by connectivity router) | Active |
+| Zapier | `server/webhooks.ts` | Express endpoint for Linear comment forwarding | Legacy |
 
 ## Utilities
 
@@ -308,7 +319,7 @@ where URLs degrade into nonsense like `/org/intake/implement`.
 3. Export types from `shared/types.ts` if needed
 
 ### Add a new intake question
-1. Edit `shared/questionnaireData.ts` or `shared/intake-questions.ts`
+1. Edit `shared/questionnaireData.ts`
 2. Update `shared/progressCalculation.ts` if conditional logic needed
 3. Sync to DB via `scripts/sync-questions.mjs`
 

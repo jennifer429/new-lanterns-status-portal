@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { questionnaireSections } from '../shared/questionnaireData';
+import { questionnaireSections } from '@shared/questionnaireData';
 
 describe('Integration Workflows', () => {
   it('should have 1 integration-workflows section', () => {

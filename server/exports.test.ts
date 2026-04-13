@@ -8,17 +8,20 @@ import { describe, it, expect, vi } from "vitest";
  */
 
 // Mock the database module
+const mockDb = {
+  select: vi.fn().mockReturnThis(),
+  from: vi.fn().mockReturnThis(),
+  where: vi.fn().mockReturnThis(),
+  leftJoin: vi.fn().mockReturnThis(),
+  innerJoin: vi.fn().mockReturnThis(),
+  orderBy: vi.fn().mockReturnThis(),
+  limit: vi.fn().mockReturnThis(),
+  execute: vi.fn().mockResolvedValue([]),
+};
+
 vi.mock("./db", () => ({
-  db: {
-    select: vi.fn().mockReturnThis(),
-    from: vi.fn().mockReturnThis(),
-    where: vi.fn().mockReturnThis(),
-    leftJoin: vi.fn().mockReturnThis(),
-    innerJoin: vi.fn().mockReturnThis(),
-    orderBy: vi.fn().mockReturnThis(),
-    limit: vi.fn().mockReturnThis(),
-    execute: vi.fn().mockResolvedValue([]),
-  },
+  requireDb: vi.fn().mockResolvedValue(mockDb),
+  getDb: vi.fn().mockResolvedValue(mockDb),
 }));
 
 // Mock the connectivity helpers

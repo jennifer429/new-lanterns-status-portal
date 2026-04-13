@@ -5,7 +5,7 @@
 import { z } from "zod";
 import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
-import { getDb } from "../db";
+import { requireDb } from "../db";
 import { users, organizations, clients } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcrypt";
@@ -28,8 +28,7 @@ export const authRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const db = await requireDb();
 
       // Find user by email
       console.log('[auth.login] Looking for user:', input.email.toLowerCase());
@@ -145,8 +144,7 @@ export const authRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const db = await requireDb();
 
       // Check if email exists
       const [user] = await db
@@ -172,8 +170,7 @@ export const authRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const db = await requireDb();
 
       // Verify email is @newlantern.ai
       if (!input.email.toLowerCase().endsWith('@newlantern.ai')) {
@@ -236,8 +233,7 @@ export const authRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const db = await requireDb();
 
       // Verify email exists - use generic error message to prevent email enumeration
       const [user] = await db
@@ -288,8 +284,7 @@ export const authRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const db = await requireDb();
 
       const [user] = await db
         .select()

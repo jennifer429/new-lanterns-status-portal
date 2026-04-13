@@ -2,9 +2,9 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { requireDb } from "../db";
 import { organizations, clients, sectionProgress, taskCompletion, activityFeed, users, intakeResponses, questions, responses, intakeFileAttachments } from "../../drizzle/schema";
-import { questionnaireSections } from "../../shared/questionnaireData";
-import { calculateProgress } from "../../shared/progressCalculation";
-import { SECTION_DEFS as TASK_SECTION_DEFS } from "../../shared/taskDefs";
+import { questionnaireSections } from "@shared/questionnaireData";
+import { calculateProgress } from "@shared/progressCalculation";
+import { SECTION_DEFS as TASK_SECTION_DEFS } from "@shared/taskDefs";
 import { eq, and, desc, count, sql } from "drizzle-orm";
 import { createCustomerFolder } from "../googleDrive";
 

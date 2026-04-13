@@ -1,14 +1,11 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
-import { getDb } from "../db";
+import { requireDb } from "../db";
 import { fileAttachments, organizations, users } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { uploadFileToDrive } from "../googleDrive";
 import { logFileActivity } from "../fileAuditLog";
-import { exec } from "child_process";
-import { promisify } from "util";
-
-const execAsync = promisify(exec);
 
 /**
  * Legacy wrapper — kept for backward compatibility with other routers that call uploadToGoogleDrive.
@@ -26,38 +23,6 @@ export async function uploadToGoogleDrive(
     organizationName
   );
   return fileUrl;
-}
-
-/**
- * Attach file link to ClickUp task
- */
-async function attachToClickUp(
-  taskId: string,
-  fileName: string,
-  fileUrl: string
-): Promise<void> {
-  await execAsync(
-    `manus-mcp-cli tool call clickup_create_task_comment --server clickup --input '${JSON.stringify({
-      task_id: taskId,
-      comment_text: `📎 File uploaded: [${fileName}](${fileUrl})`,
-    })}'`
-  );
-}
-
-/**
- * Attach file link to Linear issue
- */
-async function attachToLinear(
-  issueId: string,
-  fileName: string,
-  fileUrl: string
-): Promise<void> {
-  await execAsync(
-    `manus-mcp-cli tool call create_comment --server linear --input '${JSON.stringify({
-      issueId,
-      body: `📎 File uploaded: [${fileName}](${fileUrl})`,
-    })}'`
-  );
 }
 
 /**
@@ -109,13 +74,10 @@ export const filesRouter = router({
         fileName: z.string(),
         fileData: z.string(), // base64 encoded file data
         mimeType: z.string(),
-        clickupTaskId: z.string().optional(),
-        linearIssueId: z.string().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      const db = await requireDb();
 
       // Access control
       const hasAccess = await checkFileAccess(
@@ -126,7 +88,7 @@ export const filesRouter = router({
         ctx.user.organizationId ?? null,
         input.organizationId
       );
-      if (!hasAccess) throw new Error("Access denied to this organization's files");
+      if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this organization's files" });
 
       // Decode base64 file data
       const fileBuffer = Buffer.from(input.fileData, "base64");
@@ -139,7 +101,7 @@ export const filesRouter = router({
         .where(eq(organizations.id, input.organizationId))
         .limit(1);
 
-      if (!org) throw new Error("Organization not found");
+      if (!org) throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
 
       // Upload to Google Drive (per-customer folder)
       const fileKey = `${Date.now()}-${input.fileName}`;
@@ -173,23 +135,6 @@ export const filesRouter = router({
         notes: `Task: ${input.taskName}`,
       }).catch(() => {}); // fire-and-forget
 
-      // Attach to ClickUp and Linear asynchronously
-      if (input.clickupTaskId) {
-        attachToClickUp(input.clickupTaskId, input.fileName, fileUrl).catch(
-          (error) => {
-            console.error("[ClickUp] Failed to attach file:", error);
-          }
-        );
-      }
-
-      if (input.linearIssueId) {
-        attachToLinear(input.linearIssueId, input.fileName, fileUrl).catch(
-          (error) => {
-            console.error("[Linear] Failed to attach file:", error);
-          }
-        );
-      }
-
       return {
         success: true,
         fileId: result.insertId,
@@ -208,8 +153,7 @@ export const filesRouter = router({
       })
     )
     .query(async ({ input, ctx }) => {
-      const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      const db = await requireDb();
 
       // Access control
       const hasAccess = await checkFileAccess(
@@ -220,7 +164,7 @@ export const filesRouter = router({
         ctx.user.organizationId ?? null,
         input.organizationId
       );
-      if (!hasAccess) throw new Error("Access denied to this organization's files");
+      if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this organization's files" });
 
       const files = await db
         .select()
@@ -246,8 +190,7 @@ export const filesRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      const db = await requireDb();
 
       // Access control
       const hasAccess = await checkFileAccess(
@@ -258,7 +201,7 @@ export const filesRouter = router({
         ctx.user.organizationId ?? null,
         input.organizationId
       );
-      if (!hasAccess) throw new Error("Access denied to this organization's files");
+      if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this organization's files" });
 
       // Verify file belongs to organization before deleting
       const [file] = await db
@@ -273,7 +216,7 @@ export const filesRouter = router({
         .limit(1);
 
       if (!file) {
-        throw new Error("File not found or access denied");
+        throw new TRPCError({ code: "NOT_FOUND", message: "File not found or access denied" });
       }
 
       // Get org name for audit log
