@@ -295,8 +295,10 @@ function DiagramLightbox({
 
 // ── Main Component ──────────────────────────────────────────────────────────
 export default function Home() {
-  const [, params] = useRoute("/org/:slug");
-  const orgSlug = params?.slug || "demo";
+  const [, paramsNew] = useRoute("/org/:clientSlug/:slug");
+  const [, paramsOld] = useRoute("/org/:slug");
+  const clientSlug = paramsNew?.clientSlug || "";
+  const orgSlug = paramsNew?.slug || paramsOld?.slug || "demo";
   const { user: currentUser } = useAuth();
 
   // Expandable card states

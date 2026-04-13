@@ -114,7 +114,9 @@
       "tailwindcss>nanoid": "3.3.7"
     },
     "onlyBuiltDependencies": [
-      "bcrypt"
+      "@tailwindcss/oxide",
+      "bcrypt",
+      "esbuild"
     ]
   }
 }

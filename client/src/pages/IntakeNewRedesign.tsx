@@ -602,8 +602,10 @@ function LocalTextarea({
 }
 
 export default function IntakeNewRedesign() {
-  const [, params] = useRoute("/org/:slug/intake");
-  const slug = params?.slug;
+  const [, paramsNew] = useRoute("/org/:clientSlug/:slug/intake");
+  const [, paramsOld] = useRoute("/org/:slug/intake");
+  const slug = paramsNew?.slug || paramsOld?.slug;
+  const clientSlug = paramsNew?.clientSlug || "";
   const [, setLocation] = useLocation();
   const [responses, setResponses] = useState<Record<string, any>>({});
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
@@ -860,7 +862,8 @@ export default function IntakeNewRedesign() {
       setShowFeedbackModal(false);
       setFeedbackRating(0);
       setFeedbackComments("");
-      setLocation(`/org/${slug}/complete`);
+      const completePath = clientSlug ? `/org/${clientSlug}/${slug}/complete` : `/org/${slug}/complete`;
+      setLocation(completePath);
     },
     onError: () => {
       toast.error('Failed to submit feedback. Please try again.');
@@ -1776,7 +1779,7 @@ export default function IntakeNewRedesign() {
                 Import
               </Button>
               <div className="w-px h-5 bg-border/40 mx-1" />
-              <Link href={`/org/${slug}`} className="text-sm text-foreground hover:text-primary transition-colors font-medium whitespace-nowrap">
+              <Link href={clientSlug ? `/org/${clientSlug}/${slug}` : `/org/${slug}`} className="text-sm text-foreground hover:text-primary transition-colors font-medium whitespace-nowrap">
                 Site Dashboard
               </Link>
               {user?.role === "admin" && (
@@ -2083,7 +2086,7 @@ export default function IntakeNewRedesign() {
               <div className="flex items-center justify-between border-t mt-8 pt-6">
                 <Button
                   variant="outline"
-                  onClick={() => setLocation(`/org/${slug}`)}
+                  onClick={() => setLocation(`/org/${clientSlug}/${slug}`)}
                 >
                   Back to Overview
                 </Button>
@@ -2137,7 +2140,7 @@ export default function IntakeNewRedesign() {
                 variant="ghost"
                 onClick={() => {
                   setShowFeedbackModal(false);
-                  setLocation(`/org/${slug}/complete`);
+                  setLocation(clientSlug ? `/org/${clientSlug}/${slug}/complete` : `/org/${slug}/complete`);
                 }}
               >
                 Skip
