@@ -27,6 +27,17 @@ import { Label } from "@/components/ui/label";
 import { LogOut, Shield, KeyRound, BookOpen, FolderOpen } from "lucide-react";
 import { toast } from "sonner";
 
+const ORG_PAGES = new Set(["intake","implement","validation","workflows","specs","connectivity","tasks","library","complete","admin","users"]);
+
+/** Build a sibling route path. Strips the current page segment (if known) and appends the new page. Works for both legacy (/org/:slug/page) and new-style (/org/:clientSlug/:orgSlug/page) URLs. */
+function orgPath(pathname: string, page: string): string {
+  const segments = pathname.split("/").filter(Boolean);
+  if (ORG_PAGES.has(segments[segments.length - 1])) {
+    segments.pop();
+  }
+  return "/" + segments.join("/") + "/" + page;
+}
+
 export function UserMenu() {
   const [, setLocation] = useLocation();
   const { user, logout } = useAuth();
@@ -85,19 +96,13 @@ export function UserMenu() {
             </>
           )}
           <DropdownMenuItem onClick={() => {
-            const match = window.location.pathname.match(/\/org\/([^/]+)/);
-            if (match) {
-              setLocation(`/org/${match[1]}/specs`);
-            }
+            setLocation(orgPath(window.location.pathname, "specs"));
           }}>
             <BookOpen className="w-4 h-4 mr-2" />
             Specifications
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => {
-            const match = window.location.pathname.match(/\/org\/([^/]+)/);
-            if (match) {
-              setLocation(`/org/${match[1]}/library`);
-            }
+            setLocation(orgPath(window.location.pathname, "library"));
           }}>
             <FolderOpen className="w-4 h-4 mr-2" />
             Procedural Library

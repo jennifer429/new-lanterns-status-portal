@@ -120,6 +120,7 @@ export default function ProceduralLibrary() {
   });
 
   const logAuditMutation = trpc.proceduralLibrary.logAudit.useMutation();
+  const trpcUtils = trpc.useUtils();
 
   // Search & filter state
   const [searchQuery, setSearchQuery] = useState("");
@@ -262,17 +263,19 @@ export default function ProceduralLibrary() {
     reader.readAsDataURL(uploadFile);
   }, [uploadFile, uploadTitle, uploadClientId, isPlatformAdmin, uploadMutation]);
 
-  // Download handler (logs audit)
-  const handleDownload = (doc: (typeof documents)[0]) => {
-    logAuditMutation.mutate({ documentId: doc.id, action: "download" });
-    window.open(doc.url, "_blank");
+  // Fetch a fresh URL server-side then open it — prevents stale pre-signed URLs
+  const openDoc = async (doc: (typeof documents)[0], action: "download" | "view") => {
+    try {
+      const { url } = await trpcUtils.proceduralLibrary.getDownloadUrl.fetch({ documentId: doc.id });
+      logAuditMutation.mutate({ documentId: doc.id, action });
+      window.open(url, "_blank");
+    } catch {
+      toast.error("Could not open file. Please try again.");
+    }
   };
 
-  // View handler (logs audit + opens in new tab)
-  const handleView = (doc: (typeof documents)[0]) => {
-    logAuditMutation.mutate({ documentId: doc.id, action: "view" });
-    window.open(doc.url, "_blank");
-  };
+  const handleDownload = (doc: (typeof documents)[0]) => openDoc(doc, "download");
+  const handleView = (doc: (typeof documents)[0]) => openDoc(doc, "view");
 
   // Drag-and-drop handlers for upload zone
   const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {

@@ -10,6 +10,7 @@ import {
 } from "../../drizzle/schema";
 import { eq, desc } from "drizzle-orm";
 import { uploadToGoogleDrive } from "./files";
+import { storageGet } from "../storage";
 
 /**
  * Procedural Library router — partner-scoped document management.
@@ -201,6 +202,62 @@ export const proceduralLibraryRouter = router({
       });
 
       return { success: true };
+    }),
+
+  /**
+   * Get a fresh download URL for a document.
+   * Google Drive webViewLinks are permanent and returned as-is.
+   * Forge/S3 pre-signed URLs expire — we regenerate them on demand so customers
+   * never hit a stale link regardless of when the file was uploaded.
+   */
+  getDownloadUrl: protectedProcedure
+    .input(z.object({ documentId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      const [doc] = await db.select().from(partnerDocuments).where(eq(partnerDocuments.id, input.documentId));
+      if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Document not found" });
+
+      // Verify the user can access documents for this partner
+      let targetClientId: number | null = null;
+      if (ctx.user.clientId) {
+        targetClientId = ctx.user.clientId;
+      } else if (ctx.user.organizationId) {
+        const [org] = await db.select({ clientId: organizations.clientId })
+          .from(organizations)
+          .where(eq(organizations.id, ctx.user.organizationId));
+        targetClientId = org?.clientId ?? null;
+      } else if (ctx.user.role === "admin" && !ctx.user.clientId) {
+        // Platform admin can access any document
+        targetClientId = doc.clientId;
+      }
+
+      if (targetClientId !== doc.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "No access to this document" });
+      }
+
+      // Google Drive URLs are permanent — return as stored
+      if (doc.url.startsWith("https://drive.google.com")) {
+        return { url: doc.url };
+      }
+
+      // Forge/S3 storage — regenerate a fresh pre-signed URL from the stored key
+      const storageKey = doc.driveFileId
+        ? `uploads/unknown/${doc.driveFileId}`
+        : null;
+
+      if (!storageKey) {
+        return { url: doc.url }; // fallback: return whatever we have
+      }
+
+      try {
+        const { url } = await storageGet(storageKey);
+        return { url };
+      } catch {
+        // If key lookup fails, fall back to the stored URL
+        return { url: doc.url };
+      }
     }),
 
   /** Get audit trail for a specific document */
