@@ -20,6 +20,7 @@ import {
   type SystemEntry,
 } from "./systemConstants";
 import { SystemEditRow } from "./SystemEditRow";
+import { VendorCombobox } from "./VendorCombobox";
 
 export interface ArchitectureOverviewProps {
   slug: string;
@@ -115,6 +116,22 @@ export function ArchitectureOverview({
         { id: crypto.randomUUID(), name: vendor, type: "AI", description: "" },
       ]);
     }
+  };
+
+  // Inline custom AI vendor input
+  const [customAIInput, setCustomAIInput] = useState("");
+  const addCustomAI = () => {
+    const name = customAIInput.trim();
+    if (!name) return;
+    // Don't add duplicates
+    const aiSystems = getAISystems();
+    if (!aiSystems.some((s) => s.name.toLowerCase() === name.toLowerCase())) {
+      saveSystems([
+        ...systems,
+        { id: crypto.randomUUID(), name, type: "AI", description: "" },
+      ]);
+    }
+    setCustomAIInput("");
   };
 
   // Custom row add/edit/delete
@@ -414,10 +431,15 @@ export function ArchitectureOverview({
         <div className="flex flex-col divide-y divide-border/40">
           {DEFAULT_SYSTEM_ROWS.map((row) => {
             if (row.multiSelect) {
-              // AI row: multi-select checkboxes
+              // AI row: multi-select checkboxes with inline custom add
               const selectedAI = getAISystems().map((s) => s.name);
               const vendors =
                 vendorOptions[row.type] || VENDOR_OPTIONS[row.type] || [];
+              // Combine known vendors with any custom-added AI vendors not in the list
+              const knownVendorNames = vendors.filter((v) => v !== "Other");
+              const customAIVendors = selectedAI.filter(
+                (name) => !knownVendorNames.includes(name)
+              );
               return (
                 <div key={row.type} className="py-3">
                   <div className="flex items-center gap-3 mb-2">
@@ -433,9 +455,7 @@ export function ArchitectureOverview({
                     )}
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {vendors
-                      .filter((v) => v !== "Other")
-                      .map((vendor) => (
+                    {knownVendorNames.map((vendor) => (
                         <button
                           key={vendor}
                           onClick={() => toggleAIVendor(vendor)}
@@ -448,12 +468,48 @@ export function ArchitectureOverview({
                           {vendor}
                         </button>
                       ))}
+                    {/* Show custom-added AI vendors as removable chips */}
+                    {customAIVendors.map((vendor) => (
+                      <button
+                        key={vendor}
+                        onClick={() => toggleAIVendor(vendor)}
+                        className="px-3 py-1.5 text-xs rounded-md border transition-colors bg-purple-500/30 border-purple-500/50 text-purple-200 flex items-center gap-1"
+                      >
+                        {vendor}
+                        <X className="w-3 h-3" />
+                      </button>
+                    ))}
+                    {/* Inline add input */}
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="text"
+                        value={customAIInput}
+                        onChange={(e) => setCustomAIInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            addCustomAI();
+                          }
+                        }}
+                        placeholder="Add other..."
+                        className="h-[30px] w-28 text-xs rounded-md border border-dashed border-border/50 bg-background/30 px-2 text-foreground placeholder:text-muted-foreground/60 focus:border-purple-500/50 focus:outline-none"
+                      />
+                      {customAIInput.trim() && (
+                        <button
+                          onClick={addCustomAI}
+                          className="h-[30px] px-2 text-xs rounded-md border border-purple-500/30 bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors flex items-center gap-1"
+                        >
+                          <Plus className="w-3 h-3" />
+                          Add
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
             }
 
-            // Single-select row with vendor dropdown
+            // Single-select row with searchable combobox (supports custom entry)
             const current = getSystemForType(row.type);
             const vendors =
               vendorOptions[row.type] || VENDOR_OPTIONS[row.type] || [];
@@ -468,21 +524,15 @@ export function ArchitectureOverview({
                   {row.label}
                 </span>
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <select
+                  <VendorCombobox
+                    vendors={vendors}
                     value={current?.name || ""}
-                    onChange={(e) => {
-                      if (e.target.value) setDefaultRowVendor(row.type, e.target.value);
+                    onChange={(v) => {
+                      if (v) setDefaultRowVendor(row.type, v);
                       else clearDefaultRow(row.type);
                     }}
-                    className="flex-1 h-8 text-sm rounded-md border border-input bg-background/50 px-2 text-foreground"
-                  >
-                    <option value="">Select {row.label}...</option>
-                    {vendors.map((v) => (
-                      <option key={v} value={v}>
-                        {v}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder={`Select ${row.label}...`}
+                  />
                   {current && (
                     <button
                       onClick={() => clearDefaultRow(row.type)}
