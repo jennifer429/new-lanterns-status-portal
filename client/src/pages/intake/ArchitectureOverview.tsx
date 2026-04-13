@@ -9,8 +9,6 @@ import {
   FileDown,
   Import,
   Plus,
-  Pencil,
-  Trash2,
   X,
 } from "lucide-react";
 import {
@@ -19,7 +17,6 @@ import {
   SYSTEM_TYPE_COLORS,
   type SystemEntry,
 } from "./systemConstants";
-import { SystemEditRow } from "./SystemEditRow";
 import { VendorCombobox } from "./VendorCombobox";
 
 export interface ArchitectureOverviewProps {
@@ -77,10 +74,6 @@ export function ArchitectureOverview({
   const getSystemForType = (type: string) => systems.find((s) => s.type === type);
   // Helper: get all AI entries (multi-select)
   const getAISystems = () => systems.filter((s) => s.type === "AI");
-  // Helper: get custom (non-default) systems
-  const customSystems = systems.filter(
-    (s) => !DEFAULT_SYSTEM_ROWS.some((d) => d.type === s.type)
-  );
 
   // Update a default row's vendor selection
   const setDefaultRowVendor = (type: string, vendor: string) => {
@@ -133,61 +126,6 @@ export function ArchitectureOverview({
     }
     setCustomAIInput("");
   };
-
-  // Custom row add/edit/delete
-  const [isAdding, setIsAdding] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editName, setEditName] = useState("");
-  const [editType, setEditType] = useState<string>("Other");
-  const [editDesc, setEditDesc] = useState("");
-
-  const startAdd = () => {
-    setIsAdding(true);
-    setEditName("");
-    setEditType("Other");
-    setEditDesc("");
-  };
-  const startEdit = (s: SystemEntry) => {
-    setEditingId(s.id);
-    setEditName(s.name);
-    setEditType(s.type);
-    setEditDesc(s.description);
-  };
-  const cancelEdit = () => {
-    setEditingId(null);
-    setIsAdding(false);
-  };
-
-  const saveEdit = () => {
-    if (!editName.trim()) return;
-    if (isAdding) {
-      saveSystems([
-        ...systems,
-        {
-          id: crypto.randomUUID(),
-          name: editName.trim(),
-          type: editType,
-          description: editDesc.trim(),
-        },
-      ]);
-      setIsAdding(false);
-    } else {
-      saveSystems(
-        systems.map((s) =>
-          s.id === editingId
-            ? { ...s, name: editName.trim(), type: editType, description: editDesc.trim() }
-            : s
-        )
-      );
-      setEditingId(null);
-    }
-    setEditName("");
-    setEditType("Other");
-    setEditDesc("");
-  };
-
-  const deleteSystem = (id: string) =>
-    saveSystems(systems.filter((s) => s.id !== id));
 
   // Import/Export systems
   const systemsImportRef = useRef<HTMLInputElement>(null);
@@ -548,84 +486,6 @@ export function ArchitectureOverview({
           })}
         </div>
 
-        {/* Custom (additional) systems */}
-        {customSystems.length > 0 && (
-          <>
-            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2">
-              Additional Systems
-            </div>
-            <div className="flex flex-col divide-y divide-border/40">
-              {customSystems.map((s) => (
-                <div key={s.id} className="py-3">
-                  {editingId === s.id ? (
-                    <SystemEditRow
-                      name={editName}
-                      type={editType}
-                      description={editDesc}
-                      onNameChange={setEditName}
-                      onTypeChange={setEditType}
-                      onDescChange={setEditDesc}
-                      onSave={saveEdit}
-                      onCancel={cancelEdit}
-                    />
-                  ) : (
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded border ${SYSTEM_TYPE_COLORS[s.type] || SYSTEM_TYPE_COLORS["Other"]}`}
-                      >
-                        {s.type}
-                      </span>
-                      <span className="font-medium text-sm flex-1 min-w-0 truncate">
-                        {s.name}
-                      </span>
-                      {s.description && (
-                        <span className="text-sm text-muted-foreground flex-1 min-w-0 truncate hidden sm:block">
-                          {s.description}
-                        </span>
-                      )}
-                      <button
-                        onClick={() => startEdit(s)}
-                        className="text-muted-foreground hover:text-foreground shrink-0"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => deleteSystem(s.id)}
-                        className="text-muted-foreground hover:text-red-400 shrink-0"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* Add custom system row */}
-        {isAdding ? (
-          <SystemEditRow
-            name={editName}
-            type={editType}
-            description={editDesc}
-            onNameChange={setEditName}
-            onTypeChange={setEditType}
-            onDescChange={setEditDesc}
-            onSave={saveEdit}
-            onCancel={cancelEdit}
-          />
-        ) : (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={startAdd}
-            className="self-start gap-1.5 bg-purple-600/20 border-purple-500/30 hover:bg-purple-600/30 text-purple-300"
-          >
-            <Plus className="w-4 h-4" />
-            Add Custom System
-          </Button>
-        )}
       </div>
     </div>
   );
