@@ -45,14 +45,17 @@ export const adminProcedure = t.procedure.use(
   }),
 );
 
-/** Requires admin role + guarantees a non-null db instance in context. */
-const requireDb = t.middleware(async opts => {
-  const { ctx, next } = opts;
-  const db = await getDb();
-  if (!db) {
-    throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-  }
-  return next({ ctx: { ...ctx, db } });
-});
-
-export const adminDbProcedure = adminProcedure.use(requireDb);
+/** Requires admin role + guarantees a non-null db instance and user in context. */
+export const adminDbProcedure = adminProcedure.use(
+  t.middleware(async opts => {
+    const { ctx, next } = opts;
+    const db = await getDb();
+    if (!db) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    }
+    if (!ctx.user) {
+      throw new TRPCError({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
+    }
+    return next({ ctx: { ...ctx, db, user: ctx.user } });
+  })
+);
