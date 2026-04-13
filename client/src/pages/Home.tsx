@@ -105,6 +105,7 @@ export default function Home() {
         {/* ── TOP ROW: 3 Expandable Resource Cards ── */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           <ConnectivityCard
+            clientSlug={clientSlug}
             orgSlug={orgSlug}
             connRows={data.connRows}
             onConnChange={data.handleConnChange}
@@ -114,6 +115,7 @@ export default function Home() {
             onToggle={() => setConnectivityOpen(o => !o)}
           />
           <ArchitectureCard
+            clientSlug={clientSlug}
             orgSlug={orgSlug}
             diagramFiles={data.diagramFiles}
             open={architectureOpen}
@@ -122,6 +124,7 @@ export default function Home() {
             onRemoveDiagram={data.handleRemoveDiagram}
           />
           <SpecificationsCard
+            clientSlug={clientSlug}
             orgSlug={orgSlug}
             specs={data.specs}
             specsByCategory={data.specsByCategory}
@@ -160,6 +163,7 @@ export default function Home() {
         {/* ── WORKFLOW PHASE CARDS ── */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           <QuestionnairePhaseCard
+            clientSlug={clientSlug}
             orgSlug={orgSlug}
             completedSections={data.completedSections}
             totalSections={data.totalSections}
@@ -170,6 +174,7 @@ export default function Home() {
             activePhase={data.activePhase}
           />
           <TestingPhaseCard
+            clientSlug={clientSlug}
             orgSlug={orgSlug}
             valTotal={data.valTotal}
             valCompleted={data.valCompleted}
@@ -183,6 +188,7 @@ export default function Home() {
             VAL_PHASES={data.VAL_PHASES}
           />
           <TaskListPhaseCard
+            clientSlug={clientSlug}
             orgSlug={orgSlug}
             iPct={data.iPct}
             implCompleted={data.implCompleted}

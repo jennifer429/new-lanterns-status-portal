@@ -70,19 +70,87 @@
 | `/admin` | `client/src/pages/Admin.tsx` | Legacy admin (deprecated) |
 | `/org/admin/create` | `client/src/pages/CreateOrganization.tsx` | Org creation wizard |
 | `/org/admin`, `/org/admin/users` | `client/src/pages/PlatformAdmin.tsx` | Platform admin console |
-| `/org/SRV/admin`, `/org/SRV/admin/users` | `client/src/pages/PlatformAdmin.tsx` | SRV partner admin |
-| `/org/RadOne/admin`, `/org/RadOne/admin/users` | `client/src/pages/PlatformAdmin.tsx` | RadOne partner admin |
-| `/org/:slug/admin`, `/org/:slug/admin/users` | `client/src/pages/PlatformAdmin.tsx` | Per-org admin |
-| `/org/:slug` | `client/src/pages/Home.tsx` | Main dashboard |
-| `/org/:slug/intake` | `client/src/pages/IntakeNewRedesign.tsx` | Intake questionnaire (current) |
-| `/org/:slug/implement` | `client/src/pages/Implementation.tsx` | Implementation tracking |
-| `/org/:slug/validation` | `client/src/pages/Validation.tsx` | Validation checklist |
-| `/org/:slug/workflows` | `client/src/pages/Workflows.tsx` | Workflow visualization |
-| `/org/:slug/specs` | `client/src/pages/Specifications.tsx` | Specifications docs |
-| `/org/:slug/connectivity` | `client/src/pages/Connectivity.tsx` | Network connectivity |
-| `/org/:slug/tasks` | `client/src/pages/Tasks.tsx` | Task management + CSV |
-| `/org/:slug/complete` | `client/src/pages/IntakeComplete.tsx` | Completion screen |
+| `/org/:partnerSlug/admin/create` | `client/src/pages/CreateOrganization.tsx` | Partner admin org creation |
+| `/org/:partnerSlug/admin`, `/org/:partnerSlug/admin/users` | `client/src/pages/PlatformAdmin.tsx` | Partner admin console |
+| `/org/:clientSlug/:slug` | `client/src/pages/Home.tsx` | Main org dashboard |
+| `/org/:clientSlug/:slug/intake` | `client/src/pages/IntakeNewRedesign.tsx` | Intake questionnaire |
+| `/org/:clientSlug/:slug/implement` | `client/src/pages/Implementation.tsx` | Implementation tracking |
+| `/org/:clientSlug/:slug/validation` | `client/src/pages/Validation.tsx` | Validation checklist |
+| `/org/:clientSlug/:slug/workflows` | `client/src/pages/Workflows.tsx` | Workflow visualization |
+| `/org/:clientSlug/:slug/specs` | `client/src/pages/Specifications.tsx` | Specifications docs |
+| `/org/:clientSlug/:slug/connectivity` | `client/src/pages/Connectivity.tsx` | Network connectivity |
+| `/org/:clientSlug/:slug/tasks` | `client/src/pages/Tasks.tsx` | Task management + CSV |
+| `/org/:clientSlug/:slug/complete` | `client/src/pages/IntakeComplete.tsx` | Completion screen |
+| `/org/:clientSlug/:slug/library` | `client/src/pages/ProceduralLibrary.tsx` | Procedural document library |
+| `/org/:slug` | `client/src/pages/Home.tsx` | **Legacy** — auto-redirects to `/org/:clientSlug/:slug` |
+| `/org/:slug/:subPage` | `LegacySubPageRedirect` | **Legacy** — auto-redirects to `/org/:clientSlug/:slug/:subPage` |
 | `/404` | `client/src/pages/NotFound.tsx` | 404 page |
+
+## URL Slug System (CRITICAL — read before changing navigation)
+
+### Two-level slug architecture
+
+Every org-level URL uses **two slugs**: the **partner/client slug** and the **org slug**.
+
+```
+/org/:clientSlug/:orgSlug/:subPage
+      ^^^^^^^^^^  ^^^^^^^^  ^^^^^^^
+      Partner     Org       Page
+      (RadOne)    (boulder) (intake)
+```
+
+**Example:** `/org/RadOne/boulder/intake`
+- `clientSlug` = `"RadOne"` — from the `clients.slug` DB column
+- `orgSlug` = `"boulder"` — from the `organizations.slug` DB column
+- `subPage` = `"intake"` — the page within the org
+
+### DB tables that hold slugs
+
+| Table | Column | Example | Used in URL as |
+|-------|--------|---------|----------------|
+| `clients` | `slug` | `"RadOne"`, `"SRV"` | `:clientSlug` (1st position) |
+| `organizations` | `slug` | `"boulder"`, `"marshallmedical"` | `:slug` / `:orgSlug` (2nd position) |
+
+### Key helper: `useOrgParams` hook
+
+`client/src/hooks/useOrgParams.ts` extracts both slugs from the current URL:
+
+```ts
+const { clientSlug, slug, orgPath } = useOrgParams("intake");
+// clientSlug = "RadOne", slug = "boulder", orgPath = "/org/RadOne/boulder"
+```
+
+### Rules for building navigation links
+
+1. **ALWAYS use both slugs** when linking to org sub-pages:
+   ```tsx
+   // CORRECT
+   <Link href={`/org/${clientSlug}/${orgSlug}/intake`}>
+   
+   // WRONG — produces broken URL like /org/boulder/intake
+   <Link href={`/org/${orgSlug}/intake`}>
+   ```
+
+2. **Pass `clientSlug` as a prop** to any child component that renders navigation links.
+   The Home.tsx dashboard passes `clientSlug` to all phase cards and resource cards.
+
+3. **Never hardcode partner slugs** like `/org/RadOne/...`. Use dynamic values from:
+   - `useOrgParams()` hook (in org-scoped pages)
+   - `organization.clientSlug` from tRPC query (in the dashboard)
+   - `clientSlugMap[org.clientId]` from admin views
+
+### Legacy URL handling
+
+Old-format URLs (`/org/:slug` and `/org/:slug/:subPage`) are still supported via
+automatic redirects defined in `client/src/App.tsx`:
+
+- `/org/boulder` → `Home` component redirects to `/org/RadOne/boulder` using org's `clientSlug`
+- `/org/boulder/intake` → `LegacySubPageRedirect` looks up the org's clientSlug, redirects to `/org/RadOne/boulder/intake`
+
+**Why this matters:** If you build a link with only the orgSlug (e.g. `/org/boulder/intake`),
+Wouter will match it against `/org/:clientSlug/:slug` (the Home route), treating `"boulder"`
+as the clientSlug and `"intake"` as the orgSlug. This cascades into completely broken navigation
+where URLs degrade into nonsense like `/org/intake/implement`.
 
 ## Backend API Routers
 

@@ -5,6 +5,7 @@ import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 
 interface QuestionnairePhaseCardProps {
+  clientSlug: string;
   orgSlug: string;
   completedSections: number;
   totalSections: number;
@@ -16,6 +17,7 @@ interface QuestionnairePhaseCardProps {
 }
 
 export function QuestionnairePhaseCard({
+  clientSlug,
   orgSlug,
   completedSections,
   totalSections,
@@ -30,7 +32,7 @@ export function QuestionnairePhaseCard({
   const qLabel = qIsDone ? "View" : completedSections > 0 ? "Continue" : "Start";
 
   return (
-    <Link href={`/org/${orgSlug}/intake`}>
+    <Link href={`/org/${clientSlug}/${orgSlug}/intake`}>
       <Card
         className={cn(
           "card-elevated card-clickable relative overflow-hidden cursor-pointer group",

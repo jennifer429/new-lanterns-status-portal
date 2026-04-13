@@ -32,6 +32,11 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics }: A
     [clients]
   );
 
+  const clientSlugMap = useMemo(() =>
+    clients?.reduce((acc, c) => { acc[c.id] = c.slug; return acc; }, {} as Record<number, string>) || {},
+    [clients]
+  );
+
   const activeOrgs = useMemo(() =>
     [...(orgs?.filter(o => o.status === "active") || [])].sort((a, b) => a.name.localeCompare(b.name)),
     [orgs]
@@ -233,7 +238,7 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics }: A
                                 <div className="h-full bg-primary rounded-full" style={{ width: `${qPct}%` }} />
                               </div>
                               <button
-                                onClick={() => setLocation(`/org/${org.slug}/intake`)}
+                                onClick={() => setLocation(org.clientId && clientSlugMap[org.clientId] ? `/org/${clientSlugMap[org.clientId]}/${org.slug}/intake` : `/org/${org.slug}/intake`)}
                                 className="w-full text-xs py-1.5 px-3 rounded border-2 border-primary/40 text-primary hover:bg-primary/10 transition-colors text-center font-medium"
                               >
                                 {qPct === 100 ? "View" : qPct === 0 ? "Start" : "Continue"}
@@ -261,7 +266,7 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics }: A
                                 <span className="text-muted-foreground">{vs?.notTested ?? (vs?.total ?? 28)} Open</span>
                               </div>
                               <button
-                                onClick={() => setLocation(`/org/${org.slug}/validation`)}
+                                onClick={() => setLocation(org.clientId && clientSlugMap[org.clientId] ? `/org/${clientSlugMap[org.clientId]}/${org.slug}/validation` : `/org/${org.slug}/validation`)}
                                 className="w-full text-xs py-1.5 px-3 rounded border-2 border-primary/40 text-primary hover:bg-primary/10 transition-colors text-center font-medium"
                               >
                                 {vsPct === 100 ? "View" : vsPass === 0 ? "Start" : "Continue"}
@@ -288,7 +293,7 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics }: A
                                 <span className="text-muted-foreground">{ts ? (ts.total - tsDone - (ts.inProgress ?? 0) - (ts.blocked ?? 0) - (ts.notApplicable ?? 0)) : 0} Open</span>
                               </div>
                               <button
-                                onClick={() => setLocation(`/org/${org.slug}/implement`)}
+                                onClick={() => setLocation(org.clientId && clientSlugMap[org.clientId] ? `/org/${clientSlugMap[org.clientId]}/${org.slug}/implement` : `/org/${org.slug}/implement`)}
                                 className="w-full text-xs py-1.5 px-3 rounded border-2 border-primary/40 text-primary hover:bg-primary/10 transition-colors text-center font-medium"
                               >
                                 {tsPct === 100 ? "View" : tsDone === 0 ? "Start" : "Continue"}

@@ -10,6 +10,7 @@ interface TaskDef {
 }
 
 interface TaskListPhaseCardProps {
+  clientSlug: string;
   orgSlug: string;
   iPct: number;
   implCompleted: number;
@@ -23,6 +24,7 @@ interface TaskListPhaseCardProps {
 }
 
 export function TaskListPhaseCard({
+  clientSlug,
   orgSlug,
   iPct,
   implCompleted,
@@ -39,7 +41,7 @@ export function TaskListPhaseCard({
   const label = isDone ? "View" : implCompleted > 0 ? "Continue" : "Start";
 
   return (
-    <Link href={`/org/${orgSlug}/implement`}>
+    <Link href={`/org/${clientSlug}/${orgSlug}/implement`}>
       <Card
         className={cn(
           "card-elevated card-clickable relative overflow-hidden cursor-pointer group",

@@ -7,6 +7,7 @@ import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 
 interface ArchitectureCardProps {
+  clientSlug: string;
   orgSlug: string;
   diagramFiles: any[];
   open: boolean;
@@ -16,6 +17,7 @@ interface ArchitectureCardProps {
 }
 
 export function ArchitectureCard({
+  clientSlug,
   orgSlug,
   diagramFiles,
   open,
@@ -129,7 +131,7 @@ export function ArchitectureCard({
               <div className="text-center py-4">
                 <ImageIcon className="w-6 h-6 text-muted-foreground/40 mx-auto mb-2" />
                 <p className="text-xs text-muted-foreground mb-2">No diagrams uploaded</p>
-                <Link href={`/org/${orgSlug}/intake`}>
+                <Link href={`/org/${clientSlug}/${orgSlug}/intake`}>
                   <Button size="sm" variant="outline" className="text-xs h-7">
                     <ArrowRight className="w-3 h-3 mr-1" /> Upload in Questionnaire
                   </Button>

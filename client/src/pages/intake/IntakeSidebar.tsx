@@ -14,6 +14,7 @@ const sectionIcons: Record<string, any> = {
 };
 
 interface IntakeSidebarProps {
+  clientSlug: string;
   slug: string;
   sidebarOpen: boolean;
   onClose: () => void;
@@ -24,6 +25,7 @@ interface IntakeSidebarProps {
 }
 
 export function IntakeSidebar({
+  clientSlug,
   slug,
   sidebarOpen,
   onClose,
@@ -43,7 +45,7 @@ export function IntakeSidebar({
     >
       {/* Logo - links back to dashboard */}
       <div className="p-6 border-b flex items-center justify-between">
-        <Link href={`/org/${slug}`}>
+        <Link href={clientSlug ? `/org/${clientSlug}/${slug}` : `/org/${slug}`}>
           <img
             src="/images/new-lantern-logo.png"
             alt="New Lantern"
