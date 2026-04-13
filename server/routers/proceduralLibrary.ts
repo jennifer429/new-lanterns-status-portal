@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
-import { getDb } from "../db";
+import { requireDb } from "../db";
 import {
   partnerDocuments,
   partnerDocAudit,
@@ -44,8 +44,7 @@ export const proceduralLibraryRouter = router({
   listDocuments: protectedProcedure
     .input(z.object({ clientId: z.number().optional() }).optional())
     .query(async ({ ctx, input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const db = await requireDb();
 
       const isPlatformAdmin = ctx.user.role === "admin" && !ctx.user.clientId;
 
@@ -108,8 +107,7 @@ export const proceduralLibraryRouter = router({
       clientId: z.number().optional(), // required for platform admins
     }))
     .mutation(async ({ ctx, input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const db = await requireDb();
 
       const targetClientId = resolveClientId(ctx.user, input.clientId);
       if (!targetClientId) {
@@ -158,8 +156,7 @@ export const proceduralLibraryRouter = router({
   deleteDocument: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const db = await requireDb();
 
       const [doc] = await db.select().from(partnerDocuments).where(eq(partnerDocuments.id, input.id));
       if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Document not found" });
@@ -190,8 +187,7 @@ export const proceduralLibraryRouter = router({
       action: z.enum(["view", "download"]),
     }))
     .mutation(async ({ ctx, input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const db = await requireDb();
 
       await db.insert(partnerDocAudit).values({
         documentId: input.documentId,
@@ -213,8 +209,7 @@ export const proceduralLibraryRouter = router({
   getDownloadUrl: protectedProcedure
     .input(z.object({ documentId: z.number() }))
     .query(async ({ ctx, input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const db = await requireDb();
 
       const [doc] = await db.select().from(partnerDocuments).where(eq(partnerDocuments.id, input.documentId));
       if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Document not found" });
@@ -264,8 +259,7 @@ export const proceduralLibraryRouter = router({
   getAuditTrail: protectedProcedure
     .input(z.object({ documentId: z.number() }))
     .query(async ({ ctx, input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const db = await requireDb();
 
       // Verify user has access to this document's partner
       const [doc] = await db.select().from(partnerDocuments).where(eq(partnerDocuments.id, input.documentId));

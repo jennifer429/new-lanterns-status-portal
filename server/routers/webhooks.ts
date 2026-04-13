@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
-import { getDb } from "../db";
+import { requireDb } from "../db";
 import { activityFeed, organizations } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 
@@ -24,8 +24,7 @@ export const webhooksRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      const db = await requireDb();
 
       // Check if comment contains @Client tag
       if (!input.comment.includes("@Client")) {
@@ -84,8 +83,7 @@ export const webhooksRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      const db = await requireDb();
 
       // Check if comment contains @Client tag
       if (!input.comment.includes("@Client")) {

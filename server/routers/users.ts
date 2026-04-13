@@ -3,9 +3,8 @@
  */
 
 import { z } from "zod";
-import { protectedProcedure, router } from "../_core/trpc";
+import { adminDbProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
-import { requireDb } from "../db";
 import { users, organizations } from "../../drizzle/schema";
 import { eq, desc } from "drizzle-orm";
 import bcrypt from "bcrypt";
@@ -14,12 +13,8 @@ export const usersRouter = router({
   /**
    * List all users with their organization info
    */
-  list: protectedProcedure.query(async ({ ctx }) => {
-    if (ctx.user.role !== "admin") {
-      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-    }
-
-    const db = await requireDb();
+  list: adminDbProcedure.query(async ({ ctx }) => {
+    const { db } = ctx;
 
     const allUsers = await db
       .select({
@@ -44,7 +39,7 @@ export const usersRouter = router({
   /**
    * Create a new user
    */
-  create: protectedProcedure
+  create: adminDbProcedure
     .input(
       z.object({
         email: z.string().email(),
@@ -55,11 +50,7 @@ export const usersRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       // Check if email already exists
       const [existing] = await db
@@ -97,7 +88,7 @@ export const usersRouter = router({
   /**
    * Update an existing user
    */
-  update: protectedProcedure
+  update: adminDbProcedure
     .input(
       z.object({
         id: z.number(),
@@ -110,11 +101,7 @@ export const usersRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       // Check if user exists
       const [user] = await db
@@ -172,18 +159,14 @@ export const usersRouter = router({
   /**
    * Delete a user
    */
-  delete: protectedProcedure
+  delete: adminDbProcedure
     .input(
       z.object({
         id: z.number(),
       })
     )
     .mutation(async ({ input, ctx }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       // Check if user exists
       const [user] = await db

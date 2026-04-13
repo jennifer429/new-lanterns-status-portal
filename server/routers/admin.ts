@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { adminDbProcedure, protectedProcedure, router } from "../_core/trpc";
 import { questions, questionOptions, organizations, users, clients, intakeFileAttachments, partnerTemplates, specifications, intakeResponses, systemVendorOptions, vendorAuditLog, taskCompletion, validationResults, partnerTaskTemplates, orgCustomTasks } from "../../drizzle/schema";
-import { SECTION_DEFS as TASK_SECTION_DEFS } from "../../shared/taskDefs";
+import { SECTION_DEFS as TASK_SECTION_DEFS } from "@shared/taskDefs";
 import { eq, and, or, desc, inArray, sql } from "drizzle-orm";
 import { uploadToGoogleDrive } from "./files";
 import bcrypt from "bcrypt";

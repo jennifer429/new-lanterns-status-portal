@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { publicProcedure, router } from "../_core/trpc";
-import { getDb, requireDb } from "../db";
+import { requireDb } from "../db";
 import { intakeResponses, intakeFileAttachments, organizations, questions, onboardingFeedback, clients, partnerTemplates, partnerTaskTemplates, orgCustomTasks } from "../../drizzle/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { uploadToGoogleDrive } from "./files";
@@ -878,8 +878,7 @@ export const intakeRouter = router({
   getTaskTemplatesForOrg: publicProcedure
     .input(z.object({ organizationSlug: z.string() }))
     .query(async ({ input }) => {
-      const db = await getDb();
-      if (!db) return [];
+      const db = await requireDb();
 
       const [org] = await db
         .select({ id: organizations.id, clientId: organizations.clientId })
@@ -1021,8 +1020,7 @@ export const intakeRouter = router({
   getOrgCustomTasks: publicProcedure
     .input(z.object({ organizationSlug: z.string() }))
     .query(async ({ input }) => {
-      const db = await getDb();
-      if (!db) return [];
+      const db = await requireDb();
 
       const [org] = await db
         .select({ id: organizations.id })

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { publicProcedure, router } from "../_core/trpc";
-import { getDb } from "../db";
+import { requireDb } from "../db";
 import { organizations, taskCompletion } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 
@@ -13,8 +13,7 @@ export const implementationRouter = router({
   getTasks: publicProcedure
     .input(z.object({ organizationSlug: z.string() }))
     .query(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       const [org] = await db
         .select()
@@ -64,8 +63,7 @@ export const implementationRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const db = await requireDb();
 
       const [org] = await db
         .select()

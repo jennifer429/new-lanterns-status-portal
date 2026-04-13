@@ -12,7 +12,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
-import { getDb } from "../db";
+import { requireDb } from "../db";
 import {
   organizations,
   clients,
@@ -22,9 +22,9 @@ import {
   validationResults,
 } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
-import { questionnaireSections } from "../../shared/questionnaireData";
-import { calculateProgress } from "../../shared/progressCalculation";
-import { SECTION_DEFS as TASK_SECTION_DEFS } from "../../shared/taskDefs";
+import { questionnaireSections } from "@shared/questionnaireData";
+import { calculateProgress } from "@shared/progressCalculation";
+import { SECTION_DEFS as TASK_SECTION_DEFS } from "@shared/taskDefs";
 
 // ---------------------------------------------------------------------------
 // Validation phase definitions (mirrors client-side)
@@ -145,12 +145,7 @@ interface OrgExportData {
 }
 
 async function gatherOrgData(orgSlug: string): Promise<OrgExportData> {
-  const db = await getDb();
-  if (!db)
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Database not available",
-    });
+  const db = await requireDb();
 
   // Org
   const [org] = await db
