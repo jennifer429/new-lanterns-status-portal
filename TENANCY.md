@@ -189,44 +189,18 @@ createOrganization: protectedProcedure
 
 ### Frontend Access Control
 
-#### Email-Based Route Guards
+#### Unified Admin with Partner Scoping
+
+The `PlatformAdmin.tsx` component handles both platform admins and partner admins. It reads the partner slug from the URL and scopes data accordingly. Partner admins at `/org/SRV/admin` only see SRV data; platform admins at `/org/admin` see all data.
 
 ```typescript
-// client/src/pages/PartnerAdmin.tsx
-export default function PartnerAdmin({ 
-  partnerName, 
-  allowedDomain 
-}: PartnerAdminProps) {
-  const { user, loading } = useAuth();
-  
-  // Redirect if wrong email domain
-  useEffect(() => {
-    if (!loading && (!user || !user.email?.endsWith(allowedDomain))) {
-      setLocation('/');
-    }
-  }, [user, loading, allowedDomain]);
-  
-  // Only render if authorized
-  return <Dashboard />;
-}
+// client/src/App.tsx — admin routes use PlatformAdmin for all access levels
+<Route path="/org/admin">{() => <PlatformAdmin />}</Route>
+<Route path="/org/:slug/admin">{() => <PlatformAdmin />}</Route>
+<Route path="/org/:slug/admin/users">{() => <PlatformAdmin />}</Route>
 ```
 
-#### Route Configuration
-
-```typescript
-// client/src/App.tsx
-<Route path="/org/admin">
-  {() => <PlatformAdmin />}  {/* @newlantern.ai only */}
-</Route>
-
-<Route path="/org/SRV/admin">
-  {() => <PartnerAdmin partnerName="SRV" allowedDomain="@srv.com" />}
-</Route>
-
-<Route path="/org/RadOne/admin">
-  {() => <PartnerAdmin partnerName="RadOne" allowedDomain="@radone.com" />}
-</Route>
-```
+Backend enforces isolation regardless of frontend — `ctx.user.clientId` filtering happens on every query.
 
 ---
 
@@ -492,13 +466,9 @@ INSERT INTO clients (name, slug, description, status)
 VALUES ('NewPartner', 'NewPartner', 'Description', 'active');
 ```
 
-**Step 2: Add route in App.tsx**
+**Step 2: Verify generic admin route covers the new partner**
 
-```typescript
-<Route path="/org/NewPartner/admin">
-  {() => <PartnerAdmin partnerName="NewPartner" allowedDomain="@newpartner.com" />}
-</Route>
-```
+The generic route `/org/:slug/admin` in `App.tsx` already handles any partner. No route changes needed — the new partner's slug is resolved dynamically.
 
 **Step 3: Update auto-assignment logic**
 

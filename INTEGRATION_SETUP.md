@@ -1,5 +1,7 @@
 # Integration Setup Guide
 
+> **Note (April 2026):** The ClickUp and Linear MCP integrations described below are legacy features. The integration fields (`linearIssueId`, `clickupListId`, `googleDriveFolderId`) still exist in the `organizations` table but are not actively used by most new deployments. File storage has migrated to S3/Forge. The Activity Feed still supports manual and webhook-based entries. Review before relying on this guide for new setup.
+
 This document explains how the portal integrates with ClickUp, Linear, and Google Drive, and what needs to be configured.
 
 ## Overview

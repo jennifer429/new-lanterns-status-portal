@@ -2,6 +2,9 @@
 
 Complete database schema documentation for the New Lantern PACS Onboarding Status Portal.
 
+> **Note:** For a compact column-level reference, see [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) (25 tables).
+> The source of truth is always `drizzle/schema.ts`.
+
 ## Table of Contents
 
 - [Core Tables](#core-tables)
@@ -13,14 +16,31 @@ Complete database schema documentation for the New Lantern PACS Onboarding Statu
   - [questionOptions](#questionoptions)
   - [responses](#responses)
   - [intakeFileAttachments](#intakefileattachments)
+- [File Management](#file-management)
+  - [fileAttachments](#fileattachments)
+  - [partnerTemplates](#partnertemplates)
+  - [specifications](#specifications)
+  - [partnerDocuments](#partnerdocuments)
+  - [orgNotes](#orgnotes)
 - [Progress Tracking](#progress-tracking)
   - [sectionProgress](#sectionprogress)
   - [taskCompletion](#taskcompletion)
+  - [validationResults](#validationresults)
+  - [partnerTaskTemplates](#partnertasktemplates)
+  - [orgCustomTasks](#orgcustomtasks)
 - [Activity & Feedback](#activity--feedback)
   - [activityFeed](#activityfeed)
   - [onboardingFeedback](#onboardingfeedback)
+- [Vendor Management](#vendor-management)
+  - [systemVendorOptions](#systemvendoroptions)
+  - [vendorAuditLog](#vendorauditlog)
 - [Authentication](#authentication)
   - [passwordResetTokens](#passwordresettokens)
+- [AI & Audit](#ai--audit)
+  - [aiAuditLogs](#aiauditlogs)
+  - [partnerDocAudit](#partnerdocaudit)
+- [Legacy](#legacy)
+  - [intakeResponses](#intakeresponses)
 
 ---
 
