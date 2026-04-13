@@ -20,6 +20,7 @@ import Validation from "./pages/Validation";
 import Workflows from "./pages/Workflows";
 import Specifications from "./pages/Specifications";
 import Connectivity from "./pages/Connectivity";
+import ProceduralLibrary from "./pages/ProceduralLibrary";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -41,19 +42,33 @@ function Router() {
       <Route path="/org/admin">
         {() => <PlatformAdmin />}
       </Route>
-      {/* Generic partner admin routes - supports any partner slug (e.g. /org/rads-inc/admin) */}
+      <Route path="/org/admin/library" component={ProceduralLibrary} />
+      {/* Partner admin routes - :slug matches any partner (SRV, RadOne, etc.) */}
       <Route path="/org/:slug/admin/users">
         {() => <PlatformAdmin />}
       </Route>
       <Route path="/org/:slug/admin">
         {() => <PlatformAdmin />}
       </Route>
+      <Route path="/org/:slug/admin/library" component={ProceduralLibrary} />
+      {/* New client-level org routes (/org/:clientSlug/:orgSlug) */}
+      <Route path="/org/:clientSlug/:slug/intake" component={IntakeNewRedesign} />
+      <Route path="/org/:clientSlug/:slug/implement" component={Implementation} />
+      <Route path="/org/:clientSlug/:slug/validation" component={Validation} />
+      <Route path="/org/:clientSlug/:slug/workflows" component={Workflows} />
+      <Route path="/org/:clientSlug/:slug/specs" component={Specifications} />
+      <Route path="/org/:clientSlug/:slug/connectivity" component={Connectivity} />
+      <Route path="/org/:clientSlug/:slug/tasks" component={Tasks} />
+      <Route path="/org/:clientSlug/:slug/complete" component={IntakeComplete} />
+      <Route path="/org/:clientSlug/:slug" component={Home} />
+      {/* Legacy single-slug routes (backward compatible) */}
       <Route path="/org/:slug/intake" component={IntakeNewRedesign} />
       <Route path="/org/:slug/implement" component={Implementation} />
       <Route path="/org/:slug/validation" component={Validation} />
       <Route path="/org/:slug/workflows" component={Workflows} />
       <Route path="/org/:slug/specs" component={Specifications} />
       <Route path="/org/:slug/connectivity" component={Connectivity} />
+      <Route path="/org/:slug/library" component={ProceduralLibrary} />
       <Route path="/org/:slug/complete" component={IntakeComplete} />
       <Route path="/org/:slug/tasks" component={Tasks} />
       <Route path="/org/:slug" component={Home} />

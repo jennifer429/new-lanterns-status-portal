@@ -17,7 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ClipboardList, Users, FileText, Download, LogOut, Settings, ChevronDown, ListChecks, History } from "lucide-react";
+import { ClipboardList, Users, FileText, Download, LogOut, Settings, ChevronDown, ListChecks, History, FolderOpen } from "lucide-react";
 import { toast } from "sonner";
 import { AdminChatWidget } from "@/components/AdminChatWidget";
 import { AiAuditLog } from "@/components/AiAuditLog";
@@ -30,8 +30,14 @@ import { TemplatesTab } from "./admin/TemplatesTab";
 import { PartnersTab } from "./admin/PartnersTab";
 import { SpecsTab } from "./admin/SpecsTab";
 import { VendorPicklistsTab } from "./admin/VendorPicklistsTab";
+import ProceduralLibrary from "./ProceduralLibrary";
 
-type Tab = "prod-dashboard" | "impl-dashboard" | "orgs" | "users" | "templates" | "task-templates" | "partners" | "specs" | "vendor-picklists" | "audit-log";
+/** Thin wrapper that renders ProceduralLibrary inline within the admin layout */
+function ProceduralLibraryEmbed() {
+  return <ProceduralLibrary />;
+}
+
+type Tab = "prod-dashboard" | "impl-dashboard" | "orgs" | "users" | "templates" | "task-templates" | "partners" | "specs" | "vendor-picklists" | "audit-log" | "library";
 
 function getPartnerDisplayName(user: any, clients?: any[]): string {
   if (!user?.clientId) return "Platform";
@@ -117,31 +123,29 @@ export default function PlatformAdmin() {
     refetchUsers,
   };
 
-  const adminTabs: Tab[] = ["users", "orgs", "templates", "task-templates", "partners", "specs", "vendor-picklists", "audit-log"];
+  const adminTabs: Tab[] = ["users", "orgs", "templates", "task-templates", "partners", "specs", "vendor-picklists", "library", "audit-log"];
 
   return (
     <div className="min-h-screen bg-background animate-page-in">
       {/* Header */}
       <header className="header-glass sticky top-0 z-50">
         <div className="container py-3 sm:py-6">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-              <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-8 sm:h-12 shrink-0" />
-            </div>
-            <div className="flex-1 flex flex-col items-center justify-center min-w-0">
-              <h1 className="text-lg sm:text-3xl font-bold text-foreground truncate">{headerTitle}</h1>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 truncate max-w-[200px] sm:max-w-none">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-8 sm:h-12 shrink-0" />
+            <div className="flex-1 min-w-0 text-center">
+              <h1 className="text-base sm:text-3xl font-bold text-foreground truncate">{headerTitle}</h1>
+              <p className="text-[11px] sm:text-sm text-muted-foreground mt-0.5 truncate">
                 {headerSubtitle}
               </p>
             </div>
-            <div className="flex items-center gap-2 sm:gap-3">
-              <Button variant="outline" size="sm" onClick={handleExportAll} className="gap-2 px-2 sm:px-3">
+            <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+              <Button variant="outline" size="sm" onClick={handleExportAll} className="gap-2 h-8 sm:h-9 px-2 sm:px-3">
                 <Download className="w-4 h-4" />
                 <span className="hidden sm:inline">Export All</span>
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="h-10 w-10 rounded-full bg-purple-600 border-purple-400 hover:bg-purple-500 text-white font-semibold">
+                  <Button variant="outline" className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-purple-600 border-purple-400 hover:bg-purple-500 text-white font-semibold text-xs sm:text-sm">
                     {user?.name ? getInitials(user.name) : "AD"}
                   </Button>
                 </DropdownMenuTrigger>
@@ -166,17 +170,17 @@ export default function PlatformAdmin() {
           </div>
 
           {/* Tab Navigation */}
-          <div className="flex items-center gap-4 mt-4 sm:mt-6 border-b border-border overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="flex items-center gap-2 sm:gap-4 mt-3 sm:mt-6 border-b border-border overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
             <button
               onClick={() => setActiveTab("prod-dashboard")}
-              className={`pb-2 sm:pb-3 px-1 text-sm font-medium transition-colors relative whitespace-nowrap flex items-center gap-1.5 shrink-0 ${activeTab === "prod-dashboard" ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+              className={`pb-2 sm:pb-3 px-1 text-xs sm:text-sm font-medium transition-colors relative whitespace-nowrap flex items-center gap-1.5 shrink-0 ${activeTab === "prod-dashboard" ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
             >
               Connectivity Matrix
               {activeTab === "prod-dashboard" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
             </button>
             <button
               onClick={() => setActiveTab("impl-dashboard")}
-              className={`pb-2 sm:pb-3 px-1 text-sm font-medium transition-colors relative whitespace-nowrap shrink-0 ${activeTab === "impl-dashboard" ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+              className={`pb-2 sm:pb-3 px-1 text-xs sm:text-sm font-medium transition-colors relative whitespace-nowrap shrink-0 ${activeTab === "impl-dashboard" ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
             >
               Admin Dashboard
               {activeTab === "impl-dashboard" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
@@ -184,7 +188,7 @@ export default function PlatformAdmin() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className={`pb-2 sm:pb-3 px-1 text-sm font-medium transition-colors relative whitespace-nowrap flex items-center gap-1 shrink-0 ${adminTabs.includes(activeTab) ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}>
+                <button className={`pb-2 sm:pb-3 px-1 text-xs sm:text-sm font-medium transition-colors relative whitespace-nowrap flex items-center gap-1 shrink-0 ${adminTabs.includes(activeTab) ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}>
                   <Settings className="w-4 h-4" />
                   Admin
                   <ChevronDown className="w-3 h-3" />
@@ -206,6 +210,9 @@ export default function PlatformAdmin() {
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setActiveTab("vendor-picklists")} className="cursor-pointer">
                   <ListChecks className="mr-2 h-4 w-4" />Vendor Picklists
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveTab("library")} className="cursor-pointer">
+                  <FolderOpen className="mr-2 h-4 w-4" />Procedural Library
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setActiveTab("audit-log")} className="cursor-pointer">
@@ -250,6 +257,7 @@ export default function PlatformAdmin() {
         {activeTab === "specs" && isPlatformAdmin && <SpecsTab />}
         {activeTab === "vendor-picklists" && <VendorPicklistsTab />}
         {activeTab === "audit-log" && <AiAuditLog />}
+        {activeTab === "library" && <ProceduralLibraryEmbed />}
       </div>
 
       <AdminChatWidget isPlatformAdmin={!user?.clientId} />

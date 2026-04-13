@@ -71,8 +71,10 @@ export const authRouter = router({
 
       // Determine redirect route based on user type
       let orgSlug = "admin";
-      
+      let clientSlug = "";
+
       // If user has organizationId, they're a hospital user → go to their org portal
+
       if (user.organizationId) {
         const [org] = await db
           .select()
@@ -81,9 +83,20 @@ export const authRouter = router({
           .limit(1);
         if (org) {
           orgSlug = org.slug;
+          // If we didn't get clientSlug from user, get it from org
+          if (!clientSlug && org.clientId) {
+            const [client] = await db
+              .select()
+              .from(clients)
+              .where(eq(clients.id, org.clientId))
+              .limit(1);
+            if (client) {
+              clientSlug = client.slug;
+            }
+          }
         }
       }
-      // If user has clientId, they're a partner admin → go to partner admin page
+      // If user has clientId, they're a partner admin → go to /org/:clientSlug/admin
       else if (user.clientId) {
         const [client] = await db
           .select()
@@ -91,7 +104,8 @@ export const authRouter = router({
           .where(eq(clients.id, user.clientId))
           .limit(1);
         if (client) {
-          orgSlug = `${client.slug}/admin`;
+          clientSlug = client.slug;
+          orgSlug = "admin";
         }
       }
       // Otherwise, platform admin → go to /org/admin
@@ -117,6 +131,7 @@ export const authRouter = router({
         name: user.name || user.email?.split('@')[0] || "User",
         role: user.role,
         orgSlug,
+        clientSlug,
       };
     }),
 

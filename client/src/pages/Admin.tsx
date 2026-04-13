@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import { questionnaireSections } from "@shared/questionnaireData";
 import { transformSectionProgress } from "@/lib/adminUtils";
-import { Link } from "wouter";
+import { Link, useRoute } from "wouter";
 import { ExternalLink, Building2, Calendar, CheckCircle2, Clock, Users, TrendingUp, Activity, FileText, Download, Trash2, Search, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,6 +23,8 @@ import { PhiDisclaimer } from "@/components/PhiDisclaimer";
 import { UserMenu } from "@/components/UserMenu";
 
 export default function Admin() {
+  const [, params] = useRoute("/org/:clientSlug/admin");
+  const clientSlug = params?.clientSlug || "";
   const [activeTab, setActiveTab] = useState("dashboard");
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
   const [orgSearch, setOrgSearch] = useState("");
@@ -335,35 +337,41 @@ export default function Admin() {
 
 
                     {/* Phase Navigation Buttons */}
-                    <div className="grid grid-cols-3 gap-1.5">
-                      <Link href={`/org/${org.slug}/intake`}>
-                        <Button
-                          variant="outline"
-                          className="w-full border-purple-500/40 text-purple-300 hover:bg-purple-900/30 hover:text-purple-200"
-                          size="sm"
-                        >
-                          Questionnaire
-                        </Button>
-                      </Link>
-                      <Link href={`/org/${org.slug}/validation`}>
-                        <Button
-                          variant="outline"
-                          className="w-full border-purple-500/40 text-purple-300 hover:bg-purple-900/30 hover:text-purple-200"
-                          size="sm"
-                        >
-                          Testing
-                        </Button>
-                      </Link>
-                      <Link href={`/org/${org.slug}/implement`}>
-                        <Button
-                          variant="outline"
-                          className="w-full border-purple-500/40 text-purple-300 hover:bg-purple-900/30 hover:text-purple-200"
-                          size="sm"
-                        >
-                          Task List
-                        </Button>
-                      </Link>
-                    </div>
+                    {(() => {
+                      const orgClientSlug = allClients.find(c => c.id === org.clientId)?.slug;
+                      const prefix = orgClientSlug ? `/org/${orgClientSlug}/${org.slug}` : `/org/${org.slug}`;
+                      return (
+                        <div className="grid grid-cols-3 gap-1.5">
+                          <Link href={`${prefix}/intake`}>
+                            <Button
+                              variant="outline"
+                              className="w-full border-purple-500/40 text-purple-300 hover:bg-purple-900/30 hover:text-purple-200"
+                              size="sm"
+                            >
+                              Questionnaire
+                            </Button>
+                          </Link>
+                          <Link href={`${prefix}/validation`}>
+                            <Button
+                              variant="outline"
+                              className="w-full border-purple-500/40 text-purple-300 hover:bg-purple-900/30 hover:text-purple-200"
+                              size="sm"
+                            >
+                              Testing
+                            </Button>
+                          </Link>
+                          <Link href={`${prefix}/implement`}>
+                            <Button
+                              variant="outline"
+                              className="w-full border-purple-500/40 text-purple-300 hover:bg-purple-900/30 hover:text-purple-200"
+                              size="sm"
+                            >
+                              Task List
+                            </Button>
+                          </Link>
+                        </div>
+                      );
+                    })()}
                   </CardContent>
                 </Card>
               ))}

@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { protectedProcedure, router } from "../_core/trpc";
-import { getDb, requireDb } from "../db";
+import { adminDbProcedure, protectedProcedure, router } from "../_core/trpc";
 import { questions, questionOptions, organizations, users, clients, intakeFileAttachments, partnerTemplates, specifications, intakeResponses, systemVendorOptions, vendorAuditLog, taskCompletion, validationResults, partnerTaskTemplates, orgCustomTasks } from "../../drizzle/schema";
 import { SECTION_DEFS as TASK_SECTION_DEFS } from "../../shared/taskDefs";
 import { eq, and, or, desc, inArray, sql } from "drizzle-orm";
@@ -20,12 +19,8 @@ export const adminRouter = router({
   /**
    * Get all questions with their options
    */
-  getAllQuestions: protectedProcedure.query(async ({ ctx }) => {
-    if (ctx.user.role !== "admin") {
-      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-    }
-
-    const db = await requireDb();
+  getAllQuestions: adminDbProcedure.query(async ({ ctx }) => {
+    const { db } = ctx;
 
     const allQuestions = await db
       .select()
@@ -57,7 +52,7 @@ export const adminRouter = router({
   /**
    * Create a new question
    */
-  createQuestion: protectedProcedure
+  createQuestion: adminDbProcedure
     .input(
       z.object({
         questionId: z.string(),
@@ -73,11 +68,7 @@ export const adminRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       // Check if questionId already exists
       const existing = await db
@@ -98,7 +89,7 @@ export const adminRouter = router({
   /**
    * Update a question
    */
-  updateQuestion: protectedProcedure
+  updateQuestion: adminDbProcedure
     .input(
       z.object({
         id: z.number(),
@@ -115,11 +106,7 @@ export const adminRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       const { id, ...updates } = input;
 
@@ -131,14 +118,10 @@ export const adminRouter = router({
   /**
    * Delete a question
    */
-  deleteQuestion: protectedProcedure
+  deleteQuestion: adminDbProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       // Delete associated options first
       await db.delete(questionOptions).where(eq(questionOptions.questionId, input.id));
@@ -156,14 +139,10 @@ export const adminRouter = router({
   /**
    * Get options for a specific question
    */
-  getQuestionOptions: protectedProcedure
+  getQuestionOptions: adminDbProcedure
     .input(z.object({ questionId: z.number() }))
     .query(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       return await db
         .select()
@@ -175,7 +154,7 @@ export const adminRouter = router({
   /**
    * Create a new question option
    */
-  createQuestionOption: protectedProcedure
+  createQuestionOption: adminDbProcedure
     .input(
       z.object({
         questionId: z.number(),
@@ -186,11 +165,7 @@ export const adminRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       const [newOption] = await db.insert(questionOptions).values(input);
 
@@ -200,7 +175,7 @@ export const adminRouter = router({
   /**
    * Update a question option
    */
-  updateQuestionOption: protectedProcedure
+  updateQuestionOption: adminDbProcedure
     .input(
       z.object({
         id: z.number(),
@@ -211,11 +186,7 @@ export const adminRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       const { id, ...updates } = input;
 
@@ -227,14 +198,10 @@ export const adminRouter = router({
   /**
    * Delete a question option
    */
-  deleteQuestionOption: protectedProcedure
+  deleteQuestionOption: adminDbProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       await db.delete(questionOptions).where(eq(questionOptions.id, input.id));
 
@@ -244,7 +211,7 @@ export const adminRouter = router({
   /**
    * Reorder question options
    */
-  reorderQuestionOptions: protectedProcedure
+  reorderQuestionOptions: adminDbProcedure
     .input(
       z.object({
         questionId: z.number(),
@@ -252,11 +219,7 @@ export const adminRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       // Update display order for each option
       for (let i = 0; i < input.optionIds.length; i++) {
@@ -276,12 +239,8 @@ export const adminRouter = router({
   /**
    * Get clients (partners) - Platform admins see all, partner admins see only their own
    */
-  getAllClients: protectedProcedure.query(async ({ ctx }) => {
-    if (ctx.user.role !== "admin") {
-      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-    }
-
-    const db = await requireDb();
+  getAllClients: adminDbProcedure.query(async ({ ctx }) => {
+    const { db } = ctx;
 
     // Platform admins see all clients, partner admins see only their own
     if (ctx.user.clientId) {
@@ -295,7 +254,7 @@ export const adminRouter = router({
    * Create a new client (partner)
    * Platform admins only
    */
-  createClient: protectedProcedure
+  createClient: adminDbProcedure
     .input(
       z.object({
         name: z.string().min(1, "Name is required"),
@@ -304,11 +263,11 @@ export const adminRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin" || ctx.user.clientId) {
+      if (ctx.user.clientId) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
       }
 
-      const db = await requireDb();
+      const { db } = ctx;
 
       // Check if slug already exists
       const existing = await db.select().from(clients).where(eq(clients.slug, input.slug)).limit(1);
@@ -330,7 +289,7 @@ export const adminRouter = router({
    * Update an existing client (partner)
    * Platform admins only
    */
-  updateClient: protectedProcedure
+  updateClient: adminDbProcedure
     .input(
       z.object({
         id: z.number(),
@@ -340,11 +299,11 @@ export const adminRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin" || ctx.user.clientId) {
+      if (ctx.user.clientId) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
       }
 
-      const db = await requireDb();
+      const { db } = ctx;
 
       // Check the client exists
       const [existing] = await db.select().from(clients).where(eq(clients.id, input.id)).limit(1);
@@ -373,14 +332,14 @@ export const adminRouter = router({
    * Deactivate a client (partner) - soft delete
    * Platform admins only
    */
-  deactivateClient: protectedProcedure
+  deactivateClient: adminDbProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin" || ctx.user.clientId) {
+      if (ctx.user.clientId) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
       }
 
-      const db = await requireDb();
+      const { db } = ctx;
 
       const [existing] = await db.select().from(clients).where(eq(clients.id, input.id)).limit(1);
       if (!existing) {
@@ -396,14 +355,14 @@ export const adminRouter = router({
    * Reactivate a client (partner)
    * Platform admins only
    */
-  reactivateClient: protectedProcedure
+  reactivateClient: adminDbProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin" || ctx.user.clientId) {
+      if (ctx.user.clientId) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
       }
 
-      const db = await requireDb();
+      const { db } = ctx;
 
       const [existing] = await db.select().from(clients).where(eq(clients.id, input.id)).limit(1);
       if (!existing) {
@@ -429,12 +388,8 @@ export const adminRouter = router({
     return ctx.user;
   }),
 
-  getAllOrganizations: protectedProcedure.query(async ({ ctx }) => {
-    if (ctx.user.role !== "admin") {
-      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-    }
-
-    const db = await requireDb();
+  getAllOrganizations: adminDbProcedure.query(async ({ ctx }) => {
+    const { db } = ctx;
 
     // Debug logging
     console.log('[getAllOrganizations] User:', ctx.user.email, 'clientId:', ctx.user.clientId, 'role:', ctx.user.role);
@@ -455,12 +410,8 @@ export const adminRouter = router({
    *   - Platform admin (no clientId) → all orgs
    *   - Partner admin (clientId set) → only their partner's orgs
    */
-  getAllOrgResponses: protectedProcedure.query(async ({ ctx }) => {
-    if (ctx.user.role !== "admin") {
-      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-    }
-
-    const db = await requireDb();
+  getAllOrgResponses: adminDbProcedure.query(async ({ ctx }) => {
+    const { db } = ctx;
 
     let accessibleOrgs;
     if (ctx.user.clientId) {
@@ -490,18 +441,14 @@ export const adminRouter = router({
    * Save a single response for any accessible org (admin use — powers matrix inline editing).
    * Access control: partner admin can only write to orgs they own.
    */
-  saveOrgResponse: protectedProcedure
+  saveOrgResponse: adminDbProcedure
     .input(z.object({
       organizationId: z.number(),
       questionId: z.string(),
       response: z.string(),
     }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       // Verify caller can access this org
       const [org] = await db.select().from(organizations).where(eq(organizations.id, input.organizationId)).limit(1);
@@ -538,7 +485,7 @@ export const adminRouter = router({
    * Bulk-upsert responses from a CSV import.
    * Same access control as saveOrgResponse.
    */
-  bulkSaveOrgResponses: protectedProcedure
+  bulkSaveOrgResponses: adminDbProcedure
     .input(z.object({
       rows: z.array(z.object({
         organizationId: z.number(),
@@ -547,11 +494,7 @@ export const adminRouter = router({
       })),
     }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       // Verify all org IDs are accessible
       const uniqueOrgIds = Array.from(new Set(input.rows.map(r => r.organizationId)));
@@ -601,7 +544,7 @@ export const adminRouter = router({
   /**
    * Create a new organization
    */
-  createOrganization: protectedProcedure
+  createOrganization: adminDbProcedure
     .input(
       z.object({
         clientId: z.number().optional(), // Optional - will be auto-assigned for partner admins
@@ -614,11 +557,7 @@ export const adminRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       // Partner admins can only create orgs for their own partner
       // Platform admins must specify clientId
@@ -654,7 +593,7 @@ export const adminRouter = router({
   /**
    * Update an organization
    */
-  updateOrganization: protectedProcedure
+  updateOrganization: adminDbProcedure
     .input(
       z.object({
         id: z.number(),
@@ -668,11 +607,7 @@ export const adminRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       const { id, ...updates } = input;
 
@@ -684,14 +619,10 @@ export const adminRouter = router({
   /**
    * Delete an organization (cascades to users and responses)
    */
-  deleteOrganization: protectedProcedure
+  deleteOrganization: adminDbProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       // Note: In production, you might want to soft-delete or archive instead
       // This will cascade delete users and responses associated with this org
@@ -708,12 +639,8 @@ export const adminRouter = router({
   /**
    * Get all uploaded files across all organizations (filtered by user's clientId)
    */
-  getAllFiles: protectedProcedure.query(async ({ ctx }) => {
-    if (ctx.user.role !== "admin") {
-      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-    }
-
-    const db = await requireDb();
+  getAllFiles: adminDbProcedure.query(async ({ ctx }) => {
+    const { db } = ctx;
 
     // Join files with organizations to filter by clientId
     const files = await db
@@ -749,14 +676,10 @@ export const adminRouter = router({
   /**
    * Delete a file
    */
-  deleteFile: protectedProcedure
+  deleteFile: adminDbProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       // Get file details first to check access
       const [file] = await db
@@ -796,12 +719,8 @@ export const adminRouter = router({
    * Returns consistent summary data: organizations with user count, completion %, and files
    * Filters by clientId for partner admins, shows all for platform admins
    */
-  getAdminSummary: protectedProcedure.query(async ({ ctx }) => {
-    if (ctx.user.role !== "admin") {
-      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-    }
-
-    const db = await requireDb();
+  getAdminSummary: adminDbProcedure.query(async ({ ctx }) => {
+    const { db } = ctx;
 
     // Get all organizations (filtered by clientId if applicable)
     let orgs;
@@ -995,12 +914,8 @@ export const adminRouter = router({
   /**
    * Get all users - filtered by clientId for partner admins
    */
-  getAllUsers: protectedProcedure.query(async ({ ctx }) => {
-    if (ctx.user.role !== "admin") {
-      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-    }
-
-    const db = await requireDb();
+  getAllUsers: adminDbProcedure.query(async ({ ctx }) => {
+    const { db } = ctx;
 
     // Platform admins see all users, partner admins see only their partner's users
     let allUsers;
@@ -1038,7 +953,7 @@ export const adminRouter = router({
   /**
    * Create a new user
    */
-  createUser: protectedProcedure
+  createUser: adminDbProcedure
     .input(
       z.object({
         email: z.string().min(1, "Email is required").refine(
@@ -1059,16 +974,12 @@ export const adminRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
       // Partner admins can only create users for their own partner
       if (ctx.user.clientId && input.clientId !== ctx.user.clientId) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Cannot create users for other partners" });
       }
 
-      const db = await requireDb();
+      const { db } = ctx;
 
       // Check if user already exists
       const existingUser = await db
@@ -1114,14 +1025,10 @@ export const adminRouter = router({
    * Resend invite for a user — regenerates invite token, resets invitedAt,
    * so the user shows up in /api/external/invites/pending again.
    */
-  resendInvite: protectedProcedure
+  resendInvite: adminDbProcedure
     .input(z.object({ userId: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       // Verify the user exists
       const [targetUser] = await db
@@ -1161,14 +1068,10 @@ export const adminRouter = router({
   /**
    * Deactivate an organization (soft delete)
    */
-  deactivateOrganization: protectedProcedure
+  deactivateOrganization: adminDbProcedure
     .input(z.object({ organizationId: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       // Get the organization to check permissions
       const [org] = await db.select().from(organizations).where(eq(organizations.id, input.organizationId));
@@ -1193,14 +1096,10 @@ export const adminRouter = router({
   /**
    * Reactivate an organization
    */
-  reactivateOrganization: protectedProcedure
+  reactivateOrganization: adminDbProcedure
     .input(z.object({ organizationId: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       // Get the organization to check permissions
       const [org] = await db.select().from(organizations).where(eq(organizations.id, input.organizationId));
@@ -1225,14 +1124,10 @@ export const adminRouter = router({
   /**
    * Mark an organization as complete
    */
-  markOrganizationComplete: protectedProcedure
+  markOrganizationComplete: adminDbProcedure
     .input(z.object({ organizationId: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       // Get the organization to check permissions
       const [org] = await db.select().from(organizations).where(eq(organizations.id, input.organizationId));
@@ -1257,14 +1152,10 @@ export const adminRouter = router({
   /**
    * Reopen a completed organization (set back to active)
    */
-  reopenOrganization: protectedProcedure
+  reopenOrganization: adminDbProcedure
     .input(z.object({ organizationId: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       // Get the organization to check permissions
       const [org] = await db.select().from(organizations).where(eq(organizations.id, input.organizationId));
@@ -1289,14 +1180,10 @@ export const adminRouter = router({
   /**
    * Deactivate a user
    */
-  deactivateUser: protectedProcedure
+  deactivateUser: adminDbProcedure
     .input(z.object({ userId: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       // Get the user to check permissions
       const [targetUser] = await db.select().from(users).where(eq(users.id, input.userId));
@@ -1326,14 +1213,10 @@ export const adminRouter = router({
   /**
    * Reactivate a user
    */
-  reactivateUser: protectedProcedure
+  reactivateUser: adminDbProcedure
     .input(z.object({ userId: z.number(), organizationId: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       // Get the user to check permissions
       const [targetUser] = await db.select().from(users).where(eq(users.id, input.userId));
@@ -1361,12 +1244,8 @@ export const adminRouter = router({
   /**
    * Get all partner templates (filtered by clientId for partner admins)
    */
-  getTemplates: protectedProcedure.query(async ({ ctx }) => {
-    if (ctx.user.role !== "admin") {
-      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-    }
-
-    const db = await requireDb();
+  getTemplates: adminDbProcedure.query(async ({ ctx }) => {
+    const { db } = ctx;
 
     if (ctx.user.clientId) {
       // Partner admin: only see their own active templates
@@ -1384,12 +1263,8 @@ export const adminRouter = router({
   /**
    * Get inactive (soft-deleted) partner templates for the history/audit view
    */
-  getInactiveTemplates: protectedProcedure.query(async ({ ctx }) => {
-    if (ctx.user.role !== "admin") {
-      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-    }
-
-    const db = await requireDb();
+  getInactiveTemplates: adminDbProcedure.query(async ({ ctx }) => {
+    const { db } = ctx;
 
     if (ctx.user.clientId) {
       return await db.select().from(partnerTemplates)
@@ -1405,10 +1280,10 @@ export const adminRouter = router({
   /**
    * Get templates for a specific client (used by intake page)
    */
-  getTemplatesByClient: protectedProcedure
+  getTemplatesByClient: adminDbProcedure
     .input(z.object({ clientId: z.number() }))
     .query(async ({ ctx, input }) => {
-      const db = await requireDb();
+      const { db } = ctx;
 
       return await db.select().from(partnerTemplates)
         .where(and(eq(partnerTemplates.clientId, input.clientId), eq(partnerTemplates.isActive, 1)))
@@ -1418,7 +1293,7 @@ export const adminRouter = router({
   /**
    * Upload a new partner template
    */
-  uploadTemplate: protectedProcedure
+  uploadTemplate: adminDbProcedure
     .input(
       z.object({
         clientId: z.number(),
@@ -1430,16 +1305,12 @@ export const adminRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
       // Partner admins can only upload templates for their own partner
       if (ctx.user.clientId && input.clientId !== ctx.user.clientId) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Cannot upload templates for other partners" });
       }
 
-      const db = await requireDb();
+      const { db } = ctx;
 
       // Check if an active template already exists for this question+client
       const [existing] = await db.select().from(partnerTemplates)
@@ -1485,7 +1356,7 @@ export const adminRouter = router({
   /**
    * Replace a partner template — soft-deletes the old one and creates a new active one
    */
-  replaceTemplate: protectedProcedure
+  replaceTemplate: adminDbProcedure
     .input(
       z.object({
         id: z.number(), // ID of the template being replaced
@@ -1496,11 +1367,7 @@ export const adminRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       // Get existing template
       const [existing] = await db.select().from(partnerTemplates)
@@ -1552,8 +1419,8 @@ export const adminRouter = router({
   /**
    * Get all active specifications (available to all authenticated users)
    */
-  getSpecifications: protectedProcedure.query(async ({ ctx }) => {
-    const db = await requireDb();
+  getSpecifications: adminDbProcedure.query(async ({ ctx }) => {
+    const { db } = ctx;
 
     return await db.select().from(specifications)
       .where(eq(specifications.isActive, 1))
@@ -1563,7 +1430,7 @@ export const adminRouter = router({
   /**
    * Upload a new specification document (platform admin only)
    */
-  uploadSpecification: protectedProcedure
+  uploadSpecification: adminDbProcedure
     .input(
       z.object({
         title: z.string().min(1),
@@ -1575,11 +1442,11 @@ export const adminRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin" || ctx.user.clientId) {
+      if (ctx.user.clientId) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
       }
 
-      const db = await requireDb();
+      const { db } = ctx;
 
       const fileBuffer = Buffer.from(input.fileData, "base64");
 
@@ -1607,7 +1474,7 @@ export const adminRouter = router({
   /**
    * Update specification metadata (platform admin only)
    */
-  updateSpecification: protectedProcedure
+  updateSpecification: adminDbProcedure
     .input(
       z.object({
         id: z.number(),
@@ -1617,11 +1484,11 @@ export const adminRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin" || ctx.user.clientId) {
+      if (ctx.user.clientId) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
       }
 
-      const db = await requireDb();
+      const { db } = ctx;
 
       await db.update(specifications)
         .set({
@@ -1637,14 +1504,14 @@ export const adminRouter = router({
   /**
    * Deactivate (soft-delete) a specification (platform admin only)
    */
-  deactivateSpecification: protectedProcedure
+  deactivateSpecification: adminDbProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin" || ctx.user.clientId) {
+      if (ctx.user.clientId) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
       }
 
-      const db = await requireDb();
+      const { db } = ctx;
 
       await db.update(specifications)
         .set({ isActive: 0 })
@@ -1661,12 +1528,8 @@ export const adminRouter = router({
   /**
    * Get all active system vendor options grouped by system type
    */
-  getSystemVendorOptions: protectedProcedure.query(async ({ ctx }) => {
-    if (ctx.user.role !== "admin") {
-      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-    }
-
-    const db = await requireDb();
+  getSystemVendorOptions: adminDbProcedure.query(async ({ ctx }) => {
+    const { db } = ctx;
 
     const allOptions = await db.select().from(systemVendorOptions)
       .orderBy(systemVendorOptions.systemType, systemVendorOptions.vendorName);
@@ -1677,8 +1540,8 @@ export const adminRouter = router({
   /**
    * Get active vendor options for the intake form (public for authenticated users)
    */
-  getActiveVendorOptions: protectedProcedure.query(async ({ ctx }) => {
-    const db = await requireDb();
+  getActiveVendorOptions: adminDbProcedure.query(async ({ ctx }) => {
+    const { db } = ctx;
 
     const activeOptions = await db.select().from(systemVendorOptions)
       .where(eq(systemVendorOptions.isActive, 1))
@@ -1705,17 +1568,13 @@ export const adminRouter = router({
   /**
    * Add a vendor option to a system type
    */
-  addVendorOption: protectedProcedure
+  addVendorOption: adminDbProcedure
     .input(z.object({
       systemType: z.string().min(1),
       vendorName: z.string().min(1),
     }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       // Get max displayOrder for this system type
       const existing = await db.select().from(systemVendorOptions)
@@ -1745,17 +1604,13 @@ export const adminRouter = router({
   /**
    * Update a vendor option (rename)
    */
-  updateVendorOption: protectedProcedure
+  updateVendorOption: adminDbProcedure
     .input(z.object({
       id: z.number(),
       vendorName: z.string().min(1),
     }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       // Get current value for audit log
       const [current] = await db.select().from(systemVendorOptions)
@@ -1783,17 +1638,13 @@ export const adminRouter = router({
   /**
    * Toggle active/inactive for a vendor option
    */
-  toggleVendorOption: protectedProcedure
+  toggleVendorOption: adminDbProcedure
     .input(z.object({
       id: z.number(),
       isActive: z.number().min(0).max(1),
     }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       // Get current value for audit log
       const [currentToggle] = await db.select().from(systemVendorOptions)
@@ -1821,14 +1672,10 @@ export const adminRouter = router({
   /**
    * Delete a vendor option permanently
    */
-  deleteVendorOption: protectedProcedure
+  deleteVendorOption: adminDbProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       // Get current value for audit log
       const [currentDel] = await db.select().from(systemVendorOptions)
@@ -1854,17 +1701,13 @@ export const adminRouter = router({
   /**
    * Add a new system type with its vendor options (bulk)
    */
-  addSystemType: protectedProcedure
+  addSystemType: adminDbProcedure
     .input(z.object({
       systemType: z.string().min(1),
       vendors: z.array(z.string().min(1)),
     }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       const values = input.vendors.map((v, i) => ({
         systemType: input.systemType,
@@ -1892,13 +1735,9 @@ export const adminRouter = router({
   /**
    * Seed default vendor options (only if table is empty)
    */
-  seedDefaultVendorOptions: protectedProcedure
+  seedDefaultVendorOptions: adminDbProcedure
     .mutation(async ({ ctx }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       // Check if already seeded
       const existing = await db.select().from(systemVendorOptions);
@@ -1947,16 +1786,12 @@ export const adminRouter = router({
   /**
    * Get vendor audit log entries
    */
-  getVendorAuditLog: protectedProcedure
+  getVendorAuditLog: adminDbProcedure
     .input(z.object({
       limit: z.number().min(1).max(200).default(50),
     }).optional())
     .query(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const { db } = ctx;
 
       const limit = input?.limit ?? 50;
       const logs = await db.select().from(vendorAuditLog)
@@ -1970,12 +1805,9 @@ export const adminRouter = router({
   // PARTNER TASK TEMPLATES CRUD
   // ============================================================================
 
-  getTaskTemplates: protectedProcedure
+  getTaskTemplates: adminDbProcedure
     .query(async ({ ctx }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-      const db = await requireDb();
+      const { db } = ctx;
 
       const whereClause = ctx.user.clientId
         ? and(eq(partnerTaskTemplates.clientId, ctx.user.clientId), eq(partnerTaskTemplates.isActive, 1))
@@ -2001,7 +1833,7 @@ export const adminRouter = router({
         .orderBy(partnerTaskTemplates.clientId, partnerTaskTemplates.sortOrder, partnerTaskTemplates.id);
     }),
 
-  createTaskTemplate: protectedProcedure
+  createTaskTemplate: adminDbProcedure
     .input(z.object({
       clientId: z.number(),
       title: z.string().min(1),
@@ -2011,10 +1843,7 @@ export const adminRouter = router({
       sortOrder: z.number().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-      const db = await requireDb();
+      const { db } = ctx;
 
       if (ctx.user.clientId && ctx.user.clientId !== input.clientId) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Cannot create tasks for a different partner" });
@@ -2034,7 +1863,7 @@ export const adminRouter = router({
       return { success: true };
     }),
 
-  updateTaskTemplate: protectedProcedure
+  updateTaskTemplate: adminDbProcedure
     .input(z.object({
       id: z.number(),
       title: z.string().min(1).optional(),
@@ -2044,10 +1873,7 @@ export const adminRouter = router({
       sortOrder: z.number().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-      const db = await requireDb();
+      const { db } = ctx;
 
       const [existing] = await db.select().from(partnerTaskTemplates).where(eq(partnerTaskTemplates.id, input.id)).limit(1);
       if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Task template not found" });
@@ -2066,13 +1892,10 @@ export const adminRouter = router({
       return { success: true };
     }),
 
-  deleteTaskTemplate: protectedProcedure
+  deleteTaskTemplate: adminDbProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-      const db = await requireDb();
+      const { db } = ctx;
 
       const [existing] = await db.select().from(partnerTaskTemplates).where(eq(partnerTaskTemplates.id, input.id)).limit(1);
       if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Task template not found" });
@@ -2088,10 +1911,8 @@ export const adminRouter = router({
    * List all org-added custom tasks across orgs belonging to this partner.
    * Platform admins see all; partner admins see only their own orgs.
    */
-  getOrgCustomTasksForPartner: protectedProcedure.query(async ({ ctx }) => {
-    if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
-    const db = await getDb();
-    if (!db) return [];
+  getOrgCustomTasksForPartner: adminDbProcedure.query(async ({ ctx }) => {
+    const { db } = ctx;
 
     // Resolve which org IDs are in scope
     let orgFilter = await db.select({ id: organizations.id, name: organizations.name, slug: organizations.slug, clientId: organizations.clientId }).from(organizations);
@@ -2121,11 +1942,10 @@ export const adminRouter = router({
    * Promote an org custom task into the partner's task template,
    * making it visible to all active orgs under this partner.
    */
-  promoteCustomTaskToTemplate: protectedProcedure
+  promoteCustomTaskToTemplate: adminDbProcedure
     .input(z.object({ orgCustomTaskId: z.number() }))
     .mutation(async ({ input, ctx }) => {
-      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
-      const db = await requireDb();
+      const { db } = ctx;
 
       // Load the custom task
       const [customTask] = await db

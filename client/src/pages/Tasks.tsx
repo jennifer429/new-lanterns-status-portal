@@ -28,7 +28,8 @@ type Section = {
 };
 
 export default function Tasks() {
-  const [, params] = useRoute("/org/:slug/tasks");
+  const [, params] = useRoute("/org/:clientSlug/:slug/tasks");
+  const clientSlug = params?.clientSlug || "";
   const orgSlug = params?.slug || "demo";
   const { user } = useAuth();
 
@@ -143,7 +144,7 @@ export default function Tasks() {
               </div>
             </div>
             <Button variant="outline" size="sm" asChild>
-              <Link href={`/org/${orgSlug}`}>
+              <Link href={`/org/${clientSlug}/${orgSlug}`}>
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Dashboard
               </Link>

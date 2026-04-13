@@ -93,8 +93,8 @@ router.get("/invites/pending", requireApiKey, async (req, res) => {
     }
 
     // Collect all org IDs and client IDs we need to look up
-    const orgIds = [...new Set(uninvitedUsers.map(u => u.organizationId).filter(Boolean))] as number[];
-    const clientIds = [...new Set(uninvitedUsers.map(u => u.clientId).filter(Boolean))] as number[];
+    const orgIds = Array.from(new Set(uninvitedUsers.map(u => u.organizationId).filter(Boolean))) as number[];
+    const clientIds = Array.from(new Set(uninvitedUsers.map(u => u.clientId).filter(Boolean))) as number[];
 
     // Batch-fetch orgs and clients
     const orgMap = new Map<number, { name: string; slug: string }>();
