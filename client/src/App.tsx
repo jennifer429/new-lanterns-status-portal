@@ -51,6 +51,17 @@ function Router() {
         {() => <PlatformAdmin />}
       </Route>
       <Route path="/org/:slug/admin/library" component={ProceduralLibrary} />
+      {/* New client-level org routes (/org/:clientSlug/:orgSlug) */}
+      <Route path="/org/:clientSlug/:slug/intake" component={IntakeNewRedesign} />
+      <Route path="/org/:clientSlug/:slug/implement" component={Implementation} />
+      <Route path="/org/:clientSlug/:slug/validation" component={Validation} />
+      <Route path="/org/:clientSlug/:slug/workflows" component={Workflows} />
+      <Route path="/org/:clientSlug/:slug/specs" component={Specifications} />
+      <Route path="/org/:clientSlug/:slug/connectivity" component={Connectivity} />
+      <Route path="/org/:clientSlug/:slug/tasks" component={Tasks} />
+      <Route path="/org/:clientSlug/:slug/complete" component={IntakeComplete} />
+      <Route path="/org/:clientSlug/:slug" component={Home} />
+      {/* Legacy single-slug routes (backward compatible) */}
       <Route path="/org/:slug/intake" component={IntakeNewRedesign} />
       <Route path="/org/:slug/implement" component={Implementation} />
       <Route path="/org/:slug/validation" component={Validation} />

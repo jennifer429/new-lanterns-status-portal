@@ -42,7 +42,9 @@ export default function Login() {
 
       const data = await response.json();
       
-      if (data.orgSlug) {
+      if (data.clientSlug && data.orgSlug) {
+        window.location.href = `/org/${data.clientSlug}/${data.orgSlug}`;
+      } else if (data.orgSlug) {
         window.location.href = `/org/${data.orgSlug}`;
       } else {
         window.location.href = "/org/admin";
