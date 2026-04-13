@@ -15,15 +15,15 @@ import {
   ArrowLeft,
   ExternalLink,
 } from "lucide-react";
-import { Link, useRoute } from "wouter";
+import { Link } from "wouter";
+import { useOrgParams } from "@/hooks/useOrgParams";
 import { trpc } from "@/lib/trpc";
 import { useState, useMemo } from "react";
 import { UserMenu } from "@/components/UserMenu";
 import { PageBreadcrumb } from "@/components/PageBreadcrumb";
 
 export default function Specifications() {
-  const [, params] = useRoute("/org/:slug/specs");
-  const orgSlug = params?.slug || "";
+  const { clientSlug, slug: orgSlug, orgPath } = useOrgParams("specs");
 
   const { data: organization } = trpc.organizations.getBySlug.useQuery(
     { slug: orgSlug },
@@ -78,7 +78,7 @@ export default function Specifications() {
           </div>
         </div>
       </header>
-      <PageBreadcrumb orgSlug={orgSlug} items={[{ label: "Specifications" }]} />
+      <PageBreadcrumb orgPath={orgPath} items={[{ label: "Specifications" }]} />
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
         {/* ── Title ── */}
