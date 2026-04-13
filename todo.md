@@ -2472,3 +2472,4 @@
 - [x] Ensure partner isolation: each partner only sees their own files
 - [x] Ensure org users can only view/download, not upload or delete
 - [x] Write tests for procedural library procedures (17 tests passing)
+- [x] Fix: Vite HMR reload failures in App.tsx and Home.tsx (stale conflict markers resolved during merge)
