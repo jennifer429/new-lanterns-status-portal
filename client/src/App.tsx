@@ -62,6 +62,8 @@ function Router() {
       <Route path="/org/:clientSlug/:slug/complete" component={IntakeComplete} />
       <Route path="/org/:clientSlug/:slug/library" component={ProceduralLibrary} />
       <Route path="/org/:clientSlug/:slug" component={Home} />
+      {/* Legacy route — redirects to canonical /org/:clientSlug/:slug via Home's useEffect */}
+      <Route path="/org/:slug" component={Home} />
       <Route path="/">{() => { window.location.href = '/login'; return null; }}</Route>
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

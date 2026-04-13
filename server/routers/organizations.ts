@@ -73,8 +73,9 @@ export const organizationsRouter = router({
         throw new Error("Organization not found");
       }
 
-      // Fetch client name if clientId exists
+      // Fetch client name and slug if clientId exists
       let clientName = "Unknown Client";
+      let clientSlug: string | null = null;
       if (org.clientId) {
         const [client] = await db
           .select()
@@ -83,10 +84,11 @@ export const organizationsRouter = router({
           .limit(1);
         if (client) {
           clientName = client.name;
+          clientSlug = client.slug;
         }
       }
 
-      return { ...org, clientName };
+      return { ...org, clientName, clientSlug };
     }),
 
   /**
