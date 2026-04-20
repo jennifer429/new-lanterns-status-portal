@@ -14,7 +14,7 @@ export function useOrgParams(subPath?: string) {
     ? `/org/:clientSlug/:slug/${subPath}`
     : "/org/:clientSlug/:slug";
 
-  const [, params] = useRoute(routePath);
+  const [, params] = useRoute<{ clientSlug: string; slug: string }>(routePath);
 
   const clientSlug = params?.clientSlug ?? "";
   const slug = params?.slug ?? "";

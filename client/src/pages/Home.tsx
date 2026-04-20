@@ -42,6 +42,10 @@ export default function Home() {
   const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
 
   const data = useHomeData(orgSlug);
+  const activePhase = data.activePhase as
+    | "questionnaire"
+    | "testing"
+    | "implementation";
 
   // Redirect legacy /org/:slug URLs to canonical /org/:clientSlug/:slug
   useEffect(() => {
@@ -137,7 +141,7 @@ export default function Home() {
         {/* ── PROGRESS HERO (full width) ── */}
         <ProgressHero
           overallPct={data.overallPct}
-          activePhase={data.activePhase}
+          activePhase={activePhase}
           completedSections={data.completedSections}
           totalSections={data.totalSections}
           qPct={data.qPct}
@@ -171,7 +175,7 @@ export default function Home() {
             qNotStartedSections={data.qNotStartedSections}
             naQuestions={data.progress.naQuestions}
             nextUpSections={data.nextUpSections}
-            activePhase={data.activePhase}
+            activePhase={activePhase}
           />
           <TestingPhaseCard
             clientSlug={clientSlug}
@@ -184,7 +188,7 @@ export default function Home() {
             valBlockedCount={data.valBlockedCount}
             valNotTestedCount={data.valNotTestedCount}
             nextUpTests={data.nextUpTests}
-            activePhase={data.activePhase}
+            activePhase={activePhase}
             VAL_PHASES={data.VAL_PHASES}
           />
           <TaskListPhaseCard
@@ -198,7 +202,7 @@ export default function Home() {
             implNaCount={data.implNaCount}
             implOpenCount={data.implOpenCount}
             nextUpTasks={data.nextUpTasks}
-            activePhase={data.activePhase}
+            activePhase={activePhase}
           />
         </div>
 
