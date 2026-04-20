@@ -2,7 +2,11 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { questionnaireSections, type Section } from "@shared/questionnaireData";
+import {
+  questionnaireSections,
+  type Question,
+  type Section,
+} from "@shared/questionnaireData";
 import { type ConnectivityRow } from "@/components/ConnectivityTable";
 import { useAuth } from "@/_core/hooks/useAuth";
 
@@ -443,38 +447,55 @@ export function useIntakeData(slug: string, clientSlug: string) {
     reader.readAsDataURL(file);
   };
 
-  // Export questionnaire responses as JSON
+  // Export every response currently in state as JSON.
+  //
+  // We iterate `responses` directly (not `questionnaireSections`) so that keys
+  // rendered only by component code — the IW.historic_results_*, IW.tech_sheets_*,
+  // IW.overlay_pacs_*, IW.ct_dose_*, IW.<wf>_systems, CONN.endpoints, and
+  // __question_na:* flags — round-trip correctly alongside declared questions.
   const handleExportData = () => {
+    const declared = new Map<string, { section: string; q: Question }>();
+    questionnaireSections.forEach((section) => {
+      section.questions?.forEach((q) => {
+        declared.set(q.id, { section: section.title, q });
+      });
+    });
+
     const exportResponses: Record<string, any> = {};
     const meta: Record<
       string,
-      { section: string; text: string; type: string; options?: string[] }
+      { section?: string; text?: string; type?: string; options?: string[] }
     > = {};
 
-    questionnaireSections.forEach((section) => {
-      if (section.type === "workflow" || !section.questions) return;
-      section.questions.forEach((q) => {
-        if (q.type === "upload" || q.type === "upload-download") return;
-        const raw = responses[q.id];
-        if (raw !== undefined && raw !== null && raw !== "") {
-          exportResponses[q.id] =
-            typeof raw === "string"
-              ? (() => {
-                  try {
-                    return JSON.parse(raw);
-                  } catch {
-                    return raw;
-                  }
-                })()
-              : raw;
-        }
-        meta[q.id] = {
-          section: section.title,
-          text: q.text,
-          type: q.type,
-          ...(q.options ? { options: q.options } : {}),
+    Object.entries(responses).forEach(([qid, raw]) => {
+      if (raw === undefined || raw === null || raw === "") return;
+
+      const info = declared.get(qid);
+      // Declared file-upload questions point at S3 objects that live outside
+      // the responses table — nothing meaningful to round-trip.
+      if (info && (info.q.type === "upload" || info.q.type === "upload-download")) {
+        return;
+      }
+
+      exportResponses[qid] =
+        typeof raw === "string"
+          ? (() => {
+              try {
+                return JSON.parse(raw);
+              } catch {
+                return raw;
+              }
+            })()
+          : raw;
+
+      if (info) {
+        meta[qid] = {
+          section: info.section,
+          text: info.q.text,
+          type: info.q.type,
+          ...(info.q.options ? { options: info.q.options } : {}),
         };
-      });
+      }
     });
 
     const payload = {
@@ -492,9 +513,12 @@ export function useIntakeData(slug: string, clientSlug: string) {
     a.href = url;
     a.download = `${slug}-intake-responses.json`;
     a.click();
+    URL.revokeObjectURL(url);
   };
 
-  // Import responses — supports JSON (new) and legacy pipe-delimited (txt/csv) formats
+  // Import responses — JSON only. Preserves complex shapes (arrays, nested
+  // objects for contacts-table / systems-list / IW.*_systems) by round-tripping
+  // through JSON.stringify on save.
   const handleImportFile = async (
     importFile: File,
     onSuccess: () => void,
@@ -506,85 +530,48 @@ export function useIntakeData(slug: string, clientSlug: string) {
     try {
       const text = await importFile.text();
       const trimmed = text.trimStart();
-      const importedResponses: Record<string, any> = {};
 
       const looksLikeJson =
-        importFile.name.endsWith(".json") ||
+        importFile.name.toLowerCase().endsWith(".json") ||
         trimmed.startsWith("{") ||
         trimmed.startsWith("[");
-
-      if (looksLikeJson) {
-        try {
-          const payload = JSON.parse(trimmed);
-          const src = payload.responses ?? payload;
-          if (typeof src !== "object" || src === null)
-            throw new Error("Invalid JSON structure");
-          Object.entries(src).forEach(([qid, val]) => {
-            if (val !== undefined && val !== null && val !== "") {
-              importedResponses[qid] = val;
-            }
-          });
-        } catch (jsonErr) {
-          throw new Error(
-            `Failed to parse JSON: ${jsonErr instanceof Error ? jsonErr.message : "Invalid JSON"}`
-          );
-        }
-      } else {
-        const lines = text.split("\n").filter((l) => l.trim());
-        if (lines.length === 0) throw new Error("File is empty");
-
-        const header = lines[0] || "";
-        const isPipeDelimited = header.includes("|");
-
-        if (!isPipeDelimited) {
-          throw new Error(
-            "Unrecognized file format. Expected a .json export file or a pipe-delimited (|) .txt/.csv file. " +
-              "Tip: Use the Export button to download a .json file, then re-import that file."
-          );
-        }
-
-        const hasOptionsColumn = header.split("|").length >= 6;
-        lines.slice(1).forEach((line) => {
-          const parts = line.split("|");
-          const questionId = hasOptionsColumn
-            ? parts[1]?.trim()
-            : parts[1]?.trim();
-          const responseType = hasOptionsColumn
-            ? parts[3]?.trim()
-            : parts[3]?.trim();
-          const responseValue = hasOptionsColumn
-            ? parts[5]?.trim()
-            : parts[4]?.trim();
-          if (!questionId || !responseValue) return;
-          if (responseType === "workflow") return;
-          if (
-            responseType === "contacts-table" ||
-            responseType === "systems-list"
-          ) {
-            try {
-              importedResponses[questionId] = JSON.parse(responseValue);
-            } catch {
-              importedResponses[questionId] = responseValue;
-            }
-          } else if (
-            responseType === "multi-select" ||
-            responseType === "multiple-choice"
-          ) {
-            importedResponses[questionId] = responseValue
-              .split("; ")
-              .map((v: string) => v.trim())
-              .filter(Boolean);
-          } else {
-            importedResponses[questionId] = responseValue;
-          }
-        });
+      if (!looksLikeJson) {
+        throw new Error(
+          "Unsupported file format. Please upload a .json file exported from this tool."
+        );
       }
 
+      let payload: unknown;
+      try {
+        payload = JSON.parse(trimmed);
+      } catch (err) {
+        throw new Error(
+          `Failed to parse JSON: ${err instanceof Error ? err.message : "Invalid JSON"}`
+        );
+      }
+
+      const src =
+        payload && typeof payload === "object" && "responses" in (payload as any)
+          ? (payload as any).responses
+          : payload;
+      if (typeof src !== "object" || src === null || Array.isArray(src)) {
+        throw new Error(
+          "Invalid JSON structure — expected a { responses: { ... } } object or a flat responses object."
+        );
+      }
+
+      const importedResponses: Record<string, any> = {};
+      Object.entries(src as Record<string, unknown>).forEach(([qid, val]) => {
+        if (val === undefined || val === null || val === "") return;
+        importedResponses[qid] = val;
+      });
+
       const importCount = Object.keys(importedResponses).length;
-      if (importCount === 0)
+      if (importCount === 0) {
         throw new Error(
           "No responses found in file. Make sure the file contains questionnaire data."
         );
+      }
 
       setResponses((prev) => ({ ...prev, ...importedResponses }));
       await Promise.all(
@@ -593,7 +580,9 @@ export function useIntakeData(slug: string, clientSlug: string) {
             organizationSlug: slug,
             questionId,
             response:
-              typeof value === "object" ? JSON.stringify(value) : String(value),
+              typeof value === "object"
+                ? JSON.stringify(value)
+                : String(value),
             userEmail: user?.email || "",
           })
         )

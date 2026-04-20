@@ -322,11 +322,11 @@ Pages are split into focused sub-components:
 1. Edit `shared/questionnaireData.ts`
 2. Update `shared/progressCalculation.ts` if conditional logic needed
 3. Sync to DB via `scripts/sync-questions.mjs`
-4. **REQUIRED: Update the extract/import functions** in `client/src/hooks/useIntakeData.ts`:
-   - `handleExportData` (line ~447) — ensure the new question's value is serialized correctly (skip `upload`/`upload-download` types; JSON-parse string-encoded objects/arrays)
-   - `handleImportFile` (line ~498) — ensure the new question type is handled in both the JSON branch and the legacy pipe-delimited branch (e.g. `contacts-table`/`systems-list` use JSON.parse; `multi-select`/`multiple-choice` split on `"; "`; scalar types fall through as strings)
-   - If the new question introduces a new `q.type`, add an explicit branch in `handleImportFile`'s legacy-format parser so its value deserializes correctly
-   - Verify round-trip: export → re-import produces identical responses
+4. **REQUIRED: Verify extract/import in** `client/src/hooks/useIntakeData.ts`:
+   - Export/import are JSON-only and iterate the live `responses` object, so new keys round-trip automatically — including undeclared keys written by component code (e.g. `IW.historic_results_*`, `IW.tech_sheets_*`, `IW.overlay_pacs_*`, `IW.ct_dose_*`, `IW.<wf>_systems`, `CONN.endpoints`, `__question_na:*`).
+   - `handleExportData` skips declared `upload`/`upload-download` questions (their files live in S3). If a new question type should also be excluded from export, add it to that skip check.
+   - `handleImportFile` saves objects/arrays via `JSON.stringify` and scalars via `String(value)`. If a new question type needs custom serialization, branch on `q.type` before the save.
+   - Verify round-trip: export → re-import produces identical responses.
 
 ### Modify file upload behavior
 1. Client: `client/src/components/FileUpload.tsx`
