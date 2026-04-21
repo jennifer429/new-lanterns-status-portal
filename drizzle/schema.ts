@@ -546,3 +546,40 @@ export const partnerDocAudit = mysqlTable("partnerDocAudit", {
 
 export type PartnerDocAudit = typeof partnerDocAudit.$inferSelect;
 export type InsertPartnerDocAudit = typeof partnerDocAudit.$inferInsert;
+
+
+/**
+ * Implementation Organizations — defines which orgs are involved in each implementation.
+ * Each org in the swimlane (Rad Group, Hospital IT, New Lantern, Scipio, Silverback, etc.)
+ * is a row here, scoped to an organization (hospital).
+ */
+export const implementationOrgs = mysqlTable("implementationOrgs", {
+  id: int("id").autoincrement().primaryKey(),
+  organizationId: int("organizationId").notNull(), // FK to organizations.id
+  name: varchar("name", { length: 255 }).notNull(), // e.g., "RadOne", "Memorial Hospital IT"
+  orgType: varchar("orgType", { length: 100 }).notNull(), // e.g., "rad_group", "hospital", "new_lantern", "scipio", "silverback", "ehr_vendor", "ris_vendor", "pacs_vendor", "other"
+  color: varchar("color", { length: 20 }), // Optional custom color for the swimlane
+  sortOrder: int("sortOrder").default(0).notNull(), // Display order in swimlane (left to right)
+  isActive: tinyint("isActive").default(1).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ImplementationOrg = typeof implementationOrgs.$inferSelect;
+export type InsertImplementationOrg = typeof implementationOrgs.$inferInsert;
+
+/**
+ * Task Org Assignment — maps each task to the org responsible for it in the swimlane view.
+ * One task can only be assigned to one org at a time.
+ */
+export const taskOrgAssignment = mysqlTable("taskOrgAssignment", {
+  id: int("id").autoincrement().primaryKey(),
+  organizationId: int("organizationId").notNull(), // FK to organizations.id (the hospital/site)
+  taskId: varchar("taskId", { length: 50 }).notNull(), // e.g., "network:vpn" from taskDefs
+  implOrgId: int("implOrgId").notNull(), // FK to implementationOrgs.id (which org owns this task)
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type TaskOrgAssignment = typeof taskOrgAssignment.$inferSelect;
+export type InsertTaskOrgAssignment = typeof taskOrgAssignment.$inferInsert;

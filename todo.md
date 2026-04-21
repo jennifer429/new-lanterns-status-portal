@@ -8,6 +8,15 @@
 - [ ] Split `server/routers/admin.ts` (~2,000 lines) into sub-routers by domain (questions, orgs, users, vendors, templates, metrics)
 - [ ] Migrate manual admin role checks in `notes.ts`, `proceduralLibrary.ts`, `ai.ts` to `adminDbProcedure` where endpoints are admin-only
 
+## Swimlane Task Flow View
+
+- [x] Swimlane task flow view: visualize existing tasks as colored blocks in org swimlanes
+- [x] Org assignment for tasks: PM can assign tasks to orgs (Rad Group, Hospital, New Lantern, Scipio, Silverback, etc.)
+- [x] Status colors: yellow=in progress, green=done, red=blocked, gray=N/A, white=not started
+- [x] Toggle between list view and swimlane view on task page
+- [x] New Lantern positioned on right side of swimlane layout
+- [x] Silverback positioned in middle swimlane
+
 ## Backlog
 
 - [ ] Add per-role progress tracking (IT/Clinical/Admin) on tasks page

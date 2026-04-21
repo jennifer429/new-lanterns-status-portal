@@ -53,6 +53,8 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { buildCSV, downloadCSV, parseCSV, readFileAsText, csvFilename } from "@/lib/csv";
 import { Download, Upload } from "lucide-react";
 import { SECTION_DEFS, type TaskDef, type SectionDef } from "@shared/taskDefs";
+import { SwimlaneView } from "@/components/SwimlaneView";
+import { LayoutGrid, List } from "lucide-react";
 
 // ── Inline editable text ───────────────────────────────────────────────────────
 
@@ -213,6 +215,7 @@ export default function Implementation() {
   const [resetTargetSection, setResetTargetSection] = useState<typeof SECTION_DEFS[number] | null>(null);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
   const [bulkStatusOpenSection, setBulkStatusOpenSection] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"list" | "swimlane">("list");
 
   function toggleTaskSelection(taskId: string) {
     setSelectedTaskIds(prev => {
@@ -522,6 +525,36 @@ export default function Implementation() {
               <span className="hidden sm:inline">Import CSV</span>
             </button>
             <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={handleImportCSV} />
+            {/* View toggle */}
+            <div className="flex items-center bg-muted/30 border border-border/40 rounded-md overflow-hidden">
+              <button
+                onClick={() => setViewMode("list")}
+                className={cn(
+                  "flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium transition-all",
+                  viewMode === "list"
+                    ? "bg-primary/15 text-primary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                )}
+                title="List view"
+              >
+                <List className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">List</span>
+              </button>
+              <div className="w-px h-4 bg-border/40" />
+              <button
+                onClick={() => setViewMode("swimlane")}
+                className={cn(
+                  "flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium transition-all",
+                  viewMode === "swimlane"
+                    ? "bg-primary/15 text-primary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                )}
+                title="Swimlane view"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Swimlane</span>
+              </button>
+            </div>
             <div className="w-px h-5 bg-border/40 mx-1" />
             <Link href={orgPath} className="text-sm text-foreground hover:text-primary transition-colors font-medium whitespace-nowrap">
               Site Dashboard
@@ -560,6 +593,26 @@ export default function Implementation() {
             Loading task list…
           </div>
         ) : (
+          viewMode === "swimlane" ? (
+            <SwimlaneView
+              organizationSlug={slug}
+              taskMap={Object.fromEntries(
+                SECTION_DEFS.flatMap(s => s.tasks).map(t => {
+                  const m = getMerged(t.id);
+                  return [t.id, {
+                    completed: m.completed,
+                    notApplicable: m.notApplicable,
+                    inProgress: m.inProgress,
+                    blocked: m.blocked,
+                    completedAt: m.completedAt,
+                    owner: m.owner || null,
+                    targetDate: m.targetDate || null,
+                    notes: m.notes || null,
+                  }];
+                })
+              )}
+            />
+          ) : (
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-8">
             {/* Left column — sections */}
             <div className="space-y-6">
@@ -1065,6 +1118,7 @@ export default function Implementation() {
               </Card>
             </div>
           </div>
+          )
         )}
       </div>
 

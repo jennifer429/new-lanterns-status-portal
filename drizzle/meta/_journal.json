@@ -316,6 +316,13 @@
       "when": 1776044581641,
       "tag": "0044_bored_boom_boom",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "5",
+      "when": 1776771151890,
+      "tag": "0045_needy_vulture",
+      "breakpoints": true
     }
   ]
 }
