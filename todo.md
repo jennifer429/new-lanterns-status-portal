@@ -23,3 +23,7 @@
 - [ ] Define Drizzle relations in `drizzle/relations.ts` (currently empty)
 - [ ] Remove legacy `intakeResponses` table after confirming all data migrated to `responses`
 - [ ] Decide on Notion CRM sync architecture (see `docs/design-notion-crm-architecture.md`)
+
+## Bugs
+
+- [x] Fix broken task and testing references to questionnaire (orgPath undefined in RelatedAnswers, useOrgParams typing, activePhase type)
