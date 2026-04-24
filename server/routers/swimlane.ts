@@ -6,6 +6,7 @@ import {
   organizations,
   implementationOrgs,
   taskOrgAssignment,
+  intakeResponses,
 } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 
@@ -238,6 +239,88 @@ export const swimlaneRouter = router({
       }
 
       return { success: true };
+    }),
+
+  /**
+   * Get vendor display names from the ARCH.systems questionnaire response.
+   * Parses the JSON array of systems and extracts names by type.
+   * Also pulls the organization name for the Hospital IT row.
+   * Returns a map of partyId → display name.
+   */
+  getVendorNames: publicProcedure
+    .input(z.object({ organizationSlug: z.string() }))
+    .query(async ({ input }) => {
+      const db = await requireDb();
+      const orgId = await resolveOrgId(db, input.organizationSlug);
+
+      // Get the org name for the Hospital IT row
+      const [org] = await db
+        .select({ name: organizations.name })
+        .from(organizations)
+        .where(eq(organizations.id, orgId))
+        .limit(1);
+
+      const result: Record<string, string> = {};
+      if (org) result.hospital = org.name;
+
+      // Try ARCH.systems first (new format: JSON array of {name, type, ...})
+      const [archSystems] = await db
+        .select({ response: intakeResponses.response })
+        .from(intakeResponses)
+        .where(
+          and(
+            eq(intakeResponses.organizationId, orgId),
+            eq(intakeResponses.questionId, "ARCH.systems")
+          )
+        )
+        .limit(1);
+
+      if (archSystems?.response) {
+        try {
+          const systems: Array<{ name: string; type: string }> = JSON.parse(archSystems.response);
+          // Map system types to our party IDs
+          const typeMap: Record<string, string> = {
+            EHR: "ehr",
+            RIS: "ris",
+            PACS: "pacs",
+          };
+          for (const sys of systems) {
+            const partyId = typeMap[sys.type];
+            if (partyId && sys.name && !result[partyId]) {
+              result[partyId] = sys.name;
+            }
+          }
+        } catch {
+          // ignore parse errors
+        }
+      }
+
+      // Fallback: try legacy ARCH.1 (PACS), ARCH.2 (RIS), ARCH.3 (EHR)
+      const legacyMap: Record<string, string> = {
+        "ARCH.1": "pacs",
+        "ARCH.2": "ris",
+        "ARCH.3": "ehr",
+      };
+      for (const [qId, partyId] of Object.entries(legacyMap)) {
+        if (result[partyId]) continue; // already have from ARCH.systems
+        const [row] = await db
+          .select({ response: intakeResponses.response })
+          .from(intakeResponses)
+          .where(
+            and(
+              eq(intakeResponses.organizationId, orgId),
+              eq(intakeResponses.questionId, qId)
+            )
+          )
+          .limit(1);
+        if (row?.response) {
+          // Extract just the vendor name (before any dash or parenthetical)
+          const cleaned = row.response.split("\\'").join("'").split(" — ")[0].split(" – ")[0].trim();
+          if (cleaned) result[partyId] = cleaned;
+        }
+      }
+
+      return result;
     }),
 
   /** Unassign a task (remove from swimlane). */

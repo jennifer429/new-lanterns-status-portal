@@ -56,3 +56,8 @@
 - [x] New column headers: Discovery, Connectivity, Data Feed Testing, Production Configuration, Go Live
 - [x] Shrink cards: remove owner bullet and dates, keep just assignment text
 - [x] Row labels: keep colored badge circles, leave white name blank for questionnaire population
+
+## Swimlane Row Names from Questionnaire
+
+- [x] Pull real vendor/hospital names from questionnaire responses into swimlane row labels
+- [x] Remove Rad Group row from swimlane (they know what they do)

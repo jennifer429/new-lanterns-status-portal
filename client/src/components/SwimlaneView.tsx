@@ -3,10 +3,11 @@
  *
  * "This is a coordination tracker, not an integration teaching tool."
  *
- * 5 phases × 7 party rows. One card per cell.
+ * 5 phases × 6 party rows (no Rad Group — they know what they do).
  * Bold saturated status-colored card backgrounds matching the portal theme.
  * Silverback system box in Scipiotech & Data First Connectivity cell.
  * Edit panel slide-out on card click.
+ * Vendor display names pulled from ARCH.systems questionnaire data.
  * No drag/drop, no assignment dropdowns — purely static.
  */
 
@@ -14,12 +15,13 @@ import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { trpc } from "@/lib/trpc";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
 type Status = "open" | "in_progress" | "done" | "blocked" | "n_a";
 
-type PartyId = "hospital" | "ehr" | "ris" | "pacs" | "rad" | "df" | "nl";
+type PartyId = "hospital" | "ehr" | "ris" | "pacs" | "df" | "nl";
 
 type PhaseId = "discovery" | "connectivity" | "datafeed" | "prodconfig" | "golive";
 
@@ -28,8 +30,6 @@ interface Party {
   label: string;
   badge: string;
   badgeColor: string;
-  /** Populated from questionnaire values; blank by default */
-  displayName: string;
 }
 
 interface Phase {
@@ -53,13 +53,12 @@ interface MilestoneCard {
 // ── Reference data ─────────────────────────────────────────────────────────
 
 const PARTIES: Party[] = [
-  { id: "hospital", label: "Hospital IT",              badge: "hospital",     badgeColor: "bg-sky-500/20 text-sky-400 border-sky-500/30",    displayName: "" },
-  { id: "ehr",      label: "EHR Vendor",               badge: "ehr vendor",   badgeColor: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30", displayName: "" },
-  { id: "ris",      label: "RIS Vendor",               badge: "ris vendor",   badgeColor: "bg-teal-500/20 text-teal-400 border-teal-500/30", displayName: "" },
-  { id: "pacs",     label: "PACS/VNA Vendor",          badge: "pacs vendor",  badgeColor: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30", displayName: "" },
-  { id: "rad",      label: "Rad Group",                badge: "rad group",    badgeColor: "bg-orange-500/20 text-orange-400 border-orange-500/30", displayName: "" },
-  { id: "df",       label: "Scipiotech & Data First",  badge: "scipiotech",   badgeColor: "bg-violet-500/20 text-violet-400 border-violet-500/30", displayName: "" },
-  { id: "nl",       label: "New Lantern",              badge: "new lantern",  badgeColor: "bg-purple-500/20 text-purple-400 border-purple-500/30", displayName: "" },
+  { id: "hospital", label: "Hospital IT",              badge: "hospital",     badgeColor: "bg-sky-500/20 text-sky-400 border-sky-500/30" },
+  { id: "ehr",      label: "EHR Vendor",               badge: "ehr vendor",   badgeColor: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" },
+  { id: "ris",      label: "RIS Vendor",               badge: "ris vendor",   badgeColor: "bg-teal-500/20 text-teal-400 border-teal-500/30" },
+  { id: "pacs",     label: "PACS/VNA Vendor",          badge: "pacs vendor",  badgeColor: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30" },
+  { id: "df",       label: "Scipiotech & Data First",  badge: "scipiotech",   badgeColor: "bg-violet-500/20 text-violet-400 border-violet-500/30" },
+  { id: "nl",       label: "New Lantern",              badge: "new lantern",  badgeColor: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
 ];
 
 const PHASES: Phase[] = [
@@ -100,13 +99,6 @@ const CARDS: MilestoneCard[] = [
   { id: "p3", line1: "Validate DICOM",            line2: "image flow",                     owner: "pacs", party: "pacs", phase: "datafeed",     status: "open",        blocker: "", followUp: "", notes: "" },
   { id: "p4", line1: "Confirm production",        line2: "DICOM readiness",                owner: "pacs", party: "pacs", phase: "prodconfig",   status: "open",        blocker: "", followUp: "", notes: "" },
   { id: "p5", line1: "Support PACS /",            line2: "VNA issues",                     owner: "pacs", party: "pacs", phase: "golive",       status: "open",        blocker: "", followUp: "", notes: "" },
-
-  // Rad Group PM
-  { id: "g1", line1: "Coordinate questionnaire",  line2: "& identify missing owners",      owner: "rad", party: "rad", phase: "discovery",    status: "in_progress", blocker: "", followUp: "", notes: "" },
-  { id: "g2", line1: "Track connectivity",        line2: "progress & escalate",            owner: "rad", party: "rad", phase: "connectivity", status: "open",        blocker: "", followUp: "", notes: "" },
-  { id: "g3", line1: "Coordinate validation",     line2: "participation",                  owner: "rad", party: "rad", phase: "datafeed",     status: "open",        blocker: "", followUp: "", notes: "" },
-  { id: "g4", line1: "Confirm rad group",         line2: "readiness",                      owner: "rad", party: "rad", phase: "prodconfig",   status: "open",        blocker: "", followUp: "", notes: "" },
-  { id: "g5", line1: "Track open issues",         line2: "& escalation path",              owner: "rad", party: "rad", phase: "golive",       status: "open",        blocker: "", followUp: "", notes: "" },
 
   // Scipiotech & Data First
   { id: "d1", line1: "Review connectivity",       line2: "needs & network inputs",         owner: "df", party: "df", phase: "discovery",    status: "done",        blocker: "", followUp: "", notes: "" },
@@ -151,7 +143,7 @@ const STATUS_LABEL: Record<Status, string> = {
 
 const PARTY_LOOKUP: Record<PartyId, Party> = Object.fromEntries(PARTIES.map(p => [p.id, p])) as Record<PartyId, Party>;
 
-// ── Props (kept for compatibility but not used for data) ───────────────────
+// ── Props ────────────────────────────────────────────────────────────────
 
 interface SwimlaneViewProps {
   organizationSlug: string;
@@ -169,8 +161,14 @@ interface SwimlaneViewProps {
 
 // ── Component ──────────────────────────────────────────────────────────────
 
-export function SwimlaneView(_props: SwimlaneViewProps) {
+export function SwimlaneView({ organizationSlug }: SwimlaneViewProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Fetch vendor display names from questionnaire data
+  const { data: vendorNames } = trpc.swimlane.getVendorNames.useQuery(
+    { organizationSlug },
+    { enabled: !!organizationSlug }
+  );
 
   // Index cards by (party, phase)
   const cells = useMemo(() => {
@@ -208,7 +206,7 @@ export function SwimlaneView(_props: SwimlaneViewProps) {
           {/* Phase column headers */}
           <div
             className="grid gap-px"
-            style={{ gridTemplateColumns: `160px repeat(${PHASES.length}, 1fr)` }}
+            style={{ gridTemplateColumns: `180px repeat(${PHASES.length}, 1fr)` }}
           >
             <div className="px-2 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
               Organization
@@ -226,79 +224,84 @@ export function SwimlaneView(_props: SwimlaneViewProps) {
           </div>
 
           {/* Party rows */}
-          {PARTIES.map((party, rowIdx) => (
-            <div
-              key={party.id}
-              className={cn(
-                "grid gap-px border-t border-border/30",
-                rowIdx % 2 === 0 ? "bg-muted/5" : "bg-transparent"
-              )}
-              style={{ gridTemplateColumns: `160px repeat(${PHASES.length}, 1fr)` }}
-            >
-              {/* Party label — badge circle + blank name (to be populated from questionnaire) */}
-              <div className="px-2 py-2 flex items-center gap-2">
-                <Badge
-                  variant="outline"
-                  className={cn("text-[9px] whitespace-nowrap shrink-0", party.badgeColor)}
-                >
-                  {party.badge}
-                </Badge>
-                <span className="text-[11px] font-medium text-foreground/50 leading-tight truncate">
-                  {party.displayName || ""}
-                </span>
+          {PARTIES.map((party, rowIdx) => {
+            // Get the display name from questionnaire data
+            const displayName = vendorNames?.[party.id] ?? "";
+
+            return (
+              <div
+                key={party.id}
+                className={cn(
+                  "grid gap-px border-t border-border/30",
+                  rowIdx % 2 === 0 ? "bg-muted/5" : "bg-transparent"
+                )}
+                style={{ gridTemplateColumns: `180px repeat(${PHASES.length}, 1fr)` }}
+              >
+                {/* Party label — badge circle + vendor name from questionnaire */}
+                <div className="px-2 py-2 flex items-center gap-2">
+                  <Badge
+                    variant="outline"
+                    className={cn("text-[9px] whitespace-nowrap shrink-0", party.badgeColor)}
+                  >
+                    {party.badge}
+                  </Badge>
+                  <span className="text-[11px] font-medium text-foreground/70 leading-tight truncate" title={displayName}>
+                    {displayName}
+                  </span>
+                </div>
+
+                {/* Phase cells */}
+                {PHASES.map(phase => {
+                  const key = `${party.id}:${phase.id}`;
+                  const card = cells[key];
+                  if (!card) return <div key={key} className="px-1 py-1 min-h-[56px]" />;
+
+                  const isNa = card.status === "n_a";
+                  const style = STATUS_CARD[card.status];
+                  const isSelected = selectedId === card.id;
+                  const showSilverback = party.id === "df" && phase.id === "connectivity";
+
+                  return (
+                    <div key={key} className="px-1 py-1 min-h-[56px] relative">
+                      <button
+                        onClick={() => setSelectedId(isSelected ? null : card.id)}
+                        className={cn(
+                          "w-full rounded-md border px-2 py-1.5 text-left transition-all",
+                          style.bg, style.border,
+                          isSelected && "ring-2 ring-primary",
+                          !isNa && "hover:brightness-110 cursor-pointer",
+                        )}
+                      >
+                        {isNa ? (
+                          <div className="flex flex-col items-center justify-center py-1">
+                            <div className={cn("text-[10px] font-medium", style.text)}>{card.line1}</div>
+                            <div className={cn("text-[10px] mt-0.5", style.subtext)}>{card.line2}</div>
+                            <div className="text-sm font-bold text-slate-600 mt-0.5">N/A</div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col">
+                            <div className={cn("text-[11px] font-semibold leading-snug", style.text)}>
+                              {card.line1}
+                            </div>
+                            <div className={cn("text-[10px] leading-snug mt-0.5", style.subtext)}>
+                              {card.line2}
+                            </div>
+                          </div>
+                        )}
+                      </button>
+
+                      {/* Silverback system box */}
+                      {showSilverback && (
+                        <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 translate-y-1/2 z-10 px-2 py-0.5 rounded bg-emerald-600/80 border border-emerald-400/50 text-[9px] font-semibold text-emerald-100 whitespace-nowrap shadow-lg">
+                          Silverback System
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-
-              {/* Phase cells */}
-              {PHASES.map(phase => {
-                const key = `${party.id}:${phase.id}`;
-                const card = cells[key];
-                if (!card) return <div key={key} className="px-1 py-1 min-h-[56px]" />;
-
-                const isNa = card.status === "n_a";
-                const style = STATUS_CARD[card.status];
-                const isSelected = selectedId === card.id;
-                const showSilverback = party.id === "df" && phase.id === "connectivity";
-
-                return (
-                  <div key={key} className="px-1 py-1 min-h-[56px] relative">
-                    <button
-                      onClick={() => setSelectedId(isSelected ? null : card.id)}
-                      className={cn(
-                        "w-full rounded-md border px-2 py-1.5 text-left transition-all",
-                        style.bg, style.border,
-                        isSelected && "ring-2 ring-primary",
-                        !isNa && "hover:brightness-110 cursor-pointer",
-                      )}
-                    >
-                      {isNa ? (
-                        <div className="flex flex-col items-center justify-center py-1">
-                          <div className={cn("text-[10px] font-medium", style.text)}>{card.line1}</div>
-                          <div className={cn("text-[10px] mt-0.5", style.subtext)}>{card.line2}</div>
-                          <div className="text-sm font-bold text-slate-600 mt-0.5">N/A</div>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col">
-                          <div className={cn("text-[11px] font-semibold leading-snug", style.text)}>
-                            {card.line1}
-                          </div>
-                          <div className={cn("text-[10px] leading-snug mt-0.5", style.subtext)}>
-                            {card.line2}
-                          </div>
-                        </div>
-                      )}
-                    </button>
-
-                    {/* Silverback system box */}
-                    {showSilverback && (
-                      <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 translate-y-1/2 z-10 px-2 py-0.5 rounded bg-emerald-600/80 border border-emerald-400/50 text-[9px] font-semibold text-emerald-100 whitespace-nowrap shadow-lg">
-                        Silverback System
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
