@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Shield, Ban } from "lucide-react";
 import { toast } from "sonner";
 import { questionnaireSections } from "@shared/questionnaireData";
-import { WorkflowDiagram } from "@/components/WorkflowDiagram";
+import { PersistedWorkflowDiagram } from "@/components/PersistedWorkflowDiagram";
 import { IntegrationWorkflows } from "@/components/IntegrationWorkflows";
 import { ConnectivityTable } from "@/components/ConnectivityTable";
 import { useIntakeData } from "@/hooks/useIntakeData";
@@ -528,68 +528,12 @@ export default function IntakeNewRedesign() {
                     </div>
                   ) : currentSectionData?.type === "workflow" ? (
                     <div className="mt-6">
-                      <WorkflowDiagram
-                        workflowType={currentSectionData.workflowType as any}
-                        configuration={(() => {
-                          const configKey = currentSectionData.id + "_config";
-                          const savedConfig = responses[configKey];
-                          if (!savedConfig) return { paths: {}, systems: {}, notes: {} };
-                          if (typeof savedConfig === "string") {
-                            try {
-                              return JSON.parse(savedConfig);
-                            } catch {
-                              return { paths: {}, systems: {}, notes: {} };
-                            }
-                          }
-                          return savedConfig;
-                        })()}
-                        onConfigurationChange={(config) => {
-                          console.log(
-                            "[Workflow Debug] Configuration changed:",
-                            currentSectionData.id,
-                            config
-                          );
-                          console.log(
-                            "[Workflow Debug] slug:",
-                            slug,
-                            "user.email:",
-                            user?.email
-                          );
-                          setResponses((prev) => ({
-                            ...prev,
-                            [currentSectionData.id + "_config"]: JSON.stringify(config),
-                          }));
-                          if (slug && user?.email) {
-                            console.log(
-                              "[Workflow Debug] Calling save mutation for:",
-                              currentSectionData.id + "_config"
-                            );
-                            saveMutation.mutate(
-                              {
-                                organizationSlug: slug,
-                                questionId: currentSectionData.id + "_config",
-                                response: JSON.stringify(config),
-                                userEmail: user.email,
-                              },
-                              {
-                                onSuccess: () => {
-                                  console.log(
-                                    "[Workflow Debug] Save successful for:",
-                                    currentSectionData.id + "_config"
-                                  );
-                                },
-                                onError: (error) => {
-                                  console.error("[Workflow Debug] Save failed:", error);
-                                },
-                              }
-                            );
-                          } else {
-                            console.warn(
-                              "[Workflow Debug] Cannot save - missing slug or user.email"
-                            );
-                          }
-                        }}
-                      />
+                      {slug ? (
+                        <PersistedWorkflowDiagram
+                          organizationSlug={slug}
+                          workflowType={currentSectionData.workflowType as "orders" | "images" | "priors" | "reports"}
+                        />
+                      ) : null}
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 md:gap-x-8 gap-y-5 md:gap-y-6">
