@@ -191,9 +191,23 @@ export default function Implementation() {
     { refetchOnWindowFocus: false }
   );
 
+  // Extra task sources surfaced on the Tasks page — included in CSV export/import
+  // so admins see the full task landscape (not just the hard-coded SECTION_DEFS).
+  const { data: customTasks = [] } = trpc.intake.getOrgCustomTasks.useQuery(
+    { organizationSlug: slug },
+    { refetchOnWindowFocus: false }
+  );
+  const { data: templateTasks = [] } = trpc.intake.getTaskTemplatesForOrg.useQuery(
+    { organizationSlug: slug },
+    { refetchOnWindowFocus: false }
+  );
+
   const utils = trpc.useUtils();
   const updateTask = trpc.implementation.updateTask.useMutation({
     onSuccess: () => utils.implementation.getTasks.invalidate({ organizationSlug: slug }),
+  });
+  const toggleCustomTask = trpc.intake.toggleOrgCustomTask.useMutation({
+    onSuccess: () => utils.intake.getOrgCustomTasks.invalidate({ organizationSlug: slug }),
   });
 
   // CSV import file ref
@@ -394,19 +408,48 @@ export default function Implementation() {
   }
 
   // ── CSV Export ──────────────────────────────────────────────────────────────
+  //
+  // Emits rows from three task sources, each tagged with a `Source` column:
+  //   - "Built-in" — hard-coded SECTION_DEFS (persisted via taskCompletion table)
+  //   - "Custom"   — orgCustomTasks (per-org tasks added via the Tasks page)
+  //   - "Template" — partnerTaskTemplates (partner-defined; no per-org status,
+  //                  exported for visibility only)
+  // Built-in rows preserve In Progress / Blocked / Done / N/A / Open so the
+  // round-trip doesn't flatten those states.
+
+  function statusLabelFor(merged: ReturnType<typeof getMerged>): string {
+    if (merged.notApplicable) return "N/A";
+    if (merged.completed) return "Done";
+    if (merged.blocked) return "Blocked";
+    if (merged.inProgress) return "In Progress";
+    return "Open";
+  }
 
   function handleExportCSV() {
-    const headers = ["Phase", "Task ID", "Task Name", "Description", "Status", "Owner", "Target Date", "Status Date", "Notes"];
+    const headers = [
+      "Source",
+      "Phase",
+      "Task ID",
+      "Task Name",
+      "Description",
+      "Status",
+      "Owner",
+      "Target Date",
+      "Status Date",
+      "Notes",
+    ];
     const rows: string[][] = [];
+
     SECTION_DEFS.forEach((section, sIdx) => {
       section.tasks.forEach((task) => {
         const merged = getMerged(task.id);
         rows.push([
+          "Built-in",
           `Phase ${sIdx + 1}: ${section.title}`,
           task.id,
           task.title,
           task.description || "",
-          merged.notApplicable ? "N/A" : merged.completed ? "Done" : "Open",
+          statusLabelFor(merged),
           merged.owner || "",
           merged.targetDate || "",
           merged.completedAt ? new Date(merged.completedAt).toISOString().slice(0, 10) : "",
@@ -414,11 +457,66 @@ export default function Implementation() {
         ]);
       });
     });
+
+    customTasks.forEach((t) => {
+      rows.push([
+        "Custom",
+        t.section || "General",
+        `CUSTOM-${t.id}`,
+        t.title,
+        t.description || "",
+        t.isComplete ? "Done" : "Open",
+        "",
+        "",
+        "",
+        "",
+      ]);
+    });
+
+    templateTasks.forEach((t) => {
+      rows.push([
+        "Template",
+        t.section || "General",
+        `TEMPLATE-${t.id}`,
+        t.title,
+        t.description || "",
+        "Open",
+        "",
+        "",
+        "",
+        "",
+      ]);
+    });
+
     const csv = buildCSV(headers, rows);
     downloadCSV(csv, csvFilename(slug, "Task_List"));
   }
 
   // ── CSV Import ──────────────────────────────────────────────────────────────
+  //
+  // Routes each row by its `Source` column:
+  //   - "Built-in": matches against SECTION_DEFS by Task ID (or Name fallback)
+  //     and persists status + owner/date/notes via updateTask.
+  //   - "Custom":   matches orgCustomTasks by CUSTOM-<id>; flips isComplete via
+  //     toggleOrgCustomTask when the row's status disagrees with the DB.
+  //   - "Template": skipped (no per-org persistence — exported for visibility).
+
+  function parseStatus(raw: string): {
+    completed: boolean;
+    notApplicable: boolean;
+    inProgress: boolean;
+    blocked: boolean;
+  } {
+    const s = raw.trim().toLowerCase();
+    return {
+      completed:
+        s === "complete" || s === "completed" || s === "done",
+      notApplicable:
+        s === "n/a" || s === "na" || s === "not applicable",
+      inProgress: s === "in progress" || s === "in_progress",
+      blocked: s === "blocked",
+    };
+  }
 
   async function handleImportCSV(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -431,51 +529,99 @@ export default function Implementation() {
         return;
       }
 
-      let matched = 0;
+      let builtInMatched = 0;
+      let customMatched = 0;
+      let templateSkipped = 0;
       let skipped = 0;
 
       for (const record of records) {
-        const taskId = record["Task ID"]?.trim();
-        const taskName = record["Task Name"]?.trim();
+        const source = (record["Source"] || "").trim().toLowerCase();
+        const taskId = record["Task ID"]?.trim() || "";
+        const taskName = record["Task Name"]?.trim() || "";
+        const statusRaw = record["Status"] || "";
 
+        // Custom task row — match by CUSTOM-<id> and toggle completion if needed.
+        if (source === "custom" || taskId.startsWith("CUSTOM-")) {
+          const idNum = Number(taskId.replace(/^CUSTOM-/i, ""));
+          const ct = customTasks.find((t) => t.id === idNum);
+          if (!ct) { skipped++; continue; }
+          const { completed } = parseStatus(statusRaw);
+          const currentlyComplete = !!ct.isComplete;
+          if (completed !== currentlyComplete) {
+            toggleCustomTask.mutate({ taskId: ct.id });
+          }
+          customMatched++;
+          continue;
+        }
+
+        // Template task row — no per-org persistence; count and move on.
+        if (source === "template" || taskId.startsWith("TEMPLATE-")) {
+          templateSkipped++;
+          continue;
+        }
+
+        // Built-in row — match against SECTION_DEFS.
         let foundTask: TaskDef | null = null;
         let foundSection: SectionDef | null = null;
-
         if (taskId) {
           for (const section of SECTION_DEFS) {
-            const t = section.tasks.find(t => t.id === taskId);
+            const t = section.tasks.find((t) => t.id === taskId);
             if (t) { foundTask = t; foundSection = section; break; }
           }
         }
         if (!foundTask && taskName) {
           for (const section of SECTION_DEFS) {
-            const t = section.tasks.find(t => t.title.toLowerCase() === taskName.toLowerCase());
+            const t = section.tasks.find(
+              (t) => t.title.toLowerCase() === taskName.toLowerCase()
+            );
             if (t) { foundTask = t; foundSection = section; break; }
           }
         }
-
         if (!foundTask || !foundSection) { skipped++; continue; }
 
         const current = getMerged(foundTask.id);
-        const statusRaw = (record["Status"] || "").trim().toLowerCase();
-        const newCompleted = (statusRaw === "complete" || statusRaw === "completed" || statusRaw === "done");
-        const newNA = (statusRaw === "n/a" || statusRaw === "na" || statusRaw === "not applicable");
+        const parsed = parseStatus(statusRaw);
         const newOwner = record["Owner"]?.trim() || current.owner || "";
-        const newTargetDate = record["Target Date"]?.trim() || current.targetDate || "";
+        const newTargetDate =
+          record["Target Date"]?.trim() || current.targetDate || "";
         const newNotes = record["Notes"]?.trim() || current.notes || "";
 
-        save(foundTask.id, foundSection.title, {
-          completed: newCompleted,
-          notApplicable: newNA,
+        const patch = {
+          completed: parsed.completed,
+          notApplicable: parsed.notApplicable,
+          inProgress: parsed.inProgress,
+          blocked: parsed.blocked,
+          completedAt: parsed.completed ? new Date() : null,
           owner: newOwner,
           targetDate: newTargetDate,
           notes: newNotes,
+        };
+        setLocalOverrides((prev) => ({
+          ...prev,
+          [foundTask!.id]: { ...current, ...patch },
+        }));
+        updateTask.mutate({
+          organizationSlug: slug,
+          taskId: foundTask.id,
+          sectionName: foundSection.title,
+          completed: patch.completed,
+          notApplicable: patch.notApplicable,
+          inProgress: patch.inProgress,
+          blocked: patch.blocked,
+          owner: patch.owner || undefined,
+          targetDate: patch.targetDate || undefined,
+          notes: patch.notes || undefined,
         });
-        matched++;
+        builtInMatched++;
       }
 
-      setImportStatus({ message: `Imported ${matched} task(s). ${skipped > 0 ? `${skipped} row(s) skipped (no match).` : ""}`, type: "success" });
-      setTimeout(() => setImportStatus(null), 5000);
+      const parts: string[] = [];
+      parts.push(`Imported ${builtInMatched} built-in task(s)`);
+      if (customMatched) parts.push(`${customMatched} custom task(s)`);
+      if (templateSkipped) parts.push(`${templateSkipped} template row(s) skipped (no per-org status)`);
+      if (skipped) parts.push(`${skipped} row(s) skipped (no match)`);
+      setImportStatus({ message: parts.join(", ") + ".", type: "success" });
+      setTimeout(() => setImportStatus(null), 6000);
     } catch (err) {
       setImportStatus({ message: "Failed to parse CSV file.", type: "error" });
       setTimeout(() => setImportStatus(null), 5000);
