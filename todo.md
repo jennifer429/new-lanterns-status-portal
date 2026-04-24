@@ -1,6 +1,6 @@
 # New Lantern Implementation Portal - TODO
 
-> **Last reviewed:** April 13, 2026
+> **Last reviewed:** April 23, 2026
 
 ## Remaining Refactoring
 
@@ -31,3 +31,13 @@
 - [x] Update NOTION_CONNECTIVITY_DATASOURCE_ID to correct value (53f78f54-2908-43d4-b471-df049652d470)
 - [ ] Fix connectivity router site filtering to handle relation-type Site field (pending — needs testing with live data)
 - [x] Add data-loss safeguard: don't overwrite local connectivity data with empty Notion response
+
+## Swimlane Rewrite — PM Coordination Tracker
+
+- [x] Rewrite SwimlaneMockup.tsx as PM coordination tracker (not integration guide)
+- [x] 5 phases: Discovery, Connectivity, Data Validation, Go-Live, Support
+- [x] 7 party rows: Hospital IT, EHR Vendor, RIS Vendor, PACS/VNA, Rad Group PM, DataFirst+Scipio, New Lantern
+- [x] One card per cell: assignment, owner, status, due, blocker, follow-up
+- [x] Silverback as system box in Connectivity column, not a row
+- [x] Edit Milestone slide-out panel (visual only, no real save)
+- [x] Simple dark mode, no technical jargon, no bottom clutter
