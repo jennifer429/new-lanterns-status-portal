@@ -26,7 +26,9 @@ import {
   Network,
   Filter,
   MoreVertical,
+  Plus,
   ShieldCheck,
+  UserPlus,
 } from "lucide-react";
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -159,6 +161,21 @@ const NA_CELLS = new Set<string>([
   "nl:testing",
   "nl:prod",
 ]);
+
+// Who is *required to be involved* in each phase. This is distinct from who
+// owns milestones: a party may attend as a reviewer/dependency without
+// owning any card. The mockup exposes this at the column-header level so
+// the scheduler can see the full attendee list and edit it (e.g. add a
+// 3rd-party IT group that isn't in the default party list).
+const PHASE_ATTENDEES: Record<string, PartyId[]> = {
+  network: ["it", "sdf", "pacs"],
+  hl7: ["ehr", "ris", "sdf", "nl"],
+  config: ["it", "pacs", "ris", "nl"],
+  templates: ["rad", "ris", "pacs", "nl"],
+  training: ["rad", "ehr", "ris", "nl"],
+  testing: ["it", "ehr", "ris", "pacs", "rad", "sdf"],
+  prod: ["it", "ehr", "ris", "pacs", "rad", "sdf", "nl"],
+};
 
 // ── Status styling ──────────────────────────────────────────────────────────
 
@@ -390,6 +407,10 @@ export default function SwimlaneMockup() {
                 setCardRef={setCardRef}
               />
             ))}
+
+            {/* Add-party row — lets the scheduler add a custom party
+                (e.g. "Third-party IT") that isn't in the default list. */}
+            <AddPartyRow />
           </div>
 
           {/* Dependency arrows overlay */}
@@ -492,8 +513,10 @@ function Stat({ label, value, tone }: { label: string; value: number; tone: stri
 
 function PhaseHeader({ phase }: { phase: Phase }) {
   const { Icon } = phase;
+  const attendees = PHASE_ATTENDEES[phase.id] ?? [];
+  const partyById = Object.fromEntries(PARTIES.map((p) => [p.id, p]));
   return (
-    <div className="flex flex-col items-center text-center gap-1 pb-2">
+    <div className="flex flex-col items-center text-center gap-1.5 pb-2">
       <div className="w-8 h-8 rounded-md bg-slate-800 border border-slate-700 flex items-center justify-center">
         <Icon className="w-4 h-4 text-slate-400" />
       </div>
@@ -501,6 +524,34 @@ function PhaseHeader({ phase }: { phase: Phase }) {
         Phase {phase.num}
       </div>
       <div className="text-xs font-medium text-slate-200 leading-tight">{phase.title}</div>
+
+      {/* Required attendees — who needs to be involved in this phase. */}
+      <div className="mt-1 flex items-center gap-1">
+        <div className="flex -space-x-1.5">
+          {attendees.map((pid) => {
+            const p = partyById[pid];
+            if (!p) return null;
+            return (
+              <span
+                key={pid}
+                title={p.name}
+                className={cn(
+                  "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold ring-2 ring-slate-950",
+                  p.avatarRing,
+                )}
+              >
+                {p.initial}
+              </span>
+            );
+          })}
+        </div>
+        <button
+          title="Manage required attendees for this phase"
+          className="w-5 h-5 rounded-full border border-dashed border-slate-600 text-slate-500 hover:text-slate-200 hover:border-slate-400 flex items-center justify-center ml-0.5"
+        >
+          <Plus className="w-3 h-3" />
+        </button>
+      </div>
     </div>
   );
 }
@@ -615,6 +666,28 @@ function MilestoneCard({
         </span>
       </div>
     </button>
+  );
+}
+
+function AddPartyRow() {
+  return (
+    <>
+      <button
+        className="flex items-center gap-2 py-3 border-t border-slate-800 text-left text-slate-400 hover:text-slate-200"
+        title="Add a new party (e.g. Third-party IT)"
+      >
+        <span className="w-8 h-8 rounded-full border border-dashed border-slate-600 flex items-center justify-center shrink-0">
+          <UserPlus className="w-3.5 h-3.5" />
+        </span>
+        <span className="text-sm italic">Add party…</span>
+      </button>
+      {PHASES.map((p) => (
+        <div
+          key={p.id}
+          className="py-3 border-t border-slate-800 border-dashed"
+        />
+      ))}
+    </>
   );
 }
 
