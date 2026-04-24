@@ -254,7 +254,10 @@ const DEPENDENCIES: Array<{ from: string; to: string }> = [
 
 // ── Component ───────────────────────────────────────────────────────────────
 
-export default function SwimlaneMockup() {
+// Named export so this can be embedded inside another page (e.g. the
+// Swimlane toggle on Implementation.tsx). Default export renders the same
+// component as a full page via the /swimlane-mockup route.
+export function SwimlaneMockup() {
   const [selectedId, setSelectedId] = useState<string | null>("m60");
 
   // Arrow overlay — measure each milestone card's position relative to the
@@ -341,7 +344,7 @@ export default function SwimlaneMockup() {
   const pctDone = totalTracked === 0 ? 0 : Math.round((totals.done / totalTracked) * 100);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="bg-slate-950 text-slate-100 rounded-xl overflow-hidden border border-slate-800">
       {/* Top bar */}
       <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur px-6 py-3 flex items-center gap-6">
         <div className="w-12 h-12 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center">
@@ -701,4 +704,14 @@ function NaCell() {
 
 function EmptyCell() {
   return <div className="h-full min-h-[56px]" />;
+}
+
+// Default export for the standalone /swimlane-mockup route — adds a page
+// wrapper (full viewport background + padding) around the shared component.
+export default function SwimlaneMockupPage() {
+  return (
+    <div className="min-h-screen bg-slate-950 p-4">
+      <SwimlaneMockup />
+    </div>
+  );
 }

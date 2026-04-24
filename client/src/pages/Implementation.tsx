@@ -53,7 +53,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { buildCSV, downloadCSV, parseCSV, readFileAsText, csvFilename } from "@/lib/csv";
 import { Download, Upload } from "lucide-react";
 import { SECTION_DEFS, type TaskDef, type SectionDef } from "@shared/taskDefs";
-import { SwimlaneView } from "@/components/SwimlaneView";
+import { SwimlaneMockup } from "@/pages/SwimlaneMockup";
 import { LayoutGrid, List } from "lucide-react";
 
 // ── Inline editable text ───────────────────────────────────────────────────────
@@ -740,24 +740,7 @@ export default function Implementation() {
           </div>
         ) : (
           viewMode === "swimlane" ? (
-            <SwimlaneView
-              organizationSlug={slug}
-              taskMap={Object.fromEntries(
-                SECTION_DEFS.flatMap(s => s.tasks).map(t => {
-                  const m = getMerged(t.id);
-                  return [t.id, {
-                    completed: m.completed,
-                    notApplicable: m.notApplicable,
-                    inProgress: m.inProgress,
-                    blocked: m.blocked,
-                    completedAt: m.completedAt,
-                    owner: m.owner || null,
-                    targetDate: m.targetDate || null,
-                    notes: m.notes || null,
-                  }];
-                })
-              )}
-            />
+            <SwimlaneMockup />
           ) : (
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-8">
             {/* Left column — sections */}
