@@ -1,72 +1,157 @@
 /**
- * SwimlaneView — Visualizes tasks as colored blocks in org swimlanes.
+ * SwimlaneView — Static PM Coordination Tracker
  *
- * Layout:
- *   - Rows = implementation orgs (Hospital IT, EHR Vendor, Silverback, New Lantern, etc.)
- *   - Columns = phases (Network, HL7, Config, Templates, Training, Testing, Prod Validation)
- *   - Task blocks sit in the row of the org they're assigned to
- *   - Colors: yellow = in progress, green = done, red = blocked, gray = N/A, outline = open
+ * "This is a coordination tracker, not an integration teaching tool."
  *
- * Rules:
- *   - New Lantern always on the right (highest sortOrder)
- *   - Silverback in the middle
- *   - PM can assign tasks to orgs via dropdown on each task block
+ * 5 phases × 7 party rows. One card per cell.
+ * Bold saturated status-colored card backgrounds matching the portal theme.
+ * Silverback system box in DataFirst Connectivity cell.
+ * Edit panel slide-out on card click.
+ * No drag/drop, no assignment dropdowns — purely static.
  */
 
 import { useState, useMemo } from "react";
-import { trpc } from "@/lib/trpc";
-import { SECTION_DEFS } from "@shared/taskDefs";
 import { cn } from "@/lib/utils";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import {
-  Building2,
-  ChevronDown,
-  Plus,
-  Settings2,
-  X,
-  GripVertical,
-} from "lucide-react";
+import { X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
 
-// ── Status → Color mapping ───────────────────────────────────────────────────
+// ── Types ──────────────────────────────────────────────────────────────────
 
-type TaskStatus = "open" | "in_progress" | "complete" | "n_a" | "blocked";
+type Status = "open" | "in_progress" | "done" | "blocked" | "n_a";
 
-const STATUS_STYLES: Record<TaskStatus, { bg: string; border: string; text: string; label: string }> = {
-  open:        { bg: "bg-muted/30",          border: "border-border/60",        text: "text-foreground/70",    label: "Open" },
-  in_progress: { bg: "bg-amber-500/15",      border: "border-amber-500/40",     text: "text-amber-300",        label: "In Progress" },
-  complete:    { bg: "bg-emerald-500/15",     border: "border-emerald-500/40",   text: "text-emerald-400",      label: "Done" },
-  n_a:         { bg: "bg-muted/20",          border: "border-muted/40",         text: "text-muted-foreground/50", label: "N/A" },
-  blocked:     { bg: "bg-red-500/15",        border: "border-red-500/40",       text: "text-red-400",          label: "Blocked" },
+type PartyId = "hospital" | "ehr" | "ris" | "pacs" | "rad" | "df" | "nl";
+
+type PhaseId = "discovery" | "connectivity" | "validation" | "golive" | "support";
+
+interface Party {
+  id: PartyId;
+  label: string;
+  badge: string;
+  badgeColor: string;
+}
+
+interface Phase {
+  id: PhaseId;
+  num: number;
+  title: string;
+}
+
+interface MilestoneCard {
+  id: string;
+  line1: string;
+  line2: string;
+  owner: PartyId;
+  party: PartyId;
+  phase: PhaseId;
+  status: Status;
+  dueDate: string;
+  blocker: string;
+  followUp: string;
+  notes: string;
+}
+
+// ── Reference data ─────────────────────────────────────────────────────────
+
+const PARTIES: Party[] = [
+  { id: "hospital", label: "Hospital IT",        badge: "hospital",     badgeColor: "bg-sky-500/20 text-sky-400 border-sky-500/30" },
+  { id: "ehr",      label: "EHR Vendor",         badge: "ehr vendor",   badgeColor: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" },
+  { id: "ris",      label: "RIS Vendor",         badge: "ris vendor",   badgeColor: "bg-teal-500/20 text-teal-400 border-teal-500/30" },
+  { id: "pacs",     label: "PACS/VNA Vendor",    badge: "pacs vendor",  badgeColor: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30" },
+  { id: "rad",      label: "Rad Group",          badge: "rad group",    badgeColor: "bg-orange-500/20 text-orange-400 border-orange-500/30" },
+  { id: "df",       label: "DataFirst + Scipio", badge: "datafirst",    badgeColor: "bg-violet-500/20 text-violet-400 border-violet-500/30" },
+  { id: "nl",       label: "New Lantern",        badge: "new lantern",  badgeColor: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
+];
+
+const PHASES: Phase[] = [
+  { id: "discovery",    num: 1, title: "Discovery" },
+  { id: "connectivity", num: 2, title: "Connectivity" },
+  { id: "validation",   num: 3, title: "Data Validation" },
+  { id: "golive",       num: 4, title: "Go-Live" },
+  { id: "support",      num: 5, title: "Support" },
+];
+
+// ── Default cards from the PM prompt ───────────────────────────────────────
+
+const CARDS: MilestoneCard[] = [
+  // Hospital IT
+  { id: "h1", line1: "Complete site &",           line2: "connectivity questionnaire",     owner: "hospital", party: "hospital", phase: "discovery",    status: "done",        dueDate: "Jan 20", blocker: "", followUp: "", notes: "" },
+  { id: "h2", line1: "Work with DataFirst +",     line2: "Scipio on VPN/firewall",         owner: "hospital", party: "hospital", phase: "connectivity", status: "in_progress", dueDate: "Feb 5",  blocker: "", followUp: "", notes: "" },
+  { id: "h3", line1: "Confirm production",        line2: "access works",                   owner: "hospital", party: "hospital", phase: "validation",   status: "open",        dueDate: "Feb 20", blocker: "", followUp: "", notes: "" },
+  { id: "h4", line1: "Available for access",      line2: "& network issues",               owner: "hospital", party: "hospital", phase: "golive",       status: "open",        dueDate: "Mar 1",  blocker: "", followUp: "", notes: "" },
+  { id: "h5", line1: "Support hospital-side",     line2: "network/access",                 owner: "hospital", party: "hospital", phase: "support",      status: "open",        dueDate: "",       blocker: "", followUp: "", notes: "" },
+
+  // EHR Vendor
+  { id: "e1", line1: "Confirm EHR",               line2: "interface needs",                owner: "ehr", party: "ehr", phase: "discovery",    status: "done",        dueDate: "Jan 18", blocker: "", followUp: "", notes: "" },
+  { id: "e2", line1: "Provide endpoint /",        line2: "feed details",                   owner: "ehr", party: "ehr", phase: "connectivity", status: "in_progress", dueDate: "Feb 3",  blocker: "", followUp: "", notes: "" },
+  { id: "e3", line1: "Validate EHR",              line2: "data / messages",                owner: "ehr", party: "ehr", phase: "validation",   status: "open",        dueDate: "Feb 18", blocker: "", followUp: "", notes: "" },
+  { id: "e4", line1: "Confirm production",        line2: "feed readiness",                 owner: "ehr", party: "ehr", phase: "golive",       status: "open",        dueDate: "Mar 1",  blocker: "", followUp: "", notes: "" },
+  { id: "e5", line1: "Support EHR-side",          line2: "issues",                         owner: "ehr", party: "ehr", phase: "support",      status: "open",        dueDate: "",       blocker: "", followUp: "", notes: "" },
+
+  // RIS Vendor
+  { id: "r1", line1: "Confirm order/result",      line2: "status workflow",                owner: "ris", party: "ris", phase: "discovery",    status: "done",        dueDate: "Jan 20", blocker: "", followUp: "", notes: "" },
+  { id: "r2", line1: "Provide RIS",               line2: "interface details",              owner: "ris", party: "ris", phase: "connectivity", status: "open",        dueDate: "",       blocker: "", followUp: "", notes: "" },
+  { id: "r3", line1: "Validate orders /",         line2: "results / status",               owner: "ris", party: "ris", phase: "validation",   status: "open",        dueDate: "",       blocker: "", followUp: "", notes: "" },
+  { id: "r4", line1: "Confirm RIS",               line2: "production readiness",           owner: "ris", party: "ris", phase: "golive",       status: "open",        dueDate: "",       blocker: "", followUp: "", notes: "" },
+  { id: "r5", line1: "Support RIS-side",          line2: "issues",                         owner: "ris", party: "ris", phase: "support",      status: "open",        dueDate: "",       blocker: "", followUp: "", notes: "" },
+
+  // PACS / VNA Vendor
+  { id: "p1", line1: "Confirm DICOM /",           line2: "archive / prior workflow",       owner: "pacs", party: "pacs", phase: "discovery",    status: "in_progress", dueDate: "Jan 25", blocker: "", followUp: "", notes: "" },
+  { id: "p2", line1: "Provide DICOM routing",     line2: "& connectivity details",         owner: "pacs", party: "pacs", phase: "connectivity", status: "open",        dueDate: "",       blocker: "", followUp: "", notes: "" },
+  { id: "p3", line1: "Validate DICOM",            line2: "image flow",                     owner: "pacs", party: "pacs", phase: "validation",   status: "open",        dueDate: "",       blocker: "", followUp: "", notes: "" },
+  { id: "p4", line1: "Confirm production",        line2: "DICOM readiness",                owner: "pacs", party: "pacs", phase: "golive",       status: "open",        dueDate: "",       blocker: "", followUp: "", notes: "" },
+  { id: "p5", line1: "Support PACS /",            line2: "VNA issues",                     owner: "pacs", party: "pacs", phase: "support",      status: "open",        dueDate: "",       blocker: "", followUp: "", notes: "" },
+
+  // Rad Group PM
+  { id: "g1", line1: "Coordinate questionnaire",  line2: "& identify missing owners",      owner: "rad", party: "rad", phase: "discovery",    status: "in_progress", dueDate: "Jan 22", blocker: "", followUp: "", notes: "" },
+  { id: "g2", line1: "Track connectivity",        line2: "progress & escalate",            owner: "rad", party: "rad", phase: "connectivity", status: "open",        dueDate: "",       blocker: "", followUp: "", notes: "" },
+  { id: "g3", line1: "Coordinate validation",     line2: "participation",                  owner: "rad", party: "rad", phase: "validation",   status: "open",        dueDate: "",       blocker: "", followUp: "", notes: "" },
+  { id: "g4", line1: "Confirm rad group",         line2: "readiness",                      owner: "rad", party: "rad", phase: "golive",       status: "open",        dueDate: "",       blocker: "", followUp: "", notes: "" },
+  { id: "g5", line1: "Track open issues",         line2: "& escalation path",              owner: "rad", party: "rad", phase: "support",      status: "open",        dueDate: "",       blocker: "", followUp: "", notes: "" },
+
+  // DataFirst + Scipio
+  { id: "d1", line1: "Review connectivity",       line2: "needs & network inputs",         owner: "df", party: "df", phase: "discovery",    status: "done",        dueDate: "Jan 17", blocker: "", followUp: "", notes: "" },
+  { id: "d2", line1: "Own VPN / firewall /",      line2: "routing to Silverback",          owner: "df", party: "df", phase: "connectivity", status: "in_progress", dueDate: "Feb 8",  blocker: "", followUp: "", notes: "" },
+  { id: "d3", line1: "Support connectivity",      line2: "validation",                     owner: "df", party: "df", phase: "validation",   status: "open",        dueDate: "",       blocker: "", followUp: "", notes: "" },
+  { id: "d4", line1: "Confirm production",        line2: "connectivity ready",             owner: "df", party: "df", phase: "golive",       status: "open",        dueDate: "",       blocker: "", followUp: "", notes: "" },
+  { id: "d5", line1: "Support connectivity",      line2: "issues",                         owner: "df", party: "df", phase: "support",      status: "open",        dueDate: "",       blocker: "", followUp: "", notes: "" },
+
+  // New Lantern
+  { id: "n1", line1: "Review completed",          line2: "questionnaire & diagram",        owner: "nl", party: "nl", phase: "discovery",    status: "done",        dueDate: "Jan 24", blocker: "", followUp: "", notes: "" },
+  { id: "n2", line1: "Receive confirmed",         line2: "connectivity details",           owner: "nl", party: "nl", phase: "connectivity", status: "n_a",         dueDate: "",       blocker: "", followUp: "", notes: "" },
+  { id: "n3", line1: "Lead data / workflow",      line2: "validation",                     owner: "nl", party: "nl", phase: "validation",   status: "open",        dueDate: "",       blocker: "", followUp: "", notes: "" },
+  { id: "n4", line1: "Support go-live",           line2: "readiness & launch",             owner: "nl", party: "nl", phase: "golive",       status: "open",        dueDate: "",       blocker: "", followUp: "", notes: "" },
+  { id: "n5", line1: "Own New Lantern",           line2: "support path",                   owner: "nl", party: "nl", phase: "support",      status: "open",        dueDate: "",       blocker: "", followUp: "", notes: "" },
+];
+
+// ── Status styling — bold saturated colors matching mockup ─────────────────
+
+const STATUS_CARD: Record<Status, { bg: string; border: string; text: string; subtext: string }> = {
+  done:        { bg: "bg-emerald-500",  border: "border-emerald-400/50", text: "text-white",              subtext: "text-emerald-100" },
+  in_progress: { bg: "bg-amber-500",    border: "border-amber-400/50",   text: "text-amber-950",          subtext: "text-amber-900/80" },
+  open:        { bg: "bg-slate-800",    border: "border-slate-600/50",   text: "text-slate-100",          subtext: "text-slate-400" },
+  blocked:     { bg: "bg-red-600",      border: "border-red-400/50",     text: "text-white",              subtext: "text-red-100" },
+  n_a:         { bg: "bg-slate-800/50", border: "border-slate-700/40",   text: "text-slate-500",          subtext: "text-slate-600" },
 };
 
-// ── Org type → default icon color ────────────────────────────────────────────
-
-const ORG_TYPE_COLORS: Record<string, string> = {
-  hospital:    "bg-blue-500/20 text-blue-400 border-blue-500/30",
-  ehr_vendor:  "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
-  ris_vendor:  "bg-teal-500/20 text-teal-400 border-teal-500/30",
-  pacs_vendor: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30",
-  rad_group:   "bg-orange-500/20 text-orange-400 border-orange-500/30",
-  silverback:  "bg-slate-500/20 text-slate-300 border-slate-500/30",
-  scipio:      "bg-violet-500/20 text-violet-400 border-violet-500/30",
-  new_lantern: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-  other:       "bg-zinc-500/20 text-zinc-400 border-zinc-500/30",
+const STATUS_DOT: Record<Status, string> = {
+  done: "bg-emerald-400",
+  in_progress: "bg-amber-400",
+  open: "bg-muted-foreground/40",
+  blocked: "bg-red-400",
+  n_a: "bg-muted-foreground/20",
 };
 
-// ── Props ────────────────────────────────────────────────────────────────────
+const STATUS_LABEL: Record<Status, string> = {
+  done: "Done",
+  in_progress: "In Progress",
+  open: "Open",
+  blocked: "Blocked",
+  n_a: "N/A",
+};
+
+const PARTY_LOOKUP: Record<PartyId, Party> = Object.fromEntries(PARTIES.map(p => [p.id, p])) as any;
+
+// ── Props (kept for compatibility but not used for data) ───────────────────
 
 interface SwimlaneViewProps {
   organizationSlug: string;
@@ -82,380 +167,221 @@ interface SwimlaneViewProps {
   }>;
 }
 
-export function SwimlaneView({ organizationSlug, taskMap }: SwimlaneViewProps) {
-  const [showOrgManager, setShowOrgManager] = useState(false);
-  const [newOrgName, setNewOrgName] = useState("");
-  const [newOrgType, setNewOrgType] = useState("other");
+// ── Component ──────────────────────────────────────────────────────────────
 
-  // ── Data fetching ──────────────────────────────────────────────────────────
+export function SwimlaneView(_props: SwimlaneViewProps) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const utils = trpc.useUtils();
-
-  const { data: implOrgs = [], isLoading: orgsLoading } =
-    trpc.swimlane.getOrgs.useQuery({ organizationSlug });
-
-  const { data: assignments = {}, isLoading: assignmentsLoading } =
-    trpc.swimlane.getAssignments.useQuery({ organizationSlug });
-
-  const assignTask = trpc.swimlane.assignTask.useMutation({
-    onSuccess: () => {
-      utils.swimlane.getAssignments.invalidate({ organizationSlug });
-    },
-    onError: () => toast.error("Failed to assign task"),
-  });
-
-  const unassignTask = trpc.swimlane.unassignTask.useMutation({
-    onSuccess: () => {
-      utils.swimlane.getAssignments.invalidate({ organizationSlug });
-    },
-    onError: () => toast.error("Failed to unassign task"),
-  });
-
-  const addOrg = trpc.swimlane.addOrg.useMutation({
-    onSuccess: () => {
-      utils.swimlane.getOrgs.invalidate({ organizationSlug });
-      setNewOrgName("");
-      setNewOrgType("other");
-      toast.success("Organization added");
-    },
-    onError: () => toast.error("Failed to add organization"),
-  });
-
-  const removeOrg = trpc.swimlane.removeOrg.useMutation({
-    onSuccess: () => {
-      utils.swimlane.getOrgs.invalidate({ organizationSlug });
-      toast.success("Organization removed");
-    },
-    onError: () => toast.error("Failed to remove organization"),
-  });
-
-  // ── Derived data ───────────────────────────────────────────────────────────
-
-  function getTaskStatus(taskId: string): TaskStatus {
-    const t = taskMap[taskId];
-    if (!t) return "open";
-    if (t.completed) return "complete";
-    if (t.notApplicable) return "n_a";
-    if (t.blocked) return "blocked";
-    if (t.inProgress) return "in_progress";
-    return "open";
-  }
-
-  // Build a lookup: implOrgId → list of tasks assigned to it, grouped by section
-  const orgTaskMap = useMemo(() => {
-    const map: Record<number, Record<string, string[]>> = {};
-    for (const org of implOrgs) {
-      map[org.id] = {};
-      for (const section of SECTION_DEFS) {
-        map[org.id][section.id] = [];
-      }
-    }
-    // Place assigned tasks
-    for (const [taskId, implOrgId] of Object.entries(assignments)) {
-      if (map[implOrgId]) {
-        const section = SECTION_DEFS.find(s => s.tasks.some(t => t.id === taskId));
-        if (section && map[implOrgId][section.id]) {
-          map[implOrgId][section.id].push(taskId);
-        }
-      }
-    }
+  // Index cards by (party, phase)
+  const cells = useMemo(() => {
+    const map: Record<string, MilestoneCard> = {};
+    for (const c of CARDS) map[`${c.party}:${c.phase}`] = c;
     return map;
-  }, [implOrgs, assignments]);
+  }, []);
 
-  // Unassigned tasks per section
-  const unassignedBySection = useMemo(() => {
-    const map: Record<string, string[]> = {};
-    for (const section of SECTION_DEFS) {
-      map[section.id] = section.tasks
-        .filter(t => !assignments[t.id])
-        .map(t => t.id);
-    }
-    return map;
-  }, [assignments]);
+  // Status counts for legend
+  const totals = useMemo(() => {
+    const t: Record<Status, number> = { done: 0, in_progress: 0, open: 0, blocked: 0, n_a: 0 };
+    for (const c of CARDS) t[c.status]++;
+    return t;
+  }, []);
 
-  const hasUnassigned = Object.values(unassignedBySection).some(arr => arr.length > 0);
-
-  // ── Task block component ───────────────────────────────────────────────────
-
-  function TaskBlock({ taskId }: { taskId: string }) {
-    const status = getTaskStatus(taskId);
-    const style = STATUS_STYLES[status];
-    const taskDef = SECTION_DEFS.flatMap(s => s.tasks).find(t => t.id === taskId);
-    if (!taskDef) return null;
-
-    const shortLabel = taskDef.title.length > 22
-      ? taskDef.title.slice(0, 20) + "…"
-      : taskDef.title;
-
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                className={cn(
-                  "block w-full text-left px-2 py-1.5 rounded-md border text-xs font-medium transition-all cursor-pointer",
-                  "hover:ring-1 hover:ring-primary/30",
-                  style.bg, style.border, style.text,
-                  status === "n_a" && "opacity-50 line-through"
-                )}
-              >
-                {shortLabel}
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-52">
-              <div className="px-2 py-1.5 text-xs font-semibold text-foreground">{taskDef.title}</div>
-              {taskDef.description && (
-                <div className="px-2 pb-1.5 text-xs text-muted-foreground">{taskDef.description}</div>
-              )}
-              <DropdownMenuSeparator />
-              <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                Assign to
-              </div>
-              {implOrgs.map(org => (
-                <DropdownMenuItem
-                  key={org.id}
-                  onClick={() => assignTask.mutate({ organizationSlug, taskId, implOrgId: org.id })}
-                  className={cn(
-                    "gap-2 cursor-pointer text-xs",
-                    assignments[taskId] === org.id && "bg-primary/10 text-primary"
-                  )}
-                >
-                  <Building2 className="w-3 h-3" />
-                  {org.name}
-                  {assignments[taskId] === org.id && (
-                    <span className="ml-auto text-[10px] text-primary">✓</span>
-                  )}
-                </DropdownMenuItem>
-              ))}
-              {assignments[taskId] && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => unassignTask.mutate({ organizationSlug, taskId })}
-                    className="gap-2 cursor-pointer text-xs text-destructive"
-                  >
-                    <X className="w-3 h-3" />
-                    Unassign
-                  </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-xs">
-          <p className="font-semibold text-xs">{taskDef.title}</p>
-          {taskDef.description && <p className="text-xs text-muted-foreground mt-0.5">{taskDef.description}</p>}
-          <p className="text-[10px] mt-1">
-            Status: <span className={style.text}>{style.label}</span>
-          </p>
-        </TooltipContent>
-      </Tooltip>
-    );
-  }
-
-  // ── Loading state ──────────────────────────────────────────────────────────
-
-  if (orgsLoading || assignmentsLoading) {
-    return (
-      <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">
-        Loading swimlane view…
-      </div>
-    );
-  }
-
-  // ── Render ─────────────────────────────────────────────────────────────────
+  const selectedCard = selectedId ? CARDS.find(c => c.id === selectedId) ?? null : null;
 
   return (
     <div className="space-y-4">
-      {/* Toolbar */}
+      {/* Status legend */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          {/* Status legend */}
-          <div className="flex items-center gap-3 text-xs">
-            {Object.entries(STATUS_STYLES).map(([key, s]) => (
-              <div key={key} className="flex items-center gap-1.5">
-                <div className={cn("w-3 h-3 rounded-sm border", s.bg, s.border)} />
-                <span className="text-muted-foreground">{s.label}</span>
-              </div>
-            ))}
-          </div>
+        <div className="flex items-center gap-4 text-xs">
+          {(["open", "in_progress", "done", "n_a", "blocked"] as Status[]).map(s => (
+            <div key={s} className="flex items-center gap-1.5">
+              <div className={cn("w-2.5 h-2.5 rounded-full", STATUS_DOT[s])} />
+              <span className="text-muted-foreground">{STATUS_LABEL[s]}</span>
+            </div>
+          ))}
         </div>
-
-        <button
-          onClick={() => setShowOrgManager(!showOrgManager)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-foreground bg-muted/40 border border-border/40 rounded-md hover:bg-muted/60 hover:border-primary/30 transition-all"
-        >
-          <Settings2 className="w-3.5 h-3.5" />
-          Manage Orgs
-        </button>
       </div>
 
-      {/* Org Manager Panel */}
-      {showOrgManager && (
-        <div className="rounded-lg border border-border/60 bg-card/50 p-4 space-y-3">
-          <h4 className="text-sm font-semibold text-foreground">Implementation Organizations</h4>
-          <p className="text-xs text-muted-foreground">
-            Add or remove the organizations involved in this implementation. Each org becomes a swimlane row.
-          </p>
-          <div className="space-y-2">
-            {implOrgs.map(org => (
-              <div key={org.id} className="flex items-center justify-between px-3 py-2 rounded-md bg-muted/20 border border-border/30">
-                <div className="flex items-center gap-2">
-                  <GripVertical className="w-3.5 h-3.5 text-muted-foreground/40" />
-                  <Badge variant="outline" className={cn("text-[10px]", ORG_TYPE_COLORS[org.orgType] || ORG_TYPE_COLORS.other)}>
-                    {org.orgType.replace(/_/g, " ")}
-                  </Badge>
-                  <span className="text-sm font-medium text-foreground">{org.name}</span>
-                </div>
-                <button
-                  onClick={() => removeOrg.mutate({ id: org.id })}
-                  className="text-muted-foreground/40 hover:text-destructive transition-colors"
-                  title="Remove org"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))}
-          </div>
-
-          {/* Add new org */}
-          <div className="flex items-center gap-2 pt-2">
-            <input
-              value={newOrgName}
-              onChange={e => setNewOrgName(e.target.value)}
-              placeholder="Organization name…"
-              className="flex-1 bg-background border border-border/60 rounded-md px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/40"
-            />
-            <select
-              value={newOrgType}
-              onChange={e => setNewOrgType(e.target.value)}
-              className="bg-background border border-border/60 rounded-md px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
-            >
-              <option value="hospital">Hospital IT</option>
-              <option value="ehr_vendor">EHR Vendor</option>
-              <option value="ris_vendor">RIS Vendor</option>
-              <option value="pacs_vendor">PACS/VNA Vendor</option>
-              <option value="rad_group">Rad Group</option>
-              <option value="silverback">Silverback</option>
-              <option value="scipio">Scipio</option>
-              <option value="new_lantern">New Lantern</option>
-              <option value="other">Other</option>
-            </select>
-            <button
-              onClick={() => {
-                if (!newOrgName.trim()) return;
-                addOrg.mutate({ organizationSlug, name: newOrgName.trim(), orgType: newOrgType });
-              }}
-              disabled={!newOrgName.trim() || addOrg.isPending}
-              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 transition-all"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Swimlane Grid */}
+      {/* Swimlane grid */}
       <div className="overflow-x-auto">
-        <div className="min-w-[900px]">
+        <div className="min-w-[1000px]">
           {/* Phase column headers */}
-          <div className="grid gap-px" style={{ gridTemplateColumns: `180px repeat(${SECTION_DEFS.length}, 1fr)` }}>
+          <div
+            className="grid gap-px"
+            style={{ gridTemplateColumns: `180px repeat(${PHASES.length}, 1fr)` }}
+          >
             <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Organization
             </div>
-            {SECTION_DEFS.map((section, idx) => (
-              <div key={section.id} className="px-2 py-2 text-center">
+            {PHASES.map(phase => (
+              <div
+                key={phase.id}
+                className="px-2 py-2 text-center"
+              >
                 <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
-                  Phase {idx + 1}
+                  Phase {phase.num}
                 </div>
-                <div className="text-xs font-semibold text-foreground mt-0.5 truncate" title={section.title}>
-                  {section.title}
+                <div className="text-xs font-semibold text-foreground mt-0.5">
+                  {phase.title}
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Org swimlane rows */}
-          {implOrgs.map((org, orgIdx) => (
+          {/* Party rows */}
+          {PARTIES.map((party, rowIdx) => (
             <div
-              key={org.id}
+              key={party.id}
               className={cn(
                 "grid gap-px border-t border-border/30",
-                orgIdx % 2 === 0 ? "bg-muted/5" : "bg-transparent"
+                rowIdx % 2 === 0 ? "bg-muted/5" : "bg-transparent"
               )}
-              style={{ gridTemplateColumns: `180px repeat(${SECTION_DEFS.length}, 1fr)` }}
+              style={{ gridTemplateColumns: `180px repeat(${PHASES.length}, 1fr)` }}
             >
-              {/* Org label */}
-              <div className="px-3 py-3 flex items-start gap-2">
+              {/* Party label */}
+              <div className="px-3 py-3 flex items-center gap-2">
                 <Badge
                   variant="outline"
-                  className={cn(
-                    "text-[10px] whitespace-nowrap",
-                    ORG_TYPE_COLORS[org.orgType] || ORG_TYPE_COLORS.other
-                  )}
+                  className={cn("text-[10px] whitespace-nowrap", party.badgeColor)}
                 >
-                  {org.orgType.replace(/_/g, " ")}
+                  {party.badge}
                 </Badge>
-                <span className="text-xs font-medium text-foreground leading-tight">{org.name}</span>
+                <span className="text-xs font-medium text-foreground leading-tight">
+                  {party.label}
+                </span>
               </div>
 
               {/* Phase cells */}
-              {SECTION_DEFS.map(section => {
-                const taskIds = orgTaskMap[org.id]?.[section.id] ?? [];
+              {PHASES.map(phase => {
+                const key = `${party.id}:${phase.id}`;
+                const card = cells[key];
+                if (!card) return <div key={key} className="px-1.5 py-2 min-h-[80px]" />;
+
+                const isNa = card.status === "n_a";
+                const style = STATUS_CARD[card.status];
+                const isSelected = selectedId === card.id;
+                const showSilverback = party.id === "df" && phase.id === "connectivity";
+
                 return (
-                  <div key={section.id} className="px-1.5 py-2 space-y-1 min-h-[48px]">
-                    {taskIds.map(taskId => (
-                      <TaskBlock key={taskId} taskId={taskId} />
-                    ))}
-                    {taskIds.length === 0 && (
-                      <div className="h-full min-h-[32px]" />
+                  <div key={key} className="px-1.5 py-2 min-h-[80px] relative">
+                    <button
+                      onClick={() => setSelectedId(isSelected ? null : card.id)}
+                      className={cn(
+                        "w-full rounded-lg border px-3 py-2.5 text-left transition-all",
+                        style.bg, style.border,
+                        isSelected && "ring-2 ring-primary",
+                        !isNa && "hover:brightness-110 cursor-pointer",
+                      )}
+                    >
+                      {isNa ? (
+                        <div className="flex flex-col items-center justify-center py-2">
+                          <div className={cn("text-xs font-medium", style.text)}>{card.line1}</div>
+                          <div className={cn("text-[11px] mt-0.5", style.subtext)}>{card.line2}</div>
+                          <div className="text-lg font-bold text-slate-600 mt-1">N/A</div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col">
+                          <div className={cn("text-xs font-semibold leading-snug", style.text)}>
+                            {card.line1}
+                          </div>
+                          <div className={cn("text-[11px] leading-snug mt-0.5", style.subtext)}>
+                            {card.line2}
+                          </div>
+                          <div className="mt-2 flex items-center justify-between">
+                            <span className={cn("text-[10px]", style.subtext)}>
+                              • {PARTY_LOOKUP[card.owner]?.label ?? card.owner}
+                            </span>
+                            {card.dueDate && (
+                              <span className={cn("text-[10px]", style.subtext)}>
+                                {card.dueDate}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </button>
+
+                    {/* Silverback system box */}
+                    {showSilverback && (
+                      <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 translate-y-1/2 z-10 px-3 py-1 rounded-md bg-emerald-600/80 border border-emerald-400/50 text-[10px] font-semibold text-emerald-100 whitespace-nowrap shadow-lg">
+                        Silverback System
+                      </div>
                     )}
                   </div>
                 );
               })}
             </div>
           ))}
-
-          {/* Unassigned row */}
-          {hasUnassigned && (
-            <div
-              className="grid gap-px border-t-2 border-dashed border-border/50 bg-muted/10"
-              style={{ gridTemplateColumns: `180px repeat(${SECTION_DEFS.length}, 1fr)` }}
-            >
-              <div className="px-3 py-3 flex items-start gap-2">
-                <Badge variant="outline" className="text-[10px] whitespace-nowrap border-dashed text-muted-foreground">
-                  unassigned
-                </Badge>
-                <span className="text-xs text-muted-foreground italic leading-tight">Not yet assigned</span>
-              </div>
-
-              {SECTION_DEFS.map(section => {
-                const taskIds = unassignedBySection[section.id] ?? [];
-                return (
-                  <div key={section.id} className="px-1.5 py-2 space-y-1 min-h-[48px]">
-                    {taskIds.map(taskId => (
-                      <TaskBlock key={taskId} taskId={taskId} />
-                    ))}
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Summary stats */}
-      <div className="flex items-center gap-4 text-xs text-muted-foreground pt-2 border-t border-border/30">
-        <span>{implOrgs.length} organizations</span>
-        <span>·</span>
-        <span>{SECTION_DEFS.reduce((sum, s) => sum + s.tasks.length, 0)} total tasks</span>
-        <span>·</span>
-        <span>{Object.keys(assignments).length} assigned</span>
-        <span>·</span>
-        <span>{SECTION_DEFS.reduce((sum, s) => sum + s.tasks.length, 0) - Object.keys(assignments).length} unassigned</span>
+      {/* Edit Panel (slide-out) */}
+      {selectedCard && (
+        <div className="fixed top-0 right-0 h-full w-[380px] bg-card border-l border-border shadow-2xl z-50 flex flex-col animate-in slide-in-from-right duration-200">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+            <h2 className="text-base font-bold text-foreground">Edit Milestone</h2>
+            <button
+              onClick={() => setSelectedId(null)}
+              className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-muted text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+            <PanelField label="Issue" value={`${selectedCard.line1} ${selectedCard.line2}`} />
+            <PanelField label="Owner">
+              <div className="flex items-center gap-2 mt-1">
+                {(() => {
+                  const p = PARTY_LOOKUP[selectedCard.owner];
+                  return p ? (
+                    <>
+                      <Badge variant="outline" className={cn("text-[10px]", p.badgeColor)}>
+                        {p.badge}
+                      </Badge>
+                      <span className="text-sm text-foreground">{p.label}</span>
+                    </>
+                  ) : null;
+                })()}
+              </div>
+            </PanelField>
+            <PanelField label="Status">
+              <div className="flex items-center gap-2 mt-1">
+                <span className={cn("w-2.5 h-2.5 rounded-full", STATUS_DOT[selectedCard.status])} />
+                <span className="text-sm text-foreground">{STATUS_LABEL[selectedCard.status]}</span>
+              </div>
+            </PanelField>
+            <PanelField label="Phase" value={PHASES.find(p => p.id === selectedCard.phase)?.title ?? ""} />
+            <PanelField label="Due Date" value={selectedCard.dueDate || "—"} />
+            <PanelField label="Blocker" value={selectedCard.blocker || "None"} />
+            <PanelField label="Next Follow-up" value={selectedCard.followUp || "—"} />
+            <PanelField label="Notes" value={selectedCard.notes || "—"} />
+          </div>
+          <div className="px-5 py-4 border-t border-border">
+            <button
+              onClick={() => setSelectedId(null)}
+              className="w-full py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-sm font-semibold text-white transition-colors"
+            >
+              Save Changes
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Footer */}
+      <div className="text-center text-xs text-muted-foreground pt-2">
+        Click any milestone to edit details, change status, or add comments.
       </div>
+    </div>
+  );
+}
+
+// ── Sub-components ─────────────────────────────────────────────────────────
+
+function PanelField({ label, value, children }: { label: string; value?: string; children?: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{label}</div>
+      {children ?? <div className="mt-1 text-sm text-foreground">{value}</div>}
     </div>
   );
 }

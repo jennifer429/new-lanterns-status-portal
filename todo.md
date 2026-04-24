@@ -41,3 +41,11 @@
 - [x] Silverback as system box in Connectivity column, not a row
 - [x] Edit Milestone slide-out panel (visual only, no real save)
 - [x] Simple dark mode, no technical jargon, no bottom clutter
+- [x] Rewrite SwimlaneView.tsx (Task List swimlane toggle) as static PM coordination tracker matching mockup
+
+## Swimlane Visual Fixes (match mockup)
+
+- [x] Bold saturated status-colored card backgrounds (green=done, yellow=in-progress, dark=open, red=blocked)
+- [x] Colored phase header bars
+- [x] Edit panel with populated sample data
+- [x] N/A cell shows text overlay, not dashed border
