@@ -48,54 +48,142 @@ function getTransporter() {
   });
 }
 
+function buildSubject({ orgName }) {
+  if (orgName) return `New Lantern - ${orgName} - Implementation Portal — Action Required`;
+  return "New Lantern - Implementation Portal — Action Required";
+}
+
 function buildHtml({ name, email, orgName, setPasswordUrl, dashboardUrl }) {
   const displayName = name || email;
+  const orgLabel = orgName || "your organization";
+
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
-<body style="font-family:sans-serif;color:#1a1a1a;max-width:560px;margin:0 auto;padding:24px">
-  <h2 style="margin-bottom:8px;color:#1a3c5e">You're invited to New Lanterns</h2>
-  <p style="color:#555">Hi ${displayName},</p>
-  <p style="color:#555">
-    ${orgName
-      ? `You've been added to <strong>${orgName}</strong> on the New Lanterns Status Portal.`
-      : "You've been added to the New Lanterns Status Portal."}
-    Please set a password to activate your account.
-  </p>
-  <a href="${setPasswordUrl}"
-     style="display:inline-block;margin:16px 0;padding:12px 24px;background:#1a3c5e;color:#fff;text-decoration:none;border-radius:6px;font-weight:600">
-    Set Your Password
-  </a>
-  <p style="color:#888;font-size:13px">
-    This link expires in <strong>7 days</strong>. Once you've set your password, you can access
-    your dashboard at: <a href="${dashboardUrl}" style="color:#1a3c5e">${dashboardUrl}</a>
-  </p>
-  <p style="font-size:13px;color:#666">
-    Or copy this link into your browser:<br>
-    <a href="${setPasswordUrl}">${setPasswordUrl}</a>
-  </p>
-  <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0">
-  <p style="color:#aaa;font-size:12px">
-    If you didn't expect this invitation, you can safely ignore this email.
-  </p>
+<body style="margin:0;padding:0;background:#f4f4f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f7;padding:32px 0">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden">
+
+        <!-- Header -->
+        <tr>
+          <td style="background:#1a1a2e;padding:32px 40px">
+            <div style="font-size:20px;font-weight:700;color:#ffffff;margin-bottom:16px">New Lantern</div>
+            <div style="font-size:24px;font-weight:700;color:#ffffff;margin-bottom:4px">Implementation Portal &mdash; Action Required</div>
+            ${orgName ? `<div style="font-size:16px;color:#a78bfa;margin-top:8px">${orgName}</div>` : ""}
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="padding:40px">
+            <p style="font-size:16px;color:#333;margin:0 0 16px">Hi ${displayName},</p>
+
+            <p style="font-size:15px;color:#444;line-height:1.6;margin:0 0 24px">
+              You have been set up with access to the <strong>New Lantern Implementation Portal</strong> for <strong>${orgLabel}</strong>.
+              We need your help completing a few remaining items in the portal before go-live. Most of
+              the setup is already done &mdash; we just need you to log in and upload some key files.
+            </p>
+
+            <!-- Login Box -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border:1px solid #e5e7eb;border-left:4px solid #7c3aed;border-radius:8px;margin:0 0 32px">
+              <tr><td style="padding:24px 28px">
+                <div style="font-size:16px;font-weight:700;color:#1a1a2e;margin-bottom:12px">First: Set Up Your Login</div>
+
+                <p style="font-size:14px;color:#444;margin:0 0 16px">
+                  Click the button below to create your password and access the portal:
+                </p>
+
+                <ol style="font-size:14px;color:#444;line-height:1.8;margin:0 0 20px;padding-left:20px">
+                  <li>Click the button below to set your password</li>
+                  <li>Choose a strong password (6+ characters)</li>
+                  <li>Log in and you'll see your ${orgLabel} implementation portal</li>
+                </ol>
+
+                <a href="${setPasswordUrl}"
+                   style="display:inline-block;padding:14px 28px;background:#7c3aed;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px">
+                  Set Password &amp; Log In
+                </a>
+              </td></tr>
+            </table>
+
+            <p style="font-size:15px;color:#444;line-height:1.6;margin:0 0 24px">
+              Your dashboard will show your implementation progress. Please complete the questionnaire by
+              uploading files for users, procedure codes, templates, and a phone directory.
+            </p>
+
+            <!-- Reminders -->
+            <div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:8px;padding:20px 24px;margin:0 0 32px">
+              <div style="font-size:15px;font-weight:700;color:#92400e;margin-bottom:12px">Important Reminders</div>
+              <ul style="font-size:14px;color:#78350f;line-height:1.8;margin:0;padding-left:20px">
+                <li>This link expires in <strong>7 days</strong>. Contact us if you need a new one.</li>
+                <li>Do not share your login credentials with others.</li>
+                <li>Do not upload or include Protected Health Information (PHI) in the portal.</li>
+              </ul>
+            </div>
+
+            <p style="font-size:14px;color:#666;margin:0 0 8px">
+              If you have questions or run into any issues, please contact:<br>
+              <a href="mailto:support@newlantern.us.com" style="color:#7c3aed">support@newlantern.us.com</a>
+            </p>
+
+            <p style="font-size:15px;color:#444;margin:24px 0 4px">Thank you for your help getting these last items completed.</p>
+            <p style="font-size:15px;color:#444;margin:0">Best,<br><strong>Jennifer</strong></p>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="background:#f9fafb;padding:20px 40px;border-top:1px solid #e5e7eb">
+            <p style="font-size:12px;color:#999;margin:0;text-align:center">
+              &copy; 2026 New Lantern, Inc. &nbsp;|&nbsp;
+              <a href="mailto:support@newlantern.us.com" style="color:#999">support@newlantern.us.com</a>
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
 </body>
 </html>`;
 }
 
 function buildText({ name, email, orgName, setPasswordUrl, dashboardUrl }) {
   const displayName = name || email;
+  const orgLabel = orgName || "your organization";
   return [
     `Hi ${displayName},`,
     "",
-    orgName
-      ? `You've been added to ${orgName} on the New Lanterns Status Portal.`
-      : "You've been added to the New Lanterns Status Portal.",
-    "Please set a password to activate your account:",
+    `You have been set up with access to the New Lantern Implementation Portal for ${orgLabel}.`,
+    "We need your help completing a few remaining items in the portal before go-live.",
+    "Most of the setup is already done — we just need you to log in and upload some key files.",
     "",
+    "SET UP YOUR LOGIN",
+    "─────────────────",
+    "Click this link to set your password and access the portal:",
     setPasswordUrl,
     "",
-    "This link expires in 7 days.",
-    `Once activated, your dashboard is at: ${dashboardUrl}`,
+    "1. Click the link above to set your password",
+    "2. Choose a strong password (6+ characters)",
+    `3. Log in and you'll see your ${orgLabel} implementation portal`,
+    "",
+    "IMPORTANT REMINDERS",
+    "─────────────────",
+    "• This link expires in 7 days. Contact us if you need a new one.",
+    "• Do not share your login credentials with others.",
+    "• Do not upload or include Protected Health Information (PHI) in the portal.",
+    "",
+    "If you have questions, contact: support@newlantern.us.com",
+    "",
+    "Thank you for your help getting these last items completed.",
+    "",
+    "Best,",
+    "Jennifer",
+    "",
+    `Your dashboard: ${dashboardUrl}`,
+    "",
+    "© 2026 New Lantern, Inc. | support@newlantern.us.com",
   ].join("\n");
 }
 
@@ -104,9 +192,9 @@ async function sendInviteEmail(user) {
   if (!transporter) throw new Error("GMAIL_USER and GMAIL_APP_PASSWORD not configured");
 
   await transporter.sendMail({
-    from: `"New Lanterns" <${GMAIL_USER}>`,
+    from: `"Jennifer Starling" <${GMAIL_USER}>`,
     to: user.email,
-    subject: "You're invited to New Lanterns — set your password",
+    subject: buildSubject(user),
     text: buildText(user),
     html: buildHtml(user),
   });
