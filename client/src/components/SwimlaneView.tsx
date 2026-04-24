@@ -352,18 +352,18 @@ export function SwimlaneView({ organizationSlug }: SwimlaneViewProps) {
 
       {/* Swimlane grid */}
       <div className="overflow-x-auto">
-        <div className="min-w-[860px]">
+        <div className="min-w-[960px]">
           {/* Phase column headers */}
           <div
-            className="grid gap-1"
-            style={{ gridTemplateColumns: `170px repeat(${PHASES.length}, 1fr)` }}
+            className="grid gap-2"
+            style={{ gridTemplateColumns: `200px repeat(${PHASES.length}, 1fr)` }}
           >
-            <div className="px-2 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+            <div className="px-2 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Organization
             </div>
             {PHASES.map(phase => (
-              <div key={phase.id} className="px-2 py-2 text-center">
-                <div className="text-[11px] font-semibold text-foreground">{phase.title}</div>
+              <div key={phase.id} className="px-2 py-3 text-center">
+                <div className="text-sm font-semibold text-foreground">{phase.title}</div>
               </div>
             ))}
           </div>
@@ -376,20 +376,20 @@ export function SwimlaneView({ organizationSlug }: SwimlaneViewProps) {
               <div
                 key={party.id}
                 className={cn(
-                  "grid gap-1 border-t border-border/30",
+                  "grid gap-2 border-t border-border/30",
                   rowIdx % 2 === 0 ? "bg-muted/5" : "bg-transparent"
                 )}
-                style={{ gridTemplateColumns: `170px repeat(${PHASES.length}, 1fr)` }}
+                style={{ gridTemplateColumns: `200px repeat(${PHASES.length}, 1fr)` }}
               >
                 {/* Row label */}
                 <div className="px-2 py-2 flex items-center gap-2">
                   <Badge
                     variant="outline"
-                    className={cn("text-[9px] whitespace-nowrap shrink-0", party.badgeColor)}
+                    className={cn("text-[10px] whitespace-nowrap shrink-0", party.badgeColor)}
                   >
                     {party.badge}
                   </Badge>
-                  <span className="text-[11px] font-medium text-foreground/70 leading-tight truncate" title={displayName || party.label}>
+                  <span className="text-xs font-medium text-foreground/80 leading-tight truncate" title={displayName || party.label}>
                     {displayName}
                   </span>
                 </div>
@@ -398,17 +398,17 @@ export function SwimlaneView({ organizationSlug }: SwimlaneViewProps) {
                 {PHASES.map(phase => {
                   const key = `${party.id}:${phase.id}`;
                   const card = cells[key];
-                  if (!card) return <div key={key} className="px-0.5 py-1 min-h-[48px]" />;
+                  if (!card) return <div key={key} className="px-0.5 py-1.5" />;
 
                   const style = STATUS_CARD[card.status];
                   const isSelected = selectedId === card.id;
                   const hasMeta = !!(card.blocker || card.followUp || card.notes);
 
                   return (
-                    <div key={key} className="px-0.5 py-1 min-h-[48px]">
+                    <div key={key} className="px-0.5 py-1.5">
                       <div
                         className={cn(
-                          "group relative w-full rounded-md border transition-all",
+                          "group relative w-full h-[68px] rounded-lg border transition-all",
                           style.bg, style.border,
                           isSelected && "ring-2 ring-primary",
                         )}
@@ -416,33 +416,37 @@ export function SwimlaneView({ organizationSlug }: SwimlaneViewProps) {
                         <button
                           type="button"
                           onClick={() => cycleStatus(card.id)}
+                          onDoubleClick={(e) => {
+                            e.preventDefault();
+                            setSelectedId(card.id);
+                          }}
                           onContextMenu={(e) => {
                             e.preventDefault();
                             setSelectedId(card.id);
                           }}
-                          title="Click to cycle status · Right-click to edit"
+                          title="Click to cycle status · Double-click or right-click to edit"
                           className={cn(
-                            "w-full text-left px-2 py-1.5 pr-7 rounded-md hover:brightness-105 cursor-pointer",
+                            "absolute inset-0 flex flex-col justify-center text-left px-3 pr-8 rounded-lg hover:brightness-105 cursor-pointer overflow-hidden",
                           )}
                         >
-                          <div className={cn("text-[11px] font-semibold leading-snug", style.text)}>
+                          <div className={cn("text-[12px] font-semibold leading-tight truncate", style.text)}>
                             {card.line1}
                           </div>
                           {card.line2 && (
-                            <div className={cn("text-[10px] leading-snug mt-0.5", style.subtext)}>
+                            <div className={cn("text-[11px] leading-tight mt-0.5 truncate", style.subtext)}>
                               {card.line2}
                             </div>
                           )}
-                          {hasMeta && (
-                            <div
-                              className={cn(
-                                "absolute bottom-1 right-1 w-1.5 h-1.5 rounded-full",
-                                style.text === "text-white" ? "bg-white/70" : "bg-slate-700/60"
-                              )}
-                              title="Has notes"
-                            />
-                          )}
                         </button>
+                        {hasMeta && (
+                          <div
+                            className={cn(
+                              "absolute bottom-1.5 right-2 w-1.5 h-1.5 rounded-full pointer-events-none",
+                              style.text === "text-white" ? "bg-white/80" : "bg-slate-700/70"
+                            )}
+                            title="Has notes"
+                          />
+                        )}
                         <button
                           type="button"
                           onClick={(e) => {
@@ -451,7 +455,7 @@ export function SwimlaneView({ organizationSlug }: SwimlaneViewProps) {
                           }}
                           title="Edit details"
                           className={cn(
-                            "absolute top-1 right-1 p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10",
+                            "absolute top-1.5 right-1.5 p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-black/10 dark:hover:bg-white/10 transition-opacity",
                             style.text,
                           )}
                         >
@@ -562,7 +566,7 @@ export function SwimlaneView({ organizationSlug }: SwimlaneViewProps) {
       )}
 
       <div className="text-center text-xs text-muted-foreground pt-1">
-        Click a tile to cycle its color · Click the pencil (or right-click) to edit notes · Changes auto-save locally.
+        Click a tile to cycle its color · Double-click (or right-click) to edit notes · Changes auto-save locally.
       </div>
     </div>
   );
