@@ -101,64 +101,64 @@ export function OrganizationManagement() {
 
   if (isLoading) {
     return (
-      <Card className="border-purple-500/20 bg-black/40 backdrop-blur-xl">
+      <Card className="card-elevated overflow-hidden">
+        <div className="h-1 bg-gradient-to-r from-primary via-primary/60 to-emerald-500/40" />
         <CardContent className="py-12">
-          <div className="text-center text-gray-400">Loading organizations...</div>
+          <div className="text-center text-muted-foreground">Loading organizations...</div>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="border-purple-500/20 bg-black/40 backdrop-blur-xl">
+    <Card className="card-elevated overflow-hidden">
+      <div className="h-1 bg-gradient-to-r from-primary via-primary/60 to-emerald-500/40" />
       <CardHeader>
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
           <div>
-            <CardTitle className="text-white text-xl">Update Organizations</CardTitle>
-            <CardDescription className="text-gray-300">
+            <CardTitle className="text-xl">Update Organizations</CardTitle>
+            <CardDescription>
               Manage client organizations and their names
             </CardDescription>
           </div>
           <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-purple-600 hover:bg-purple-500 text-white w-full sm:w-auto">
+              <Button className="w-full sm:w-auto">
                 <Plus className="w-4 h-4 mr-2" />
                 Create New Organization
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-black border-purple-500/30">
+            <DialogContent>
               <DialogHeader>
-                <DialogTitle className="text-white">Create New Organization</DialogTitle>
-                <DialogDescription className="text-gray-400">
+                <DialogTitle>Create New Organization</DialogTitle>
+                <DialogDescription>
                   Enter the name for the new organization
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="new-org-name" className="text-white">Organization Name</Label>
+                  <Label htmlFor="new-org-name">Organization Name</Label>
                   <Input
                     id="new-org-name"
                     value={newOrgName}
                     onChange={(e) => setNewOrgName(e.target.value)}
                     placeholder="e.g., Memorial Hospital"
-                    className="bg-black/50 border-purple-500/30 text-white"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="new-org-slug" className="text-white">URL Slug</Label>
+                  <Label htmlFor="new-org-slug">URL Slug</Label>
                   <Input
                     id="new-org-slug"
                     value={newOrgSlug}
                     onChange={(e) => setNewOrgSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
                     placeholder="e.g., memorial-hospital"
-                    className="bg-black/50 border-purple-500/30 text-white"
                   />
-                  <p className="text-xs text-gray-400">Only lowercase letters, numbers, and hyphens</p>
+                  <p className="text-xs text-muted-foreground">Only lowercase letters, numbers, and hyphens</p>
                 </div>
                 <Button
                   onClick={handleCreate}
                   disabled={createMutation.isPending}
-                  className="w-full bg-purple-600 hover:bg-purple-500"
+                  className="w-full"
                 >
                   {createMutation.isPending ? "Creating..." : "Create Organization"}
                 </Button>
@@ -168,79 +168,80 @@ export function OrganizationManagement() {
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        <table className="w-full border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
-          <colgroup>
-            <col style={{ width: '42%' }} />
-            <col style={{ width: '26%' }} />
-            <col style={{ width: '32%' }} />
-          </colgroup>
-          <thead>
-            <tr className="border-b border-purple-500/20 bg-purple-950/20">
-              {['Organization', 'Slug', ''].map((h, i) => (
-                <th key={i} className="text-left px-4 py-2 text-[10px] font-medium text-gray-400 uppercase tracking-wide">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {organizations && organizations.length > 0 ? (
-              organizations.map((org: any) => (
-                <tr key={org.id} className="border-b border-purple-500/10 hover:bg-purple-900/20 transition-colors">
-                  <td className="px-4 py-2 text-white font-medium truncate">
-                    <span className="flex items-center gap-2">
-                      <Building2 className="w-3 h-3 text-purple-400 shrink-0" />
-                      {org.name}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2 text-gray-400 font-mono truncate">{org.slug}</td>
-                  <td className="px-3 py-1.5">
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-1">
-                      <button onClick={() => openEditDialog(org)}
-                        className="flex items-center justify-center gap-1 px-2 py-0.5 rounded text-[10px] text-purple-300 hover:text-white border border-purple-500/30 hover:bg-purple-600 transition-colors">
-                        <Edit className="w-2.5 h-2.5" /> Rename
-                      </button>
-                      <button onClick={() => openDeleteDialog(org)}
-                        className="flex items-center justify-center gap-1 px-2 py-0.5 rounded text-[10px] text-red-400/70 hover:text-white border border-red-500/20 hover:bg-red-600 transition-colors">
-                        <Trash2 className="w-2.5 h-2.5" /> Remove
-                      </button>
-                    </div>
+        <div className="table-pro border-t border-border/60 rounded-none border-x-0 border-b-0">
+          <table className="w-full border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
+            <colgroup>
+              <col style={{ width: '42%' }} />
+              <col style={{ width: '26%' }} />
+              <col style={{ width: '32%' }} />
+            </colgroup>
+            <thead>
+              <tr className="border-b border-border/60 bg-muted/40">
+                {['Organization', 'Slug', ''].map((h, i) => (
+                  <th key={i} className="text-left px-4 py-2">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {organizations && organizations.length > 0 ? (
+                organizations.map((org: any) => (
+                  <tr key={org.id} className="border-b border-border/40">
+                    <td className="px-4 py-2 font-medium truncate">
+                      <span className="flex items-center gap-2">
+                        <Building2 className="w-3 h-3 text-primary shrink-0" />
+                        {org.name}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 text-muted-foreground font-mono truncate">{org.slug}</td>
+                    <td className="px-3 py-1.5">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-1">
+                        <button onClick={() => openEditDialog(org)}
+                          className="flex items-center justify-center gap-1 px-2 py-0.5 rounded text-[10px] text-muted-foreground hover:text-primary border border-border/70 hover:bg-accent transition-colors">
+                          <Edit className="w-2.5 h-2.5" /> Rename
+                        </button>
+                        <button onClick={() => openDeleteDialog(org)}
+                          className="flex items-center justify-center gap-1 px-2 py-0.5 rounded text-[10px] text-muted-foreground hover:text-destructive border border-border/70 hover:bg-destructive/10 transition-colors">
+                          <Trash2 className="w-2.5 h-2.5" /> Remove
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={3} className="px-4 py-8 text-center text-muted-foreground italic text-xs">
+                    No organizations found. Create one to get started.
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={3} className="px-4 py-8 text-center text-gray-500 italic text-xs">
-                  No organizations found. Create one to get started.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
+        </div>
       </CardContent>
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="bg-black border-purple-500/30">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-white">Rename Organization</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogTitle>Rename Organization</DialogTitle>
+            <DialogDescription>
               Update the organization name (this will update everywhere)
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-org-name" className="text-white">Organization Name</Label>
+              <Label htmlFor="edit-org-name">Organization Name</Label>
               <Input
                 id="edit-org-name"
                 value={editOrgName}
                 onChange={(e) => setEditOrgName(e.target.value)}
                 placeholder="e.g., Memorial Hospital"
-                className="bg-black/50 border-purple-500/30 text-white"
               />
             </div>
             <Button
               onClick={handleUpdate}
               disabled={updateMutation.isPending}
-              className="w-full bg-purple-600 hover:bg-purple-500"
+              className="w-full"
             >
               {updateMutation.isPending ? "Updating..." : "Save Changes"}
             </Button>
@@ -250,11 +251,11 @@ export function OrganizationManagement() {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="bg-black border-red-500/30">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-white">Inactivate Organization</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Are you sure you want to inactivate <span className="font-semibold text-white">{orgToDelete?.name}</span>?
+            <DialogTitle>Inactivate Organization</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to inactivate <span className="font-semibold text-foreground">{orgToDelete?.name}</span>?
               This will hide the organization from the dashboard and portal, but data will be preserved.
             </DialogDescription>
           </DialogHeader>
@@ -262,14 +263,15 @@ export function OrganizationManagement() {
             <Button
               variant="outline"
               onClick={() => setDeleteDialogOpen(false)}
-              className="flex-1 border-purple-500/30 hover:bg-purple-600 hover:text-white text-gray-300"
+              className="flex-1"
             >
               Cancel
             </Button>
             <Button
               onClick={handleInactivate}
               disabled={inactivateMutation.isPending}
-              className="flex-1 bg-red-600 hover:bg-red-500 text-white"
+              variant="destructive"
+              className="flex-1"
             >
               {inactivateMutation.isPending ? "Inactivating..." : "Inactivate"}
             </Button>

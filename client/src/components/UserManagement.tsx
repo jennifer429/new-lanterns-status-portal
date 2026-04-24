@@ -151,17 +151,18 @@ export function UserManagement() {
   });
 
   if (usersLoading) {
-    return <div className="text-white">Loading users...</div>;
+    return <div className="text-muted-foreground">Loading users...</div>;
   }
 
   return (
     <div className="space-y-6">
-      <Card className="border-purple-500/20 bg-black/40 backdrop-blur-xl">
+      <Card className="card-elevated overflow-hidden">
+        <div className="h-1 bg-gradient-to-r from-primary via-primary/60 to-emerald-500/40" />
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-white text-xl">User Management</CardTitle>
-              <CardDescription className="text-gray-300">
+              <CardTitle className="text-xl">User Management</CardTitle>
+              <CardDescription>
                 Manage all portal users and their access
               </CardDescription>
             </div>
@@ -170,7 +171,6 @@ export function UserManagement() {
                 resetForm();
                 setIsCreateOpen(true);
               }}
-              className="bg-purple-600 hover:bg-purple-700"
             >
               <UserPlus className="w-4 h-4 mr-2" />
               Add User
@@ -180,9 +180,9 @@ export function UserManagement() {
         <CardContent>
           {/* Filter */}
           <div className="mb-4 flex items-center gap-3">
-            <Label className="text-gray-300">Filter by Organization:</Label>
+            <Label>Filter by Organization:</Label>
             <Select value={filterOrg} onValueChange={setFilterOrg}>
-              <SelectTrigger className="w-64 bg-purple-950/30 border-purple-500/30 text-white">
+              <SelectTrigger className="w-64">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -198,7 +198,7 @@ export function UserManagement() {
           </div>
 
           {/* Users Table */}
-          <div className="rounded-lg border border-purple-500/20 overflow-hidden">
+          <div className="table-pro">
             <table className="w-full border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
               <colgroup>
                 <col style={{ width: '16%' }} />
@@ -209,36 +209,36 @@ export function UserManagement() {
                 <col style={{ width: '7%'  }} />
               </colgroup>
               <thead>
-                <tr className="bg-purple-950/30 border-b border-purple-500/20">
+                <tr className="border-b border-border/60 bg-muted/40">
                   {['Name','Email','Role','Organization','Last Login',''].map((h,i) => (
-                    <th key={i} className="text-left px-3 py-2 text-[10px] font-medium text-gray-400 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    <th key={i} className="text-left px-3 py-2 whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {filteredUsers?.map((user) => (
-                  <tr key={user.id} className="border-b border-purple-500/10 hover:bg-purple-950/20 transition-colors">
-                    <td className="px-3 py-1.5 text-white font-medium truncate">{user.name}</td>
-                    <td className="px-3 py-1.5 text-gray-300 truncate">{user.email}</td>
+                  <tr key={user.id} className="border-b border-border/40">
+                    <td className="px-3 py-1.5 font-medium truncate">{user.name}</td>
+                    <td className="px-3 py-1.5 text-muted-foreground truncate">{user.email}</td>
                     <td className="px-3 py-1.5">
                       <span className={cn(
                         "inline-block px-1.5 py-0 rounded text-[10px] font-semibold leading-5 border",
                         user.role === "admin"
-                          ? "bg-purple-600/80 text-white border-purple-500/50"
-                          : "border-purple-500/30 text-purple-300"
+                          ? "bg-primary/15 text-primary border-primary/40"
+                          : "border-border/70 text-muted-foreground"
                       )}>{user.role}</span>
                     </td>
-                    <td className="px-3 py-1.5 text-gray-300">
+                    <td className="px-3 py-1.5 text-muted-foreground">
                       {user.organizationName ? (
                         <span className="flex items-center gap-1 truncate">
-                          <Building2 className="w-3 h-3 text-purple-400 shrink-0" />
-                          <span className="truncate">{user.organizationName}</span>
+                          <Building2 className="w-3 h-3 text-primary shrink-0" />
+                          <span className="truncate text-foreground">{user.organizationName}</span>
                         </span>
                       ) : (
-                        <span className="text-gray-500 italic">None</span>
+                        <span className="text-muted-foreground/60 italic">None</span>
                       )}
                     </td>
-                    <td className="px-3 py-1.5 text-gray-400 whitespace-nowrap">
+                    <td className="px-3 py-1.5 text-muted-foreground whitespace-nowrap">
                       {user.lastLoginAt
                         ? formatDistanceToNow(new Date(user.lastLoginAt), { addSuffix: true })
                         : "Never"}
@@ -246,11 +246,11 @@ export function UserManagement() {
                     <td className="px-2 py-1.5">
                       <div className="flex items-center justify-end gap-0.5">
                         <button onClick={() => handleEdit(user)}
-                          className="p-1 rounded hover:bg-purple-950/50 text-purple-400 hover:text-purple-200 transition-colors">
+                          className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-primary transition-colors">
                           <Pencil className="w-3 h-3" />
                         </button>
                         <button onClick={() => handleDelete(user)}
-                          className="p-1 rounded hover:bg-red-950/40 text-red-500/60 hover:text-red-300 transition-colors">
+                          className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
                           <Trash2 className="w-3 h-3" />
                         </button>
                       </div>
@@ -265,50 +265,47 @@ export function UserManagement() {
 
       {/* Create User Dialog */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="bg-slate-900 border-purple-500/30 text-white">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Create New User</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogDescription>
               Add a new user to the portal
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="create-name" className="text-gray-300">Name</Label>
+              <Label htmlFor="create-name">Name</Label>
               <Input
                 id="create-name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="bg-purple-950/30 border-purple-500/30 text-white"
               />
             </div>
             <div>
-              <Label htmlFor="create-email" className="text-gray-300">Email</Label>
+              <Label htmlFor="create-email">Email</Label>
               <Input
                 id="create-email"
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="bg-purple-950/30 border-purple-500/30 text-white"
               />
             </div>
             <div>
-              <Label htmlFor="create-password" className="text-gray-300">Password</Label>
+              <Label htmlFor="create-password">Password</Label>
               <Input
                 id="create-password"
                 type="password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="bg-purple-950/30 border-purple-500/30 text-white"
               />
             </div>
             <div>
-              <Label htmlFor="create-role" className="text-gray-300">Role</Label>
+              <Label htmlFor="create-role">Role</Label>
               <Select
                 value={formData.role}
                 onValueChange={(value: "admin" | "user") => setFormData({ ...formData, role: value })}
               >
-                <SelectTrigger className="bg-purple-950/30 border-purple-500/30 text-white">
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -318,14 +315,14 @@ export function UserManagement() {
               </Select>
             </div>
             <div>
-              <Label htmlFor="create-org" className="text-gray-300">Organization</Label>
+              <Label htmlFor="create-org">Organization</Label>
               <Select
                 value={formData.organizationId?.toString() || "none"}
                 onValueChange={(value) =>
                   setFormData({ ...formData, organizationId: value === "none" ? null : parseInt(value) })
                 }
               >
-                <SelectTrigger className="bg-purple-950/30 border-purple-500/30 text-white">
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -346,7 +343,6 @@ export function UserManagement() {
             <Button
               onClick={handleCreate}
               disabled={createMutation.isPending}
-              className="bg-purple-600 hover:bg-purple-700"
             >
               {createMutation.isPending ? "Creating..." : "Create User"}
             </Button>
@@ -356,35 +352,33 @@ export function UserManagement() {
 
       {/* Edit User Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="bg-slate-900 border-purple-500/30 text-white">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogDescription>
               Update user information
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="edit-name" className="text-gray-300">Name</Label>
+              <Label htmlFor="edit-name">Name</Label>
               <Input
                 id="edit-name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="bg-purple-950/30 border-purple-500/30 text-white"
               />
             </div>
             <div>
-              <Label htmlFor="edit-email" className="text-gray-300">Email</Label>
+              <Label htmlFor="edit-email">Email</Label>
               <Input
                 id="edit-email"
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="bg-purple-950/30 border-purple-500/30 text-white"
               />
             </div>
             <div>
-              <Label htmlFor="edit-password" className="text-gray-300">
+              <Label htmlFor="edit-password">
                 New Password (leave blank to keep current)
               </Label>
               <Input
@@ -392,16 +386,15 @@ export function UserManagement() {
                 type="password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="bg-purple-950/30 border-purple-500/30 text-white"
               />
             </div>
             <div>
-              <Label htmlFor="edit-role" className="text-gray-300">Role</Label>
+              <Label htmlFor="edit-role">Role</Label>
               <Select
                 value={formData.role}
                 onValueChange={(value: "admin" | "user") => setFormData({ ...formData, role: value })}
               >
-                <SelectTrigger className="bg-purple-950/30 border-purple-500/30 text-white">
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -411,14 +404,14 @@ export function UserManagement() {
               </Select>
             </div>
             <div>
-              <Label htmlFor="edit-org" className="text-gray-300">Organization</Label>
+              <Label htmlFor="edit-org">Organization</Label>
               <Select
                 value={formData.organizationId?.toString() || "none"}
                 onValueChange={(value) =>
                   setFormData({ ...formData, organizationId: value === "none" ? null : parseInt(value) })
                 }
               >
-                <SelectTrigger className="bg-purple-950/30 border-purple-500/30 text-white">
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -439,7 +432,6 @@ export function UserManagement() {
             <Button
               onClick={handleUpdate}
               disabled={updateMutation.isPending}
-              className="bg-purple-600 hover:bg-purple-700"
             >
               {updateMutation.isPending ? "Updating..." : "Update User"}
             </Button>
@@ -449,10 +441,10 @@ export function UserManagement() {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-        <DialogContent className="bg-slate-900 border-purple-500/30 text-white">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete User</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogDescription>
               Are you sure you want to delete {selectedUser?.name}? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
@@ -463,7 +455,7 @@ export function UserManagement() {
             <Button
               onClick={confirmDelete}
               disabled={deleteMutation.isPending}
-              className="bg-red-600 hover:bg-red-700"
+              variant="destructive"
             >
               {deleteMutation.isPending ? "Deleting..." : "Delete"}
             </Button>

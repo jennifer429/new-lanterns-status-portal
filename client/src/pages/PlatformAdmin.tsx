@@ -145,7 +145,7 @@ export default function PlatformAdmin() {
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-purple-600 border-purple-400 hover:bg-purple-500 text-white font-semibold text-xs sm:text-sm">
+                  <Button variant="outline" className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-primary border-primary/40 hover:bg-primary/90 text-primary-foreground font-semibold text-xs sm:text-sm">
                     {user?.name ? getInitials(user.name) : "AD"}
                   </Button>
                 </DropdownMenuTrigger>
