@@ -5,7 +5,6 @@ import { Route, Switch, useRoute, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
-import Admin from "./pages/Admin";
 import PlatformAdmin from "./pages/PlatformAdmin";
 import IntakeNewRedesign from "./pages/IntakeNewRedesign";
 import Login from "./pages/Login";
@@ -66,7 +65,8 @@ function Router() {
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/set-password" component={SetPassword} />
-      <Route path="/admin" component={Admin} />
+      {/* Legacy /admin redirects to the unified /org/admin page */}
+      <Route path="/admin">{() => { window.location.replace("/org/admin"); return null; }}</Route>
       <Route path="/org/admin/create" component={CreateOrganization} />
       {/* Partner admin create org - supports any partner slug */}
       <Route path="/org/:partner/admin/create" component={CreateOrganization} />
