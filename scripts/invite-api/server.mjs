@@ -278,6 +278,21 @@ app.post("/invites/send", async (req, res) => {
   }
 });
 
+// ── GET /invites/preview ──────────────────────────────────────────────────────
+// Renders the email HTML in your browser. No email sent, nothing marked.
+// Query params: ?name=John&email=john@test.com&orgName=RRAL
+app.get("/invites/preview", (req, res) => {
+  const sample = {
+    name: req.query.name || "Pranay",
+    email: req.query.email || "pranay@example.com",
+    orgName: req.query.orgName || "RRAL",
+    setPasswordUrl: "https://newlantern.us.com/set-password?token=EXAMPLE-TOKEN-PREVIEW",
+    dashboardUrl: "https://newlantern.us.com/org/RRAL",
+  };
+  res.setHeader("Content-Type", "text/html");
+  res.send(buildHtml(sample));
+});
+
 // ── POST /invites/send-all ────────────────────────────────────────────────────
 // Sends invite emails to ALL pending users, then marks them as sent.
 // Body (optional): { dryRun: true } — returns what would be sent without sending.
