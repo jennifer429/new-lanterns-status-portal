@@ -49,3 +49,10 @@
 - [x] Colored phase header bars
 - [x] Edit panel with populated sample data
 - [x] N/A cell shows text overlay, not dashed border
+
+## Swimlane Refinements (Apr 23)
+
+- [x] Rename DataFirst + Scipio to Scipiotech & Data First
+- [x] New column headers: Discovery, Connectivity, Data Feed Testing, Production Configuration, Go Live
+- [x] Shrink cards: remove owner bullet and dates, keep just assignment text
+- [x] Row labels: keep colored badge circles, leave white name blank for questionnaire population
