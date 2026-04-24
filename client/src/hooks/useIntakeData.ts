@@ -55,6 +55,12 @@ export function useIntakeData(slug: string, clientSlug: string) {
     { enabled: !!slug }
   );
 
+  // Workflow pathway summaries — canonical source for integration-workflows progress
+  const { data: workflowPathwayRows = [] } = trpc.workflowPathways.list.useQuery(
+    { organizationSlug: slug || "" },
+    { enabled: !!slug }
+  );
+
   // ── tRPC mutations ───────────────────────────────────────────────────────────
 
   const utils = trpc.useUtils();
@@ -272,8 +278,13 @@ export function useIntakeData(slug: string, clientSlug: string) {
     if (section.type === "integration-workflows") {
       const wfKeys = ["orders", "images", "priors", "reports"] as const;
       const completedWorkflows = wfKeys.filter((wf) => {
-        const v = responses[`IW.${wf}_description`];
-        return v && String(v).trim().length > 0;
+        const row = workflowPathwayRows.find(
+          (r) => r.workflowType === wf && r.pathId === "__summary",
+        );
+        if (row?.notes && row.notes.trim().length > 0) return true;
+        // Fallback for pre-migration data still living in intakeResponses
+        const legacy = responses[`IW.${wf}_description`];
+        return !!(legacy && String(legacy).trim().length > 0);
       }).length;
       return Math.round((completedWorkflows / 4) * 100);
     }

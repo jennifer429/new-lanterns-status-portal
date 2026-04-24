@@ -53,6 +53,7 @@ export const workflowPathwaysRouter = router({
         sourceSystem: z.string().max(255).nullable().optional(),
         middlewareSystem: z.string().max(255).nullable().optional(),
         destinationSystem: z.string().max(255).nullable().optional(),
+        systems: z.array(z.string()).nullable().optional(),
         notes: z.string().nullable().optional(),
       }),
     )
@@ -77,6 +78,7 @@ export const workflowPathwaysRouter = router({
       if (input.sourceSystem !== undefined) patch.sourceSystem = input.sourceSystem;
       if (input.middlewareSystem !== undefined) patch.middlewareSystem = input.middlewareSystem;
       if (input.destinationSystem !== undefined) patch.destinationSystem = input.destinationSystem;
+      if (input.systems !== undefined) patch.systems = input.systems === null ? null : JSON.stringify(input.systems);
       if (input.notes !== undefined) patch.notes = input.notes;
 
       if (existing) {
@@ -93,6 +95,7 @@ export const workflowPathwaysRouter = router({
         sourceSystem: input.sourceSystem ?? null,
         middlewareSystem: input.middlewareSystem ?? null,
         destinationSystem: input.destinationSystem ?? null,
+        systems: input.systems ? JSON.stringify(input.systems) : null,
         notes: input.notes ?? null,
       });
       const [inserted] = await db

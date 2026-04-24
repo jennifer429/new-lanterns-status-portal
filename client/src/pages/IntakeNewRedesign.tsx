@@ -281,6 +281,7 @@ export default function IntakeNewRedesign() {
                     }
                   }}
                   organizationId={org?.id ?? 0}
+                  organizationSlug={slug}
                   onBack={() => setLocation(clientSlug ? `/org/${clientSlug}/${slug}` : `/org/${slug}`)}
                   onContinue={() => {
                     const idx = questionnaireSections.findIndex((s) => s.id === currentSection);

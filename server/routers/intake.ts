@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { publicProcedure, router } from "../_core/trpc";
 import { requireDb } from "../db";
-import { intakeResponses, intakeFileAttachments, organizations, questions, onboardingFeedback, clients, partnerTemplates, partnerTaskTemplates, orgCustomTasks } from "../../drizzle/schema";
+import { intakeResponses, intakeFileAttachments, organizations, questions, onboardingFeedback, clients, partnerTemplates, partnerTaskTemplates, orgCustomTasks, workflowPathways } from "../../drizzle/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { uploadToGoogleDrive } from "./files";
 import { logFileActivity } from "../fileAuditLog";
@@ -329,10 +329,33 @@ export const intakeRouter = router({
         import('../../shared/questionnaireData'),
       ]);
 
-      const [responsesData, orgFiles] = await Promise.all([
+      const [responsesData, orgFiles, pathwayRows] = await Promise.all([
         db.select().from(intakeResponses).where(eq(intakeResponses.organizationId, org.id)),
         db.select().from(intakeFileAttachments).where(eq(intakeFileAttachments.organizationId, org.id)),
+        db.select().from(workflowPathways).where(eq(workflowPathways.organizationId, org.id)),
       ]);
+
+      // Surface workflowPathways summaries as synthetic IW.*_description responses
+      // so calculateProgress sees the integration-workflows section as answered.
+      const existingQids = new Set(responsesData.map(r => r.questionId));
+      for (const row of pathwayRows) {
+        if (row.pathId !== "__summary") continue;
+        const qid = `IW.${row.workflowType}_description`;
+        if (existingQids.has(qid)) continue;
+        if (!row.notes || row.notes.trim().length === 0) continue;
+        responsesData.push({
+          id: -1,
+          organizationId: org.id,
+          questionId: qid,
+          section: "integration-workflows",
+          response: row.notes,
+          fileUrl: null,
+          status: "complete",
+          updatedBy: null,
+          createdAt: row.createdAt,
+          updatedAt: row.updatedAt,
+        });
+      }
 
       const allQuestions = questionnaireSections.flatMap((section: any) => {
         if (section.type === 'workflow') {

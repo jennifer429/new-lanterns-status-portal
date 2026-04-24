@@ -515,6 +515,11 @@ export default function Validation() {
     { refetchOnWindowFocus: false }
   );
 
+  const { data: workflowPathwayRows = [] } = trpc.workflowPathways.list.useQuery(
+    { organizationSlug: slug },
+    { enabled: !!slug, refetchOnWindowFocus: false }
+  );
+
   const responseLookup = useMemo(() => {
     const map: Record<string, string> = {};
     for (const r of intakeResponses) {
@@ -522,8 +527,16 @@ export default function Validation() {
         map[r.questionId] = r.response;
       }
     }
+    // Workflow summaries from workflowPathways now carry the canonical IW.*_description
+    // values — expose them under the legacy keys so evidence pills resolve.
+    for (const row of workflowPathwayRows) {
+      if (row.pathId !== "__summary") continue;
+      if (row.notes && row.notes.trim().length > 0) {
+        map[`IW.${row.workflowType}_description`] = row.notes;
+      }
+    }
     return map;
-  }, [intakeResponses]);
+  }, [intakeResponses, workflowPathwayRows]);
 
   const utils = trpc.useUtils();
 

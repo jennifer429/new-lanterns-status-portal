@@ -126,26 +126,27 @@ function SystemsMultiSelect({ selectedNames, allSystems, onChange }: SystemsMult
 }
 
 interface WorkflowBlockProps {
-  id: string;
   label: string;
   description: string;
   placeholder: string;
-  values: Record<string, any>;
-  systems: IntegrationSystem[];
-  onChange: (key: string, value: any) => void;
+  descriptionValue: string;
+  selectedSystems: string[];
+  allSystems: IntegrationSystem[];
+  onDescriptionChange: (value: string) => void;
+  onSystemsChange: (value: string[]) => void;
 }
 
-function WorkflowBlock({ id, label, description, placeholder, values, systems, onChange }: WorkflowBlockProps) {
-  const descKey = `IW.${id}_description`;
-  const sysKey  = `IW.${id}_systems`;
-  const selectedNames: string[] = (() => {
-    try {
-      const v = values[sysKey];
-      if (!v) return [];
-      return Array.isArray(v) ? v : JSON.parse(v);
-    } catch { return []; }
-  })();
-  const isFilled = !!(values[descKey] && String(values[descKey]).trim().length > 0);
+function WorkflowBlock({
+  label,
+  description,
+  placeholder,
+  descriptionValue,
+  selectedSystems,
+  allSystems,
+  onDescriptionChange,
+  onSystemsChange,
+}: WorkflowBlockProps) {
+  const isFilled = !!(descriptionValue && descriptionValue.trim().length > 0);
 
   return (
     <div className={cn('space-y-3 p-5 rounded-xl border bg-card transition-colors', isFilled && 'border-primary/50')}>
@@ -158,8 +159,8 @@ function WorkflowBlock({ id, label, description, placeholder, values, systems, o
       </div>
       <p className="text-sm text-muted-foreground">{description}</p>
       <Textarea
-        value={values[descKey] || ''}
-        onChange={(e) => onChange(descKey, e.target.value)}
+        value={descriptionValue}
+        onChange={(e) => onDescriptionChange(e.target.value)}
         placeholder={placeholder}
         rows={5}
         className="resize-y"
@@ -167,9 +168,9 @@ function WorkflowBlock({ id, label, description, placeholder, values, systems, o
       <div className="space-y-1.5">
         <p className="text-sm text-muted-foreground">Systems involved:</p>
         <SystemsMultiSelect
-          selectedNames={selectedNames}
-          allSystems={systems}
-          onChange={(v) => onChange(sysKey, v)}
+          selectedNames={selectedSystems}
+          allSystems={allSystems}
+          onChange={onSystemsChange}
         />
       </div>
     </div>
@@ -180,12 +181,80 @@ interface IntegrationWorkflowsProps {
   values: Record<string, any>;
   onChange: (key: string, value: any) => void;
   organizationId: number;
+  organizationSlug: string;
   onBack?: () => void;
   onContinue?: () => void;
 }
 
-export function IntegrationWorkflows({ values, onChange, organizationId, onBack, onContinue }: IntegrationWorkflowsProps) {
+const PRIMARY_WORKFLOWS = ['orders', 'images', 'priors', 'reports'] as const;
+type PrimaryWorkflow = (typeof PRIMARY_WORKFLOWS)[number];
+const SUMMARY_PATH_ID = '__summary';
+
+function parseSystems(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((s): s is string => typeof s === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+export function IntegrationWorkflows({ values, onChange, organizationId, organizationSlug, onBack, onContinue }: IntegrationWorkflowsProps) {
   const uploadFileMutation = trpc.files.upload.useMutation();
+
+  // ── Workflow pathway summaries (canonical source for the 4 primary blocks) ──
+  const utils = trpc.useUtils();
+  const pathwaysQuery = trpc.workflowPathways.list.useQuery(
+    { organizationSlug },
+    { enabled: !!organizationSlug, refetchOnWindowFocus: false },
+  );
+  const upsertPathway = trpc.workflowPathways.upsert.useMutation({
+    onSuccess: () => utils.workflowPathways.list.invalidate({ organizationSlug }),
+  });
+
+  const summaries = (() => {
+    // Fallback seeded from the legacy IW.* response keys so pre-migration data
+    // stays visible until the user edits (and the first edit copies it into
+    // workflowPathways via upsert).
+    const map: Record<PrimaryWorkflow, { description: string; systems: string[] }> = {
+      orders: { description: '', systems: [] },
+      images: { description: '', systems: [] },
+      priors: { description: '', systems: [] },
+      reports: { description: '', systems: [] },
+    };
+    for (const wf of PRIMARY_WORKFLOWS) {
+      const legacyDesc = values[`IW.${wf}_description`];
+      if (legacyDesc) map[wf].description = String(legacyDesc);
+      const legacySys = values[`IW.${wf}_systems`];
+      if (legacySys) {
+        try {
+          const parsed = Array.isArray(legacySys) ? legacySys : JSON.parse(legacySys);
+          if (Array.isArray(parsed)) map[wf].systems = parsed.filter((s): s is string => typeof s === 'string');
+        } catch { /* ignore */ }
+      }
+    }
+    for (const row of pathwaysQuery.data ?? []) {
+      if (row.pathId !== SUMMARY_PATH_ID) continue;
+      if (!(PRIMARY_WORKFLOWS as readonly string[]).includes(row.workflowType)) continue;
+      map[row.workflowType as PrimaryWorkflow] = {
+        description: row.notes ?? '',
+        systems: parseSystems(row.systems),
+      };
+    }
+    return map;
+  })();
+
+  const saveSummary = (wf: PrimaryWorkflow, patch: { description?: string; systems?: string[] }) => {
+    upsertPathway.mutate({
+      organizationSlug,
+      workflowType: wf,
+      pathId: SUMMARY_PATH_ID,
+      enabled: true,
+      ...(patch.description !== undefined ? { notes: patch.description } : {}),
+      ...(patch.systems !== undefined ? { systems: patch.systems } : {}),
+    });
+  };
 
   // ── Systems (read from Architecture section via shared values) ──────────────
   const systems: IntegrationSystem[] = (() => {
@@ -226,11 +295,7 @@ export function IntegrationWorkflows({ values, onChange, organizationId, onBack,
   }, [organizationId, uploadFileMutation, onChange]);
 
   // ── Completion ───────────────────────────────────────────────────────────────
-  const wfKeys = ['orders', 'images', 'priors', 'reports'] as const;
-  const completedWorkflows = wfKeys.filter(wf => {
-    const v = values[`IW.${wf}_description`];
-    return v && String(v).trim().length > 0;
-  }).length;
+  const completedWorkflows = PRIMARY_WORKFLOWS.filter(wf => summaries[wf].description.trim().length > 0).length;
   const historicDone = !!(values['IW.historic_results_description'] && String(values['IW.historic_results_description']).trim().length > 0);
   const techSheetsDone = !!(values['IW.tech_sheets_description'] && String(values['IW.tech_sheets_description']).trim().length > 0);
   const overlayDone = !!(values['IW.overlay_pacs_description'] && String(values['IW.overlay_pacs_description']).trim().length > 0);
@@ -263,40 +328,44 @@ export function IntegrationWorkflows({ values, onChange, organizationId, onBack,
       {/* Workflow blocks — 2×2 grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <WorkflowBlock
-          id="orders"
           label="Orders Workflow"
           description="Describe how imaging orders reach the platform."
           placeholder="e.g., Orders originate in Epic, sent via HL7 ORM through Mirth Connect to New Lantern..."
-          values={values}
-          systems={systems}
-          onChange={onChange}
+          descriptionValue={summaries.orders.description}
+          selectedSystems={summaries.orders.systems}
+          allSystems={systems}
+          onDescriptionChange={(v) => saveSummary('orders', { description: v })}
+          onSystemsChange={(v) => saveSummary('orders', { systems: v })}
         />
         <WorkflowBlock
-          id="images"
           label="Images Workflow"
           description="Describe how imaging studies are routed."
           placeholder="e.g., Studies acquired on modalities (CT, MR, XR) and sent via DICOM C-STORE to PACS, then forwarded to New Lantern..."
-          values={values}
-          systems={systems}
-          onChange={onChange}
+          descriptionValue={summaries.images.description}
+          selectedSystems={summaries.images.systems}
+          allSystems={systems}
+          onDescriptionChange={(v) => saveSummary('images', { description: v })}
+          onSystemsChange={(v) => saveSummary('images', { systems: v })}
         />
         <WorkflowBlock
-          id="priors"
           label="Priors Workflow"
           description="Describe how prior studies are retrieved."
           placeholder="e.g., New Lantern queries prior PACS via C-FIND/C-MOVE for relevant prior studies when a new order arrives..."
-          values={values}
-          systems={systems}
-          onChange={onChange}
+          descriptionValue={summaries.priors.description}
+          selectedSystems={summaries.priors.systems}
+          allSystems={systems}
+          onDescriptionChange={(v) => saveSummary('priors', { description: v })}
+          onSystemsChange={(v) => saveSummary('priors', { systems: v })}
         />
         <WorkflowBlock
-          id="reports"
           label="Reports Workflow"
           description="Describe how reports are delivered back."
           placeholder="e.g., Finalized reports sent via HL7 ORU through Mirth Connect back to Epic Radiant..."
-          values={values}
-          systems={systems}
-          onChange={onChange}
+          descriptionValue={summaries.reports.description}
+          selectedSystems={summaries.reports.systems}
+          allSystems={systems}
+          onDescriptionChange={(v) => saveSummary('reports', { description: v })}
+          onSystemsChange={(v) => saveSummary('reports', { systems: v })}
         />
       </div>
 

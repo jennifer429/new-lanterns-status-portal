@@ -1,0 +1,1 @@
+ALTER TABLE `workflowPathways` ADD `systems` text;

@@ -601,6 +601,7 @@ export const workflowPathways = mysqlTable("workflowPathways", {
   sourceSystem: varchar("sourceSystem", { length: 255 }),
   middlewareSystem: varchar("middlewareSystem", { length: 255 }),
   destinationSystem: varchar("destinationSystem", { length: 255 }),
+  systems: text("systems"), // JSON array of system names involved in this pathway/summary
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
