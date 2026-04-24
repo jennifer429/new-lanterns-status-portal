@@ -14,10 +14,11 @@ export function useOrgParams(subPath?: string) {
     ? `/org/:clientSlug/:slug/${subPath}`
     : "/org/:clientSlug/:slug";
 
-  const [, params] = useRoute<{ clientSlug: string; slug: string }>(routePath);
+  const [, params] = useRoute(routePath);
+  const p = params as Record<string, string> | undefined;
 
-  const clientSlug = params?.clientSlug ?? "";
-  const slug = params?.slug ?? "";
+  const clientSlug = p?.clientSlug ?? "";
+  const slug = p?.slug ?? "";
   const orgPath = `/org/${clientSlug}/${slug}`;
 
   return { clientSlug, slug, orgPath };

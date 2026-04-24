@@ -300,7 +300,7 @@ export function useHomeData(orgSlug: string) {
 
   const qDone = completedSections === totalSections && totalSections > 0;
   const vDone = valCompleted === valTotal && valTotal > 0;
-  const activePhase = !qDone ? "questionnaire" : !vDone ? "testing" : "implementation";
+  const activePhase: "questionnaire" | "testing" | "implementation" = !qDone ? "questionnaire" : !vDone ? "testing" : "implementation";
 
   // ── Specs by category ────────────────────────────────────────────────────
   const specsByCategory = new Map<string, any[]>();

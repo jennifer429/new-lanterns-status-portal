@@ -429,12 +429,10 @@ function StatusBadge({
 function RelatedAnswers({
   questions,
   responses,
-  slug,
   orgPath,
 }: {
   questions: TestCase["relatedQuestions"];
   responses: Record<string, string>;
-  slug: string;
   orgPath: string;
 }) {
   if (!questions || questions.length === 0) return null;
@@ -1191,7 +1189,6 @@ export default function Validation() {
                                     <RelatedAnswers
                                       questions={test.relatedQuestions}
                                       responses={responseLookup}
-                                      slug={slug}
                                       orgPath={orgPath}
                                     />
                                   )}

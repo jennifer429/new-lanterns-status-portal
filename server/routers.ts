@@ -16,6 +16,7 @@ import { notesRouter } from "./routers/notes";
 import { aiRouter } from "./routers/ai";
 import { exportsRouter } from "./routers/exports";
 import { proceduralLibraryRouter } from "./routers/proceduralLibrary";
+import { swimlaneRouter } from "./routers/swimlane";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -47,6 +48,7 @@ export const appRouter = router({
   ai: aiRouter,
   exports: exportsRouter,
   proceduralLibrary: proceduralLibraryRouter,
+  swimlane: swimlaneRouter,
 });
 
 export type AppRouter = typeof appRouter;
