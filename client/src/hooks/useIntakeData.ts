@@ -129,6 +129,10 @@ export function useIntakeData(slug: string, clientSlug: string) {
   const updateConnRow = trpc.connectivity.updateRow.useMutation();
   const archiveConnRow = trpc.connectivity.archiveRow.useMutation();
 
+  const upsertWorkflowPathway = trpc.workflowPathways.upsert.useMutation({
+    onSuccess: () => utils.workflowPathways.list.invalidate({ organizationSlug: slug || "" }),
+  });
+
   // ── Derived state ────────────────────────────────────────────────────────────
 
   // Build a map of questionId -> template(s) from database
@@ -522,6 +526,25 @@ export function useIntakeData(slug: string, clientSlug: string) {
       }
     });
 
+    // Workflow pathway summaries now live in workflowPathways, not responses.
+    // Project them back into IW.<wf>_description / IW.<wf>_systems so the
+    // export stays round-trippable with the import path.
+    for (const row of workflowPathwayRows) {
+      if (row.pathId !== "__summary") continue;
+      const wf = row.workflowType;
+      if (row.notes && row.notes.trim().length > 0) {
+        exportResponses[`IW.${wf}_description`] = row.notes;
+      }
+      if (row.systems) {
+        try {
+          const parsed = JSON.parse(row.systems);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            exportResponses[`IW.${wf}_systems`] = parsed;
+          }
+        } catch { /* ignore malformed */ }
+      }
+    }
+
     const payload = {
       exported: new Date().toISOString(),
       org: slug,
@@ -598,8 +621,35 @@ export function useIntakeData(slug: string, clientSlug: string) {
       }
 
       setResponses((prev) => ({ ...prev, ...importedResponses }));
-      await Promise.all(
-        Object.entries(importedResponses).map(([questionId, value]) =>
+
+      // Route primary workflow summaries into workflowPathways (canonical).
+      // Everything else (including secondary IW.* keys like historic_results,
+      // tech_sheets, overlay_pacs, ct_dose) continues going to intakeResponses.
+      const primaries = ["orders", "images", "priors", "reports"] as const;
+      const summaryPatch: Record<string, { description?: string; systems?: string[] }> = {};
+      const regularEntries: [string, unknown][] = [];
+      for (const [qid, value] of Object.entries(importedResponses)) {
+        const descMatch = primaries.find((wf) => qid === `IW.${wf}_description`);
+        const sysMatch = primaries.find((wf) => qid === `IW.${wf}_systems`);
+        if (descMatch) {
+          (summaryPatch[descMatch] ||= {}).description = String(value ?? "");
+        } else if (sysMatch) {
+          let arr: string[] = [];
+          if (Array.isArray(value)) arr = value.filter((s): s is string => typeof s === "string");
+          else if (typeof value === "string") {
+            try {
+              const parsed = JSON.parse(value);
+              if (Array.isArray(parsed)) arr = parsed.filter((s): s is string => typeof s === "string");
+            } catch { /* ignore */ }
+          }
+          (summaryPatch[sysMatch] ||= {}).systems = arr;
+        } else {
+          regularEntries.push([qid, value]);
+        }
+      }
+
+      await Promise.all([
+        ...regularEntries.map(([questionId, value]) =>
           saveMutation.mutateAsync({
             organizationSlug: slug,
             questionId,
@@ -609,8 +659,18 @@ export function useIntakeData(slug: string, clientSlug: string) {
                 : String(value),
             userEmail: user?.email || "",
           })
-        )
-      );
+        ),
+        ...Object.entries(summaryPatch).map(([wf, patch]) =>
+          upsertWorkflowPathway.mutateAsync({
+            organizationSlug: slug,
+            workflowType: wf as (typeof primaries)[number],
+            pathId: "__summary",
+            enabled: true,
+            ...(patch.description !== undefined ? { notes: patch.description } : {}),
+            ...(patch.systems !== undefined ? { systems: patch.systems } : {}),
+          })
+        ),
+      ]);
 
       toast.success("Import successful", {
         description: `Imported ${importCount} responses`,
