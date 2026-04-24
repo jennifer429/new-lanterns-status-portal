@@ -706,7 +706,7 @@ export default function Implementation() {
               Site Dashboard
             </Link>
             {user?.role === "admin" && (
-              <Link href="/admin" className="text-sm text-muted-foreground hover:text-primary transition-colors font-medium whitespace-nowrap">
+              <Link href="/org/admin" className="text-sm text-muted-foreground hover:text-primary transition-colors font-medium whitespace-nowrap">
                 Admin
               </Link>
             )}
