@@ -61,3 +61,5 @@
 
 - [x] Pull real vendor/hospital names from questionnaire responses into swimlane row labels
 - [x] Remove Rad Group row from swimlane (they know what they do)
+- [x] Replace grid: 5 columns (Questionnaire, Connectivity, Data Implementation, Go-Live Pre-Prod, Go-Live) × 5 rows (Health Care Org, EHR/RIS Vendor, PACS Vendor, Partner, New Lantern)
+- [x] Clean up card verbiage to be less repetitive
