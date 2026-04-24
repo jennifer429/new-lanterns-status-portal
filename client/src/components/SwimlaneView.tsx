@@ -15,17 +15,19 @@
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { X, Download, Upload, Pencil } from "lucide-react";
+import { X, Download, Upload, Pencil, Calendar as CalendarIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { trpc } from "@/lib/trpc";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
 type Status = "open" | "in_progress" | "done" | "blocked" | "n_a";
-type PartyId = "hospital" | "ehr" | "pacs" | "partner" | "nl";
+type PartyId = "hospital" | "ehr" | "pacs" | "partner" | "partner_vendor" | "nl";
 type PhaseId = "questionnaire" | "connectivity" | "implementation" | "golive" | "golive_support";
 
 interface Party {
@@ -55,12 +57,18 @@ interface MilestoneCard {
 // ── Reference data ─────────────────────────────────────────────────────────
 
 const PARTIES: Party[] = [
-  { id: "hospital", label: "Health Care Org",   badge: "hospital",  badgeColor: "bg-sky-500/20 text-sky-400 border-sky-500/30" },
-  { id: "ehr",      label: "EHR / RIS Vendor",  badge: "ehr / ris", badgeColor: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" },
-  { id: "pacs",     label: "PACS Vendor",        badge: "pacs",      badgeColor: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30" },
-  { id: "partner",  label: "Partner",            badge: "partner",   badgeColor: "bg-violet-500/20 text-violet-400 border-violet-500/30" },
-  { id: "nl",       label: "New Lantern",        badge: "new lantern", badgeColor: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
+  { id: "hospital",        label: "Health Care Org",     badge: "hospital",       badgeColor: "bg-sky-500/20 text-sky-400 border-sky-500/30" },
+  { id: "ehr",             label: "EHR / RIS Vendor",    badge: "ehr / ris",      badgeColor: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" },
+  { id: "pacs",            label: "PACS Vendor",          badge: "pacs",           badgeColor: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30" },
+  { id: "partner",         label: "Partner",              badge: "partner",        badgeColor: "bg-violet-500/20 text-violet-400 border-violet-500/30" },
+  { id: "partner_vendor",  label: "Partner - Vendor",    badge: "partner · vendor", badgeColor: "bg-fuchsia-500/20 text-fuchsia-400 border-fuchsia-500/30" },
+  { id: "nl",              label: "New Lantern",          badge: "new lantern",    badgeColor: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
 ];
+
+// Fallback label for the Partner - Vendor row when no questionnaire-derived
+// value is available. The user's spec lists "Data First and Scipiotech" as
+// the default vendors.
+const PARTNER_VENDOR_FALLBACK = "Data First / Scipiotech";
 
 const PHASES: Phase[] = [
   { id: "questionnaire",    title: "Questionnaire" },
@@ -74,39 +82,46 @@ const PHASES: Phase[] = [
 
 const DEFAULT_CARDS: MilestoneCard[] = [
   // Health Care Org
-  { id: "h1", line1: "Complete questionnaire",    line2: "workflows",                            party: "hospital", phase: "questionnaire",  status: "done",        blocker: "", followUp: "", notes: "" },
-  { id: "h2", line1: "Enable VPN access",         line2: "",                                     party: "hospital", phase: "connectivity",   status: "in_progress", blocker: "", followUp: "", notes: "" },
-  { id: "h3", line1: "Generate tech sheets &",    line2: "place orders for workflows",           party: "hospital", phase: "implementation", status: "open",        blocker: "", followUp: "", notes: "" },
-  { id: "h4", line1: "Resolve network issues",    line2: "",                                     party: "hospital", phase: "golive",         status: "open",        blocker: "", followUp: "", notes: "" },
-  { id: "h5", line1: "Troubleshoot studies",      line2: "& workflows",                          party: "hospital", phase: "golive_support", status: "open",        blocker: "", followUp: "", notes: "" },
+  { id: "h1", line1: "Complete questionnaire",    line2: "workflows",                      party: "hospital", phase: "questionnaire",  status: "open", blocker: "", followUp: "", notes: "" },
+  { id: "h2", line1: "VPN access",                line2: "",                               party: "hospital", phase: "connectivity",   status: "open", blocker: "", followUp: "", notes: "" },
+  { id: "h3", line1: "Generate tech sheets",      line2: "& place orders for workflows",   party: "hospital", phase: "implementation", status: "open", blocker: "", followUp: "", notes: "" },
+  { id: "h4", line1: "Health Care Org",           line2: "signoff",                        party: "hospital", phase: "golive",         status: "open", blocker: "", followUp: "", notes: "" },
+  { id: "h5", line1: "Troubleshoot studies",      line2: "and workflows",                  party: "hospital", phase: "golive_support", status: "open", blocker: "", followUp: "", notes: "" },
 
   // EHR / RIS Vendor
-  { id: "e1", line1: "Complete questionnaire",    line2: "orders & results",                     party: "ehr", phase: "questionnaire",  status: "done",        blocker: "", followUp: "", notes: "" },
-  { id: "e2", line1: "Deliver endpoint details",  line2: "",                                     party: "ehr", phase: "connectivity",   status: "in_progress", blocker: "", followUp: "", notes: "" },
-  { id: "e3", line1: "Implement HL7 interface,",  line2: "resolve errors, share reports",        party: "ehr", phase: "implementation", status: "open",        blocker: "", followUp: "", notes: "" },
-  { id: "e4", line1: "Confirm feed ready",        line2: "",                                     party: "ehr", phase: "golive",         status: "open",        blocker: "", followUp: "", notes: "" },
-  { id: "e5", line1: "Troubleshoot results,",     line2: "worklist & orders",                    party: "ehr", phase: "golive_support", status: "open",        blocker: "", followUp: "", notes: "" },
+  { id: "e1", line1: "Complete questionnaire",    line2: "orders & results",               party: "ehr", phase: "questionnaire",  status: "open", blocker: "", followUp: "", notes: "" },
+  { id: "e2", line1: "Deliver endpoint details",  line2: "",                               party: "ehr", phase: "connectivity",   status: "open", blocker: "", followUp: "", notes: "" },
+  { id: "e3", line1: "HL7 interface &",           line2: "historic 3-5 years of reports",  party: "ehr", phase: "implementation", status: "open", blocker: "", followUp: "", notes: "" },
+  { id: "e4", line1: "Confirm feed ready",        line2: "",                               party: "ehr", phase: "golive",         status: "open", blocker: "", followUp: "", notes: "" },
+  { id: "e5", line1: "Troubleshoot results,",     line2: "worklist & orders",              party: "ehr", phase: "golive_support", status: "open", blocker: "", followUp: "", notes: "" },
 
   // PACS Vendor
-  { id: "p1", line1: "Complete questionnaire",    line2: "DICOM workflows",                      party: "pacs", phase: "questionnaire",  status: "in_progress", blocker: "", followUp: "", notes: "" },
-  { id: "p2", line1: "Deliver DICOM routing",     line2: "",                                     party: "pacs", phase: "connectivity",   status: "open",        blocker: "", followUp: "", notes: "" },
-  { id: "p3", line1: "Validate image flow",       line2: "live & comparison",                    party: "pacs", phase: "implementation", status: "open",        blocker: "", followUp: "", notes: "" },
-  { id: "p4", line1: "Confirm DICOM ready",       line2: "",                                     party: "pacs", phase: "golive",         status: "open",        blocker: "", followUp: "", notes: "" },
-  { id: "p5", line1: "Troubleshoot DICOM",        line2: "issues",                               party: "pacs", phase: "golive_support", status: "open",        blocker: "", followUp: "", notes: "" },
+  { id: "p1", line1: "Answer questionnaire",      line2: "DICOM workflows",                party: "pacs", phase: "questionnaire",  status: "open", blocker: "", followUp: "", notes: "" },
+  { id: "p2", line1: "Deliver DICOM routing",     line2: "",                               party: "pacs", phase: "connectivity",   status: "open", blocker: "", followUp: "", notes: "" },
+  { id: "p3", line1: "DICOM AE — image flow for", line2: "live & comparison images",       party: "pacs", phase: "implementation", status: "open", blocker: "", followUp: "", notes: "" },
+  { id: "p4", line1: "Confirm DICOM ready",       line2: "",                               party: "pacs", phase: "golive",         status: "open", blocker: "", followUp: "", notes: "" },
+  { id: "p5", line1: "Troubleshoot DICOM issues", line2: "",                               party: "pacs", phase: "golive_support", status: "open", blocker: "", followUp: "", notes: "" },
 
-  // Partner
-  { id: "d1", line1: "Diagram solution",          line2: "",                                     party: "partner", phase: "questionnaire",  status: "done",        blocker: "", followUp: "", notes: "" },
-  { id: "d2", line1: "Submit VPN form,",          line2: "configure router & firewall",          party: "partner", phase: "connectivity",   status: "in_progress", blocker: "", followUp: "", notes: "" },
-  { id: "d3", line1: "Support validation",        line2: "",                                     party: "partner", phase: "implementation", status: "open",        blocker: "", followUp: "", notes: "" },
-  { id: "d4", line1: "Confirm connectivity",      line2: "stable",                               party: "partner", phase: "golive",         status: "open",        blocker: "", followUp: "", notes: "" },
-  { id: "d5", line1: "Troubleshoot connectivity",  line2: "& processing errors",                  party: "partner", phase: "golive_support", status: "open",        blocker: "", followUp: "", notes: "" },
+  // Partner (the partner org itself — e.g. SRV)
+  { id: "pt1", line1: "Coordinate calls",         line2: "",                               party: "partner", phase: "questionnaire",  status: "open", blocker: "", followUp: "", notes: "" },
+  { id: "pt2", line1: "Coordinate calls",         line2: "",                               party: "partner", phase: "connectivity",   status: "open", blocker: "", followUp: "", notes: "" },
+  { id: "pt3", line1: "Worklist & procedure",     line2: "code updates",                   party: "partner", phase: "implementation", status: "open", blocker: "", followUp: "", notes: "" },
+  { id: "pt4", line1: "Radiology sign off",       line2: "",                               party: "partner", phase: "golive",         status: "open", blocker: "", followUp: "", notes: "" },
+  { id: "pt5", line1: "Coordinate the",           line2: "reporting of issues",            party: "partner", phase: "golive_support", status: "open", blocker: "", followUp: "", notes: "" },
+
+  // Partner - Vendor (Data First / Scipiotech)
+  { id: "pv1", line1: "Diagram solution",         line2: "",                               party: "partner_vendor", phase: "questionnaire",  status: "open", blocker: "", followUp: "", notes: "" },
+  { id: "pv2", line1: "VPN form, router,",        line2: "firewall configuration",         party: "partner_vendor", phase: "connectivity",   status: "open", blocker: "", followUp: "", notes: "" },
+  { id: "pv3", line1: "Router and",               line2: "integration engine",             party: "partner_vendor", phase: "implementation", status: "open", blocker: "", followUp: "", notes: "" },
+  { id: "pv4", line1: "Performance checks",       line2: "",                               party: "partner_vendor", phase: "golive",         status: "open", blocker: "", followUp: "", notes: "" },
+  { id: "pv5", line1: "Troubleshoot connectivity",line2: "& processing errors",            party: "partner_vendor", phase: "golive_support", status: "open", blocker: "", followUp: "", notes: "" },
 
   // New Lantern
-  { id: "n1", line1: "Lead questionnaire",        line2: "discovery",                            party: "nl", phase: "questionnaire",  status: "done",        blocker: "", followUp: "", notes: "" },
-  { id: "n2", line1: "Confirm routing",           line2: "& ports",                              party: "nl", phase: "connectivity",   status: "in_progress", blocker: "", followUp: "", notes: "" },
-  { id: "n3", line1: "Lead data validation",      line2: "",                                     party: "nl", phase: "implementation", status: "open",        blocker: "", followUp: "", notes: "" },
-  { id: "n4", line1: "Lead launch prep",          line2: "",                                     party: "nl", phase: "golive",         status: "open",        blocker: "", followUp: "", notes: "" },
-  { id: "n5", line1: "Monitor data processing",   line2: "& support users",                      party: "nl", phase: "golive_support", status: "open",        blocker: "", followUp: "", notes: "" },
+  { id: "n1", line1: "Lead questionnaire",        line2: "discovery",                      party: "nl", phase: "questionnaire",  status: "open", blocker: "", followUp: "", notes: "" },
+  { id: "n2", line1: "Confirm routing",           line2: "and ports",                      party: "nl", phase: "connectivity",   status: "open", blocker: "", followUp: "", notes: "" },
+  { id: "n3", line1: "PACS site",                 line2: "configuration",                  party: "nl", phase: "implementation", status: "open", blocker: "", followUp: "", notes: "" },
+  { id: "n4", line1: "Prod checklist review",     line2: "",                               party: "nl", phase: "golive",         status: "open", blocker: "", followUp: "", notes: "" },
+  { id: "n5", line1: "Monitor data processing",   line2: "& support users",                party: "nl", phase: "golive_support", status: "open", blocker: "", followUp: "", notes: "" },
 ];
 
 // ── Status styling ─────────────────────────────────────────────────────────
@@ -145,7 +160,10 @@ const nextStatus = (s: Status): Status => {
 
 // ── Persistence ────────────────────────────────────────────────────────────
 
-const STORAGE_PREFIX = "swimlane:v1:";
+// Bumped to v2 when the card IDs / party list changed (added partner_vendor row,
+// renamed partner card IDs from d* → pt*). Old saved state is dropped rather
+// than merged to avoid stale cards in the wrong cells.
+const STORAGE_PREFIX = "swimlane:v2:";
 
 function loadCards(slug: string): MilestoneCard[] {
   if (typeof window === "undefined") return DEFAULT_CARDS;
@@ -370,7 +388,9 @@ export function SwimlaneView({ organizationSlug }: SwimlaneViewProps) {
 
           {/* Party rows */}
           {PARTIES.map((party, rowIdx) => {
-            const displayName = vendorNames?.[party.id] ?? "";
+            const displayName =
+              vendorNames?.[party.id]
+              ?? (party.id === "partner_vendor" ? PARTNER_VENDOR_FALLBACK : "");
 
             return (
               <div
@@ -536,11 +556,9 @@ export function SwimlaneView({ organizationSlug }: SwimlaneViewProps) {
             </PanelField>
 
             <PanelField label="Next Follow-up">
-              <Input
-                type="date"
+              <FollowUpDatePicker
                 value={selectedCard.followUp}
-                onChange={(e) => updateCard(selectedCard.id, { followUp: e.target.value })}
-                className="mt-1"
+                onChange={(v) => updateCard(selectedCard.id, { followUp: v })}
               />
             </PanelField>
 
@@ -577,6 +595,78 @@ function PanelField({ label, value, children }: { label: string; value?: string;
     <div>
       <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{label}</div>
       {children ?? <div className="mt-1 text-sm text-foreground">{value}</div>}
+    </div>
+  );
+}
+
+// Parse / format the ISO-ish date string stored on the card.
+function parseFollowUp(value: string): Date | undefined {
+  if (!value) return undefined;
+  // value shape is "YYYY-MM-DD" — construct with local-time parts to avoid
+  // UTC off-by-one when the browser is west of UTC.
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!m) return undefined;
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+}
+
+function formatFollowUp(date: Date): string {
+  const y = date.getFullYear();
+  const mo = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${mo}-${d}`;
+}
+
+function FollowUpDatePicker({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = parseFollowUp(value);
+  const display = selected
+    ? selected.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+    : "Pick a date";
+
+  return (
+    <div className="mt-1 flex items-center gap-2">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className={cn(
+              "flex-1 justify-start text-left font-normal",
+              !selected && "text-muted-foreground"
+            )}
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {display}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={selected}
+            onSelect={(d) => {
+              onChange(d ? formatFollowUp(d) : "");
+              setOpen(false);
+            }}
+            autoFocus
+          />
+        </PopoverContent>
+      </Popover>
+      {selected && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => onChange("")}
+          className="h-8 px-2 text-xs text-muted-foreground"
+        >
+          Clear
+        </Button>
+      )}
     </div>
   );
 }
