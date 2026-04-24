@@ -865,26 +865,9 @@ export default function Validation() {
             {orgName && <div className="sm:hidden text-sm font-semibold truncate max-w-[100px]">{orgName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 4)}</div>}
           </div>
 
-          {/* Right: actions + nav + user */}
+          {/* Right: nav + user */}
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleExportCSV}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-foreground bg-muted/40 border border-border/40 rounded-md hover:bg-muted/60 hover:border-primary/30 transition-all"
-              title="Export testing checklist as CSV"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Export CSV</span>
-            </button>
-            <button
-              onClick={() => csvInputRef.current?.click()}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-foreground bg-muted/40 border border-border/40 rounded-md hover:bg-muted/60 hover:border-primary/30 transition-all"
-              title="Import testing data from CSV"
-            >
-              <Upload className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Import CSV</span>
-            </button>
             <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={handleImportCSV} />
-            <div className="w-px h-5 bg-border/40 mx-1" />
             <Link href={orgPath} className="text-sm text-foreground hover:text-primary transition-colors font-medium whitespace-nowrap">
               Site Dashboard
             </Link>
@@ -893,7 +876,20 @@ export default function Validation() {
                 Admin
               </Link>
             )}
-            <UserMenu />
+            <UserMenu
+              extraItems={[
+                {
+                  label: "Export CSV",
+                  icon: <Download className="w-4 h-4 mr-2" />,
+                  onClick: handleExportCSV,
+                },
+                {
+                  label: "Import CSV",
+                  icon: <Upload className="w-4 h-4 mr-2" />,
+                  onClick: () => csvInputRef.current?.click(),
+                },
+              ]}
+            />
           </div>
         </div>
       </header>
