@@ -38,7 +38,17 @@ function orgPath(pathname: string, page: string): string {
   return "/" + segments.join("/") + "/" + page;
 }
 
-export function UserMenu() {
+export interface UserMenuExtraItem {
+  label: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+}
+
+interface UserMenuProps {
+  extraItems?: UserMenuExtraItem[];
+}
+
+export function UserMenu({ extraItems }: UserMenuProps = {}) {
   const [, setLocation] = useLocation();
   const { user, logout } = useAuth();
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
@@ -86,6 +96,17 @@ export function UserMenu() {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
+          {extraItems && extraItems.length > 0 && (
+            <>
+              {extraItems.map((item) => (
+                <DropdownMenuItem key={item.label} onClick={item.onClick}>
+                  {item.icon}
+                  {item.label}
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+            </>
+          )}
           {user.role === "admin" && (
             <>
               <DropdownMenuItem onClick={() => setLocation("/org/admin")}>
