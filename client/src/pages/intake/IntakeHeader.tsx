@@ -1,5 +1,4 @@
 import { Link } from "wouter";
-import { Button } from "@/components/ui/button";
 import { Download, Menu, Upload } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 import { PageBreadcrumb } from "@/components/PageBreadcrumb";
@@ -11,7 +10,6 @@ interface IntakeHeaderProps {
   clientSlug: string;
   orgName?: string;
   orgClientName?: string;
-  userRole?: string;
   onOpenSidebar: () => void;
   onExport: () => void;
   onOpenImport: () => void;
@@ -24,7 +22,6 @@ export function IntakeHeader({
   clientSlug,
   orgName,
   orgClientName,
-  userRole,
   onOpenSidebar,
   onExport,
   onOpenImport,
@@ -69,40 +66,26 @@ export function IntakeHeader({
             )}
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onExport}
-              className="gap-2 hidden sm:flex"
-            >
-              <Download className="w-4 h-4" />
-              Export
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onOpenImport}
-              className="gap-2 hidden sm:flex"
-            >
-              <Upload className="w-4 h-4" />
-              Import
-            </Button>
-            <div className="w-px h-5 bg-border/40 mx-1" />
             <Link
               href={clientSlug ? `/org/${clientSlug}/${slug}` : `/org/${slug}`}
               className="text-sm text-foreground hover:text-primary transition-colors font-medium whitespace-nowrap"
             >
               Site Dashboard
             </Link>
-            {userRole === "admin" && (
-              <Link
-                href="/admin"
-                className="text-sm text-muted-foreground hover:text-primary transition-colors font-medium whitespace-nowrap"
-              >
-                Admin
-              </Link>
-            )}
-            <UserMenu />
+            <UserMenu
+              extraItems={[
+                {
+                  label: "Export",
+                  icon: <Download className="w-4 h-4 mr-2" />,
+                  onClick: onExport,
+                },
+                {
+                  label: "Import",
+                  icon: <Upload className="w-4 h-4 mr-2" />,
+                  onClick: onOpenImport,
+                },
+              ]}
+            />
           </div>
         </div>
       </header>

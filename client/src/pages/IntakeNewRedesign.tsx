@@ -253,7 +253,6 @@ export default function IntakeNewRedesign() {
           clientSlug={clientSlug}
           orgName={org?.name}
           orgClientName={org?.clientName ?? undefined}
-          userRole={user?.role}
           onOpenSidebar={() => setSidebarOpen(true)}
           onExport={handleExportData}
           onOpenImport={() => setImportDialogOpen(true)}
