@@ -16,6 +16,7 @@ import Tasks from "./pages/Tasks";
 import IntakeComplete from "./pages/IntakeComplete";
 import CreateOrganization from "./pages/CreateOrganization";
 import Implementation from "./pages/Implementation";
+import SwimlaneMockup from "./pages/SwimlaneMockup";
 import Validation from "./pages/Validation";
 import Workflows from "./pages/Workflows";
 import Specifications from "./pages/Specifications";
@@ -60,6 +61,7 @@ function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
+      <Route path="/swimlane-mockup" component={SwimlaneMockup} />
       <Route path="/login" component={Login} />
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
