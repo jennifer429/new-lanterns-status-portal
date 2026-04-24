@@ -4,7 +4,6 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { Download, Trash2, FileText, Calendar, Building2, AlertCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -53,9 +52,10 @@ export function FilesManagement() {
 
   if (isLoading) {
     return (
-      <Card className="border-purple-500/20 bg-black/40 backdrop-blur-xl">
+      <Card className="card-elevated overflow-hidden">
+        <div className="h-1 bg-gradient-to-r from-primary via-primary/60 to-emerald-500/40" />
         <CardContent className="py-12">
-          <div className="text-center text-gray-400">Loading files...</div>
+          <div className="text-center text-muted-foreground">Loading files...</div>
         </CardContent>
       </Card>
     );
@@ -63,10 +63,11 @@ export function FilesManagement() {
 
   return (
     <>
-      <Card className="border-purple-500/20 bg-black/40 backdrop-blur-xl">
+      <Card className="card-elevated overflow-hidden">
+        <div className="h-1 bg-gradient-to-r from-primary via-primary/60 to-emerald-500/40" />
         <CardHeader>
-          <CardTitle className="text-white text-xl">Uploaded Files</CardTitle>
-          <CardDescription className="text-gray-300">
+          <CardTitle className="text-xl">Uploaded Files</CardTitle>
+          <CardDescription>
             All files uploaded across organizations ({files?.length || 0} total)
           </CardDescription>
         </CardHeader>
@@ -76,31 +77,31 @@ export function FilesManagement() {
               {files.map((file) => (
                 <Card
                   key={file.id}
-                  className="border-purple-500/30 bg-purple-950/20 hover:bg-purple-950/30 transition-colors"
+                  className="card-elevated"
                 >
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between gap-4">
                       {/* File Info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-2">
-                          <FileText className="w-4 h-4 text-purple-400 flex-shrink-0" />
-                          <h3 className="text-white font-medium truncate">{file.fileName}</h3>
+                          <FileText className="w-4 h-4 text-primary flex-shrink-0" />
+                          <h3 className="font-medium truncate">{file.fileName}</h3>
                         </div>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
                           {/* Organization */}
-                          <div className="flex items-center gap-2 text-gray-400">
+                          <div className="flex items-center gap-2 text-muted-foreground">
                             <Building2 className="w-3 h-3" />
                             <span className="truncate">{file.organizationName || "Unknown"}</span>
                           </div>
 
                           {/* File Size */}
-                          <div className="text-gray-400">
+                          <div className="text-muted-foreground">
                             Size: {formatFileSize(file.fileSize)}
                           </div>
 
                           {/* Upload Date */}
-                          <div className="flex items-center gap-2 text-gray-400">
+                          <div className="flex items-center gap-2 text-muted-foreground">
                             <Calendar className="w-3 h-3" />
                             <span>
                               {file.createdAt
@@ -119,18 +120,14 @@ export function FilesManagement() {
                           target="_blank"
                           rel="noopener noreferrer"
                         >
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-purple-500/30 text-purple-300 hover:bg-purple-600 hover:text-white"
-                          >
+                          <Button size="sm" variant="outline">
                             <Download className="w-4 h-4" />
                           </Button>
                         </a>
                         <Button
                           size="sm"
                           variant="outline"
-                          className="border-red-500/30 text-red-300 hover:bg-red-600 hover:text-white"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
                           onClick={() => handleDeleteClick(file.id)}
                           disabled={deleteMutation.isPending}
                         >
@@ -144,8 +141,8 @@ export function FilesManagement() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <FileText className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-400">No files uploaded yet</p>
+              <FileText className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
+              <p className="text-muted-foreground">No files uploaded yet</p>
             </div>
           )}
         </CardContent>
@@ -153,24 +150,22 @@ export function FilesManagement() {
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="bg-slate-900 border-purple-500/30">
+        <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-red-400" />
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-destructive" />
               Delete File
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-300">
+            <AlertDialogDescription>
               Are you sure you want to delete this file? This action cannot be undone.
               The file will be removed from the database but will remain in storage.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-slate-800 text-white border-purple-500/30 hover:bg-slate-700">
-              Cancel
-            </AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
-              className="bg-red-600 text-white hover:bg-red-700"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending ? "Deleting..." : "Delete"}

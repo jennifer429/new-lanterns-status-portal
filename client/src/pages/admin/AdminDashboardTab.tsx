@@ -166,7 +166,8 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics }: A
                   const isExpanded = expandedSiteIds.has(org.id);
 
                   return (
-                    <Card key={org.id} className="overflow-hidden border-2 border-primary/50 bg-card shadow-md shadow-primary/5">
+                    <Card key={org.id} className="card-elevated overflow-hidden">
+                      <div className="h-1 bg-gradient-to-r from-primary via-primary/60 to-emerald-500/40" />
                       {/* Collapsible header */}
                       <button
                         onClick={() => setExpandedSiteIds(prev => {
@@ -174,13 +175,13 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics }: A
                           next.has(org.id) ? next.delete(org.id) : next.add(org.id);
                           return next;
                         })}
-                        className="w-full px-3 sm:px-5 py-3 flex items-center justify-between hover:bg-muted/40 transition-colors bg-muted/25"
+                        className="w-full px-3 sm:px-5 py-3 flex items-center justify-between hover:bg-muted/30 transition-colors"
                       >
                         <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 min-w-0 text-left">
                           <span className="font-bold text-base sm:text-lg">{org.name}</span>
                           <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
                             <Badge variant="outline" className={cn(
-                              "text-sm font-bold border-2 px-2.5 py-0.5",
+                              "text-sm font-bold px-2.5 py-0.5",
                               overallPct === 100 ? "border-emerald-500/60 text-emerald-400" : "border-primary/60 text-primary"
                             )}>
                               {overallPct}% overall
@@ -201,7 +202,7 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics }: A
 
                           {/* Expanded mini dashboard */}
                       {isExpanded && (
-                        <div className="border-t-2 border-primary/60 px-3 sm:px-5 py-4 space-y-4 bg-background/80">
+                        <div className="border-t border-border/60 px-3 sm:px-5 py-4 space-y-4">
                           {/* Overall progress bar */}
                           <div>
                             <div className="flex items-center justify-between mb-1.5">
@@ -219,7 +220,7 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics }: A
                           {/* Three mini stat columns */}
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             {/* Questionnaire */}
-                            <div className="rounded-lg border-2 border-border/90 bg-muted/50 p-4">
+                            <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
                               <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
                                   <ClipboardList className="w-4 h-4 text-primary" />
@@ -239,14 +240,14 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics }: A
                               </div>
                               <button
                                 onClick={() => setLocation(org.clientId && clientSlugMap[org.clientId] ? `/org/${clientSlugMap[org.clientId]}/${org.slug}/intake` : `/org/${org.slug}/intake`)}
-                                className="w-full text-xs py-1.5 px-3 rounded border-2 border-primary/40 text-primary hover:bg-primary/10 transition-colors text-center font-medium"
+                                className="w-full text-xs py-1.5 px-3 rounded border border-primary/40 text-primary hover:bg-primary/10 transition-colors text-center font-medium"
                               >
                                 {qPct === 100 ? "View" : qPct === 0 ? "Start" : "Continue"}
                               </button>
                             </div>
 
                             {/* Testing */}
-                            <div className="rounded-lg border-2 border-border/90 bg-muted/50 p-4">
+                            <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
                               <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
                                   <TestTube2 className="w-4 h-4 text-primary" />
@@ -267,14 +268,14 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics }: A
                               </div>
                               <button
                                 onClick={() => setLocation(org.clientId && clientSlugMap[org.clientId] ? `/org/${clientSlugMap[org.clientId]}/${org.slug}/validation` : `/org/${org.slug}/validation`)}
-                                className="w-full text-xs py-1.5 px-3 rounded border-2 border-primary/40 text-primary hover:bg-primary/10 transition-colors text-center font-medium"
+                                className="w-full text-xs py-1.5 px-3 rounded border border-primary/40 text-primary hover:bg-primary/10 transition-colors text-center font-medium"
                               >
                                 {vsPct === 100 ? "View" : vsPass === 0 ? "Start" : "Continue"}
                               </button>
                             </div>
 
                             {/* Task List */}
-                            <div className="rounded-lg border-2 border-border/90 bg-muted/50 p-4">
+                            <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
                               <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
                                   <ListChecks className="w-4 h-4 text-primary" />
@@ -294,7 +295,7 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics }: A
                               </div>
                               <button
                                 onClick={() => setLocation(org.clientId && clientSlugMap[org.clientId] ? `/org/${clientSlugMap[org.clientId]}/${org.slug}/implement` : `/org/${org.slug}/implement`)}
-                                className="w-full text-xs py-1.5 px-3 rounded border-2 border-primary/40 text-primary hover:bg-primary/10 transition-colors text-center font-medium"
+                                className="w-full text-xs py-1.5 px-3 rounded border border-primary/40 text-primary hover:bg-primary/10 transition-colors text-center font-medium"
                               >
                                 {tsPct === 100 ? "View" : tsDone === 0 ? "Start" : "Continue"}
                               </button>
