@@ -43,6 +43,29 @@ function normalise(s: string): string {
   return s.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 }
 
+/**
+ * Decide whether a Notion row's "site" field belongs to the given org.
+ * Requires the row to have a site label — rows without a site are excluded
+ * so they don't leak onto every org's dashboard. Matches exactly, or when
+ * the row's site contains the org slug/name as a substring (min 3 chars to
+ * avoid accidental short-string matches).
+ */
+function siteMatchesOrg(
+  rowSite: string,
+  slugNorm: string,
+  nameNorm: string | null,
+): boolean {
+  if (!rowSite) return false;
+  const siteNorm = normalise(rowSite);
+  const MIN_LEN = 3;
+  return (
+    siteNorm === slugNorm ||
+    (nameNorm !== null && siteNorm === nameNorm) ||
+    (slugNorm.length >= MIN_LEN && siteNorm.includes(slugNorm)) ||
+    (nameNorm !== null && nameNorm.length >= MIN_LEN && siteNorm.includes(nameNorm))
+  );
+}
+
 // ── Schema / write helpers ────────────────────────────────────────────────────
 
 const FIELD_CANDIDATES: Record<string, string[]> = {
@@ -300,16 +323,7 @@ export const connectivityRouter = router({
               status:            getStr(pick(p, ...FIELD_CANDIDATES.status)),
             };
           })
-          .filter((row: any) => {
-            if (!row.site) return true; // single-site DB — include all
-            const siteNorm = normalise(row.site);
-            return (
-              siteNorm === slugNorm ||
-              siteNorm.includes(slugNorm) ||
-              slugNorm.includes(siteNorm) ||
-              (nameNorm && (siteNorm.includes(nameNorm) || nameNorm.includes(siteNorm)))
-            );
-          });
+          .filter((row: any) => siteMatchesOrg(row.site, slugNorm, nameNorm));
 
         return { rows, configured: true };
       } catch (error: any) {
@@ -356,15 +370,7 @@ export const connectivityRouter = router({
           if ((page as any).object !== "page" || (page as any).archived) continue;
           const p = (page as any).properties as Record<string, any>;
           const site = getStr(pick(p, ...FIELD_CANDIDATES.site));
-          const siteNorm = normalise(site);
-          const belongsToOrg =
-            !site ||
-            siteNorm === slugNorm ||
-            siteNorm.includes(slugNorm) ||
-            slugNorm.includes(siteNorm) ||
-            siteNorm.includes(nameNorm) ||
-            nameNorm.includes(siteNorm);
-          if (!belongsToOrg) continue;
+          if (!siteMatchesOrg(site, slugNorm, nameNorm)) continue;
 
           const k = rowKey(
             getStr(pick(p, ...FIELD_CANDIDATES.trafficType)),
