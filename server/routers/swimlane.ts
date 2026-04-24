@@ -278,31 +278,30 @@ export const swimlaneRouter = router({
       if (archSystems?.response) {
         try {
           const systems: Array<{ name: string; type: string }> = JSON.parse(archSystems.response);
-          // Map system types to our party IDs
-          const typeMap: Record<string, string> = {
-            EHR: "ehr",
-            RIS: "ris",
-            PACS: "pacs",
-          };
+          // Collect names by category
+          const ehrNames: string[] = [];
+          const risNames: string[] = [];
+          const pacsNames: string[] = [];
           for (const sys of systems) {
-            const partyId = typeMap[sys.type];
-            if (partyId && sys.name && !result[partyId]) {
-              result[partyId] = sys.name;
-            }
+            const t = sys.type?.toUpperCase() ?? "";
+            if (t.includes("EHR") && sys.name) ehrNames.push(sys.name);
+            else if (t.includes("RIS") && sys.name) risNames.push(sys.name);
+            else if (t.includes("PACS") && sys.name) pacsNames.push(sys.name);
           }
+          // EHR / RIS row: combine both, dedup
+          const ehrRis = Array.from(new Set([...ehrNames, ...risNames]));
+          if (ehrRis.length > 0 && !result.ehr) result.ehr = ehrRis.join(" / ");
+          if (pacsNames.length > 0 && !result.pacs) result.pacs = pacsNames[0];
         } catch {
           // ignore parse errors
         }
       }
 
       // Fallback: try legacy ARCH.1 (PACS), ARCH.2 (RIS), ARCH.3 (EHR)
-      const legacyMap: Record<string, string> = {
-        "ARCH.1": "pacs",
-        "ARCH.2": "ris",
-        "ARCH.3": "ehr",
-      };
-      for (const [qId, partyId] of Object.entries(legacyMap)) {
-        if (result[partyId]) continue; // already have from ARCH.systems
+      // ARCH.3 → EHR name, ARCH.2 → RIS name, ARCH.1 → PACS name
+      const legacyIds = ["ARCH.3", "ARCH.2", "ARCH.1"] as const;
+      const legacyResults: Record<string, string> = {};
+      for (const qId of legacyIds) {
         const [row] = await db
           .select({ response: intakeResponses.response })
           .from(intakeResponses)
@@ -314,10 +313,24 @@ export const swimlaneRouter = router({
           )
           .limit(1);
         if (row?.response) {
-          // Extract just the vendor name (before any dash or parenthetical)
-          const cleaned = row.response.split("\\'").join("'").split(" — ")[0].split(" – ")[0].trim();
-          if (cleaned) result[partyId] = cleaned;
+          // Extract just the vendor name (before any dash or special chars)
+          const cleaned = row.response
+            .replace(/\\'/g, "'")
+            .replace(/\'\d+/g, "") // remove escaped codes like '97
+            .split(" — ")[0]
+            .split(" – ")[0]
+            .split(" - ")[0]
+            .trim();
+          if (cleaned) legacyResults[qId] = cleaned;
         }
+      }
+      // Combine EHR + RIS for the ehr row
+      if (!result.ehr) {
+        const parts = [legacyResults["ARCH.3"], legacyResults["ARCH.2"]].filter(Boolean);
+        if (parts.length > 0) result.ehr = Array.from(new Set(parts)).join(" / ");
+      }
+      if (!result.pacs && legacyResults["ARCH.1"]) {
+        result.pacs = legacyResults["ARCH.1"];
       }
 
       return result;
