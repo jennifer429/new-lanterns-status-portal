@@ -8,7 +8,7 @@
  * for this first pass; we'll layer those on after the grid feels right.
  */
 
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
   Activity,
@@ -193,10 +193,100 @@ const STATUS_STYLE: Record<
   },
 };
 
+// ── Dependencies (from → to, by milestone id) ──────────────────────────────
+
+const DEPENDENCIES: Array<{ from: string; to: string }> = [
+  // Hospital IT: network prerequisites feed HL7 interface access
+  { from: "m1", to: "m3" },
+  { from: "m2", to: "m3" },
+  { from: "m3", to: "m4" },
+  { from: "m4", to: "m5" },
+  { from: "m5", to: "m6" },
+  { from: "m6", to: "m7" },
+  // EHR build flow
+  { from: "m10", to: "m12" },
+  { from: "m11", to: "m12" },
+  { from: "m12", to: "m13" },
+  { from: "m13", to: "m14" },
+  { from: "m14", to: "m15" },
+  // RIS build flow
+  { from: "m20", to: "m21" },
+  { from: "m21", to: "m22" },
+  { from: "m22", to: "m23" },
+  { from: "m23", to: "m24" },
+  { from: "m24", to: "m25" },
+  // PACS flow
+  { from: "m30", to: "m31" },
+  { from: "m31", to: "m32" },
+  { from: "m32", to: "m33" },
+  { from: "m33", to: "m34" },
+  { from: "m34", to: "m35" },
+  // Rad Group flow
+  { from: "m40", to: "m41" },
+  { from: "m41", to: "m42" },
+  { from: "m42", to: "m43" },
+  // Silverback flow
+  { from: "m50", to: "m51" },
+  { from: "m51", to: "m52" },
+  { from: "m52", to: "m53" },
+  { from: "m53", to: "m54" },
+  // New Lantern flow (within its active phases)
+  { from: "m60", to: "m61" },
+  { from: "m61", to: "m62" },
+];
+
 // ── Component ───────────────────────────────────────────────────────────────
 
 export default function SwimlaneMockup() {
   const [selectedId, setSelectedId] = useState<string | null>("m60");
+
+  // Arrow overlay — measure each milestone card's position relative to the
+  // grid and draw orthogonal paths between dependent cards.
+  const gridRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<Map<string, HTMLElement>>(new Map());
+  const setCardRef = (id: string, el: HTMLElement | null) => {
+    if (el) cardRefs.current.set(id, el);
+    else cardRefs.current.delete(id);
+  };
+  const [arrows, setArrows] = useState<Array<{ id: string; d: string }>>([]);
+  const [overlaySize, setOverlaySize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
+
+  useLayoutEffect(() => {
+    const compute = () => {
+      const container = gridRef.current;
+      if (!container) return;
+      const cRect = container.getBoundingClientRect();
+      setOverlaySize({ w: container.scrollWidth, h: container.scrollHeight });
+      const out: Array<{ id: string; d: string }> = [];
+      for (const dep of DEPENDENCIES) {
+        const fromEl = cardRefs.current.get(dep.from);
+        const toEl = cardRefs.current.get(dep.to);
+        if (!fromEl || !toEl) continue;
+        const f = fromEl.getBoundingClientRect();
+        const t = toEl.getBoundingClientRect();
+        const x1 = f.right - cRect.left;
+        const y1 = f.top + f.height / 2 - cRect.top;
+        const x2 = t.left - cRect.left - 4; // leave room for arrowhead
+        const y2 = t.top + t.height / 2 - cRect.top;
+        // Orthogonal path: out 10px, jog to target Y at midpoint, into target.
+        const elbow = Math.max(x1 + 10, (x1 + x2) / 2);
+        const d =
+          Math.abs(y2 - y1) < 1
+            ? `M ${x1} ${y1} H ${x2}`
+            : `M ${x1} ${y1} H ${elbow} V ${y2} H ${x2}`;
+        out.push({ id: `${dep.from}->${dep.to}`, d });
+      }
+      setArrows(out);
+    };
+    compute();
+    const ro = new ResizeObserver(compute);
+    if (gridRef.current) ro.observe(gridRef.current);
+    window.addEventListener("resize", compute);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", compute);
+    };
+  }, []);
 
   // Index milestones by (party, phase)
   const cells = useMemo(() => {
@@ -269,35 +359,70 @@ export default function SwimlaneMockup() {
 
       {/* Grid */}
       <div className="px-6 py-6 overflow-x-auto">
-        <div
-          className="grid gap-2 min-w-[1400px]"
-          style={{
-            gridTemplateColumns: `220px repeat(${PHASES.length}, minmax(170px, 1fr))`,
-          }}
-        >
-          {/* Column headers */}
-          <div className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold self-end pb-3">
-            Party / Vendor
-          </div>
-          {PHASES.map((p) => (
-            <PhaseHeader key={p.id} phase={p} />
-          ))}
+        <div className="relative" ref={gridRef}>
+          <div
+            className="grid gap-2 min-w-[1400px]"
+            style={{
+              gridTemplateColumns: `220px repeat(${PHASES.length}, minmax(170px, 1fr))`,
+            }}
+          >
+            {/* Column headers */}
+            <div className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold self-end pb-3">
+              Party / Vendor
+            </div>
+            {PHASES.map((p) => (
+              <PhaseHeader key={p.id} phase={p} />
+            ))}
 
-          {/* Rows */}
-          {PARTIES.map((party) => (
-            <RowFragment
-              key={party.id}
-              party={party}
-              counts={partyCounts[party.id]}
-              getCell={(phaseId) => {
-                const key = `${party.id}:${phaseId}`;
-                if (NA_CELLS.has(key)) return "n_a" as const;
-                return cells[key] ?? [];
-              }}
-              selectedId={selectedId}
-              onSelect={(id) => setSelectedId(id)}
-            />
-          ))}
+            {/* Rows */}
+            {PARTIES.map((party) => (
+              <RowFragment
+                key={party.id}
+                party={party}
+                counts={partyCounts[party.id]}
+                getCell={(phaseId) => {
+                  const key = `${party.id}:${phaseId}`;
+                  if (NA_CELLS.has(key)) return "n_a" as const;
+                  return cells[key] ?? [];
+                }}
+                selectedId={selectedId}
+                onSelect={(id) => setSelectedId(id)}
+                setCardRef={setCardRef}
+              />
+            ))}
+          </div>
+
+          {/* Dependency arrows overlay */}
+          <svg
+            className="absolute inset-0 pointer-events-none text-sky-400/60"
+            width={overlaySize.w}
+            height={overlaySize.h}
+            style={{ minWidth: 1400 }}
+          >
+            <defs>
+              <marker
+                id="arrowhead"
+                viewBox="0 0 10 10"
+                refX="9"
+                refY="5"
+                markerWidth="6"
+                markerHeight="6"
+                orient="auto-start-reverse"
+              >
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor" />
+              </marker>
+            </defs>
+            {arrows.map((a) => (
+              <path
+                key={a.id}
+                d={a.d}
+                stroke="currentColor"
+                strokeWidth="1.5"
+                fill="none"
+                markerEnd="url(#arrowhead)"
+              />
+            ))}
+          </svg>
         </div>
       </div>
 
@@ -386,12 +511,14 @@ function RowFragment({
   getCell,
   selectedId,
   onSelect,
+  setCardRef,
 }: {
   party: Party;
   counts: Record<Status, number>;
   getCell: (phaseId: string) => "n_a" | Milestone[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  setCardRef: (id: string, el: HTMLElement | null) => void;
 }) {
   return (
     <>
@@ -433,6 +560,7 @@ function RowFragment({
                   milestone={m}
                   selected={selectedId === m.id}
                   onClick={() => onSelect(m.id)}
+                  cardRef={(el) => setCardRef(m.id, el)}
                 />
               ))
             )}
@@ -461,14 +589,17 @@ function MilestoneCard({
   milestone,
   selected,
   onClick,
+  cardRef,
 }: {
   milestone: Milestone;
   selected: boolean;
   onClick: () => void;
+  cardRef?: (el: HTMLElement | null) => void;
 }) {
   const s = STATUS_STYLE[milestone.status];
   return (
     <button
+      ref={cardRef}
       onClick={onClick}
       className={cn(
         "text-left rounded-md border px-2.5 py-2 transition-all cursor-pointer",
