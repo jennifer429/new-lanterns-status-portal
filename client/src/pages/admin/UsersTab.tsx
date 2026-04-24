@@ -92,7 +92,7 @@ export function UsersTab({ isPlatformAdmin, orgs, clients, allUsers, refetchUser
           : "User created. Email could not be sent — check email settings."
       );
       setIsCreateUserDialogOpen(false);
-      setNewUserEmail(""); setNewUserName(""); setNewUserOrgId(undefined); setNewUserRole("user");
+      setNewUserEmail(""); setNewUserName(""); setNewUserOrgId(undefined); setNewUserRole("user"); setNewUserClientId(null);
       refetchUsers();
     },
     onError: (error: any) => toast.error(error.message || "Failed to create user"),
@@ -442,10 +442,29 @@ export function UsersTab({ isPlatformAdmin, orgs, clients, allUsers, refetchUser
                   <Input id="userName" value={newUserName} onChange={(e) => setNewUserName(e.target.value)} placeholder="John Doe" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="userOrg">Organization <span className="text-destructive">*</span></Label>
-                  <Select value={newUserOrgId?.toString()} onValueChange={(value) => setNewUserOrgId(parseInt(value))}>
+                  <Label htmlFor="userOrg">
+                    Organization{newUserRole === "user" && <span className="text-destructive"> *</span>}
+                  </Label>
+                  <Select
+                    value={newUserOrgId?.toString() || "none"}
+                    onValueChange={(value) => {
+                      if (value === "none") {
+                        setNewUserOrgId(undefined);
+                        return;
+                      }
+                      const orgId = parseInt(value);
+                      setNewUserOrgId(orgId);
+                      if (isPlatformAdmin) {
+                        const selectedOrg = activeOrgs.find(o => o.id === orgId);
+                        if (selectedOrg?.clientId) setNewUserClientId(selectedOrg.clientId);
+                      }
+                    }}
+                  >
                     <SelectTrigger id="userOrg"><SelectValue placeholder="Select organization" /></SelectTrigger>
                     <SelectContent>
+                      {newUserRole === "admin" && (
+                        <SelectItem value="none">No Organization (Partner-level admin)</SelectItem>
+                      )}
                       {activeOrgs
                         .filter(org => {
                           const selectedClientId = isPlatformAdmin ? newUserClientId : user?.clientId;
@@ -462,7 +481,14 @@ export function UsersTab({ isPlatformAdmin, orgs, clients, allUsers, refetchUser
                   <Label htmlFor="userPartner">Client ID <span className="text-destructive">*</span></Label>
                   <Select
                     value={!isPlatformAdmin ? (user?.clientId?.toString() || "") : (newUserClientId?.toString() || "")}
-                    onValueChange={(value) => setNewUserClientId(parseInt(value))}
+                    onValueChange={(value) => {
+                      const clientId = parseInt(value);
+                      setNewUserClientId(clientId);
+                      if (newUserOrgId) {
+                        const currentOrg = activeOrgs.find(o => o.id === newUserOrgId);
+                        if (currentOrg && currentOrg.clientId !== clientId) setNewUserOrgId(undefined);
+                      }
+                    }}
                     disabled={!isPlatformAdmin}
                   >
                     <SelectTrigger id="userPartner"><SelectValue placeholder="Select client" /></SelectTrigger>
@@ -474,6 +500,9 @@ export function UsersTab({ isPlatformAdmin, orgs, clients, allUsers, refetchUser
                   </Select>
                   {!isPlatformAdmin && (
                     <p className="text-xs text-muted-foreground">Auto-assigned to your partner</p>
+                  )}
+                  {isPlatformAdmin && newUserOrgId && (
+                    <p className="text-xs text-muted-foreground">Auto-filled from organization</p>
                   )}
                 </div>
                 <div className="space-y-2">
