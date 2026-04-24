@@ -27,3 +27,7 @@
 ## Bugs
 
 - [x] Fix broken task and testing references to questionnaire (orgPath undefined in RelatedAnswers, useOrgParams typing, activePhase type)
+- [x] Fix connectivity network endpoints data loss — rows populated yesterday are blank today (switched to Implementations-Updates Notion integration, updated data source ID)
+- [x] Update NOTION_CONNECTIVITY_DATASOURCE_ID to correct value (53f78f54-2908-43d4-b471-df049652d470)
+- [ ] Fix connectivity router site filtering to handle relation-type Site field (pending — needs testing with live data)
+- [x] Add data-loss safeguard: don't overwrite local connectivity data with empty Notion response

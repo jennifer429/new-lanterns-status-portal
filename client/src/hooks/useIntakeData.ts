@@ -152,21 +152,34 @@ export function useIntakeData(slug: string, clientSlug: string) {
   // ── Effects ──────────────────────────────────────────────────────────────────
 
   // Seed connectivity rows from Notion on load
+  // DATA-LOSS SAFEGUARD: Never overwrite existing rows with empty data from
+  // a Notion error response. Only replace rows when Notion returns actual data,
+  // or when the table was previously empty (initial load).
   useEffect(() => {
     if (notionConnData?.rows && notionConnData.rows.length > 0) {
+      // Notion returned real data — use it
       setConnRows(notionConnData.rows as ConnectivityRow[]);
       notionPageIds.current = new Set(
         notionConnData.rows.map((r: any) => r.id)
       );
-    } else if (notionConnData !== undefined) {
-      // Notion configured but empty — fall back to local DB data
-      try {
-        const v = responses["CONN.endpoints"];
-        if (v) setConnRows(typeof v === "string" ? JSON.parse(v) : v);
-      } catch {
-        /* ignore */
-      }
+    } else if (notionConnData !== undefined && !notionConnData?.error) {
+      // Notion returned empty with NO error — only load local fallback if
+      // we don't already have rows (prevents wiping user-entered data)
+      setConnRows((prev) => {
+        if (prev.length > 0) return prev; // preserve existing rows
+        try {
+          const v = responses["CONN.endpoints"];
+          if (v) {
+            const parsed = typeof v === "string" ? JSON.parse(v) : v;
+            return Array.isArray(parsed) ? parsed : prev;
+          }
+        } catch {
+          /* ignore */
+        }
+        return prev;
+      });
     }
+    // If notionConnData has an error, do nothing — keep existing rows intact
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notionConnData]);
 
