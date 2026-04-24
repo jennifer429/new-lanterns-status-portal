@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { LogOut, Shield, KeyRound, BookOpen, FolderOpen } from "lucide-react";
+import { LogOut, Shield, KeyRound, BookOpen, FolderOpen, Check } from "lucide-react";
 import { toast } from "sonner";
 
 const ORG_PAGES = new Set(["intake","implement","validation","workflows","specs","connectivity","tasks","library","complete","admin","users"]);
@@ -42,6 +42,7 @@ export interface UserMenuExtraItem {
   label: string;
   icon: React.ReactNode;
   onClick: () => void;
+  active?: boolean;
 }
 
 interface UserMenuProps {
@@ -102,6 +103,7 @@ export function UserMenu({ extraItems }: UserMenuProps = {}) {
                 <DropdownMenuItem key={item.label} onClick={item.onClick}>
                   {item.icon}
                   {item.label}
+                  {item.active && <Check className="w-4 h-4 ml-auto text-primary" />}
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator />
