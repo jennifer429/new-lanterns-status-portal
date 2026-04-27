@@ -6,6 +6,7 @@ import { SECTION_DEFS as TASK_SECTION_DEFS } from "@shared/taskDefs";
 import { eq, and, or, desc, inArray, sql } from "drizzle-orm";
 import { uploadToGoogleDrive } from "./files";
 import bcrypt from "bcrypt";
+import { triggerInviteSend } from "../_core/inviteTrigger";
 
 /**
  * Admin router for managing questions, options, organizations, and users
@@ -1015,10 +1016,35 @@ export const adminRouter = router({
           openId: `user-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         });
 
-      // TODO: Send email with temporary password or reset link
       console.log(`[createUser] Created user ${input.email} (temp password generated, not logged for security)`);
 
-       return { success: true, tempPassword };
+      // Collect partner-admin CC list so they are notified of the new user's
+      // initial invite. Only active admins on the same partner; never the
+      // newly-created user themselves.
+      let ccEmails: string[] = [];
+      if (input.clientId) {
+        const partnerAdmins = await db
+          .select({ email: users.email })
+          .from(users)
+          .where(
+            and(
+              eq(users.clientId, input.clientId),
+              eq(users.role, "admin"),
+              eq(users.isActive, 1),
+            )
+          );
+        ccEmails = partnerAdmins
+          .map((a) => a.email)
+          .filter((e): e is string => !!e && e !== input.email);
+      }
+
+      const inviteTriggered = await triggerInviteSend({
+        email: input.email,
+        reason: "created",
+        ccEmails,
+      });
+
+      return { success: true, tempPassword, inviteTriggered };
     }),
 
   /**
@@ -1045,6 +1071,10 @@ export const adminRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot resend invite to an inactive user" });
       }
 
+      if (!targetUser.email) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot resend invite to a user without an email address" });
+      }
+
       // Partner admins can only resend for their own partner's users
       if (ctx.user.clientId && targetUser.clientId !== ctx.user.clientId) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Cannot resend invite for users from other partners" });
@@ -1062,7 +1092,12 @@ export const adminRouter = router({
 
       console.log(`[resendInvite] Reset invite for user ${targetUser.email} (id: ${input.userId})`);
 
-      return { success: true, email: targetUser.email };
+      const inviteTriggered = await triggerInviteSend({
+        email: targetUser.email,
+        reason: "resent",
+      });
+
+      return { success: true, email: targetUser.email, inviteTriggered };
     }),
 
   /**
