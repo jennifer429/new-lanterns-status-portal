@@ -460,13 +460,54 @@ export function useIntakeData(slug: string, clientSlug: string) {
     reader.readAsDataURL(file);
   };
 
-  // Export every response currently in state as JSON.
+  // Export every saved response for this org as JSON.
   //
-  // We iterate `responses` directly (not `questionnaireSections`) so that keys
-  // rendered only by component code — the IW.historic_results_*, IW.tech_sheets_*,
-  // IW.overlay_pacs_*, IW.ct_dose_*, IW.<wf>_systems, CONN.endpoints, and
-  // __question_na:* flags — round-trip correctly alongside declared questions.
-  const handleExportData = () => {
+  // We refetch from the server (rather than relying on the in-memory `responses`
+  // state) so that auto-save races, lazy-hydrated section components, and any
+  // local state that hasn't synced yet can't cause a partial export. The
+  // server is the source of truth; we then merge in any in-memory keys that
+  // haven't been persisted yet so unsaved edits also round-trip.
+  //
+  // We iterate the merged map directly (not `questionnaireSections`) so that
+  // keys rendered only by component code — the IW.historic_results_*,
+  // IW.tech_sheets_*, IW.overlay_pacs_*, IW.ct_dose_*, IW.<wf>_systems,
+  // CONN.endpoints, and __question_na:* flags — round-trip correctly
+  // alongside declared questions.
+  const handleExportData = async () => {
+    if (!slug) return;
+
+    let serverResponses: Record<string, any> = {};
+    try {
+      const fresh = await utils.intake.getResponses.fetch({
+        organizationSlug: slug,
+      });
+      fresh?.forEach((resp) => {
+        if (!resp.questionId) return;
+        try {
+          serverResponses[resp.questionId] =
+            typeof resp.response === "string"
+              ? JSON.parse(resp.response)
+              : resp.response;
+        } catch {
+          serverResponses[resp.questionId] = resp.response;
+        }
+      });
+    } catch (err) {
+      console.error("Export: failed to refetch responses, falling back to in-memory state", err);
+    }
+
+    // In-memory wins for any keys not yet persisted; otherwise prefer server.
+    const merged: Record<string, any> = { ...serverResponses, ...responses };
+
+    // Connectivity endpoints live in Notion as the source of truth and only
+    // get pushed back to CONN.endpoints in our DB when the user edits the
+    // table. If the user viewed but didn't edit the table, the DB copy can
+    // be stale or missing — pull from live `connRows` so the export always
+    // reflects what's actually shown in the connectivity grid.
+    if (connRows.length > 0) {
+      merged["CONN.endpoints"] = connRows;
+    }
+
     const declared = new Map<string, { section: string; q: Question }>();
     questionnaireSections.forEach((section) => {
       section.questions?.forEach((q) => {
@@ -479,8 +520,9 @@ export function useIntakeData(slug: string, clientSlug: string) {
       string,
       { section?: string; text?: string; type?: string; options?: string[] }
     > = {};
+    const sectionCounts: Record<string, number> = {};
 
-    Object.entries(responses).forEach(([qid, raw]) => {
+    Object.entries(merged).forEach(([qid, raw]) => {
       if (raw === undefined || raw === null || raw === "") return;
 
       const info = declared.get(qid);
@@ -501,6 +543,9 @@ export function useIntakeData(slug: string, clientSlug: string) {
             })()
           : raw;
 
+      const sectionLabel = info?.section ?? "Other";
+      sectionCounts[sectionLabel] = (sectionCounts[sectionLabel] ?? 0) + 1;
+
       if (info) {
         meta[qid] = {
           section: info.section,
@@ -510,6 +555,14 @@ export function useIntakeData(slug: string, clientSlug: string) {
         };
       }
     });
+
+    const total = Object.keys(exportResponses).length;
+    if (total === 0) {
+      toast.warning("Nothing to export", {
+        description: "No questionnaire responses have been saved for this organization yet.",
+      });
+      return;
+    }
 
     const payload = {
       exported: new Date().toISOString(),
@@ -527,6 +580,13 @@ export function useIntakeData(slug: string, clientSlug: string) {
     a.download = `${slug}-intake-responses.json`;
     a.click();
     URL.revokeObjectURL(url);
+
+    const breakdown = Object.entries(sectionCounts)
+      .map(([sec, n]) => `${sec}: ${n}`)
+      .join(" · ");
+    toast.success(`Exported ${total} response${total === 1 ? "" : "s"}`, {
+      description: breakdown,
+    });
   };
 
   // Import responses — JSON only. Preserves complex shapes (arrays, nested

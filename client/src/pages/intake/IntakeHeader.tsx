@@ -75,12 +75,12 @@ export function IntakeHeader({
             <UserMenu
               extraItems={[
                 {
-                  label: "Export",
+                  label: "Export Questionnaire (JSON)",
                   icon: <Download className="w-4 h-4 mr-2" />,
                   onClick: onExport,
                 },
                 {
-                  label: "Import",
+                  label: "Import Questionnaire (JSON)",
                   icon: <Upload className="w-4 h-4 mr-2" />,
                   onClick: onOpenImport,
                 },
