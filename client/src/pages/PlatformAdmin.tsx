@@ -139,9 +139,9 @@ export default function PlatformAdmin() {
               </p>
             </div>
             <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-              <Button variant="outline" size="sm" onClick={handleExportAll} className="gap-2 h-8 sm:h-9 px-2 sm:px-3">
+              <Button variant="outline" size="sm" onClick={handleExportAll} className="gap-2 h-8 sm:h-9 px-2 sm:px-3" title="Export a CSV summary of all organizations and users">
                 <Download className="w-4 h-4" />
-                <span className="hidden sm:inline">Export All</span>
+                <span className="hidden sm:inline">Export Orgs &amp; Users</span>
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -157,7 +157,7 @@ export default function PlatformAdmin() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="cursor-pointer" onClick={handleExportAll}>
                     <Download className="mr-2 h-4 w-4" />
-                    Export All Data
+                    Export Orgs &amp; Users (CSV)
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="cursor-pointer text-destructive" onClick={() => logoutMutation.mutate()}>
