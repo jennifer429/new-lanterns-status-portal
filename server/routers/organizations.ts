@@ -7,6 +7,7 @@ import { calculateProgress } from "@shared/progressCalculation";
 import { SECTION_DEFS as TASK_SECTION_DEFS } from "@shared/taskDefs";
 import { eq, and, desc, count, sql } from "drizzle-orm";
 import { createCustomerFolder } from "../googleDrive";
+import { resolveOrgByIdentifier } from "../_core/orgLookup";
 
 /**
  * Organizations router - handles organization CRUD and data access
@@ -63,12 +64,8 @@ export const organizationsRouter = router({
     .input(z.object({ slug: z.string() }))
     .query(async ({ input }) => {
       const db = await requireDb();
-      const [org] = await db
-        .select()
-        .from(organizations)
-        .where(eq(organizations.slug, input.slug))
-        .limit(1);
-      
+      const org = await resolveOrgByIdentifier(db, input.slug);
+
       if (!org) {
         throw new Error("Organization not found");
       }

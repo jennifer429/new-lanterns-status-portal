@@ -64,6 +64,19 @@ export function useIntakeData(slug: string, clientSlug: string) {
       setSaveStatus("saved");
       setTimeout(() => setSaveStatus("idle"), 2000);
     },
+    onError: (error) => {
+      // Silent save failures used to leave users typing into the void when the
+      // URL slug didn't match any org (e.g. an org renamed in admin without
+      // updating its slug). Surface them so the problem is visible.
+      setSaveStatus("idle");
+      const msg =
+        error.data?.code === "NOT_FOUND"
+          ? `Couldn't save — this org URL doesn't match any record. Slug may have been renamed.`
+          : error.data?.code === "FORBIDDEN"
+            ? `Couldn't save — you don't have access to this org.`
+            : `Couldn't save your changes: ${error.message}`;
+      toast.error("Save failed", { description: msg });
+    },
   });
 
   const submitFeedbackMutation = trpc.intake.submitFeedback.useMutation({
