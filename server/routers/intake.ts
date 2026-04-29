@@ -6,6 +6,7 @@ import { intakeResponses, intakeFileAttachments, organizations, questions, onboa
 import { eq, and, sql } from "drizzle-orm";
 import { uploadToGoogleDrive } from "./files";
 import { logFileActivity } from "../fileAuditLog";
+import { resolveOrgByIdentifier } from "../_core/orgLookup";
 
 export const intakeRouter = router({
   /**
@@ -20,25 +21,28 @@ export const intakeRouter = router({
     .query(async ({ input }) => {
       const db = await requireDb();
 
-      // Get organization with partner info via LEFT JOIN
-      const result = await db
-        .select({
-          id: organizations.id,
-          name: organizations.name,
-          slug: organizations.slug,
-          clientId: organizations.clientId,
-          partnerName: sql<string>`COALESCE(clients.name, '')`,
-        })
-        .from(organizations)
-        .leftJoin(sql`clients`, sql`organizations.clientId = clients.id`)
-        .where(eq(organizations.slug, input.organizationSlug))
-        .limit(1);
-
-      if (!result || result.length === 0) {
+      const org = await resolveOrgByIdentifier(db, input.organizationSlug);
+      if (!org) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
       }
 
-      return result[0];
+      let partnerName = "";
+      if (org.clientId) {
+        const [client] = await db
+          .select({ name: clients.name })
+          .from(clients)
+          .where(eq(clients.id, org.clientId))
+          .limit(1);
+        partnerName = client?.name ?? "";
+      }
+
+      return {
+        id: org.id,
+        name: org.name,
+        slug: org.slug,
+        clientId: org.clientId,
+        partnerName,
+      };
     }),
   /**
    * Get file count for an organization
@@ -52,12 +56,7 @@ export const intakeRouter = router({
     .query(async ({ input }) => {
       const db = await requireDb();
 
-      // Get organization by slug
-      const [org] = await db
-        .select()
-        .from(organizations)
-        .where(eq(organizations.slug, input.organizationSlug))
-        .limit(1);
+      const org = await resolveOrgByIdentifier(db, input.organizationSlug);
 
       if (!org) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
@@ -83,14 +82,11 @@ export const intakeRouter = router({
     .query(async ({ input, ctx }) => {
       const db = await requireDb();
 
-      // Get organization by slug
+      // Resolve organization by slug, with a name-based fallback for orgs
+      // whose slug is out-of-sync with their renamed name.
       let org;
       try {
-        [org] = await db
-          .select()
-          .from(organizations)
-          .where(eq(organizations.slug, input.organizationSlug))
-          .limit(1);
+        org = await resolveOrgByIdentifier(db, input.organizationSlug);
       } catch (error) {
         console.error('[intake] Database error when fetching organization:', error);
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database error: " + (error instanceof Error ? error.message : String(error)) });
@@ -146,14 +142,9 @@ export const intakeRouter = router({
     .mutation(async ({ input, ctx }) => {
       const db = await requireDb();
 
-      // Get organization by slug
       let org;
       try {
-        [org] = await db
-          .select()
-          .from(organizations)
-          .where(eq(organizations.slug, input.organizationSlug))
-          .limit(1);
+        org = await resolveOrgByIdentifier(db, input.organizationSlug);
       } catch (error) {
         console.error('[intake] Database error when fetching organization:', error);
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database error: " + (error instanceof Error ? error.message : String(error)) });
@@ -219,14 +210,9 @@ export const intakeRouter = router({
     .mutation(async ({ input, ctx }) => {
       const db = await requireDb();
 
-      // Get organization by slug
       let org;
       try {
-        [org] = await db
-          .select()
-          .from(organizations)
-          .where(eq(organizations.slug, input.organizationSlug))
-          .limit(1);
+        org = await resolveOrgByIdentifier(db, input.organizationSlug);
       } catch (error) {
         console.error('[intake] Database error when fetching organization:', error);
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database error: " + (error instanceof Error ? error.message : String(error)) });
@@ -300,14 +286,9 @@ export const intakeRouter = router({
     .query(async ({ input, ctx }) => {
       const db = await requireDb();
 
-      // Get organization by slug
       let org;
       try {
-        [org] = await db
-          .select()
-          .from(organizations)
-          .where(eq(organizations.slug, input.organizationSlug))
-          .limit(1);
+        org = await resolveOrgByIdentifier(db, input.organizationSlug);
       } catch (error) {
         console.error('[intake] Database error when fetching organization:', error);
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database error: " + (error instanceof Error ? error.message : String(error)) });
