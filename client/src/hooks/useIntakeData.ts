@@ -460,19 +460,22 @@ export function useIntakeData(slug: string, clientSlug: string) {
     reader.readAsDataURL(file);
   };
 
-  // Export every saved response for this org as JSON.
+  // Export the FULL questionnaire as JSON — every declared question (with
+  // its answer or an empty placeholder), every section, plus connectivity
+  // endpoints and any component-managed scratch keys.
   //
-  // We refetch from the server (rather than relying on the in-memory `responses`
-  // state) so that auto-save races, lazy-hydrated section components, and any
-  // local state that hasn't synced yet can't cause a partial export. The
-  // server is the source of truth; we then merge in any in-memory keys that
-  // haven't been persisted yet so unsaved edits also round-trip.
+  // Server-fresh data: refetch from the server rather than relying on the
+  // in-memory `responses` state, so auto-save races and lazy-hydrated
+  // section components can't cause partial exports. Server is the source of
+  // truth; in-memory keys overlay it so unsaved edits also round-trip.
+  // Live `connRows` overlay CONN.endpoints so connectivity reflects the grid.
   //
-  // We iterate the merged map directly (not `questionnaireSections`) so that
-  // keys rendered only by component code — the IW.historic_results_*,
-  // IW.tech_sheets_*, IW.overlay_pacs_*, IW.ct_dose_*, IW.<wf>_systems,
-  // CONN.endpoints, and __question_na:* flags — round-trip correctly
-  // alongside declared questions.
+  // First pass enumerates `questionnaireSections` so empty/unanswered
+  // questions show up (with "" as the value) — the export documents the
+  // full questionnaire shape, not just whatever happens to be saved.
+  // Second pass adds undeclared keys actually present in state
+  // (IW.<wf>_systems, IW.historic_results_*, CONN.endpoints,
+  // __question_na:* flags, etc.) so they round-trip on import.
   const handleExportData = async () => {
     if (!slug) return;
 
@@ -520,17 +523,59 @@ export function useIntakeData(slug: string, clientSlug: string) {
       string,
       { section?: string; text?: string; type?: string; options?: string[] }
     > = {};
-    const sectionCounts: Record<string, number> = {};
+    const sectionCounts: Record<string, { answered: number; total: number }> = {};
 
+    // First pass: enumerate every declared question so the export reflects the
+    // FULL questionnaire structure — even unanswered questions show up (with
+    // empty value), so the user gets a complete picture, not just whatever
+    // happens to be saved. Skip declared upload questions: their files live
+    // in S3 and aren't part of this responses payload.
+    questionnaireSections.forEach((section) => {
+      section.questions?.forEach((q) => {
+        if (q.inactive) return;
+        if (q.type === "upload" || q.type === "upload-download") return;
+
+        const raw = merged[q.id];
+        const isAnswered =
+          raw !== undefined &&
+          raw !== null &&
+          raw !== "" &&
+          !(Array.isArray(raw) && raw.length === 0);
+
+        const value = isAnswered
+          ? typeof raw === "string"
+            ? (() => {
+                try {
+                  return JSON.parse(raw);
+                } catch {
+                  return raw;
+                }
+              })()
+            : raw
+          : "";
+
+        exportResponses[q.id] = value;
+        meta[q.id] = {
+          section: section.title,
+          text: q.text,
+          type: q.type,
+          ...(q.options ? { options: q.options } : {}),
+        };
+
+        const bucket =
+          sectionCounts[section.title] ?? (sectionCounts[section.title] = { answered: 0, total: 0 });
+        bucket.total += 1;
+        if (isAnswered) bucket.answered += 1;
+      });
+    });
+
+    // Second pass: include any undeclared keys actually present in state
+    // (component-managed scratch keys like IW.historic_results_*,
+    // IW.<wf>_systems, CONN.endpoints, __question_na:*, etc.) so they
+    // round-trip on import.
     Object.entries(merged).forEach(([qid, raw]) => {
+      if (qid in exportResponses) return;
       if (raw === undefined || raw === null || raw === "") return;
-
-      const info = declared.get(qid);
-      // Declared file-upload questions point at S3 objects that live outside
-      // the responses table — nothing meaningful to round-trip.
-      if (info && (info.q.type === "upload" || info.q.type === "upload-download")) {
-        return;
-      }
 
       exportResponses[qid] =
         typeof raw === "string"
@@ -543,26 +588,14 @@ export function useIntakeData(slug: string, clientSlug: string) {
             })()
           : raw;
 
-      const sectionLabel = info?.section ?? "Other";
-      sectionCounts[sectionLabel] = (sectionCounts[sectionLabel] ?? 0) + 1;
-
-      if (info) {
-        meta[qid] = {
-          section: info.section,
-          text: info.q.text,
-          type: info.q.type,
-          ...(info.q.options ? { options: info.q.options } : {}),
-        };
-      }
+      const bucket =
+        sectionCounts["Other"] ?? (sectionCounts["Other"] = { answered: 0, total: 0 });
+      bucket.total += 1;
+      bucket.answered += 1;
     });
 
-    const total = Object.keys(exportResponses).length;
-    if (total === 0) {
-      toast.warning("Nothing to export", {
-        description: "No questionnaire responses have been saved for this organization yet.",
-      });
-      return;
-    }
+    const totalAnswered = Object.values(sectionCounts).reduce((sum, b) => sum + b.answered, 0);
+    const totalQuestions = Object.values(sectionCounts).reduce((sum, b) => sum + b.total, 0);
 
     const payload = {
       exported: new Date().toISOString(),
@@ -582,11 +615,12 @@ export function useIntakeData(slug: string, clientSlug: string) {
     URL.revokeObjectURL(url);
 
     const breakdown = Object.entries(sectionCounts)
-      .map(([sec, n]) => `${sec}: ${n}`)
+      .map(([sec, b]) => `${sec}: ${b.answered}/${b.total}`)
       .join(" · ");
-    toast.success(`Exported ${total} response${total === 1 ? "" : "s"}`, {
-      description: breakdown,
-    });
+    toast.success(
+      `Exported questionnaire (${totalAnswered}/${totalQuestions} answered)`,
+      { description: breakdown }
+    );
   };
 
   // Import responses — JSON only. Preserves complex shapes (arrays, nested
