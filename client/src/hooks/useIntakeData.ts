@@ -499,6 +499,15 @@ export function useIntakeData(slug: string, clientSlug: string) {
     // In-memory wins for any keys not yet persisted; otherwise prefer server.
     const merged: Record<string, any> = { ...serverResponses, ...responses };
 
+    // Connectivity endpoints live in Notion as the source of truth and only
+    // get pushed back to CONN.endpoints in our DB when the user edits the
+    // table. If the user viewed but didn't edit the table, the DB copy can
+    // be stale or missing — pull from live `connRows` so the export always
+    // reflects what's actually shown in the connectivity grid.
+    if (connRows.length > 0) {
+      merged["CONN.endpoints"] = connRows;
+    }
+
     const declared = new Map<string, { section: string; q: Question }>();
     questionnaireSections.forEach((section) => {
       section.questions?.forEach((q) => {
