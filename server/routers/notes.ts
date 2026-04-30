@@ -3,6 +3,7 @@ import { protectedProcedure, router } from "../_core/trpc";
 import { requireDb } from "../db";
 import { orgNotes, organizations } from "../../drizzle/schema";
 import { eq, and, desc, isNull } from "drizzle-orm";
+import { orgIdentifierMatches } from "../_core/orgLookup";
 import { uploadToGoogleDrive } from "./files";
 import { logFileActivity } from "../fileAuditLog";
 import { TRPCError } from "@trpc/server";
@@ -32,7 +33,7 @@ export const notesRouter = router({
       const [org] = await db
         .select()
         .from(organizations)
-        .where(eq(organizations.slug, input.organizationSlug))
+        .where(orgIdentifierMatches(input.organizationSlug))
         .limit(1);
       if (!org) throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
 
@@ -142,7 +143,7 @@ export const notesRouter = router({
       const [org] = await db
         .select()
         .from(organizations)
-        .where(eq(organizations.slug, input.organizationSlug))
+        .where(orgIdentifierMatches(input.organizationSlug))
         .limit(1);
       if (!org) throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
 

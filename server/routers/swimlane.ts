@@ -10,6 +10,7 @@ import {
   clients,
 } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
+import { orgIdentifierMatches } from "../_core/orgLookup";
 
 /**
  * Default org types seeded when a PM first opens the swimlane view.
@@ -34,7 +35,7 @@ async function resolveOrgId(db: ReturnType<typeof requireDb> extends Promise<inf
   const [org] = await db
     .select({ id: organizations.id })
     .from(organizations)
-    .where(eq(organizations.slug, slug))
+    .where(orgIdentifierMatches(slug))
     .limit(1);
   if (!org) throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
   return org.id;

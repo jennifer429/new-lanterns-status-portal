@@ -22,6 +22,7 @@ import {
   validationResults,
 } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
+import { orgIdentifierMatches } from "../_core/orgLookup";
 import { questionnaireSections } from "@shared/questionnaireData";
 import { calculateProgress } from "@shared/progressCalculation";
 import { SECTION_DEFS as TASK_SECTION_DEFS } from "@shared/taskDefs";
@@ -151,7 +152,7 @@ async function gatherOrgData(orgSlug: string): Promise<OrgExportData> {
   const [org] = await db
     .select()
     .from(organizations)
-    .where(eq(organizations.slug, orgSlug))
+    .where(orgIdentifierMatches(orgSlug))
     .limit(1);
   if (!org)
     throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });

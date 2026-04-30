@@ -41,6 +41,7 @@ import {
   questions,
 } from "../../drizzle/schema";
 import { eq, and, isNull, inArray, desc, sql } from "drizzle-orm";
+import { orgIdentifierMatches } from "../_core/orgLookup";
 import bcrypt from "bcrypt";
 import { questionnaireSections } from "@shared/questionnaireData";
 import { SECTION_DEFS as TASK_SECTION_DEFS } from "@shared/taskDefs";
@@ -168,7 +169,7 @@ async function verifyOrgAccess(
       slug: organizations.slug,
     })
     .from(organizations)
-    .where(eq(organizations.slug, orgSlug))
+    .where(orgIdentifierMatches(orgSlug))
     .limit(1);
 
   if (!org) return null;
@@ -561,7 +562,7 @@ async function executeTool(
         const [org] = await db
           .select({ id: organizations.id })
           .from(organizations)
-          .where(eq(organizations.slug, orgSlug))
+          .where(orgIdentifierMatches(orgSlug))
           .limit(1);
         orgId = org?.id;
       }
@@ -644,7 +645,7 @@ async function executeTool(
       const [existing] = await db
         .select({ id: organizations.id })
         .from(organizations)
-        .where(eq(organizations.slug, slug))
+        .where(orgIdentifierMatches(slug))
         .limit(1);
 
       if (existing) {
@@ -1290,7 +1291,7 @@ Guidelines:
         const [scopedOrg] = await db
           .select({ id: organizations.id, name: organizations.name, slug: organizations.slug })
           .from(organizations)
-          .where(eq(organizations.slug, input.orgSlug!))
+          .where(orgIdentifierMatches(input.orgSlug!))
           .limit(1);
         if (scopedOrg) {
           orgScopedPrompt = `\n\nIMPORTANT CONTEXT: You are currently viewing the site dashboard for "${scopedOrg.name}" (slug: ${scopedOrg.slug}).
