@@ -460,9 +460,11 @@ export function useIntakeData(slug: string, clientSlug: string) {
     reader.readAsDataURL(file);
   };
 
-  // Export the FULL questionnaire as JSON — every declared question (with
-  // its answer or an empty placeholder), every section, plus connectivity
-  // endpoints and any component-managed scratch keys.
+  // Export the FULL questionnaire as a human-friendly JSON document.
+  //
+  // Shape is sections → questions → { id, text, type, answer }, so the file
+  // reads like a fillable form. Workflow: export → drop into Claude with
+  // meeting notes → Claude fills in `answer` fields → re-import.
   //
   // Server-fresh data: refetch from the server rather than relying on the
   // in-memory `responses` state, so auto-save races and lazy-hydrated
@@ -470,12 +472,10 @@ export function useIntakeData(slug: string, clientSlug: string) {
   // truth; in-memory keys overlay it so unsaved edits also round-trip.
   // Live `connRows` overlay CONN.endpoints so connectivity reflects the grid.
   //
-  // First pass enumerates `questionnaireSections` so empty/unanswered
-  // questions show up (with "" as the value) — the export documents the
-  // full questionnaire shape, not just whatever happens to be saved.
-  // Second pass adds undeclared keys actually present in state
-  // (IW.<wf>_systems, IW.historic_results_*, CONN.endpoints,
-  // __question_na:* flags, etc.) so they round-trip on import.
+  // Component-managed scratch keys (IW.<wf>_systems, IW.historic_results_*,
+  // CONN.endpoints, __question_na:* flags, etc.) are emitted in a separate
+  // `extra` bucket — they aren't surveyable questions, just supporting data
+  // that needs to round-trip on import.
   const handleExportData = async () => {
     if (!slug) return;
 
@@ -502,106 +502,110 @@ export function useIntakeData(slug: string, clientSlug: string) {
     // In-memory wins for any keys not yet persisted; otherwise prefer server.
     const merged: Record<string, any> = { ...serverResponses, ...responses };
 
-    // Connectivity endpoints live in Notion as the source of truth and only
-    // get pushed back to CONN.endpoints in our DB when the user edits the
-    // table. If the user viewed but didn't edit the table, the DB copy can
-    // be stale or missing — pull from live `connRows` so the export always
-    // reflects what's actually shown in the connectivity grid.
+    // Live Notion connectivity — the DB copy can lag if the user only viewed
+    // (didn't edit) the grid.
     if (connRows.length > 0) {
       merged["CONN.endpoints"] = connRows;
     }
 
-    const declared = new Map<string, { section: string; q: Question }>();
-    questionnaireSections.forEach((section) => {
-      section.questions?.forEach((q) => {
-        declared.set(q.id, { section: section.title, q });
-      });
-    });
+    const parseValue = (raw: unknown): unknown => {
+      if (raw === undefined || raw === null || raw === "") return "";
+      if (typeof raw !== "string") return raw;
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return raw;
+      }
+    };
 
-    const exportResponses: Record<string, any> = {};
-    const meta: Record<
-      string,
-      { section?: string; text?: string; type?: string; options?: string[] }
-    > = {};
-    const sectionCounts: Record<string, { answered: number; total: number }> = {};
+    const isAnswered = (raw: unknown): boolean => {
+      if (raw === undefined || raw === null || raw === "") return false;
+      if (Array.isArray(raw) && raw.length === 0) return false;
+      if (typeof raw === "object" && Object.keys(raw as object).length === 0) return false;
+      return true;
+    };
 
-    // First pass: enumerate every declared question so the export reflects the
-    // FULL questionnaire structure — even unanswered questions show up (with
-    // empty value), so the user gets a complete picture, not just whatever
-    // happens to be saved. Skip declared upload questions: their files live
-    // in S3 and aren't part of this responses payload.
+    const declaredIds = new Set<string>();
+    const exportedSections: Array<{
+      id: string;
+      title: string;
+      description?: string;
+      answered: number;
+      total: number;
+      questions: Array<{
+        id: string;
+        text: string;
+        type: string;
+        options?: string[];
+        notes?: string;
+        answer: unknown;
+      }>;
+    }> = [];
+
     questionnaireSections.forEach((section) => {
+      const questions: Array<{
+        id: string;
+        text: string;
+        type: string;
+        options?: string[];
+        notes?: string;
+        answer: unknown;
+      }> = [];
+      let answered = 0;
+
       section.questions?.forEach((q) => {
         if (q.inactive) return;
         if (q.type === "upload" || q.type === "upload-download") return;
+        declaredIds.add(q.id);
 
         const raw = merged[q.id];
-        const isAnswered =
-          raw !== undefined &&
-          raw !== null &&
-          raw !== "" &&
-          !(Array.isArray(raw) && raw.length === 0);
+        const filled = isAnswered(raw);
+        if (filled) answered += 1;
 
-        const value = isAnswered
-          ? typeof raw === "string"
-            ? (() => {
-                try {
-                  return JSON.parse(raw);
-                } catch {
-                  return raw;
-                }
-              })()
-            : raw
-          : "";
-
-        exportResponses[q.id] = value;
-        meta[q.id] = {
-          section: section.title,
+        questions.push({
+          id: q.id,
           text: q.text,
           type: q.type,
           ...(q.options ? { options: q.options } : {}),
-        };
-
-        const bucket =
-          sectionCounts[section.title] ?? (sectionCounts[section.title] = { answered: 0, total: 0 });
-        bucket.total += 1;
-        if (isAnswered) bucket.answered += 1;
+          ...(q.notes ? { notes: q.notes } : {}),
+          answer: filled ? parseValue(raw) : "",
+        });
       });
+
+      if (questions.length > 0) {
+        exportedSections.push({
+          id: section.id,
+          title: section.title,
+          ...(section.description ? { description: section.description } : {}),
+          answered,
+          total: questions.length,
+          questions,
+        });
+      }
     });
 
-    // Second pass: include any undeclared keys actually present in state
-    // (component-managed scratch keys like IW.historic_results_*,
-    // IW.<wf>_systems, CONN.endpoints, __question_na:*, etc.) so they
+    // Anything in state that isn't a declared question — connectivity rows,
+    // workflow scratch keys, N/A flags. We keep these as a flat dict so they
     // round-trip on import.
+    const extra: Record<string, unknown> = {};
     Object.entries(merged).forEach(([qid, raw]) => {
-      if (qid in exportResponses) return;
+      if (declaredIds.has(qid)) return;
       if (raw === undefined || raw === null || raw === "") return;
-
-      exportResponses[qid] =
-        typeof raw === "string"
-          ? (() => {
-              try {
-                return JSON.parse(raw);
-              } catch {
-                return raw;
-              }
-            })()
-          : raw;
-
-      const bucket =
-        sectionCounts["Other"] ?? (sectionCounts["Other"] = { answered: 0, total: 0 });
-      bucket.total += 1;
-      bucket.answered += 1;
+      extra[qid] = parseValue(raw);
     });
 
-    const totalAnswered = Object.values(sectionCounts).reduce((sum, b) => sum + b.answered, 0);
-    const totalQuestions = Object.values(sectionCounts).reduce((sum, b) => sum + b.total, 0);
+    const totalAnswered = exportedSections.reduce((sum, s) => sum + s.answered, 0);
+    const totalQuestions = exportedSections.reduce((sum, s) => sum + s.total, 0);
 
     const payload = {
       exported: new Date().toISOString(),
       org: slug,
-      responses: exportResponses,
-      meta,
+      summary: {
+        answered: totalAnswered,
+        total: totalQuestions,
+      },
+      sections: exportedSections,
+      extra,
     };
 
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
@@ -610,12 +614,12 @@ export function useIntakeData(slug: string, clientSlug: string) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${slug}-intake-responses.json`;
+    a.download = `${slug}-questionnaire.json`;
     a.click();
     URL.revokeObjectURL(url);
 
-    const breakdown = Object.entries(sectionCounts)
-      .map(([sec, b]) => `${sec}: ${b.answered}/${b.total}`)
+    const breakdown = exportedSections
+      .map((s) => `${s.title}: ${s.answered}/${s.total}`)
       .join(" · ");
     toast.success(
       `Exported questionnaire (${totalAnswered}/${totalQuestions} answered)`,
@@ -657,21 +661,46 @@ export function useIntakeData(slug: string, clientSlug: string) {
         );
       }
 
-      const src =
-        payload && typeof payload === "object" && "responses" in (payload as any)
-          ? (payload as any).responses
-          : payload;
-      if (typeof src !== "object" || src === null || Array.isArray(src)) {
-        throw new Error(
-          "Invalid JSON structure — expected a { responses: { ... } } object or a flat responses object."
-        );
-      }
-
+      // Accept three shapes:
+      //   1. New sections format: { sections: [{ questions: [{id, answer}] }], extra: {...} }
+      //   2. Legacy flat: { responses: { qid: value, ... } }
+      //   3. Bare flat: { qid: value, ... }
       const importedResponses: Record<string, any> = {};
-      Object.entries(src as Record<string, unknown>).forEach(([qid, val]) => {
-        if (val === undefined || val === null || val === "") return;
-        importedResponses[qid] = val;
-      });
+      const skip = (val: unknown) =>
+        val === undefined ||
+        val === null ||
+        val === "" ||
+        (Array.isArray(val) && val.length === 0);
+
+      const p = payload as any;
+      if (p && typeof p === "object" && Array.isArray(p.sections)) {
+        for (const section of p.sections) {
+          if (!section || !Array.isArray(section.questions)) continue;
+          for (const q of section.questions) {
+            if (!q || typeof q.id !== "string") continue;
+            if (skip(q.answer)) continue;
+            importedResponses[q.id] = q.answer;
+          }
+        }
+        if (p.extra && typeof p.extra === "object" && !Array.isArray(p.extra)) {
+          for (const [qid, val] of Object.entries(p.extra)) {
+            if (skip(val)) continue;
+            importedResponses[qid] = val;
+          }
+        }
+      } else {
+        const src =
+          p && typeof p === "object" && "responses" in p ? p.responses : p;
+        if (typeof src !== "object" || src === null || Array.isArray(src)) {
+          throw new Error(
+            "Invalid JSON structure — expected { sections: [...] } or { responses: { ... } }."
+          );
+        }
+        for (const [qid, val] of Object.entries(src as Record<string, unknown>)) {
+          if (skip(val)) continue;
+          importedResponses[qid] = val;
+        }
+      }
 
       const importCount = Object.keys(importedResponses).length;
       if (importCount === 0) {

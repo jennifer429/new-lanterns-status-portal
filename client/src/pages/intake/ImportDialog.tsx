@@ -33,9 +33,11 @@ export function ImportDialog({
         <DialogHeader>
           <DialogTitle>Import Questionnaire Data</DialogTitle>
           <DialogDescription>
-            Upload a <strong>.json</strong> export file to restore responses.
-            Complex fields (contacts, systems lists, integration workflow
-            details) are preserved.
+            Upload a <strong>.json</strong> export file with answers filled
+            into the <code>answer</code> fields. Empty answers are skipped, so
+            you can leave anything blank that you don't want to overwrite.
+            Complex fields (contacts, systems lists, integration workflows)
+            are preserved.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
