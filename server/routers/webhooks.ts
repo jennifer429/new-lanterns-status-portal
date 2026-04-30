@@ -3,7 +3,6 @@ import { publicProcedure, router } from "../_core/trpc";
 import { requireDb } from "../db";
 import { activityFeed, organizations } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
-import { orgIdentifierMatches } from "../_core/orgLookup";
 
 /**
  * Webhooks router - handles incoming webhooks from Zapier/Linear/ClickUp
@@ -39,7 +38,7 @@ export const webhooksRouter = router({
       const [org] = await db
         .select()
         .from(organizations)
-        .where(orgIdentifierMatches(input.organizationSlug))
+        .where(eq(organizations.slug, input.organizationSlug))
         .limit(1);
 
       if (!org) {
@@ -98,7 +97,7 @@ export const webhooksRouter = router({
       const [org] = await db
         .select()
         .from(organizations)
-        .where(orgIdentifierMatches(input.organizationSlug))
+        .where(eq(organizations.slug, input.organizationSlug))
         .limit(1);
 
       if (!org) {

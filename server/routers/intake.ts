@@ -6,7 +6,6 @@ import { intakeResponses, intakeFileAttachments, organizations, questions, onboa
 import { eq, and, sql } from "drizzle-orm";
 import { uploadToGoogleDrive } from "./files";
 import { logFileActivity } from "../fileAuditLog";
-import { orgIdentifierMatches } from "../_core/orgLookup";
 
 export const intakeRouter = router({
   /**
@@ -32,7 +31,7 @@ export const intakeRouter = router({
         })
         .from(organizations)
         .leftJoin(sql`clients`, sql`organizations.clientId = clients.id`)
-        .where(orgIdentifierMatches(input.organizationSlug))
+        .where(eq(organizations.slug, input.organizationSlug))
         .limit(1);
 
       if (!result || result.length === 0) {
@@ -57,7 +56,7 @@ export const intakeRouter = router({
       const [org] = await db
         .select()
         .from(organizations)
-        .where(orgIdentifierMatches(input.organizationSlug))
+        .where(eq(organizations.slug, input.organizationSlug))
         .limit(1);
 
       if (!org) {
@@ -90,7 +89,7 @@ export const intakeRouter = router({
         [org] = await db
           .select()
           .from(organizations)
-          .where(orgIdentifierMatches(input.organizationSlug))
+          .where(eq(organizations.slug, input.organizationSlug))
           .limit(1);
       } catch (error) {
         console.error('[intake] Database error when fetching organization:', error);
@@ -153,7 +152,7 @@ export const intakeRouter = router({
         [org] = await db
           .select()
           .from(organizations)
-          .where(orgIdentifierMatches(input.organizationSlug))
+          .where(eq(organizations.slug, input.organizationSlug))
           .limit(1);
       } catch (error) {
         console.error('[intake] Database error when fetching organization:', error);
@@ -226,7 +225,7 @@ export const intakeRouter = router({
         [org] = await db
           .select()
           .from(organizations)
-          .where(orgIdentifierMatches(input.organizationSlug))
+          .where(eq(organizations.slug, input.organizationSlug))
           .limit(1);
       } catch (error) {
         console.error('[intake] Database error when fetching organization:', error);
@@ -307,7 +306,7 @@ export const intakeRouter = router({
         [org] = await db
           .select()
           .from(organizations)
-          .where(orgIdentifierMatches(input.organizationSlug))
+          .where(eq(organizations.slug, input.organizationSlug))
           .limit(1);
       } catch (error) {
         console.error('[intake] Database error when fetching organization:', error);
@@ -395,7 +394,7 @@ export const intakeRouter = router({
         [org] = await db
           .select()
           .from(organizations)
-          .where(orgIdentifierMatches(input.organizationSlug))
+          .where(eq(organizations.slug, input.organizationSlug))
           .limit(1);
       } catch (error) {
         console.error('[intake] Database error when fetching organization:', error);
@@ -513,7 +512,7 @@ export const intakeRouter = router({
         [org] = await db
           .select()
           .from(organizations)
-          .where(orgIdentifierMatches(input.organizationSlug))
+          .where(eq(organizations.slug, input.organizationSlug))
           .limit(1);
       } catch (error) {
         console.error('[intake] Database error when fetching organization:', error);
@@ -562,7 +561,7 @@ export const intakeRouter = router({
         [org] = await db
           .select()
           .from(organizations)
-          .where(orgIdentifierMatches(input.organizationSlug))
+          .where(eq(organizations.slug, input.organizationSlug))
           .limit(1);
       } catch (error) {
         console.error('[intake] Database error when fetching organization:', error);
@@ -657,7 +656,7 @@ export const intakeRouter = router({
         [org] = await db
           .select()
           .from(organizations)
-          .where(orgIdentifierMatches(input.organizationSlug))
+          .where(eq(organizations.slug, input.organizationSlug))
           .limit(1);
       } catch (error) {
         console.error('[intake] Database error when fetching organization:', error);
@@ -713,7 +712,7 @@ export const intakeRouter = router({
       const [org] = await db
         .select()
         .from(organizations)
-        .where(orgIdentifierMatches(input.organizationSlug))
+        .where(eq(organizations.slug, input.organizationSlug))
         .limit(1);
 
       if (!org) {
@@ -742,7 +741,7 @@ export const intakeRouter = router({
 
       // Get the org to find its clientId
       const [org] = await db.select().from(organizations)
-        .where(orgIdentifierMatches(input.organizationSlug)).limit(1);
+        .where(eq(organizations.slug, input.organizationSlug)).limit(1);
       if (!org || !org.clientId) return [];
 
       // Get all active templates for this org's partner
@@ -770,7 +769,7 @@ export const intakeRouter = router({
       const [org] = await db
         .select()
         .from(organizations)
-        .where(orgIdentifierMatches(input.organizationSlug))
+        .where(eq(organizations.slug, input.organizationSlug))
         .limit(1);
       if (!org) throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
 
@@ -823,7 +822,7 @@ export const intakeRouter = router({
       const [org] = await db
         .select()
         .from(organizations)
-        .where(orgIdentifierMatches(input.organizationSlug))
+        .where(eq(organizations.slug, input.organizationSlug))
         .limit(1);
       if (!org) throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
 
@@ -884,7 +883,7 @@ export const intakeRouter = router({
       const [org] = await db
         .select({ id: organizations.id, clientId: organizations.clientId })
         .from(organizations)
-        .where(orgIdentifierMatches(input.organizationSlug))
+        .where(eq(organizations.slug, input.organizationSlug))
         .limit(1);
 
       if (!org?.clientId) return [];
@@ -1026,7 +1025,7 @@ export const intakeRouter = router({
       const [org] = await db
         .select({ id: organizations.id })
         .from(organizations)
-        .where(orgIdentifierMatches(input.organizationSlug))
+        .where(eq(organizations.slug, input.organizationSlug))
         .limit(1);
 
       if (!org) return [];
@@ -1056,7 +1055,7 @@ export const intakeRouter = router({
       const [org] = await db
         .select({ id: organizations.id })
         .from(organizations)
-        .where(orgIdentifierMatches(input.organizationSlug))
+        .where(eq(organizations.slug, input.organizationSlug))
         .limit(1);
 
       if (!org) throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });

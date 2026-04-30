@@ -4,7 +4,6 @@ import { publicProcedure, router } from "../_core/trpc";
 import { requireDb } from "../db";
 import { organizations, validationResults } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
-import { orgIdentifierMatches } from "../_core/orgLookup";
 
 export const validationRouter = router({
   /**
@@ -19,7 +18,7 @@ export const validationRouter = router({
       const [org] = await db
         .select()
         .from(organizations)
-        .where(orgIdentifierMatches(input.organizationSlug))
+        .where(eq(organizations.slug, input.organizationSlug))
         .limit(1);
 
       if (!org) throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
@@ -67,7 +66,7 @@ export const validationRouter = router({
       const [org] = await db
         .select()
         .from(organizations)
-        .where(orgIdentifierMatches(input.organizationSlug))
+        .where(eq(organizations.slug, input.organizationSlug))
         .limit(1);
 
       if (!org) throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
