@@ -102,8 +102,8 @@ export function OrgsTab({ isPlatformAdmin, orgs, clients, refetchOrgs, metrics }
   };
 
   const handleUpdateOrg = () => {
-    if (!editOrgId || !editOrgName || !editOrgSlug || !editOrgClientId) { toast.error("Please fill in all required fields"); return; }
-    updateOrgMutation.mutate({ id: editOrgId, name: editOrgName, slug: editOrgSlug, clientId: editOrgClientId });
+    if (!editOrgId || !editOrgName || !editOrgClientId) { toast.error("Please fill in all required fields"); return; }
+    updateOrgMutation.mutate({ id: editOrgId, name: editOrgName, clientId: editOrgClientId });
   };
 
   const handleDeactivateOrg = (orgId: number) => {
@@ -302,7 +302,8 @@ export function OrgsTab({ isPlatformAdmin, orgs, clients, refetchOrgs, metrics }
             </div>
             <div>
               <Label htmlFor="edit-org-slug">URL Slug</Label>
-              <Input id="edit-org-slug" placeholder="memorial-general" value={editOrgSlug} onChange={(e) => setEditOrgSlug(e.target.value)} />
+              <Input id="edit-org-slug" value={editOrgSlug} readOnly disabled className="font-mono opacity-70" />
+              <p className="text-[11px] text-muted-foreground mt-1">Slug is permanent — it's the org's URL identifier. Rename via the Name field above instead.</p>
             </div>
             <Button onClick={handleUpdateOrg} disabled={updateOrgMutation.isPending} className="w-full">
               {updateOrgMutation.isPending ? "Updating..." : "Update Organization"}

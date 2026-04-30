@@ -591,14 +591,19 @@ export const adminRouter = router({
     }),
 
   /**
-   * Update an organization
+   * Update an organization.
+   *
+   * Slug is intentionally not editable — it's the stable URL identifier
+   * for an org and changing it after data exists would (a) break every
+   * bookmark and inbound link, and (b) leave responses keyed by the old
+   * URL stranded if anything in the system still resolved by slug.
+   * Names can change freely; slugs cannot.
    */
   updateOrganization: adminDbProcedure
     .input(
       z.object({
         id: z.number(),
         name: z.string().optional(),
-        slug: z.string().optional(),
         contactName: z.string().optional(),
         contactEmail: z.string().optional(),
         contactPhone: z.string().optional(),
