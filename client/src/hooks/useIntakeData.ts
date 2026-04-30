@@ -460,22 +460,10 @@ export function useIntakeData(slug: string, clientSlug: string) {
     reader.readAsDataURL(file);
   };
 
-  // Export the FULL questionnaire as a human-friendly JSON document.
-  //
-  // Shape is sections → questions → { id, text, type, answer }, so the file
-  // reads like a fillable form. Workflow: export → drop into Claude with
-  // meeting notes → Claude fills in `answer` fields → re-import.
-  //
-  // Server-fresh data: refetch from the server rather than relying on the
-  // in-memory `responses` state, so auto-save races and lazy-hydrated
-  // section components can't cause partial exports. Server is the source of
-  // truth; in-memory keys overlay it so unsaved edits also round-trip.
-  // Live `connRows` overlay CONN.endpoints so connectivity reflects the grid.
-  //
-  // Component-managed scratch keys (IW.<wf>_systems, IW.historic_results_*,
-  // CONN.endpoints, __question_na:* flags, etc.) are emitted in a separate
-  // `extra` bucket — they aren't surveyable questions, just supporting data
-  // that needs to round-trip on import.
+  // Export every questionnaire question as a flat array of
+  // { id, text, answer }. Unanswered questions get answer: "". Same shape
+  // for import. Workflow: export → fill in answers (e.g. via Claude +
+  // meeting notes) → re-import.
   const handleExportData = async () => {
     if (!slug) return;
 
@@ -499,118 +487,21 @@ export function useIntakeData(slug: string, clientSlug: string) {
       console.error("Export: failed to refetch responses, falling back to in-memory state", err);
     }
 
-    // In-memory wins for any keys not yet persisted; otherwise prefer server.
     const merged: Record<string, any> = { ...serverResponses, ...responses };
+    if (connRows.length > 0) merged["CONN.endpoints"] = connRows;
 
-    // Live Notion connectivity — the DB copy can lag if the user only viewed
-    // (didn't edit) the grid.
-    if (connRows.length > 0) {
-      merged["CONN.endpoints"] = connRows;
-    }
-
-    const parseValue = (raw: unknown): unknown => {
-      if (raw === undefined || raw === null || raw === "") return "";
-      if (typeof raw !== "string") return raw;
-      try {
-        return JSON.parse(raw);
-      } catch {
-        return raw;
-      }
-    };
-
-    const isAnswered = (raw: unknown): boolean => {
-      if (raw === undefined || raw === null || raw === "") return false;
-      if (Array.isArray(raw) && raw.length === 0) return false;
-      if (typeof raw === "object" && Object.keys(raw as object).length === 0) return false;
-      return true;
-    };
-
-    const declaredIds = new Set<string>();
-    const exportedSections: Array<{
-      id: string;
-      title: string;
-      description?: string;
-      answered: number;
-      total: number;
-      questions: Array<{
-        id: string;
-        text: string;
-        type: string;
-        options?: string[];
-        notes?: string;
-        answer: unknown;
-      }>;
-    }> = [];
+    const items: Array<{ id: string; text: string; answer: unknown }> = [];
 
     questionnaireSections.forEach((section) => {
-      const questions: Array<{
-        id: string;
-        text: string;
-        type: string;
-        options?: string[];
-        notes?: string;
-        answer: unknown;
-      }> = [];
-      let answered = 0;
-
       section.questions?.forEach((q) => {
         if (q.inactive) return;
         if (q.type === "upload" || q.type === "upload-download") return;
-        declaredIds.add(q.id);
-
         const raw = merged[q.id];
-        const filled = isAnswered(raw);
-        if (filled) answered += 1;
-
-        questions.push({
-          id: q.id,
-          text: q.text,
-          type: q.type,
-          ...(q.options ? { options: q.options } : {}),
-          ...(q.notes ? { notes: q.notes } : {}),
-          answer: filled ? parseValue(raw) : "",
-        });
+        items.push({ id: q.id, text: q.text, answer: raw ?? "" });
       });
-
-      if (questions.length > 0) {
-        exportedSections.push({
-          id: section.id,
-          title: section.title,
-          ...(section.description ? { description: section.description } : {}),
-          answered,
-          total: questions.length,
-          questions,
-        });
-      }
     });
 
-    // Anything in state that isn't a declared question — connectivity rows,
-    // workflow scratch keys, N/A flags. We keep these as a flat dict so they
-    // round-trip on import.
-    const extra: Record<string, unknown> = {};
-    Object.entries(merged).forEach(([qid, raw]) => {
-      if (declaredIds.has(qid)) return;
-      if (raw === undefined || raw === null || raw === "") return;
-      extra[qid] = parseValue(raw);
-    });
-
-    const totalAnswered = exportedSections.reduce((sum, s) => sum + s.answered, 0);
-    const totalQuestions = exportedSections.reduce((sum, s) => sum + s.total, 0);
-
-    const payload = {
-      exported: new Date().toISOString(),
-      org: slug,
-      summary: {
-        answered: totalAnswered,
-        total: totalQuestions,
-      },
-      sections: exportedSections,
-      extra,
-    };
-
-    const blob = new Blob([JSON.stringify(payload, null, 2)], {
-      type: "application/json",
-    });
+    const blob = new Blob([JSON.stringify(items, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -618,13 +509,8 @@ export function useIntakeData(slug: string, clientSlug: string) {
     a.click();
     URL.revokeObjectURL(url);
 
-    const breakdown = exportedSections
-      .map((s) => `${s.title}: ${s.answered}/${s.total}`)
-      .join(" · ");
-    toast.success(
-      `Exported questionnaire (${totalAnswered}/${totalQuestions} answered)`,
-      { description: breakdown }
-    );
+    const answered = items.filter((i) => i.answer !== "" && i.answer !== null).length;
+    toast.success(`Exported ${items.length} questions (${answered} answered)`);
   };
 
   // Import responses — JSON only. Preserves complex shapes (arrays, nested
@@ -661,45 +547,21 @@ export function useIntakeData(slug: string, clientSlug: string) {
         );
       }
 
-      // Accept three shapes:
-      //   1. New sections format: { sections: [{ questions: [{id, answer}] }], extra: {...} }
-      //   2. Legacy flat: { responses: { qid: value, ... } }
-      //   3. Bare flat: { qid: value, ... }
-      const importedResponses: Record<string, any> = {};
-      const skip = (val: unknown) =>
-        val === undefined ||
-        val === null ||
-        val === "" ||
-        (Array.isArray(val) && val.length === 0);
+      // Expects a flat array: [{ id, text, answer }, ...]. Empty answers
+      // are skipped so partial fills don't blank out existing data.
+      if (!Array.isArray(payload)) {
+        throw new Error(
+          'Expected a JSON array like [{ "id": "H.1", "text": "...", "answer": "..." }, ...].'
+        );
+      }
 
-      const p = payload as any;
-      if (p && typeof p === "object" && Array.isArray(p.sections)) {
-        for (const section of p.sections) {
-          if (!section || !Array.isArray(section.questions)) continue;
-          for (const q of section.questions) {
-            if (!q || typeof q.id !== "string") continue;
-            if (skip(q.answer)) continue;
-            importedResponses[q.id] = q.answer;
-          }
-        }
-        if (p.extra && typeof p.extra === "object" && !Array.isArray(p.extra)) {
-          for (const [qid, val] of Object.entries(p.extra)) {
-            if (skip(val)) continue;
-            importedResponses[qid] = val;
-          }
-        }
-      } else {
-        const src =
-          p && typeof p === "object" && "responses" in p ? p.responses : p;
-        if (typeof src !== "object" || src === null || Array.isArray(src)) {
-          throw new Error(
-            "Invalid JSON structure — expected { sections: [...] } or { responses: { ... } }."
-          );
-        }
-        for (const [qid, val] of Object.entries(src as Record<string, unknown>)) {
-          if (skip(val)) continue;
-          importedResponses[qid] = val;
-        }
+      const importedResponses: Record<string, any> = {};
+      for (const item of payload) {
+        if (!item || typeof item !== "object" || typeof (item as any).id !== "string") continue;
+        const { id, answer } = item as { id: string; answer: unknown };
+        if (answer === undefined || answer === null || answer === "") continue;
+        if (Array.isArray(answer) && answer.length === 0) continue;
+        importedResponses[id] = answer;
       }
 
       const importCount = Object.keys(importedResponses).length;
