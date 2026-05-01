@@ -33,10 +33,8 @@ export function ImportDialog({
         <DialogHeader>
           <DialogTitle>Import Questionnaire Data</DialogTitle>
           <DialogDescription>
-            Upload a <strong>.json</strong> export file to restore responses.
-            Complex fields (contacts, systems lists, integration workflow
-            details) are preserved. Empty values are skipped, so partial
-            fills don't blank out existing data.
+            Upload a <strong>.json</strong> export file to restore responses. You can also
+            import legacy pipe-delimited <code>.txt</code> or <code>.csv</code> files.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
@@ -45,7 +43,7 @@ export function ImportDialog({
             <Input
               id="import-file"
               type="file"
-              accept=".json"
+              accept=".json,.txt,.csv"
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 onFileChange(file || null);

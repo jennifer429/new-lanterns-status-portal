@@ -2,11 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import {
-  questionnaireSections,
-  type Question,
-  type Section,
-} from "@shared/questionnaireData";
+import { questionnaireSections, type Section } from "@shared/questionnaireData";
 import { type ConnectivityRow } from "@/components/ConnectivityTable";
 import { useAuth } from "@/_core/hooks/useAuth";
 
@@ -152,34 +148,21 @@ export function useIntakeData(slug: string, clientSlug: string) {
   // ── Effects ──────────────────────────────────────────────────────────────────
 
   // Seed connectivity rows from Notion on load
-  // DATA-LOSS SAFEGUARD: Never overwrite existing rows with empty data from
-  // a Notion error response. Only replace rows when Notion returns actual data,
-  // or when the table was previously empty (initial load).
   useEffect(() => {
     if (notionConnData?.rows && notionConnData.rows.length > 0) {
-      // Notion returned real data — use it
       setConnRows(notionConnData.rows as ConnectivityRow[]);
       notionPageIds.current = new Set(
         notionConnData.rows.map((r: any) => r.id)
       );
-    } else if (notionConnData !== undefined && !notionConnData?.error) {
-      // Notion returned empty with NO error — only load local fallback if
-      // we don't already have rows (prevents wiping user-entered data)
-      setConnRows((prev) => {
-        if (prev.length > 0) return prev; // preserve existing rows
-        try {
-          const v = responses["CONN.endpoints"];
-          if (v) {
-            const parsed = typeof v === "string" ? JSON.parse(v) : v;
-            return Array.isArray(parsed) ? parsed : prev;
-          }
-        } catch {
-          /* ignore */
-        }
-        return prev;
-      });
+    } else if (notionConnData !== undefined) {
+      // Notion configured but empty — fall back to local DB data
+      try {
+        const v = responses["CONN.endpoints"];
+        if (v) setConnRows(typeof v === "string" ? JSON.parse(v) : v);
+      } catch {
+        /* ignore */
+      }
     }
-    // If notionConnData has an error, do nothing — keep existing rows intact
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notionConnData]);
 
@@ -460,94 +443,38 @@ export function useIntakeData(slug: string, clientSlug: string) {
     reader.readAsDataURL(file);
   };
 
-  // Export questionnaire as JSON: { exported, org, responses, meta }.
-  //   - `responses`: filled-in answers, keyed by question id
-  //   - `meta`: every declared question with section/text/type/options
-  // The meta block doubles as the "list of all questions" so an LLM (or
-  // human) can fill answers in by id without seeing the UI.
-  //
-  // Refetches from the server so auto-save races and lazy-hydrated section
-  // components don't cause partial exports; in-memory keys overlay it for
-  // unsaved edits; live `connRows` overlay CONN.endpoints since the DB copy
-  // can lag if the user only viewed the grid.
-  const handleExportData = async () => {
-    if (!slug) return;
-
-    let serverResponses: Record<string, any> = {};
-    try {
-      const fresh = await utils.intake.getResponses.fetch({
-        organizationSlug: slug,
-      });
-      fresh?.forEach((resp) => {
-        if (!resp.questionId) return;
-        try {
-          serverResponses[resp.questionId] =
-            typeof resp.response === "string"
-              ? JSON.parse(resp.response)
-              : resp.response;
-        } catch {
-          serverResponses[resp.questionId] = resp.response;
-        }
-      });
-    } catch (err) {
-      console.error("Export: failed to refetch responses, falling back to in-memory state", err);
-    }
-
-    const merged: Record<string, any> = { ...serverResponses, ...responses };
-    if (connRows.length > 0) merged["CONN.endpoints"] = connRows;
-
+  // Export questionnaire responses as JSON
+  const handleExportData = () => {
     const exportResponses: Record<string, any> = {};
     const meta: Record<
       string,
       { section: string; text: string; type: string; options?: string[] }
     > = {};
 
-    // Walk declared questions: build meta for every one, copy answers when present.
     questionnaireSections.forEach((section) => {
-      section.questions?.forEach((q) => {
-        if (q.inactive) return;
+      if (section.type === "workflow" || !section.questions) return;
+      section.questions.forEach((q) => {
         if (q.type === "upload" || q.type === "upload-download") return;
-
+        const raw = responses[q.id];
+        if (raw !== undefined && raw !== null && raw !== "") {
+          exportResponses[q.id] =
+            typeof raw === "string"
+              ? (() => {
+                  try {
+                    return JSON.parse(raw);
+                  } catch {
+                    return raw;
+                  }
+                })()
+              : raw;
+        }
         meta[q.id] = {
           section: section.title,
           text: q.text,
           type: q.type,
           ...(q.options ? { options: q.options } : {}),
         };
-
-        const raw = merged[q.id];
-        if (raw === undefined || raw === null || raw === "") return;
-        if (Array.isArray(raw) && raw.length === 0) return;
-        exportResponses[q.id] =
-          typeof raw === "string"
-            ? (() => {
-                try {
-                  return JSON.parse(raw);
-                } catch {
-                  return raw;
-                }
-              })()
-            : raw;
       });
-    });
-
-    // Component-managed scratch keys (CONN.endpoints, IW.<wf>_systems,
-    // IW.historic_results_*, __question_na:*, etc.) — copy through so they
-    // round-trip on import.
-    Object.entries(merged).forEach(([qid, raw]) => {
-      if (qid in meta) return;
-      if (qid in exportResponses) return;
-      if (raw === undefined || raw === null || raw === "") return;
-      exportResponses[qid] =
-        typeof raw === "string"
-          ? (() => {
-              try {
-                return JSON.parse(raw);
-              } catch {
-                return raw;
-              }
-            })()
-          : raw;
     });
 
     const payload = {
@@ -557,22 +484,17 @@ export function useIntakeData(slug: string, clientSlug: string) {
       meta,
     };
 
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     a.download = `${slug}-intake-responses.json`;
     a.click();
-    URL.revokeObjectURL(url);
-
-    toast.success(
-      `Exported ${Object.keys(exportResponses).length} answers across ${Object.keys(meta).length} questions`
-    );
   };
 
-  // Import responses — JSON only. Preserves complex shapes (arrays, nested
-  // objects for contacts-table / systems-list / IW.*_systems) by round-tripping
-  // through JSON.stringify on save.
+  // Import responses — supports JSON (new) and legacy pipe-delimited (txt/csv) formats
   const handleImportFile = async (
     importFile: File,
     onSuccess: () => void,
@@ -584,52 +506,85 @@ export function useIntakeData(slug: string, clientSlug: string) {
     try {
       const text = await importFile.text();
       const trimmed = text.trimStart();
+      const importedResponses: Record<string, any> = {};
 
       const looksLikeJson =
-        importFile.name.toLowerCase().endsWith(".json") ||
+        importFile.name.endsWith(".json") ||
         trimmed.startsWith("{") ||
         trimmed.startsWith("[");
-      if (!looksLikeJson) {
-        throw new Error(
-          "Unsupported file format. Please upload a .json file exported from this tool."
-        );
-      }
 
-      let payload: unknown;
-      try {
-        payload = JSON.parse(trimmed);
-      } catch (err) {
-        throw new Error(
-          `Failed to parse JSON: ${err instanceof Error ? err.message : "Invalid JSON"}`
-        );
-      }
+      if (looksLikeJson) {
+        try {
+          const payload = JSON.parse(trimmed);
+          const src = payload.responses ?? payload;
+          if (typeof src !== "object" || src === null)
+            throw new Error("Invalid JSON structure");
+          Object.entries(src).forEach(([qid, val]) => {
+            if (val !== undefined && val !== null && val !== "") {
+              importedResponses[qid] = val;
+            }
+          });
+        } catch (jsonErr) {
+          throw new Error(
+            `Failed to parse JSON: ${jsonErr instanceof Error ? jsonErr.message : "Invalid JSON"}`
+          );
+        }
+      } else {
+        const lines = text.split("\n").filter((l) => l.trim());
+        if (lines.length === 0) throw new Error("File is empty");
 
-      // Accepts the export shape ({ responses: { qid: value, ... } }) or a
-      // bare flat dict ({ qid: value, ... }). Empty values are skipped so
-      // partial fills don't blank out existing data.
-      const src =
-        payload && typeof payload === "object" && "responses" in (payload as any)
-          ? (payload as any).responses
-          : payload;
-      if (typeof src !== "object" || src === null || Array.isArray(src)) {
-        throw new Error(
-          "Invalid JSON structure — expected { responses: { ... } } or a flat { qid: value } object."
-        );
-      }
+        const header = lines[0] || "";
+        const isPipeDelimited = header.includes("|");
 
-      const importedResponses: Record<string, any> = {};
-      Object.entries(src as Record<string, unknown>).forEach(([qid, val]) => {
-        if (val === undefined || val === null || val === "") return;
-        if (Array.isArray(val) && val.length === 0) return;
-        importedResponses[qid] = val;
-      });
+        if (!isPipeDelimited) {
+          throw new Error(
+            "Unrecognized file format. Expected a .json export file or a pipe-delimited (|) .txt/.csv file. " +
+              "Tip: Use the Export button to download a .json file, then re-import that file."
+          );
+        }
+
+        const hasOptionsColumn = header.split("|").length >= 6;
+        lines.slice(1).forEach((line) => {
+          const parts = line.split("|");
+          const questionId = hasOptionsColumn
+            ? parts[1]?.trim()
+            : parts[1]?.trim();
+          const responseType = hasOptionsColumn
+            ? parts[3]?.trim()
+            : parts[3]?.trim();
+          const responseValue = hasOptionsColumn
+            ? parts[5]?.trim()
+            : parts[4]?.trim();
+          if (!questionId || !responseValue) return;
+          if (responseType === "workflow") return;
+          if (
+            responseType === "contacts-table" ||
+            responseType === "systems-list"
+          ) {
+            try {
+              importedResponses[questionId] = JSON.parse(responseValue);
+            } catch {
+              importedResponses[questionId] = responseValue;
+            }
+          } else if (
+            responseType === "multi-select" ||
+            responseType === "multiple-choice"
+          ) {
+            importedResponses[questionId] = responseValue
+              .split("; ")
+              .map((v: string) => v.trim())
+              .filter(Boolean);
+          } else {
+            importedResponses[questionId] = responseValue;
+          }
+        });
+      }
 
       const importCount = Object.keys(importedResponses).length;
-      if (importCount === 0) {
+      if (importCount === 0)
         throw new Error(
           "No responses found in file. Make sure the file contains questionnaire data."
         );
-      }
 
       setResponses((prev) => ({ ...prev, ...importedResponses }));
       await Promise.all(
@@ -638,9 +593,7 @@ export function useIntakeData(slug: string, clientSlug: string) {
             organizationSlug: slug,
             questionId,
             response:
-              typeof value === "object"
-                ? JSON.stringify(value)
-                : String(value),
+              typeof value === "object" ? JSON.stringify(value) : String(value),
             userEmail: user?.email || "",
           })
         )
