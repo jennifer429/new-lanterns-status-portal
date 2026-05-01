@@ -17,7 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ClipboardList, Users, FileText, Download, LogOut, Settings, ChevronDown, ListChecks, History, FolderOpen } from "lucide-react";
+import { ClipboardList, Users, FileText, Download, LogOut, Settings, ChevronDown, ListChecks, History, FolderOpen, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { AdminChatWidget } from "@/components/AdminChatWidget";
 import { AiAuditLog } from "@/components/AiAuditLog";
@@ -64,17 +64,63 @@ export default function PlatformAdmin() {
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("impl-dashboard");
+  // Platform admins can preview the console scoped to a single partner.
+  // Survives reload via sessionStorage; partner admins ignore this.
+  const [viewAsClientId, setViewAsClientIdRaw] = useState<number | null>(() => {
+    if (typeof window === "undefined") return null;
+    const stored = sessionStorage.getItem("admin.viewAsClientId");
+    return stored ? Number(stored) : null;
+  });
+  const setViewAsClientId = (id: number | null) => {
+    setViewAsClientIdRaw(id);
+    if (typeof window !== "undefined") {
+      if (id === null) sessionStorage.removeItem("admin.viewAsClientId");
+      else sessionStorage.setItem("admin.viewAsClientId", String(id));
+    }
+  };
 
   useEffect(() => {
     if (!authLoading && (!user || user.role !== "admin")) setLocation("/");
   }, [user, authLoading, setLocation]);
 
-  const isPlatformAdmin = user?.clientId === null || user?.clientId === undefined;
+  const isTruePlatformAdmin = user?.clientId === null || user?.clientId === undefined;
 
   const { data: orgs, isLoading, refetch: refetchOrgs } = trpc.admin.getAllOrganizations.useQuery();
   const { data: clients } = trpc.admin.getAllClients.useQuery();
   const { data: metrics } = trpc.admin.getAdminSummary.useQuery();
   const { data: allUsers, refetch: refetchUsers } = trpc.admin.getAllUsers.useQuery();
+
+  // Effective scope: partner admins always see their own clientId; platform admins
+  // either see everything or, while previewing, only the selected partner.
+  const effectiveClientId = isTruePlatformAdmin ? viewAsClientId : (user?.clientId ?? null);
+  const isPlatformAdmin = effectiveClientId === null;
+  const viewedPartnerName = effectiveClientId
+    ? (clients?.find(c => c.id === effectiveClientId)?.name ?? "")
+    : "";
+
+  const scopedOrgs = effectiveClientId
+    ? (orgs ?? []).filter(o => o.clientId === effectiveClientId)
+    : (orgs ?? []);
+  const scopedClients = effectiveClientId
+    ? (clients ?? []).filter(c => c.id === effectiveClientId)
+    : (clients ?? []);
+  const scopedOrgIds = new Set(scopedOrgs.map(o => o.id));
+  const scopedUsers = effectiveClientId
+    ? (allUsers ?? []).filter(u =>
+        (u.organizationId != null && scopedOrgIds.has(u.organizationId)) ||
+        (u.role === "admin" && u.clientId === effectiveClientId)
+      )
+    : (allUsers ?? []);
+  const scopedMetrics = effectiveClientId
+    ? metrics?.filter(m => scopedOrgIds.has(m.organizationId))
+    : metrics;
+
+  // If the active tab becomes unavailable (e.g. Partners/Specs while previewing), fall back.
+  useEffect(() => {
+    if (!isPlatformAdmin && (activeTab === "partners" || activeTab === "specs")) {
+      setActiveTab("impl-dashboard");
+    }
+  }, [isPlatformAdmin, activeTab]);
 
   const logoutMutation = trpc.auth.logout.useMutation({
     onSuccess: () => { window.location.href = "/login"; },
@@ -82,14 +128,14 @@ export default function PlatformAdmin() {
 
   const handleExportAll = () => {
     const lines = ["Type,Name,Email,Organization,Partner,Role,Status,Completion %,Last Login"];
-    orgs?.forEach(org => {
-      const orgMetrics = metrics?.find(m => m.organizationId === org.id);
-      const partnerName = org.clientId && clients ? clients.find(c => c.id === org.clientId)?.name || "N/A" : "N/A";
+    scopedOrgs.forEach(org => {
+      const orgMetrics = scopedMetrics?.find(m => m.organizationId === org.id);
+      const partnerName = org.clientId ? clients?.find(c => c.id === org.clientId)?.name || "N/A" : "N/A";
       lines.push([csvEscape("Organization"), csvEscape(org.name), "", "", csvEscape(partnerName), "", csvEscape(org.status), `${orgMetrics?.completionPercent || 0}%`, ""].join(","));
     });
-    allUsers?.forEach(u => {
-      const org = orgs?.find(o => o.id === u.organizationId);
-      const partnerName = org?.clientId && clients ? clients.find(c => c.id === org.clientId)?.name || "N/A" : "N/A";
+    scopedUsers.forEach(u => {
+      const org = scopedOrgs.find(o => o.id === u.organizationId);
+      const partnerName = org?.clientId ? clients?.find(c => c.id === org.clientId)?.name || "N/A" : "N/A";
       const lastLogin = u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : "Never";
       lines.push([csvEscape("User"), csvEscape(u.name), csvEscape(u.email), csvEscape(org?.name), csvEscape(partnerName), csvEscape(u.role), u.organizationId ? "Active" : "Inactive", "", csvEscape(lastLogin)].join(","));
     });
@@ -111,15 +157,23 @@ export default function PlatformAdmin() {
     );
   }
 
-  const headerTitle = isPlatformAdmin ? "Platform Admin" : `${getPartnerDisplayName(user, clients)} Admin`;
-  const headerSubtitle = isPlatformAdmin ? "New Lantern - All Partners" : "Manage your organizations";
+  const headerTitle = isPlatformAdmin
+    ? "Platform Admin"
+    : isTruePlatformAdmin
+      ? `${viewedPartnerName} Admin`
+      : `${getPartnerDisplayName(user, clients)} Admin`;
+  const headerSubtitle = isPlatformAdmin
+    ? "New Lantern - All Partners"
+    : isTruePlatformAdmin
+      ? "Previewing partner view"
+      : "Manage your organizations";
 
   const sharedProps = {
     isPlatformAdmin,
-    orgs: orgs || [],
+    orgs: scopedOrgs,
     refetchOrgs,
-    clients: clients || [],
-    allUsers: allUsers || [],
+    clients: scopedClients,
+    allUsers: scopedUsers,
     refetchUsers,
   };
 
@@ -139,6 +193,23 @@ export default function PlatformAdmin() {
               </p>
             </div>
             <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+              {isTruePlatformAdmin && (clients?.length ?? 0) > 0 && (
+                <Select
+                  value={viewAsClientId === null ? "platform" : String(viewAsClientId)}
+                  onValueChange={(v) => setViewAsClientId(v === "platform" ? null : Number(v))}
+                >
+                  <SelectTrigger className="h-8 sm:h-9 w-32 sm:w-44 text-xs sm:text-sm gap-1.5">
+                    <Eye className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                    <SelectValue placeholder="View as…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="platform">Platform (All)</SelectItem>
+                    {clients?.map(c => (
+                      <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               <Button variant="outline" size="sm" onClick={handleExportAll} className="gap-2 h-8 sm:h-9 px-2 sm:px-3" title="Export a CSV summary of all organizations and users">
                 <Download className="w-4 h-4" />
                 <span className="hidden sm:inline">Export Orgs &amp; Users</span>
@@ -235,10 +306,30 @@ export default function PlatformAdmin() {
         </div>
       </header>
 
+      {/* Preview banner — only shown when a true Platform admin is scoping the view to one partner */}
+      {isTruePlatformAdmin && viewAsClientId !== null && (
+        <div className="bg-amber-500/10 border-b border-amber-500/30 text-amber-300 text-xs sm:text-sm">
+          <div className="container py-2 flex items-center justify-between gap-2">
+            <span className="flex items-center gap-1.5 min-w-0">
+              <Eye className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">
+                Previewing as <strong className="text-amber-200">{viewedPartnerName}</strong> partner admin — data is scoped to this partner.
+              </span>
+            </span>
+            <button
+              onClick={() => setViewAsClientId(null)}
+              className="underline hover:no-underline shrink-0 text-amber-200"
+            >
+              Exit
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <div className="container py-5">
         {activeTab === "prod-dashboard" && (
-          <ConnectivityMatrix orgs={(orgs || [])
+          <ConnectivityMatrix orgs={scopedOrgs
             .filter(o => o.status === "active")
             .map(o => ({
               id: o.id,
@@ -248,11 +339,11 @@ export default function PlatformAdmin() {
             }))}
           />
         )}
-        {activeTab === "impl-dashboard" && <AdminDashboardTab {...sharedProps} metrics={metrics} />}
-        {activeTab === "orgs" && <OrgsTab {...sharedProps} metrics={metrics} />}
+        {activeTab === "impl-dashboard" && <AdminDashboardTab {...sharedProps} metrics={scopedMetrics} />}
+        {activeTab === "orgs" && <OrgsTab {...sharedProps} metrics={scopedMetrics} />}
         {activeTab === "users" && <UsersTab {...sharedProps} />}
-        {activeTab === "task-templates" && <TaskTemplatesTab isPlatformAdmin={isPlatformAdmin} clients={clients || []} />}
-        {activeTab === "templates" && <TemplatesTab isPlatformAdmin={isPlatformAdmin} clients={clients || []} />}
+        {activeTab === "task-templates" && <TaskTemplatesTab isPlatformAdmin={isPlatformAdmin} clients={scopedClients} />}
+        {activeTab === "templates" && <TemplatesTab isPlatformAdmin={isPlatformAdmin} clients={scopedClients} />}
         {activeTab === "partners" && isPlatformAdmin && <PartnersTab clients={clients || []} orgs={orgs || []} refetchOrgs={refetchOrgs} />}
         {activeTab === "specs" && isPlatformAdmin && <SpecsTab />}
         {activeTab === "vendor-picklists" && <VendorPicklistsTab />}
@@ -260,7 +351,7 @@ export default function PlatformAdmin() {
         {activeTab === "library" && <ProceduralLibraryEmbed />}
       </div>
 
-      <AdminChatWidget isPlatformAdmin={!user?.clientId} />
+      <AdminChatWidget isPlatformAdmin={isPlatformAdmin} />
     </div>
   );
 }
