@@ -7,6 +7,7 @@ import {
   implementationOrgs,
   taskOrgAssignment,
   intakeResponses,
+  clients,
 } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 
@@ -253,15 +254,25 @@ export const swimlaneRouter = router({
       const db = await requireDb();
       const orgId = await resolveOrgId(db, input.organizationSlug);
 
-      // Get the org name for the Hospital IT row
+      // Get the org name for the Hospital IT row and the partner (client) name
       const [org] = await db
-        .select({ name: organizations.name })
+        .select({ name: organizations.name, clientId: organizations.clientId })
         .from(organizations)
         .where(eq(organizations.id, orgId))
         .limit(1);
 
       const result: Record<string, string> = {};
       if (org) result.hospital = org.name;
+
+      // Look up the partner/client name (e.g. "SRV", "RadOne")
+      if (org?.clientId) {
+        const [client] = await db
+          .select({ name: clients.name })
+          .from(clients)
+          .where(eq(clients.id, org.clientId))
+          .limit(1);
+        if (client) result.partner = client.name;
+      }
 
       // Try ARCH.systems first (new format: JSON array of {name, type, ...})
       const [archSystems] = await db

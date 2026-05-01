@@ -652,56 +652,9 @@ export default function Implementation() {
             {orgName && <div className="sm:hidden text-sm font-semibold truncate max-w-[100px]">{orgName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 4)}</div>}
           </div>
 
-          {/* Right: actions + nav + user */}
+          {/* Right: nav + user */}
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleExportCSV}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-foreground bg-muted/40 border border-border/40 rounded-md hover:bg-muted/60 hover:border-primary/30 transition-all"
-              title="Export task list as CSV"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Export CSV</span>
-            </button>
-            <button
-              onClick={() => csvInputRef.current?.click()}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-foreground bg-muted/40 border border-border/40 rounded-md hover:bg-muted/60 hover:border-primary/30 transition-all"
-              title="Import task data from CSV"
-            >
-              <Upload className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Import CSV</span>
-            </button>
             <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={handleImportCSV} />
-            {/* View toggle */}
-            <div className="flex items-center bg-muted/30 border border-border/40 rounded-md overflow-hidden">
-              <button
-                onClick={() => setViewMode("list")}
-                className={cn(
-                  "flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium transition-all",
-                  viewMode === "list"
-                    ? "bg-primary/15 text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                )}
-                title="List view"
-              >
-                <List className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">List</span>
-              </button>
-              <div className="w-px h-4 bg-border/40" />
-              <button
-                onClick={() => setViewMode("swimlane")}
-                className={cn(
-                  "flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium transition-all",
-                  viewMode === "swimlane"
-                    ? "bg-primary/15 text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                )}
-                title="Swimlane view"
-              >
-                <LayoutGrid className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Swimlane</span>
-              </button>
-            </div>
-            <div className="w-px h-5 bg-border/40 mx-1" />
             <Link href={orgPath} className="text-sm text-foreground hover:text-primary transition-colors font-medium whitespace-nowrap">
               Site Dashboard
             </Link>
@@ -710,7 +663,32 @@ export default function Implementation() {
                 Admin
               </Link>
             )}
-            <UserMenu />
+            <UserMenu
+              extraItems={[
+                {
+                  label: "List view",
+                  icon: <List className="w-4 h-4 mr-2" />,
+                  onClick: () => setViewMode("list"),
+                  active: viewMode === "list",
+                },
+                {
+                  label: "Swimlane view",
+                  icon: <LayoutGrid className="w-4 h-4 mr-2" />,
+                  onClick: () => setViewMode("swimlane"),
+                  active: viewMode === "swimlane",
+                },
+                {
+                  label: "Export CSV",
+                  icon: <Download className="w-4 h-4 mr-2" />,
+                  onClick: handleExportCSV,
+                },
+                {
+                  label: "Import CSV",
+                  icon: <Upload className="w-4 h-4 mr-2" />,
+                  onClick: () => csvInputRef.current?.click(),
+                },
+              ]}
+            />
           </div>
         </div>
       </header>

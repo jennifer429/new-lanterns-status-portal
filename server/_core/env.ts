@@ -21,4 +21,9 @@ export const ENV = {
   googleDriveFolderId: process.env.GOOGLE_DRIVE_FOLDER_ID ?? "1STogLQnTku6B0iAkAAqt7oFKFtaUy1Nu",
   siteBaseUrl: process.env.SITE_BASE_URL ?? "https://newlantern.us.com",
   externalApiKey: process.env.EXTERNAL_API_KEY ?? "",
+  inviteWebhookUrl: process.env.INVITE_WEBHOOK_URL ?? "",
+  inviteWebhookSecret: process.env.INVITE_WEBHOOK_SECRET ?? "",
+  // Kill switch: emails do not go out unless this is explicitly "true".
+  // Leave unset (or "false") during testing so no real invites are sent.
+  inviteWebhookEnabled: process.env.INVITE_WEBHOOK_ENABLED === "true",
 };

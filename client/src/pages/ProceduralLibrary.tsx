@@ -326,19 +326,25 @@ export default function ProceduralLibrary() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {isAdmin && (
-              <Button size="sm" onClick={() => setIsUploadOpen(true)} className="gap-1.5 h-8 sm:h-9 px-2 sm:px-3 shrink-0">
-                <Upload className="w-4 h-4 shrink-0" />
-                <span className="hidden sm:inline">Upload Document</span>
-              </Button>
-            )}
             <Link href={backPath}>
               <Button variant="outline" size="sm" className="gap-1.5 shrink-0">
                 <ArrowLeft className="w-4 h-4" />
                 <span className="hidden sm:inline">Back</span>
               </Button>
             </Link>
-            <UserMenu />
+            <UserMenu
+              extraItems={
+                isAdmin
+                  ? [
+                      {
+                        label: "Upload Document",
+                        icon: <Upload className="w-4 h-4 mr-2" />,
+                        onClick: () => setIsUploadOpen(true),
+                      },
+                    ]
+                  : undefined
+              }
+            />
           </div>
         </div>
       </header>
