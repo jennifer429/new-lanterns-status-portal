@@ -460,10 +460,16 @@ export function useIntakeData(slug: string, clientSlug: string) {
     reader.readAsDataURL(file);
   };
 
-  // Export every questionnaire question as a flat array of
-  // { id, text, answer }. Unanswered questions get answer: "". Same shape
-  // for import. Workflow: export → fill in answers (e.g. via Claude +
-  // meeting notes) → re-import.
+  // Export questionnaire as JSON: { exported, org, responses, meta }.
+  //   - `responses`: filled-in answers, keyed by question id
+  //   - `meta`: every declared question with section/text/type/options
+  // The meta block doubles as the "list of all questions" so an LLM (or
+  // human) can fill answers in by id without seeing the UI.
+  //
+  // Refetches from the server so auto-save races and lazy-hydrated section
+  // components don't cause partial exports; in-memory keys overlay it for
+  // unsaved edits; live `connRows` overlay CONN.endpoints since the DB copy
+  // can lag if the user only viewed the grid.
   const handleExportData = async () => {
     if (!slug) return;
 
@@ -490,27 +496,78 @@ export function useIntakeData(slug: string, clientSlug: string) {
     const merged: Record<string, any> = { ...serverResponses, ...responses };
     if (connRows.length > 0) merged["CONN.endpoints"] = connRows;
 
-    const items: Array<{ id: string; text: string; answer: unknown }> = [];
+    const exportResponses: Record<string, any> = {};
+    const meta: Record<
+      string,
+      { section: string; text: string; type: string; options?: string[] }
+    > = {};
 
+    // Walk declared questions: build meta for every one, copy answers when present.
     questionnaireSections.forEach((section) => {
       section.questions?.forEach((q) => {
         if (q.inactive) return;
         if (q.type === "upload" || q.type === "upload-download") return;
+
+        meta[q.id] = {
+          section: section.title,
+          text: q.text,
+          type: q.type,
+          ...(q.options ? { options: q.options } : {}),
+        };
+
         const raw = merged[q.id];
-        items.push({ id: q.id, text: q.text, answer: raw ?? "" });
+        if (raw === undefined || raw === null || raw === "") return;
+        if (Array.isArray(raw) && raw.length === 0) return;
+        exportResponses[q.id] =
+          typeof raw === "string"
+            ? (() => {
+                try {
+                  return JSON.parse(raw);
+                } catch {
+                  return raw;
+                }
+              })()
+            : raw;
       });
     });
 
-    const blob = new Blob([JSON.stringify(items, null, 2)], { type: "application/json" });
+    // Component-managed scratch keys (CONN.endpoints, IW.<wf>_systems,
+    // IW.historic_results_*, __question_na:*, etc.) — copy through so they
+    // round-trip on import.
+    Object.entries(merged).forEach(([qid, raw]) => {
+      if (qid in meta) return;
+      if (qid in exportResponses) return;
+      if (raw === undefined || raw === null || raw === "") return;
+      exportResponses[qid] =
+        typeof raw === "string"
+          ? (() => {
+              try {
+                return JSON.parse(raw);
+              } catch {
+                return raw;
+              }
+            })()
+          : raw;
+    });
+
+    const payload = {
+      exported: new Date().toISOString(),
+      org: slug,
+      responses: exportResponses,
+      meta,
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${slug}-questionnaire.json`;
+    a.download = `${slug}-intake-responses.json`;
     a.click();
     URL.revokeObjectURL(url);
 
-    const answered = items.filter((i) => i.answer !== "" && i.answer !== null).length;
-    toast.success(`Exported ${items.length} questions (${answered} answered)`);
+    toast.success(
+      `Exported ${Object.keys(exportResponses).length} answers across ${Object.keys(meta).length} questions`
+    );
   };
 
   // Import responses — JSON only. Preserves complex shapes (arrays, nested
@@ -547,22 +604,25 @@ export function useIntakeData(slug: string, clientSlug: string) {
         );
       }
 
-      // Expects a flat array: [{ id, text, answer }, ...]. Empty answers
-      // are skipped so partial fills don't blank out existing data.
-      if (!Array.isArray(payload)) {
+      // Accepts the export shape ({ responses: { qid: value, ... } }) or a
+      // bare flat dict ({ qid: value, ... }). Empty values are skipped so
+      // partial fills don't blank out existing data.
+      const src =
+        payload && typeof payload === "object" && "responses" in (payload as any)
+          ? (payload as any).responses
+          : payload;
+      if (typeof src !== "object" || src === null || Array.isArray(src)) {
         throw new Error(
-          'Expected a JSON array like [{ "id": "H.1", "text": "...", "answer": "..." }, ...].'
+          "Invalid JSON structure — expected { responses: { ... } } or a flat { qid: value } object."
         );
       }
 
       const importedResponses: Record<string, any> = {};
-      for (const item of payload) {
-        if (!item || typeof item !== "object" || typeof (item as any).id !== "string") continue;
-        const { id, answer } = item as { id: string; answer: unknown };
-        if (answer === undefined || answer === null || answer === "") continue;
-        if (Array.isArray(answer) && answer.length === 0) continue;
-        importedResponses[id] = answer;
-      }
+      Object.entries(src as Record<string, unknown>).forEach(([qid, val]) => {
+        if (val === undefined || val === null || val === "") return;
+        if (Array.isArray(val) && val.length === 0) return;
+        importedResponses[qid] = val;
+      });
 
       const importCount = Object.keys(importedResponses).length;
       if (importCount === 0) {
