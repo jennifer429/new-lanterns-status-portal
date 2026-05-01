@@ -2,11 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import {
-  questionnaireSections,
-  type Question,
-  type Section,
-} from "@shared/questionnaireData";
+import { questionnaireSections, type Section } from "@shared/questionnaireData";
 import { type ConnectivityRow } from "@/components/ConnectivityTable";
 import { useAuth } from "@/_core/hooks/useAuth";
 
@@ -165,34 +161,21 @@ export function useIntakeData(slug: string, clientSlug: string) {
   // ── Effects ──────────────────────────────────────────────────────────────────
 
   // Seed connectivity rows from Notion on load
-  // DATA-LOSS SAFEGUARD: Never overwrite existing rows with empty data from
-  // a Notion error response. Only replace rows when Notion returns actual data,
-  // or when the table was previously empty (initial load).
   useEffect(() => {
     if (notionConnData?.rows && notionConnData.rows.length > 0) {
-      // Notion returned real data — use it
       setConnRows(notionConnData.rows as ConnectivityRow[]);
       notionPageIds.current = new Set(
         notionConnData.rows.map((r: any) => r.id)
       );
-    } else if (notionConnData !== undefined && !notionConnData?.error) {
-      // Notion returned empty with NO error — only load local fallback if
-      // we don't already have rows (prevents wiping user-entered data)
-      setConnRows((prev) => {
-        if (prev.length > 0) return prev; // preserve existing rows
-        try {
-          const v = responses["CONN.endpoints"];
-          if (v) {
-            const parsed = typeof v === "string" ? JSON.parse(v) : v;
-            return Array.isArray(parsed) ? parsed : prev;
-          }
-        } catch {
-          /* ignore */
-        }
-        return prev;
-      });
+    } else if (notionConnData !== undefined) {
+      // Notion configured but empty — fall back to local DB data
+      try {
+        const v = responses["CONN.endpoints"];
+        if (v) setConnRows(typeof v === "string" ? JSON.parse(v) : v);
+      } catch {
+        /* ignore */
+      }
     }
-    // If notionConnData has an error, do nothing — keep existing rows intact
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notionConnData]);
 
@@ -473,109 +456,39 @@ export function useIntakeData(slug: string, clientSlug: string) {
     reader.readAsDataURL(file);
   };
 
-  // Export every saved response for this org as JSON.
-  //
-  // We refetch from the server (rather than relying on the in-memory `responses`
-  // state) so that auto-save races, lazy-hydrated section components, and any
-  // local state that hasn't synced yet can't cause a partial export. The
-  // server is the source of truth; we then merge in any in-memory keys that
-  // haven't been persisted yet so unsaved edits also round-trip.
-  //
-  // We iterate the merged map directly (not `questionnaireSections`) so that
-  // keys rendered only by component code — the IW.historic_results_*,
-  // IW.tech_sheets_*, IW.overlay_pacs_*, IW.ct_dose_*, IW.<wf>_systems,
-  // CONN.endpoints, and __question_na:* flags — round-trip correctly
-  // alongside declared questions.
-  const handleExportData = async () => {
-    if (!slug) return;
-
-    let serverResponses: Record<string, any> = {};
-    try {
-      const fresh = await utils.intake.getResponses.fetch({
-        organizationSlug: slug,
-      });
-      fresh?.forEach((resp) => {
-        if (!resp.questionId) return;
-        try {
-          serverResponses[resp.questionId] =
-            typeof resp.response === "string"
-              ? JSON.parse(resp.response)
-              : resp.response;
-        } catch {
-          serverResponses[resp.questionId] = resp.response;
-        }
-      });
-    } catch (err) {
-      console.error("Export: failed to refetch responses, falling back to in-memory state", err);
-    }
-
-    // In-memory wins for any keys not yet persisted; otherwise prefer server.
-    const merged: Record<string, any> = { ...serverResponses, ...responses };
-
-    // Connectivity endpoints live in Notion as the source of truth and only
-    // get pushed back to CONN.endpoints in our DB when the user edits the
-    // table. If the user viewed but didn't edit the table, the DB copy can
-    // be stale or missing — pull from live `connRows` so the export always
-    // reflects what's actually shown in the connectivity grid.
-    if (connRows.length > 0) {
-      merged["CONN.endpoints"] = connRows;
-    }
-
-    const declared = new Map<string, { section: string; q: Question }>();
-    questionnaireSections.forEach((section) => {
-      section.questions?.forEach((q) => {
-        declared.set(q.id, { section: section.title, q });
-      });
-    });
-
+  // Export questionnaire responses as JSON
+  const handleExportData = () => {
     const exportResponses: Record<string, any> = {};
     const meta: Record<
       string,
-      { section?: string; text?: string; type?: string; options?: string[] }
+      { section: string; text: string; type: string; options?: string[] }
     > = {};
-    const sectionCounts: Record<string, number> = {};
 
-    Object.entries(merged).forEach(([qid, raw]) => {
-      if (raw === undefined || raw === null || raw === "") return;
-
-      const info = declared.get(qid);
-      // Declared file-upload questions point at S3 objects that live outside
-      // the responses table — nothing meaningful to round-trip.
-      if (info && (info.q.type === "upload" || info.q.type === "upload-download")) {
-        return;
-      }
-
-      exportResponses[qid] =
-        typeof raw === "string"
-          ? (() => {
-              try {
-                return JSON.parse(raw);
-              } catch {
-                return raw;
-              }
-            })()
-          : raw;
-
-      const sectionLabel = info?.section ?? "Other";
-      sectionCounts[sectionLabel] = (sectionCounts[sectionLabel] ?? 0) + 1;
-
-      if (info) {
-        meta[qid] = {
-          section: info.section,
-          text: info.q.text,
-          type: info.q.type,
-          ...(info.q.options ? { options: info.q.options } : {}),
+    questionnaireSections.forEach((section) => {
+      if (section.type === "workflow" || !section.questions) return;
+      section.questions.forEach((q) => {
+        if (q.type === "upload" || q.type === "upload-download") return;
+        const raw = responses[q.id];
+        if (raw !== undefined && raw !== null && raw !== "") {
+          exportResponses[q.id] =
+            typeof raw === "string"
+              ? (() => {
+                  try {
+                    return JSON.parse(raw);
+                  } catch {
+                    return raw;
+                  }
+                })()
+              : raw;
+        }
+        meta[q.id] = {
+          section: section.title,
+          text: q.text,
+          type: q.type,
+          ...(q.options ? { options: q.options } : {}),
         };
-      }
-    });
-
-    const total = Object.keys(exportResponses).length;
-    if (total === 0) {
-      toast.warning("Nothing to export", {
-        description: "No questionnaire responses have been saved for this organization yet.",
       });
-      return;
-    }
+    });
 
     const payload = {
       exported: new Date().toISOString(),
@@ -592,19 +505,9 @@ export function useIntakeData(slug: string, clientSlug: string) {
     a.href = url;
     a.download = `${slug}-intake-responses.json`;
     a.click();
-    URL.revokeObjectURL(url);
-
-    const breakdown = Object.entries(sectionCounts)
-      .map(([sec, n]) => `${sec}: ${n}`)
-      .join(" · ");
-    toast.success(`Exported ${total} response${total === 1 ? "" : "s"}`, {
-      description: breakdown,
-    });
   };
 
-  // Import responses — JSON only. Preserves complex shapes (arrays, nested
-  // objects for contacts-table / systems-list / IW.*_systems) by round-tripping
-  // through JSON.stringify on save.
+  // Import responses — supports JSON (new) and legacy pipe-delimited (txt/csv) formats
   const handleImportFile = async (
     importFile: File,
     onSuccess: () => void,
@@ -616,48 +519,85 @@ export function useIntakeData(slug: string, clientSlug: string) {
     try {
       const text = await importFile.text();
       const trimmed = text.trimStart();
+      const importedResponses: Record<string, any> = {};
 
       const looksLikeJson =
-        importFile.name.toLowerCase().endsWith(".json") ||
+        importFile.name.endsWith(".json") ||
         trimmed.startsWith("{") ||
         trimmed.startsWith("[");
-      if (!looksLikeJson) {
-        throw new Error(
-          "Unsupported file format. Please upload a .json file exported from this tool."
-        );
-      }
 
-      let payload: unknown;
-      try {
-        payload = JSON.parse(trimmed);
-      } catch (err) {
-        throw new Error(
-          `Failed to parse JSON: ${err instanceof Error ? err.message : "Invalid JSON"}`
-        );
-      }
+      if (looksLikeJson) {
+        try {
+          const payload = JSON.parse(trimmed);
+          const src = payload.responses ?? payload;
+          if (typeof src !== "object" || src === null)
+            throw new Error("Invalid JSON structure");
+          Object.entries(src).forEach(([qid, val]) => {
+            if (val !== undefined && val !== null && val !== "") {
+              importedResponses[qid] = val;
+            }
+          });
+        } catch (jsonErr) {
+          throw new Error(
+            `Failed to parse JSON: ${jsonErr instanceof Error ? jsonErr.message : "Invalid JSON"}`
+          );
+        }
+      } else {
+        const lines = text.split("\n").filter((l) => l.trim());
+        if (lines.length === 0) throw new Error("File is empty");
 
-      const src =
-        payload && typeof payload === "object" && "responses" in (payload as any)
-          ? (payload as any).responses
-          : payload;
-      if (typeof src !== "object" || src === null || Array.isArray(src)) {
-        throw new Error(
-          "Invalid JSON structure — expected a { responses: { ... } } object or a flat responses object."
-        );
-      }
+        const header = lines[0] || "";
+        const isPipeDelimited = header.includes("|");
 
-      const importedResponses: Record<string, any> = {};
-      Object.entries(src as Record<string, unknown>).forEach(([qid, val]) => {
-        if (val === undefined || val === null || val === "") return;
-        importedResponses[qid] = val;
-      });
+        if (!isPipeDelimited) {
+          throw new Error(
+            "Unrecognized file format. Expected a .json export file or a pipe-delimited (|) .txt/.csv file. " +
+              "Tip: Use the Export button to download a .json file, then re-import that file."
+          );
+        }
+
+        const hasOptionsColumn = header.split("|").length >= 6;
+        lines.slice(1).forEach((line) => {
+          const parts = line.split("|");
+          const questionId = hasOptionsColumn
+            ? parts[1]?.trim()
+            : parts[1]?.trim();
+          const responseType = hasOptionsColumn
+            ? parts[3]?.trim()
+            : parts[3]?.trim();
+          const responseValue = hasOptionsColumn
+            ? parts[5]?.trim()
+            : parts[4]?.trim();
+          if (!questionId || !responseValue) return;
+          if (responseType === "workflow") return;
+          if (
+            responseType === "contacts-table" ||
+            responseType === "systems-list"
+          ) {
+            try {
+              importedResponses[questionId] = JSON.parse(responseValue);
+            } catch {
+              importedResponses[questionId] = responseValue;
+            }
+          } else if (
+            responseType === "multi-select" ||
+            responseType === "multiple-choice"
+          ) {
+            importedResponses[questionId] = responseValue
+              .split("; ")
+              .map((v: string) => v.trim())
+              .filter(Boolean);
+          } else {
+            importedResponses[questionId] = responseValue;
+          }
+        });
+      }
 
       const importCount = Object.keys(importedResponses).length;
-      if (importCount === 0) {
+      if (importCount === 0)
         throw new Error(
           "No responses found in file. Make sure the file contains questionnaire data."
         );
-      }
 
       setResponses((prev) => ({ ...prev, ...importedResponses }));
       await Promise.all(
@@ -666,9 +606,7 @@ export function useIntakeData(slug: string, clientSlug: string) {
             organizationSlug: slug,
             questionId,
             response:
-              typeof value === "object"
-                ? JSON.stringify(value)
-                : String(value),
+              typeof value === "object" ? JSON.stringify(value) : String(value),
             userEmail: user?.email || "",
           })
         )
