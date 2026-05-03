@@ -71,4 +71,4 @@
 
 ## RRAL Import Bug
 
-- [ ] Fix RRAL import not persisting — import says "46 responses" successful but data reverts on reload
+- [x] Fix RRAL import not persisting — race condition between import saves, auto-save, and existingResponses refetch

@@ -16,6 +16,7 @@ export function useIntakeData(slug: string, clientSlug: string) {
   const [naQuestions, setNaQuestions] = useState<Set<string>>(new Set());
   const [connRows, setConnRows] = useState<ConnectivityRow[]>([]);
   const notionPageIds = useRef<Set<string>>(new Set());
+  const isImportingRef = useRef(false);
 
   // ── tRPC queries ─────────────────────────────────────────────────────────────
 
@@ -181,6 +182,8 @@ export function useIntakeData(slug: string, clientSlug: string) {
 
   // Load existing responses into state
   useEffect(() => {
+    // Skip state reset during import — import manages its own state
+    if (isImportingRef.current) return;
     if (existingResponses) {
       const loadedResponses: Record<string, any> = {};
       existingResponses.forEach((resp) => {
@@ -218,12 +221,12 @@ export function useIntakeData(slug: string, clientSlug: string) {
   // Auto-save on response change
   useEffect(() => {
     if (!slug || Object.keys(responses).length === 0) return;
+    // Skip auto-save during import — import handles its own persistence
+    if (isImportingRef.current) return;
 
     const timer = setTimeout(() => {
       setSaveStatus("saving");
-      console.log("[VPN Debug] Auto-saving responses:", Object.keys(responses));
       Object.entries(responses).forEach(([questionId, value]) => {
-        console.log(`[VPN Debug] Saving ${questionId}:`, value);
         saveMutation.mutate({
           organizationSlug: slug,
           questionId,
@@ -599,6 +602,8 @@ export function useIntakeData(slug: string, clientSlug: string) {
           "No responses found in file. Make sure the file contains questionnaire data."
         );
 
+      // Block auto-save and state-reset during import
+      isImportingRef.current = true;
       setResponses((prev) => ({ ...prev, ...importedResponses }));
       await Promise.all(
         Object.entries(importedResponses).map(([questionId, value]) =>
@@ -611,6 +616,12 @@ export function useIntakeData(slug: string, clientSlug: string) {
           })
         )
       );
+
+      // All saves complete — now invalidate the query so next fetch gets fresh data
+      await utils.intake.getResponses.invalidate({ organizationSlug: slug });
+      // Small delay to let React Query refetch complete before unblocking
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      isImportingRef.current = false;
 
       toast.success("Import successful", {
         description: `Imported ${importCount} responses`,
@@ -625,6 +636,7 @@ export function useIntakeData(slug: string, clientSlug: string) {
             : "Failed to parse import file",
       });
     } finally {
+      isImportingRef.current = false;
       setIsImporting(false);
     }
   };
