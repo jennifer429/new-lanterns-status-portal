@@ -68,3 +68,7 @@
 ## Questionnaire Navigation Fix
 
 - [x] Fix Save & Continue to advance to next sequential section (not jump to first incomplete)
+
+## RRAL Import Bug
+
+- [ ] Fix RRAL import not persisting — import says "46 responses" successful but data reverts on reload
