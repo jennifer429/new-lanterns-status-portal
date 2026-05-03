@@ -64,3 +64,7 @@
 - [x] Replace grid: 5 columns (Questionnaire, Connectivity, Data Implementation, Go-Live Pre-Prod, Go-Live) × 5 rows (Health Care Org, EHR/RIS Vendor, PACS Vendor, Partner, New Lantern)
 - [x] Clean up card verbiage to be less repetitive
 - [x] Integrate questionnaire data to auto-populate vendor names (e.g. Epic, GE) next to swimlane rows
+
+## Questionnaire Navigation Fix
+
+- [x] Fix Save & Continue to advance to next sequential section (not jump to first incomplete)

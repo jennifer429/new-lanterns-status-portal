@@ -93,15 +93,17 @@ export default function IntakeNewRedesign() {
   }, []);
 
   useEffect(() => {
+    if (hasNavigatedRef.current) return;
     const urlSection = new URLSearchParams(window.location.search).get("section");
-    if (hasNavigatedRef.current || Object.keys(responses).length === 0 || urlSection) return;
+    if (Object.keys(responses).length === 0 || urlSection) return;
+    // Only auto-navigate to first incomplete section on initial page load
+    hasNavigatedRef.current = true;
     const firstIncompleteSection = questionnaireSections.find(
       (section) => calculateSectionProgress(section) < 100
     );
     if (firstIncompleteSection) {
       setCurrentSection(firstIncompleteSection.id);
     }
-    hasNavigatedRef.current = true;
   }, [responses]);
 
   // ── Derived section info ──────────────────────────────────────────────────────
