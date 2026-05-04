@@ -3,7 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { publicProcedure, router } from "../_core/trpc";
 import { requireDb } from "../db";
 import { intakeResponses, intakeFileAttachments, organizations, questions, onboardingFeedback, clients, partnerTemplates, partnerTaskTemplates, orgCustomTasks } from "../../drizzle/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, desc } from "drizzle-orm";
 import { uploadToGoogleDrive } from "./files";
 import { logFileActivity } from "../fileAuditLog";
 import { resolveOrgByIdentifier } from "../_core/orgLookup";
@@ -101,24 +101,36 @@ export const intakeRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this organization" });
       }
 
-      // Get all responses for this organization from intakeResponses table
-      // This table stores questionId as varchar (e.g., "H.1", "A.2") directly
+      // Get all responses for this organization from intakeResponses table.
+      // ORDER BY updatedAt DESC so that, if duplicate rows exist for the same
+      // (organizationId, questionId) — which can happen because the table has
+      // no unique constraint and saveResponse uses a select-then-update pattern
+      // that races under concurrent writes — the most recent row wins when we
+      // dedupe below.
       const responsesData = await db
         .select({
           id: intakeResponses.id,
           organizationId: intakeResponses.organizationId,
-          questionId: intakeResponses.questionId, // Already a string identifier
+          questionId: intakeResponses.questionId,
           response: intakeResponses.response,
           fileUrl: intakeResponses.fileUrl,
-          userEmail: intakeResponses.updatedBy, // Map updatedBy to userEmail for compatibility
+          userEmail: intakeResponses.updatedBy,
           createdAt: intakeResponses.createdAt,
           updatedAt: intakeResponses.updatedAt,
         })
         .from(intakeResponses)
-        .where(eq(intakeResponses.organizationId, org.id));
+        .where(eq(intakeResponses.organizationId, org.id))
+        .orderBy(desc(intakeResponses.updatedAt));
 
-      // Include organization name in each response
-      const responsesWithOrgName = responsesData.map(r => ({
+      // Dedupe: keep only the first (most recent) row per questionId.
+      const seen = new Set<string>();
+      const deduped = responsesData.filter((r) => {
+        if (!r.questionId || seen.has(r.questionId)) return false;
+        seen.add(r.questionId);
+        return true;
+      });
+
+      const responsesWithOrgName = deduped.map(r => ({
         ...r,
         organizationName: org.name,
         organizationSlug: org.slug,
@@ -159,9 +171,17 @@ export const intakeRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this organization" });
       }
 
-      // Use intakeResponses table which stores questionId as varchar (no foreign key validation)
-      // Check if response already exists
-      const [existing] = await db
+      // The intakeResponses table has no unique constraint on
+      // (organizationId, questionId), so concurrent saves (e.g. import +
+      // auto-save firing in parallel) can race and create duplicate rows.
+      // Once duplicates exist, this select-with-limit-1 only updates one of
+      // them and the other stays stale forever — every load then returns
+      // both, and the client overwrites the new value with the old one.
+      //
+      // Fix: pull every row that matches (orgId, questionId), keep the most
+      // recent, update it with the new value, and delete the rest. This
+      // collapses any existing duplicates and converges to one row.
+      const matching = await db
         .select()
         .from(intakeResponses)
         .where(
@@ -170,31 +190,31 @@ export const intakeRouter = router({
             eq(intakeResponses.questionId, input.questionId)
           )
         )
-        .limit(1);
+        .orderBy(desc(intakeResponses.updatedAt));
 
-      if (existing) {
-        // Update existing response
-        await db
-          .update(intakeResponses)
-          .set({
-            response: input.response,
-            updatedBy: input.userEmail,
-          })
-          .where(eq(intakeResponses.id, existing.id));
-
-        return { success: true, action: "updated" };
-      } else {
-        // Insert new response
+      if (matching.length === 0) {
         await db.insert(intakeResponses).values({
           organizationId: org.id,
           questionId: input.questionId,
-          section: 'intake', // Default section
+          section: 'intake',
           response: input.response,
           updatedBy: input.userEmail,
         });
-
         return { success: true, action: "created" };
       }
+
+      const keep = matching[0];
+      await db
+        .update(intakeResponses)
+        .set({ response: input.response, updatedBy: input.userEmail })
+        .where(eq(intakeResponses.id, keep.id));
+
+      // Drop any stale duplicates so they can't resurface on read.
+      for (const stale of matching.slice(1)) {
+        await db.delete(intakeResponses).where(eq(intakeResponses.id, stale.id));
+      }
+
+      return { success: true, action: "updated" };
     }),
 
   /**
