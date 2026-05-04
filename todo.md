@@ -72,6 +72,12 @@
 ## RRAL Import Bug
 
 - [x] Fix RRAL import not persisting — race condition between import saves, auto-save, and existingResponses refetch
+- [x] Fix RRAL import not persisting — root cause: duplicate DB row for IW.images_description + existingResponses useEffect overwriting local state on every refetch
+- [x] Delete duplicate intakeResponses row (id=2160007)
+- [x] Add UNIQUE index on (organizationId, questionId) to prevent future duplicates
+- [x] Convert saveResponse/saveResponses to use ON DUPLICATE KEY UPDATE (race-condition-proof)
+- [x] Add hasHydratedRef to only load server data once on initial page load (prevent refetch overwrites)
+- [x] Add refetchOnWindowFocus: false to getResponses query
 
 ## Hardening Backlog (from May 2026 code review)
 
@@ -92,15 +98,15 @@
 
 - [ ] **UNIQUE constraints + DB-level upserts** — add composite UNIQUE indexes and switch manual SELECT-then-INSERT-or-UPDATE to `onDuplicateKeyUpdate` inside `db.transaction()`:
 
-  | Table | UNIQUE on | Routers to rewrite |
-  |---|---|---|
-  | `responses` | `(organizationId, questionId)` | intake.ts, admin.ts |
-  | `intakeResponses` | `(organizationId, questionId)` | intake.ts, admin.ts (bulk) |
-  | `sectionProgress` | `(organizationId, sectionName)` | organizations.ts |
-  | `taskCompletion` | `(organizationId, taskId)` | implementation.ts, organizations.ts |
-  | `validationResults` | `(organizationId, testKey)` | validation.ts |
-  | `taskOrgAssignment` | `(organizationId, taskId)` | swimlane.ts (replace delete-then-insert) |
-  | `partnerTemplates` | `(clientId, questionId)` where `isActive=1` | admin.ts |
+  | Table | UNIQUE on | Routers to rewrite | Status |
+  |---|---|---|---|
+  | `responses` | `(organizationId, questionId)` | intake.ts, admin.ts | pending |
+  | `intakeResponses` | `(organizationId, questionId)` | intake.ts, admin.ts (bulk) | **done in PR #76** (`saveResponse`, `saveResponses`); admin bulk import still pending |
+  | `sectionProgress` | `(organizationId, sectionName)` | organizations.ts | pending |
+  | `taskCompletion` | `(organizationId, taskId)` | implementation.ts, organizations.ts | pending |
+  | `validationResults` | `(organizationId, testKey)` | validation.ts | pending |
+  | `taskOrgAssignment` | `(organizationId, taskId)` | swimlane.ts (replace delete-then-insert) | pending |
+  | `partnerTemplates` | `(clientId, questionId)` where `isActive=1` | admin.ts | pending |
 
   **Pre-flight:** write a dedupe script (`scripts/dedupe-pre-unique.mjs`) that finds duplicate rows per table, picks the latest `id`, and deletes the rest. Run it in staging first; the UNIQUE migration will fail otherwise.
 

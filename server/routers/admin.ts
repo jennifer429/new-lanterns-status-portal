@@ -1608,15 +1608,26 @@ export const adminRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { db } = ctx;
 
-      // Get max displayOrder for this system type
+      const systemType = input.systemType.trim();
+      const vendorName = input.vendorName.trim().replace(/\s+/g, " ");
+      if (!systemType || !vendorName) {
+        throw new Error("System type and vendor name are required.");
+      }
+
       const existing = await db.select().from(systemVendorOptions)
-        .where(eq(systemVendorOptions.systemType, input.systemType))
+        .where(eq(systemVendorOptions.systemType, systemType))
         .orderBy(desc(systemVendorOptions.displayOrder));
+
+      const dup = existing.find(v => v.vendorName.toLowerCase() === vendorName.toLowerCase());
+      if (dup) {
+        throw new Error(`"${dup.vendorName}" already exists under ${systemType}${dup.isActive ? "" : " (currently hidden — re-enable it instead)"}.`);
+      }
+
       const maxOrder = existing.length > 0 ? existing[0].displayOrder : 0;
 
       await db.insert(systemVendorOptions).values({
-        systemType: input.systemType,
-        vendorName: input.vendorName,
+        systemType,
+        vendorName,
         displayOrder: maxOrder + 1,
         createdBy: ctx.user.email || "unknown",
       });
@@ -1624,9 +1635,9 @@ export const adminRouter = router({
       // Audit log
       await db.insert(vendorAuditLog).values({
         action: 'add',
-        systemType: input.systemType,
-        vendorName: input.vendorName,
-        newValue: input.vendorName,
+        systemType,
+        vendorName,
+        newValue: vendorName,
         performedBy: ctx.user.email || "unknown",
       });
 
@@ -1644,25 +1655,36 @@ export const adminRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { db } = ctx;
 
-      // Get current value for audit log
+      const vendorName = input.vendorName.trim().replace(/\s+/g, " ");
+      if (!vendorName) {
+        throw new Error("Vendor name is required.");
+      }
+
       const [current] = await db.select().from(systemVendorOptions)
         .where(eq(systemVendorOptions.id, input.id)).limit(1);
+      if (!current) {
+        throw new Error("Vendor not found.");
+      }
+
+      const siblings = await db.select().from(systemVendorOptions)
+        .where(eq(systemVendorOptions.systemType, current.systemType));
+      const dup = siblings.find(v => v.id !== input.id && v.vendorName.toLowerCase() === vendorName.toLowerCase());
+      if (dup) {
+        throw new Error(`"${dup.vendorName}" already exists under ${current.systemType}.`);
+      }
 
       await db.update(systemVendorOptions)
-        .set({ vendorName: input.vendorName })
+        .set({ vendorName })
         .where(eq(systemVendorOptions.id, input.id));
 
-      // Audit log
-      if (current) {
-        await db.insert(vendorAuditLog).values({
-          action: 'update',
-          systemType: current.systemType,
-          vendorName: input.vendorName,
-          previousValue: current.vendorName,
-          newValue: input.vendorName,
-          performedBy: ctx.user.email || "unknown",
-        });
-      }
+      await db.insert(vendorAuditLog).values({
+        action: 'update',
+        systemType: current.systemType,
+        vendorName,
+        previousValue: current.vendorName,
+        newValue: vendorName,
+        performedBy: ctx.user.email || "unknown",
+      });
 
       return { success: true };
     }),
@@ -1741,27 +1763,56 @@ export const adminRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { db } = ctx;
 
-      const values = input.vendors.map((v, i) => ({
-        systemType: input.systemType,
-        vendorName: v,
-        displayOrder: i + 1,
-        createdBy: ctx.user.email || "unknown",
-      }));
+      const systemType = input.systemType.trim();
+      if (!systemType) throw new Error("System type name is required.");
 
-      if (values.length > 0) {
-        await db.insert(systemVendorOptions).values(values);
+      // Trim, collapse whitespace, dedupe case-insensitively, alphabetize, ensure "Other" is last.
+      const seen = new Set<string>();
+      const cleaned: string[] = [];
+      for (const raw of input.vendors) {
+        const v = raw.trim().replace(/\s+/g, " ");
+        if (!v) continue;
+        const key = v.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        cleaned.push(v);
+      }
+      cleaned.sort((a, b) => {
+        if (a.toLowerCase() === "other") return 1;
+        if (b.toLowerCase() === "other") return -1;
+        return a.localeCompare(b);
+      });
+      if (cleaned.length === 0) throw new Error("Please enter at least one vendor.");
+
+      // Skip vendors already present under this system type (case-insensitive).
+      const existing = await db.select().from(systemVendorOptions)
+        .where(eq(systemVendorOptions.systemType, systemType));
+      const existingKeys = new Set(existing.map(e => e.vendorName.toLowerCase()));
+      const baseOrder = existing.reduce((m, e) => Math.max(m, e.displayOrder), 0);
+
+      const toInsert = cleaned
+        .filter(v => !existingKeys.has(v.toLowerCase()))
+        .map((v, i) => ({
+          systemType,
+          vendorName: v,
+          displayOrder: baseOrder + i + 1,
+          createdBy: ctx.user.email || "unknown",
+        }));
+
+      if (toInsert.length > 0) {
+        await db.insert(systemVendorOptions).values(toInsert);
       }
 
-      // Audit log
       await db.insert(vendorAuditLog).values({
         action: 'add_system_type',
-        systemType: input.systemType,
+        systemType,
         vendorName: null,
-        newValue: JSON.stringify(input.vendors),
+        newValue: JSON.stringify(toInsert.map(t => t.vendorName)),
         performedBy: ctx.user.email || "unknown",
       });
 
-      return { success: true };
+      const skipped = cleaned.length - toInsert.length;
+      return { success: true, added: toInsert.length, skipped };
     }),
 
   /**

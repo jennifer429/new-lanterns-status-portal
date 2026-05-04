@@ -160,42 +160,15 @@ export const intakeRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this organization" });
       }
 
-      // Use intakeResponses table which stores questionId as varchar (no foreign key validation)
-      // Check if response already exists
-      const [existing] = await db
-        .select()
-        .from(intakeResponses)
-        .where(
-          and(
-            eq(intakeResponses.organizationId, org.id),
-            eq(intakeResponses.questionId, input.questionId)
-          )
-        )
-        .limit(1);
+      // Use INSERT ... ON DUPLICATE KEY UPDATE to prevent race conditions
+      // that can create duplicate rows when concurrent saves hit the server
+      await db.execute(
+        sql`INSERT INTO intakeResponses (organizationId, questionId, section, response, updatedBy)
+            VALUES (${org.id}, ${input.questionId}, 'intake', ${input.response}, ${input.userEmail})
+            ON DUPLICATE KEY UPDATE response = VALUES(response), updatedBy = VALUES(updatedBy)`
+      );
 
-      if (existing) {
-        // Update existing response
-        await db
-          .update(intakeResponses)
-          .set({
-            response: input.response,
-            updatedBy: input.userEmail,
-          })
-          .where(eq(intakeResponses.id, existing.id));
-
-        return { success: true, action: "updated" };
-      } else {
-        // Insert new response
-        await db.insert(intakeResponses).values({
-          organizationId: org.id,
-          questionId: input.questionId,
-          section: 'intake', // Default section
-          response: input.response,
-          updatedBy: input.userEmail,
-        });
-
-        return { success: true, action: "created" };
-      }
+      return { success: true, action: "upserted" };
     }),
 
   /**
@@ -228,8 +201,9 @@ export const intakeRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this organization" });
       }
 
-      // Process each response using intakeResponses table (no question validation)
-      const results = [];
+      // Use INSERT ... ON DUPLICATE KEY UPDATE to prevent race conditions
+      const userEmail = ctx.user?.email || 'batch-save@system';
+      let saved = 0;
       for (const [questionIdStr, response] of Object.entries(input.responses)) {
         // Skip empty responses
         if (!response || response === '' || response === null) continue;
@@ -237,42 +211,15 @@ export const intakeRouter = router({
         // Convert response to string for storage
         const responseStr = typeof response === 'object' ? JSON.stringify(response) : String(response);
 
-        // Check if response already exists in intakeResponses table
-        const [existing] = await db
-          .select()
-          .from(intakeResponses)
-          .where(
-            and(
-              eq(intakeResponses.organizationId, org.id),
-              eq(intakeResponses.questionId, questionIdStr)
-            )
-          )
-          .limit(1);
-
-        if (existing) {
-          // Update existing response
-          await db
-            .update(intakeResponses)
-            .set({
-              response: responseStr,
-              updatedBy: ctx.user?.email || 'batch-save@system',
-            })
-            .where(eq(intakeResponses.id, existing.id));
-          results.push({ questionId: questionIdStr, action: "updated" });
-        } else {
-          // Insert new response
-          await db.insert(intakeResponses).values({
-            organizationId: org.id,
-            questionId: questionIdStr,
-            section: 'intake', // Default section
-            response: responseStr,
-            updatedBy: ctx.user?.email || 'batch-save@system',
-          });
-          results.push({ questionId: questionIdStr, action: "created" });
-        }
+        await db.execute(
+          sql`INSERT INTO intakeResponses (organizationId, questionId, section, response, updatedBy)
+              VALUES (${org.id}, ${questionIdStr}, 'intake', ${responseStr}, ${userEmail})
+              ON DUPLICATE KEY UPDATE response = VALUES(response), updatedBy = VALUES(updatedBy)`
+        );
+        saved++;
       }
 
-      return { success: true, saved: results.length };
+      return { success: true, saved };
     }),
 
   /**
@@ -848,6 +795,71 @@ export const intakeRouter = router({
     }
     return grouped;
   }),
+
+  /**
+   * Add a vendor option from the intake questionnaire.
+   * Trims input, dedupes case-insensitively (returns the existing canonical name
+   * so the caller can still select it), and logs to the audit trail.
+   */
+  addVendorOption: publicProcedure
+    .input(z.object({
+      systemType: z.string().min(1),
+      vendorName: z.string().min(1),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await requireDb();
+      const { systemVendorOptions, vendorAuditLog } = await import("../../drizzle/schema");
+      const { desc } = await import("drizzle-orm");
+
+      const systemType = input.systemType.trim();
+      const vendorName = input.vendorName.trim().replace(/\s+/g, " ");
+      if (!systemType || !vendorName) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "System type and vendor name are required." });
+      }
+
+      const existing = await db.select().from(systemVendorOptions)
+        .where(eq(systemVendorOptions.systemType, systemType))
+        .orderBy(desc(systemVendorOptions.displayOrder));
+
+      const dup = existing.find(v => v.vendorName.toLowerCase() === vendorName.toLowerCase());
+      if (dup) {
+        // Idempotent: if the vendor already exists (active or hidden), make sure
+        // it's active so the caller can pick it, and return the canonical name.
+        if (!dup.isActive) {
+          await db.update(systemVendorOptions)
+            .set({ isActive: 1 })
+            .where(eq(systemVendorOptions.id, dup.id));
+          await db.insert(vendorAuditLog).values({
+            action: 'toggle',
+            systemType,
+            vendorName: dup.vendorName,
+            previousValue: 'inactive',
+            newValue: 'active',
+            performedBy: ctx.user?.email || "intake-user",
+          });
+        }
+        return { success: true, vendorName: dup.vendorName, alreadyExisted: true };
+      }
+
+      const maxOrder = existing.length > 0 ? existing[0].displayOrder : 0;
+      await db.insert(systemVendorOptions).values({
+        systemType,
+        vendorName,
+        displayOrder: maxOrder + 1,
+        createdBy: ctx.user?.email || "intake-user",
+      });
+
+      await db.insert(vendorAuditLog).values({
+        action: 'add',
+        systemType,
+        vendorName,
+        newValue: vendorName,
+        performedBy: ctx.user?.email || "intake-user",
+      });
+
+      return { success: true, vendorName, alreadyExisted: false };
+    }),
+
 
   /**
    * Get task templates for an org (by slug → clientId → partner tasks).

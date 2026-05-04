@@ -28,7 +28,7 @@ export function useIntakeData(slug: string, clientSlug: string) {
   const { data: existingResponses, isLoading: orgLoading } =
     trpc.intake.getResponses.useQuery(
       { organizationSlug: slug || "" },
-      { enabled: !!slug }
+      { enabled: !!slug, refetchOnWindowFocus: false }
     );
 
   const { data: fileCount = 0 } = trpc.intake.getFileCount.useQuery(
@@ -180,10 +180,17 @@ export function useIntakeData(slug: string, clientSlug: string) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notionConnData]);
 
-  // Load existing responses into state
+  // Load existing responses into state — only on initial data load.
+  // We use a ref to track whether we've already hydrated from the server
+  // to prevent refetches from overwriting user edits in progress.
+  const hasHydratedRef = useRef(false);
+
   useEffect(() => {
     // Skip state reset during import — import manages its own state
     if (isImportingRef.current) return;
+    // Only hydrate from server data once (on initial load)
+    // After that, local state is the source of truth until page reload
+    if (hasHydratedRef.current) return;
     if (existingResponses) {
       const loadedResponses: Record<string, any> = {};
       existingResponses.forEach((resp) => {
@@ -200,6 +207,7 @@ export function useIntakeData(slug: string, clientSlug: string) {
         }
       });
       setResponses(loadedResponses);
+      hasHydratedRef.current = true;
 
       // Load N/A question state from saved responses
       const loadedNa = new Set<string>();
@@ -602,9 +610,11 @@ export function useIntakeData(slug: string, clientSlug: string) {
           "No responses found in file. Make sure the file contains questionnaire data."
         );
 
-      // Block auto-save and state-reset during import
+      // Block auto-save during import — import handles its own persistence
       isImportingRef.current = true;
       setResponses((prev) => ({ ...prev, ...importedResponses }));
+
+      // Save all imported responses to the server
       await Promise.all(
         Object.entries(importedResponses).map(([questionId, value]) =>
           saveMutation.mutateAsync({
@@ -617,10 +627,9 @@ export function useIntakeData(slug: string, clientSlug: string) {
         )
       );
 
-      // All saves complete — now invalidate the query so next fetch gets fresh data
-      await utils.intake.getResponses.invalidate({ organizationSlug: slug });
-      // Small delay to let React Query refetch complete before unblocking
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Import saves are complete. Local state is already correct.
+      // No need to invalidate/refetch since hasHydratedRef prevents
+      // server data from overwriting local state anyway.
       isImportingRef.current = false;
 
       toast.success("Import successful", {
