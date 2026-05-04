@@ -63,7 +63,7 @@ async function checkFileAccess(
  */
 export const filesRouter = router({
   /**
-   * Upload a file to Google Drive (per-customer folder) and attach links to ClickUp and Linear
+   * Upload a file to Google Drive (per-customer folder)
    */
   upload: protectedProcedure
     .input(

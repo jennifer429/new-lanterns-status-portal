@@ -4,7 +4,6 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { organizationsRouter } from "./routers/organizations";
 import { filesRouter } from "./routers/files";
-import { webhooksRouter } from "./routers/webhooks";
 import { intakeRouter } from "./routers/intake";
 import { authRouter } from "./routers/auth";
 import { usersRouter } from "./routers/users";
@@ -38,7 +37,6 @@ export const appRouter = router({
   admin: adminRouter,
   organizations: organizationsRouter,
   files: filesRouter,
-  webhooks: webhooksRouter,
   intake: intakeRouter,
   users: usersRouter,
   validation: validationRouter,

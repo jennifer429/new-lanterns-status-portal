@@ -27,8 +27,6 @@ export const organizationsRouter = router({
         contactPhone: z.string().optional(),
         startDate: z.string().optional(),
         goalDate: z.string().optional(),
-        linearIssueId: z.string().optional(),
-        clickupListId: z.string().optional(),
         googleDriveFolderId: z.string().optional(),
       })
     )
@@ -203,34 +201,6 @@ export const organizationsRouter = router({
           completedBy: input.completedBy,
           notes: input.notes,
         });
-      }
-
-      // Check if section is now complete and trigger ClickUp webhook
-      if (input.completed) {
-        // Get all tasks for this section
-        const sectionTasks = await db
-          .select()
-          .from(taskCompletion)
-          .where(
-            and(
-              eq(taskCompletion.organizationId, input.organizationId),
-              eq(taskCompletion.sectionName, input.sectionName)
-            )
-          );
-
-        const completedCount = sectionTasks.filter(t => t.completed === 1).length;
-        const totalCount = sectionTasks.length;
-
-        // If all tasks in section are complete, create ClickUp task
-        if (completedCount === totalCount && totalCount > 0) {
-          const [org] = await db
-            .select()
-            .from(organizations)
-            .where(eq(organizations.id, input.organizationId))
-            .limit(1);
-
-          // ClickUp integration removed - section completion tracking simplified
-        }
       }
 
       return { success: true };
@@ -460,7 +430,7 @@ export const organizationsRouter = router({
     }),
 
   /**
-   * Post a reply from hospital to Linear issue
+   * Post a reply from hospital into the activity feed
    */
   postReply: publicProcedure
     .input(
@@ -473,7 +443,6 @@ export const organizationsRouter = router({
     .mutation(async ({ input }) => {
       const db = await requireDb();
 
-      // Get organization with Linear issue ID
       const [org] = await db
         .select()
         .from(organizations)
@@ -484,13 +453,8 @@ export const organizationsRouter = router({
         throw new Error("Organization not found");
       }
 
-      if (!org.linearIssueId) {
-        throw new Error("No Linear issue configured for this organization");
-      }
-
-      // Linear integration removed - save directly to activity feed
       const author = input.authorName || org.contactName || "Hospital Team";
-      
+
       await db.insert(activityFeed).values({
         organizationId: input.organizationId,
         source: "manual",

@@ -32,7 +32,6 @@
 │   ├── _core/            # Auth, context, middleware, integrations, services
 │   ├── routers.ts        # Root tRPC router (merges all sub-routers)
 │   ├── db.ts             # Database connection (Drizzle + MySQL)
-│   ├── webhooks.ts       # Express webhook endpoints (Zapier/Linear)
 │   ├── notion.ts         # Notion integration (API client) — used by connectivity router
 │   ├── storage.ts        # Forge/S3 file storage
 │   └── *.test.ts         # Server tests
@@ -171,7 +170,6 @@ where URLs degrade into nonsense like `/org/intake/implement`.
 | **ai** | `server/routers/ai.ts` | AI chat and tool execution with audit logging |
 | **exports** | `server/routers/exports.ts` | Data export endpoints (CSV, PDF) |
 | **proceduralLibrary** | `server/routers/proceduralLibrary.ts` | Document Library CRUD, download URLs, audit trail (see Business Rules) |
-| **webhooks** | `server/routers/webhooks.ts` | `linearComment`, `clickupComment` |
 
 ## Database Tables (drizzle/schema.ts)
 
@@ -179,7 +177,7 @@ where URLs degrade into nonsense like `/org/intake/implement`.
 |-------|---------|
 | `users` | Auth & profile (id, openId, email, passwordHash, role, organizationId, clientId, isActive) |
 | `clients` | Partner companies (RadOne, SRV) with slug and status |
-| `organizations` | Clinical facilities under each client (contact info, linearIssueId, clickupListId, googleDriveFolderId) |
+| `organizations` | Clinical facilities under each client (contact info, googleDriveFolderId) |
 | `questions` | Master question definitions (questionId, sectionId, shortTitle, type, options) |
 | `questionOptions` | Dropdown/multi-select options per question (optionValue, optionLabel, displayOrder) |
 | `responses` | User answers to questions (organizationId, questionId, response, fileUrl) |
@@ -187,7 +185,7 @@ where URLs degrade into nonsense like `/org/intake/implement`.
 | `taskCompletion` | Individual task status (completed/inProgress/blocked/notApplicable, targetDate, notes) |
 | `fileAttachments` | File metadata for tasks (S3 URL, size, MIME, fileKey) |
 | `validationResults` | Test results (status: Pass/Fail/Not Tested/Pending/N/A, signOff, notes, testedDate) |
-| `activityFeed` | Activity log from integrations (source: linear/clickup/manual) |
+| `activityFeed` | Manual activity log entries posted to the client portal (source: manual) |
 | `passwordResetTokens` | Password reset tokens (token, expiresAt, used) |
 | `onboardingFeedback` | User ratings on intake experience |
 | `partnerTemplates` | Template files scoped to clients (clientId, questionId, s3Key) |
@@ -284,7 +282,6 @@ Pages are split into focused sub-components:
 | Whisper | `server/_core/voiceTranscription.ts` | Audio transcription | Active |
 | Google Maps | `server/_core/map.ts` | Map API requests | Active |
 | Notion | `server/notion.ts` | Connectivity sync (used by connectivity router) | Active |
-| Zapier | `server/webhooks.ts` | Express endpoint for Linear comment forwarding | Legacy |
 
 ## Utilities
 
