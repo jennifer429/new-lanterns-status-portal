@@ -159,42 +159,15 @@ export const intakeRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this organization" });
       }
 
-      // Use intakeResponses table which stores questionId as varchar (no foreign key validation)
-      // Check if response already exists
-      const [existing] = await db
-        .select()
-        .from(intakeResponses)
-        .where(
-          and(
-            eq(intakeResponses.organizationId, org.id),
-            eq(intakeResponses.questionId, input.questionId)
-          )
-        )
-        .limit(1);
+      // Use INSERT ... ON DUPLICATE KEY UPDATE to prevent race conditions
+      // that can create duplicate rows when concurrent saves hit the server
+      await db.execute(
+        sql`INSERT INTO intakeResponses (organizationId, questionId, section, response, updatedBy)
+            VALUES (${org.id}, ${input.questionId}, 'intake', ${input.response}, ${input.userEmail})
+            ON DUPLICATE KEY UPDATE response = VALUES(response), updatedBy = VALUES(updatedBy)`
+      );
 
-      if (existing) {
-        // Update existing response
-        await db
-          .update(intakeResponses)
-          .set({
-            response: input.response,
-            updatedBy: input.userEmail,
-          })
-          .where(eq(intakeResponses.id, existing.id));
-
-        return { success: true, action: "updated" };
-      } else {
-        // Insert new response
-        await db.insert(intakeResponses).values({
-          organizationId: org.id,
-          questionId: input.questionId,
-          section: 'intake', // Default section
-          response: input.response,
-          updatedBy: input.userEmail,
-        });
-
-        return { success: true, action: "created" };
-      }
+      return { success: true, action: "upserted" };
     }),
 
   /**
@@ -227,8 +200,9 @@ export const intakeRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to this organization" });
       }
 
-      // Process each response using intakeResponses table (no question validation)
-      const results = [];
+      // Use INSERT ... ON DUPLICATE KEY UPDATE to prevent race conditions
+      const userEmail = ctx.user?.email || 'batch-save@system';
+      let saved = 0;
       for (const [questionIdStr, response] of Object.entries(input.responses)) {
         // Skip empty responses
         if (!response || response === '' || response === null) continue;
@@ -236,42 +210,15 @@ export const intakeRouter = router({
         // Convert response to string for storage
         const responseStr = typeof response === 'object' ? JSON.stringify(response) : String(response);
 
-        // Check if response already exists in intakeResponses table
-        const [existing] = await db
-          .select()
-          .from(intakeResponses)
-          .where(
-            and(
-              eq(intakeResponses.organizationId, org.id),
-              eq(intakeResponses.questionId, questionIdStr)
-            )
-          )
-          .limit(1);
-
-        if (existing) {
-          // Update existing response
-          await db
-            .update(intakeResponses)
-            .set({
-              response: responseStr,
-              updatedBy: ctx.user?.email || 'batch-save@system',
-            })
-            .where(eq(intakeResponses.id, existing.id));
-          results.push({ questionId: questionIdStr, action: "updated" });
-        } else {
-          // Insert new response
-          await db.insert(intakeResponses).values({
-            organizationId: org.id,
-            questionId: questionIdStr,
-            section: 'intake', // Default section
-            response: responseStr,
-            updatedBy: ctx.user?.email || 'batch-save@system',
-          });
-          results.push({ questionId: questionIdStr, action: "created" });
-        }
+        await db.execute(
+          sql`INSERT INTO intakeResponses (organizationId, questionId, section, response, updatedBy)
+              VALUES (${org.id}, ${questionIdStr}, 'intake', ${responseStr}, ${userEmail})
+              ON DUPLICATE KEY UPDATE response = VALUES(response), updatedBy = VALUES(updatedBy)`
+        );
+        saved++;
       }
 
-      return { success: true, saved: results.length };
+      return { success: true, saved };
     }),
 
   /**

@@ -71,4 +71,9 @@
 
 ## RRAL Import Bug
 
-- [x] Fix RRAL import not persisting — race condition between import saves, auto-save, and existingResponses refetch
+- [x] Fix RRAL import not persisting — root cause: duplicate DB row for IW.images_description + existingResponses useEffect overwriting local state on every refetch
+- [x] Delete duplicate intakeResponses row (id=2160007)
+- [x] Add UNIQUE index on (organizationId, questionId) to prevent future duplicates
+- [x] Convert saveResponse/saveResponses to use ON DUPLICATE KEY UPDATE (race-condition-proof)
+- [x] Add hasHydratedRef to only load server data once on initial page load (prevent refetch overwrites)
+- [x] Add refetchOnWindowFocus: false to getResponses query
