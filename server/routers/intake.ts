@@ -800,6 +800,71 @@ export const intakeRouter = router({
   }),
 
   /**
+   * Add a vendor option from the intake questionnaire.
+   * Trims input, dedupes case-insensitively (returns the existing canonical name
+   * so the caller can still select it), and logs to the audit trail.
+   */
+  addVendorOption: publicProcedure
+    .input(z.object({
+      systemType: z.string().min(1),
+      vendorName: z.string().min(1),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await requireDb();
+      const { systemVendorOptions, vendorAuditLog } = await import("../../drizzle/schema");
+      const { desc } = await import("drizzle-orm");
+
+      const systemType = input.systemType.trim();
+      const vendorName = input.vendorName.trim().replace(/\s+/g, " ");
+      if (!systemType || !vendorName) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "System type and vendor name are required." });
+      }
+
+      const existing = await db.select().from(systemVendorOptions)
+        .where(eq(systemVendorOptions.systemType, systemType))
+        .orderBy(desc(systemVendorOptions.displayOrder));
+
+      const dup = existing.find(v => v.vendorName.toLowerCase() === vendorName.toLowerCase());
+      if (dup) {
+        // Idempotent: if the vendor already exists (active or hidden), make sure
+        // it's active so the caller can pick it, and return the canonical name.
+        if (!dup.isActive) {
+          await db.update(systemVendorOptions)
+            .set({ isActive: 1 })
+            .where(eq(systemVendorOptions.id, dup.id));
+          await db.insert(vendorAuditLog).values({
+            action: 'toggle',
+            systemType,
+            vendorName: dup.vendorName,
+            previousValue: 'inactive',
+            newValue: 'active',
+            performedBy: ctx.user?.email || "intake-user",
+          });
+        }
+        return { success: true, vendorName: dup.vendorName, alreadyExisted: true };
+      }
+
+      const maxOrder = existing.length > 0 ? existing[0].displayOrder : 0;
+      await db.insert(systemVendorOptions).values({
+        systemType,
+        vendorName,
+        displayOrder: maxOrder + 1,
+        createdBy: ctx.user?.email || "intake-user",
+      });
+
+      await db.insert(vendorAuditLog).values({
+        action: 'add',
+        systemType,
+        vendorName,
+        newValue: vendorName,
+        performedBy: ctx.user?.email || "intake-user",
+      });
+
+      return { success: true, vendorName, alreadyExisted: false };
+    }),
+
+
+  /**
    * Get task templates for an org (by slug → clientId → partner tasks).
    * Used by the Tasks page to show partner-defined action items.
    */
