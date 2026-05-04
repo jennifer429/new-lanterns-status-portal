@@ -1,6 +1,8 @@
 import { useState, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 import {
   CloudUpload,
   FileText,
@@ -12,6 +14,7 @@ import {
   Pencil,
   Trash2,
   X,
+  Check,
 } from "lucide-react";
 import {
   VENDOR_OPTIONS,
@@ -20,6 +23,8 @@ import {
   type SystemEntry,
 } from "./systemConstants";
 import { SystemEditRow } from "./SystemEditRow";
+
+const ADD_NEW_VENDOR = "__add_new_vendor__";
 
 export interface ArchitectureOverviewProps {
   slug: string;
@@ -48,11 +53,55 @@ export function ArchitectureOverview({
   const diagramInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch dynamic vendor options from database (falls back to hardcoded if unavailable)
-  const { data: dynamicVendors } = trpc.intake.getActiveVendorOptions.useQuery();
+  const { data: dynamicVendors, refetch: refetchVendors } = trpc.intake.getActiveVendorOptions.useQuery();
   const vendorOptions =
     dynamicVendors && Object.keys(dynamicVendors).length > 0
       ? dynamicVendors
       : VENDOR_OPTIONS;
+
+  // Inline "Add new vendor" state — keyed by systemType so each row is independent.
+  const [addingForType, setAddingForType] = useState<string | null>(null);
+  const [newVendorName, setNewVendorName] = useState("");
+
+  const addVendorMutation = trpc.intake.addVendorOption.useMutation();
+
+  const submitNewVendor = async (systemType: string, opts: { selectAfter: boolean; multi?: boolean }) => {
+    const name = newVendorName.trim().replace(/\s+/g, " ");
+    if (!name) return;
+    try {
+      const result = await addVendorMutation.mutateAsync({ systemType, vendorName: name });
+      const canonical = result.vendorName;
+      if (result.alreadyExisted) {
+        toast.info(`"${canonical}" is already in the ${systemType} list — selected.`);
+      } else {
+        toast.success(`Added "${canonical}" to ${systemType}.`);
+      }
+      await refetchVendors();
+      if (opts.selectAfter) {
+        if (opts.multi) {
+          // Toggle on if not already selected
+          const aiSystems = systems.filter((s) => s.type === systemType);
+          if (!aiSystems.some((s) => s.name === canonical)) {
+            saveSystems([
+              ...systems,
+              { id: crypto.randomUUID(), name: canonical, type: systemType, description: "" },
+            ]);
+          }
+        } else {
+          setDefaultRowVendor(systemType, canonical);
+        }
+      }
+      setAddingForType(null);
+      setNewVendorName("");
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to add vendor");
+    }
+  };
+
+  const cancelAddVendor = () => {
+    setAddingForType(null);
+    setNewVendorName("");
+  };
 
   // Parse systems from JSON
   const systems: SystemEntry[] = (() => {
@@ -432,7 +481,7 @@ export function ArchitectureOverview({
                       </span>
                     )}
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2 items-center">
                     {vendors
                       .filter((v) => v !== "Other")
                       .map((vendor) => (
@@ -448,6 +497,46 @@ export function ArchitectureOverview({
                           {vendor}
                         </button>
                       ))}
+                    {addingForType === row.type ? (
+                      <div className="flex items-center gap-1">
+                        <Input
+                          autoFocus
+                          value={newVendorName}
+                          onChange={(e) => setNewVendorName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") { e.preventDefault(); submitNewVendor(row.type, { selectAfter: true, multi: true }); }
+                            if (e.key === "Escape") cancelAddVendor();
+                          }}
+                          placeholder={`New ${row.label} vendor`}
+                          className="h-7 text-xs w-44"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => submitNewVendor(row.type, { selectAfter: true, multi: true })}
+                          disabled={!newVendorName.trim() || addVendorMutation.isPending}
+                          className="p-1 rounded hover:bg-indigo-500/20 text-indigo-300 disabled:opacity-40"
+                          title="Add"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelAddVendor}
+                          className="p-1 rounded hover:bg-muted/50 text-muted-foreground"
+                          title="Cancel"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => { setAddingForType(row.type); setNewVendorName(""); }}
+                        className="px-3 py-1.5 text-xs rounded-md border border-dashed border-border/60 text-muted-foreground hover:border-indigo-500/40 hover:text-indigo-300 transition-colors flex items-center gap-1"
+                        title="Add a new vendor to this list"
+                      >
+                        <Plus className="w-3 h-3" /> Add new
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -468,29 +557,72 @@ export function ArchitectureOverview({
                   {row.label}
                 </span>
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <select
-                    value={current?.name || ""}
-                    onChange={(e) => {
-                      if (e.target.value) setDefaultRowVendor(row.type, e.target.value);
-                      else clearDefaultRow(row.type);
-                    }}
-                    className="flex-1 h-8 text-sm rounded-md border border-input bg-background/50 px-2 text-foreground"
-                  >
-                    <option value="">Select {row.label}...</option>
-                    {vendors.map((v) => (
-                      <option key={v} value={v}>
-                        {v}
-                      </option>
-                    ))}
-                  </select>
-                  {current && (
-                    <button
-                      onClick={() => clearDefaultRow(row.type)}
-                      className="text-muted-foreground hover:text-red-400 shrink-0"
-                      title="Clear"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
+                  {addingForType === row.type ? (
+                    <>
+                      <Input
+                        autoFocus
+                        value={newVendorName}
+                        onChange={(e) => setNewVendorName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") { e.preventDefault(); submitNewVendor(row.type, { selectAfter: true }); }
+                          if (e.key === "Escape") cancelAddVendor();
+                        }}
+                        placeholder={`New ${row.label} vendor name`}
+                        className="flex-1 h-8 text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => submitNewVendor(row.type, { selectAfter: true })}
+                        disabled={!newVendorName.trim() || addVendorMutation.isPending}
+                        className="p-1.5 rounded hover:bg-purple-500/20 text-purple-300 disabled:opacity-40 shrink-0"
+                        title="Save vendor"
+                      >
+                        <Check className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelAddVendor}
+                        className="p-1.5 rounded hover:bg-muted/50 text-muted-foreground shrink-0"
+                        title="Cancel"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <select
+                        value={current?.name || ""}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (v === ADD_NEW_VENDOR) {
+                            setAddingForType(row.type);
+                            setNewVendorName("");
+                          } else if (v) {
+                            setDefaultRowVendor(row.type, v);
+                          } else {
+                            clearDefaultRow(row.type);
+                          }
+                        }}
+                        className="flex-1 h-8 text-sm rounded-md border border-input bg-background/50 px-2 text-foreground"
+                      >
+                        <option value="">Select {row.label}...</option>
+                        {vendors.map((v) => (
+                          <option key={v} value={v}>
+                            {v}
+                          </option>
+                        ))}
+                        <option value={ADD_NEW_VENDOR}>+ Add new vendor…</option>
+                      </select>
+                      {current && (
+                        <button
+                          onClick={() => clearDefaultRow(row.type)}
+                          className="text-muted-foreground hover:text-red-400 shrink-0"
+                          title="Clear"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
