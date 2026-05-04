@@ -31,14 +31,12 @@ export const authRouter = router({
       const db = await requireDb();
 
       // Find user by email
-      console.log('[auth.login] Looking for user:', input.email.toLowerCase());
       const [user] = await db
         .select()
         .from(users)
         .where(eq(users.email, input.email.toLowerCase()))
         .limit(1);
 
-      console.log('[auth.login] User found:', !!user, 'Has password:', !!user?.passwordHash);
       if (!user || !user.passwordHash) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -55,9 +53,7 @@ export const authRouter = router({
       }
 
       // Verify password
-      console.log('[auth.login] Comparing password...');
       const isValid = await bcrypt.compare(input.password, user.passwordHash);
-      console.log('[auth.login] Password valid:', isValid);
       if (!isValid) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -122,9 +118,7 @@ export const authRouter = router({
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, cookieOptions);
       ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
-      // Cookie set successfully
 
-      console.log('[auth.login] Login successful for:', user.email, 'redirecting to:', orgSlug);
       return {
         email: user.email || "",
         name: user.name || user.email?.split('@')[0] || "User",

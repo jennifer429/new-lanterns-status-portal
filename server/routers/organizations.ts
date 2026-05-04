@@ -40,10 +40,9 @@ export const organizationsRouter = router({
           const folderId = await createCustomerFolder(input.name);
           if (folderId) {
             googleDriveFolderId = folderId;
-            console.log(`[Org] Created Drive folder for ${input.name}: ${folderId}`);
           }
-        } catch (err: any) {
-          console.error(`[Org] Failed to create Drive folder for ${input.name}:`, err.message);
+        } catch (err) {
+          console.error("[Org] Failed to create Drive folder", err);
           // Continue without Drive folder — files will go to root folder
         }
       }

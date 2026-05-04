@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
+import { escapeCSV } from "@/lib/csv";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -446,7 +447,7 @@ function buildCSV(orgs: { id: number; name: string }[], lookup: Record<number, R
       dataRows.push([section.title, `${row.label} (${row.questionId})`, ...orgs.map(o => lookup[o.id]?.[row.questionId] ?? "")]);
     });
   });
-  return [header, ...dataRows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+  return [header, ...dataRows].map(r => r.map(v => escapeCSV(String(v))).join(",")).join("\n");
 }
 
 function downloadCSV(csv: string) {

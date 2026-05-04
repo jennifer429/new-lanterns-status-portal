@@ -11,6 +11,7 @@ import {
 import { eq, desc } from "drizzle-orm";
 import { uploadToGoogleDrive } from "./files";
 import { storageGet } from "../storage";
+import { fileUploadInput } from "../_core/fileValidation";
 
 /**
  * Document Library router — partner-scoped document management.
@@ -103,9 +104,7 @@ export const proceduralLibraryRouter = router({
   uploadDocument: protectedProcedure
     .input(z.object({
       title: z.string().min(1).max(500),
-      fileName: z.string(),
-      fileData: z.string(), // base64
-      mimeType: z.string(),
+      ...fileUploadInput,
       clientId: z.number().optional(), // required for platform admins
     }))
     .mutation(async ({ ctx, input }) => {

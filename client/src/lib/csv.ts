@@ -3,9 +3,17 @@
  * Used by both the Testing Checklist and Task List pages.
  */
 
-/** Escape a CSV cell value — wraps in quotes if it contains commas, quotes, or newlines */
+/**
+ * Escape a CSV cell value.
+ * Wraps in quotes if it contains commas, quotes, or newlines, and prefixes a leading
+ * single-quote to any cell starting with =, +, -, @, tab, or CR to neutralize
+ * spreadsheet formula injection (CWE-1236).
+ */
 export function escapeCSV(value: string | null | undefined): string {
-  const str = value ?? "";
+  let str = value ?? "";
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = "'" + str;
+  }
   if (str.includes(",") || str.includes('"') || str.includes("\n") || str.includes("\r")) {
     return `"${str.replace(/"/g, '""')}"`;
   }

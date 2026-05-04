@@ -7,6 +7,7 @@ import { eq, and, sql } from "drizzle-orm";
 import { uploadToGoogleDrive } from "./files";
 import { logFileActivity } from "../fileAuditLog";
 import { resolveOrgByIdentifier } from "../_core/orgLookup";
+import { fileUploadInput } from "../_core/fileValidation";
 
 export const intakeRouter = router({
   /**
@@ -89,7 +90,7 @@ export const intakeRouter = router({
         org = await resolveOrgByIdentifier(db, input.organizationSlug);
       } catch (error) {
         console.error('[intake] Database error when fetching organization:', error);
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database error: " + (error instanceof Error ? error.message : String(error)) });
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database error" });
       }
 
       if (!org) {
@@ -147,7 +148,7 @@ export const intakeRouter = router({
         org = await resolveOrgByIdentifier(db, input.organizationSlug);
       } catch (error) {
         console.error('[intake] Database error when fetching organization:', error);
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database error: " + (error instanceof Error ? error.message : String(error)) });
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database error" });
       }
 
       if (!org) {
@@ -215,7 +216,7 @@ export const intakeRouter = router({
         org = await resolveOrgByIdentifier(db, input.organizationSlug);
       } catch (error) {
         console.error('[intake] Database error when fetching organization:', error);
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database error: " + (error instanceof Error ? error.message : String(error)) });
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database error" });
       }
 
       if (!org) {
@@ -291,7 +292,7 @@ export const intakeRouter = router({
         org = await resolveOrgByIdentifier(db, input.organizationSlug);
       } catch (error) {
         console.error('[intake] Database error when fetching organization:', error);
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database error: " + (error instanceof Error ? error.message : String(error)) });
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database error" });
       }
 
       if (!org) {
@@ -358,12 +359,10 @@ export const intakeRouter = router({
   uploadFile: publicProcedure
     .input(
       z.object({
-        organizationSlug: z.string(),
-        questionId: z.string(),
-        fileName: z.string(),
-        fileData: z.string(), // base64 encoded file data
-        mimeType: z.string(),
-        userEmail: z.string().email(),
+        organizationSlug: z.string().max(100),
+        questionId: z.string().max(100),
+        ...fileUploadInput,
+        userEmail: z.string().email().max(320),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -379,7 +378,7 @@ export const intakeRouter = router({
           .limit(1);
       } catch (error) {
         console.error('[intake] Database error when fetching organization:', error);
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database error: " + (error instanceof Error ? error.message : String(error)) });
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database error" });
       }
 
       if (!org) {
@@ -464,11 +463,11 @@ export const intakeRouter = router({
           fileUrl,
           message: "File uploaded successfully",
         };
-      } catch (error: any) {
-        console.error("[Upload Error] Full error:", error);
+      } catch (error) {
+        console.error("[Upload Error]", error);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: `Failed to upload file: ${error.message}`,
+          message: "Failed to upload file",
         });
       }
     }),
@@ -497,7 +496,7 @@ export const intakeRouter = router({
           .limit(1);
       } catch (error) {
         console.error('[intake] Database error when fetching organization:', error);
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database error: " + (error instanceof Error ? error.message : String(error)) });
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database error" });
       }
 
       if (!org) {
@@ -546,7 +545,7 @@ export const intakeRouter = router({
           .limit(1);
       } catch (error) {
         console.error('[intake] Database error when fetching organization:', error);
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database error: " + (error instanceof Error ? error.message : String(error)) });
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database error" });
       }
 
       if (!org) {
@@ -641,7 +640,7 @@ export const intakeRouter = router({
           .limit(1);
       } catch (error) {
         console.error('[intake] Database error when fetching organization:', error);
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database error: " + (error instanceof Error ? error.message : String(error)) });
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database error" });
       }
 
       if (!org) {
@@ -737,11 +736,9 @@ export const intakeRouter = router({
   uploadAdhocFile: publicProcedure
     .input(
       z.object({
-        organizationSlug: z.string(),
-        fileName: z.string(),
-        fileData: z.string(), // base64
-        mimeType: z.string(),
-        userEmail: z.string().email(),
+        organizationSlug: z.string().max(100),
+        ...fileUploadInput,
+        userEmail: z.string().email().max(320),
       })
     )
     .mutation(async ({ input, ctx }) => {
