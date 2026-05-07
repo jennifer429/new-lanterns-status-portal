@@ -6,6 +6,7 @@ import { eq, and, desc, isNull } from "drizzle-orm";
 import { uploadToGoogleDrive } from "./files";
 import { logFileActivity } from "../fileAuditLog";
 import { TRPCError } from "@trpc/server";
+import { fileUploadInput } from "../_core/fileValidation";
 
 /**
  * Notes router — labeled file uploads for org and partner dashboards.
@@ -19,11 +20,9 @@ export const notesRouter = router({
   uploadForOrg: protectedProcedure
     .input(
       z.object({
-        organizationSlug: z.string(),
+        organizationSlug: z.string().max(100),
         label: z.string().min(1).max(100),
-        fileName: z.string(),
-        fileData: z.string(), // base64
-        mimeType: z.string(),
+        ...fileUploadInput,
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -84,9 +83,7 @@ export const notesRouter = router({
       z.object({
         clientId: z.number(),
         label: z.string().min(1).max(100),
-        fileName: z.string(),
-        fileData: z.string(), // base64
-        mimeType: z.string(),
+        ...fileUploadInput,
       })
     )
     .mutation(async ({ input, ctx }) => {

@@ -119,8 +119,6 @@ Represents clinical organizations (hospitals/facilities) that belong to a partne
 | `startDate` | varchar(50) | YES | NULL | Project start date |
 | `goalDate` | varchar(50) | YES | NULL | Target completion date |
 | `status` | enum('active', 'completed', 'paused', 'inactive') | NO | 'active' | Organization status |
-| `linearIssueId` | varchar(100) | YES | NULL | Linear issue ID for two-way sync |
-| `clickupListId` | varchar(100) | YES | NULL | ClickUp list ID for tasks |
 | `googleDriveFolderId` | varchar(100) | YES | NULL | Google Drive folder ID |
 | `createdAt` | timestamp | NO | CURRENT_TIMESTAMP | Creation timestamp |
 | `updatedAt` | timestamp | NO | CURRENT_TIMESTAMP ON UPDATE | Last update timestamp |
@@ -290,14 +288,14 @@ Stores which tasks are completed.
 
 ### activityFeed
 
-Stores updates from Linear/ClickUp for client visibility.
+Stores manual updates posted to the client portal.
 
 | Column | Type | Nullable | Default | Description |
 |--------|------|----------|---------|-------------|
 | `id` | int | NO | AUTO_INCREMENT | Primary key |
 | `organizationId` | int | NO | - | FK to organizations.id |
-| `source` | enum('linear', 'clickup', 'manual') | NO | - | Update source |
-| `sourceId` | varchar(100) | YES | NULL | Linear issue ID or ClickUp task ID |
+| `source` | enum('manual') | NO | - | Update source |
+| `sourceId` | varchar(100) | YES | NULL | Optional external reference |
 | `author` | varchar(255) | YES | NULL | Update author |
 | `message` | text | NO | - | Update message |
 | `createdAt` | timestamp | NO | CURRENT_TIMESTAMP | Creation timestamp |
@@ -486,7 +484,7 @@ UPDATE organizations SET clientId = 1 WHERE clientId IS NULL;
 - `sectionProgress` - Progress tracking
 
 ### Recoverable Tables (Priority 3)
-- `activityFeed` - Can be re-synced from Linear/ClickUp
+- `activityFeed` - Manual posts; non-critical history
 - `onboardingFeedback` - Nice to have, not critical
 
 ---

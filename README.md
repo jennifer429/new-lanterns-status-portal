@@ -68,7 +68,7 @@ New Lantern
 - **Organization management**: Create, view, update hospital organizations
 - **User management**: Create users with automatic partner assignment
 - **File management**: View and manage uploaded configuration files
-- **Activity feed**: Track updates from Linear/ClickUp
+- **Activity feed**: Manual updates posted to the client portal
 
 ## Getting Started
 

@@ -6,6 +6,7 @@ import { fileAttachments, organizations, users } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { uploadFileToDrive } from "../googleDrive";
 import { logFileActivity } from "../fileAuditLog";
+import { fileUploadInput, makeSafeFileKey } from "../_core/fileValidation";
 
 /**
  * Legacy wrapper — kept for backward compatibility with other routers that call uploadToGoogleDrive.
@@ -63,17 +64,15 @@ async function checkFileAccess(
  */
 export const filesRouter = router({
   /**
-   * Upload a file to Google Drive (per-customer folder) and attach links to ClickUp and Linear
+   * Upload a file to Google Drive (per-customer folder)
    */
   upload: protectedProcedure
     .input(
       z.object({
         organizationId: z.number(),
-        taskId: z.string(),
-        taskName: z.string(),
-        fileName: z.string(),
-        fileData: z.string(), // base64 encoded file data
-        mimeType: z.string(),
+        taskId: z.string().max(100),
+        taskName: z.string().max(255),
+        ...fileUploadInput,
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -104,7 +103,7 @@ export const filesRouter = router({
       if (!org) throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
 
       // Upload to Google Drive (per-customer folder)
-      const fileKey = `${Date.now()}-${input.fileName}`;
+      const fileKey = makeSafeFileKey(input.fileName);
       const { fileUrl, driveFileId } = await uploadFileToDrive(
         fileKey,
         fileBuffer,

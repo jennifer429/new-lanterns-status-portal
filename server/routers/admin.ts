@@ -7,6 +7,7 @@ import { eq, and, or, desc, inArray, sql } from "drizzle-orm";
 import { uploadToGoogleDrive } from "./files";
 import bcrypt from "bcrypt";
 import { triggerInviteSend } from "../_core/inviteTrigger";
+import { fileUploadInput } from "../_core/fileValidation";
 
 /**
  * Admin router for managing questions, options, organizations, and users
@@ -393,7 +394,6 @@ export const adminRouter = router({
     const { db } = ctx;
 
     // Debug logging
-    console.log('[getAllOrganizations] User:', ctx.user.email, 'clientId:', ctx.user.clientId, 'role:', ctx.user.role);
 
     // Filter by user's clientId for access control
     if (ctx.user.clientId) {
@@ -1021,7 +1021,6 @@ export const adminRouter = router({
           openId: `user-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         });
 
-      console.log(`[createUser] Created user ${input.email} (temp password generated, not logged for security)`);
 
       // Collect partner-admin CC list so they are notified of the new user's
       // initial invite. Only active admins on the same partner; never the
@@ -1095,7 +1094,6 @@ export const adminRouter = router({
         })
         .where(eq(users.id, input.userId));
 
-      console.log(`[resendInvite] Reset invite for user ${targetUser.email} (id: ${input.userId})`);
 
       const inviteTriggered = await triggerInviteSend({
         email: targetUser.email,
@@ -1337,11 +1335,9 @@ export const adminRouter = router({
     .input(
       z.object({
         clientId: z.number(),
-        questionId: z.string(),
-        label: z.string(),
-        fileName: z.string(),
-        fileData: z.string(), // base64 encoded
-        mimeType: z.string(),
+        questionId: z.string().max(100),
+        label: z.string().max(255),
+        ...fileUploadInput,
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -1399,11 +1395,9 @@ export const adminRouter = router({
   replaceTemplate: adminDbProcedure
     .input(
       z.object({
-        id: z.number(), // ID of the template being replaced
-        label: z.string(),
-        fileName: z.string(),
-        fileData: z.string(), // base64 encoded
-        mimeType: z.string(),
+        id: z.number(),
+        label: z.string().max(255),
+        ...fileUploadInput,
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -1473,12 +1467,10 @@ export const adminRouter = router({
   uploadSpecification: adminDbProcedure
     .input(
       z.object({
-        title: z.string().min(1),
-        description: z.string().optional(),
-        category: z.string().optional(),
-        fileName: z.string(),
-        fileData: z.string(), // base64 encoded
-        mimeType: z.string(),
+        title: z.string().min(1).max(255),
+        description: z.string().max(2000).optional(),
+        category: z.string().max(100).optional(),
+        ...fileUploadInput,
       })
     )
     .mutation(async ({ ctx, input }) => {

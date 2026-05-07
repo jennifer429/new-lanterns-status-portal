@@ -7,7 +7,6 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
-import { registerWebhooks } from "../webhooks";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -39,8 +38,6 @@ async function startServer() {
   // Auth routes (login, etc.)
   const { registerAuthRoutes } = await import("./authRoutes");
   registerAuthRoutes(app);
-  // Webhook endpoints
-  registerWebhooks(app);
   // External API (for Claude/automation — bearer token auth)
   const { registerExternalApi } = await import("../external/index");
   registerExternalApi(app);

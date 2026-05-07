@@ -62,8 +62,6 @@ Clinical facilities (hospitals) under each partner.
 | `startDate` | varchar(50) | YES | NULL | Project start date |
 | `goalDate` | varchar(50) | YES | NULL | Target completion date |
 | `status` | enum('active','completed','paused','inactive') | NO | 'active' | Status |
-| `linearIssueId` | varchar(100) | YES | NULL | Linear issue ID |
-| `clickupListId` | varchar(100) | YES | NULL | ClickUp list ID |
 | `googleDriveFolderId` | varchar(100) | YES | NULL | Google Drive folder ID |
 | `createdAt` | timestamp | NO | CURRENT_TIMESTAMP | Creation time |
 | `updatedAt` | timestamp | NO | ON UPDATE | Last update |
@@ -359,14 +357,14 @@ Org-specific custom tasks added by hospital users (does not affect partner templ
 
 ### 19. activityFeed
 
-Updates from integrations (Linear/ClickUp) and manual entries.
+Manual updates posted to the client portal.
 
 | Column | Type | Nullable | Default | Description |
 |--------|------|----------|---------|-------------|
 | `id` | int | NO | AUTO_INCREMENT | Primary key |
 | `organizationId` | int | NO | - | FK to organizations.id |
-| `source` | enum('linear','clickup','manual') | NO | - | Update source |
-| `sourceId` | varchar(100) | YES | NULL | External ID |
+| `source` | enum('manual') | NO | - | Update source |
+| `sourceId` | varchar(100) | YES | NULL | Optional external reference |
 | `author` | varchar(255) | YES | NULL | Author name |
 | `message` | text | NO | - | Message content |
 | `createdAt` | timestamp | NO | CURRENT_TIMESTAMP | Creation time |
