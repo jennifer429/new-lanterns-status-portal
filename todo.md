@@ -132,3 +132,12 @@
 - [ ] Wrap all `JSON.parse` calls in routers with try/catch (`swimlane.ts:291`, `intake.ts:976/980/988`).
 - [ ] Centralize soft-delete filtering (`isActive=1`) so query paths can't accidentally include archived rows across `partnerTemplates`, `specifications`, `systemVendorOptions`, `partnerTaskTemplates`.
 - [ ] Add indexes: `passwordResetTokens.expiresAt` for cleanup; `users.email` `notNull()` to make the unique constraint meaningful.
+
+## Vendor Picklist Cleanup & Redesign
+
+- [x] Delete all audit test entries from systemVendorOptions (191 rows: AuditAdd_*, AuditToggle_*, AuditUpdate_*)
+- [x] Delete all test entries from vendorAuditLog (1,573 rows: Audit*, AlphaTest_*, ActiveTest_*, BulkTest_*)
+- [x] Redesign vendor picklist admin UI as collapsible cards (consistent site design framework)
+- [x] Audit log hidden by default, toggled via "Show History" button
+- [x] Vendor items displayed as compact card rows with eye/edit/delete icons
+- [x] Document design decision: collapsible cards pattern for all admin controls

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Plus, Edit, History, ListChecks, ChevronDown, Check, AlertCircle, X } from "lucide-react";
+import { Plus, Edit, History, ListChecks, ChevronRight, Check, AlertCircle, X, Trash2, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -40,7 +40,6 @@ function levenshtein(a: string, b: string, max: number): number {
 }
 
 // Find existing vendors that look like a typo or near-duplicate of `name`.
-// Skips exact (case-insensitive) match — that's caught as a hard duplicate elsewhere.
 function findSimilar(name: string, existing: { vendorName: string }[]): string[] {
   const trimmed = name.trim();
   if (trimmed.length < 2) return [];
@@ -49,15 +48,13 @@ function findSimilar(name: string, existing: { vendorName: string }[]): string[]
   const hits: { name: string; score: number }[] = [];
   for (const e of existing) {
     const candLower = e.vendorName.toLowerCase();
-    if (candLower === targetLower) continue; // exact dup, handled separately
+    if (candLower === targetLower) continue;
     const cand = normalize(e.vendorName);
     if (!cand) continue;
-    // Substring match (e.g. typing "fuji" matches "Fujifilm Synapse")
     if (cand.includes(target) || target.includes(cand)) {
       hits.push({ name: e.vendorName, score: 0 });
       continue;
     }
-    // Levenshtein within an edit distance proportional to length.
     const max = target.length <= 4 ? 1 : target.length <= 8 ? 2 : 3;
     const dist = levenshtein(target, cand, max);
     if (dist <= max) hits.push({ name: e.vendorName, score: dist });
@@ -75,15 +72,15 @@ function sortVendors<T extends { vendorName: string }>(list: T[]): T[] {
 }
 
 export function VendorPicklistsTab() {
-  // Per-system-type input state, keyed by systemType so each card is independent.
   const [addInputs, setAddInputs] = useState<Record<string, string>>({});
   const [newSystemTypeName, setNewSystemTypeName] = useState("");
   const [newSystemTypeVendors, setNewSystemTypeVendors] = useState("");
   const [editVendorId, setEditVendorId] = useState<number | null>(null);
   const [editVendorName, setEditVendorName] = useState("");
+  const [showAuditLog, setShowAuditLog] = useState(false);
 
   const { data: vendorOptions, refetch: refetchVendorOptions } = trpc.admin.getSystemVendorOptions.useQuery();
-  const { data: vendorAuditLogs, refetch: refetchVendorAuditLogs } = trpc.admin.getVendorAuditLog.useQuery({ limit: 100 });
+  const { data: vendorAuditLogs, refetch: refetchVendorAuditLogs } = trpc.admin.getVendorAuditLog.useQuery({ limit: 50 });
 
   const vendorsByType = useMemo(() => {
     if (!vendorOptions) return {} as Record<string, typeof vendorOptions>;
@@ -151,18 +148,29 @@ export function VendorPicklistsTab() {
 
   return (
     <>
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold">Vendor Picklists</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Manage the vendor dropdown options shown in the Architecture section of the intake questionnaire.
-            Lists are alphabetized automatically, with "Other" pinned to the bottom.
+            Manage vendor dropdown options for the Architecture section of the intake questionnaire.
+            Lists are alphabetized with "Other" pinned to the bottom.
           </p>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAuditLog(!showAuditLog)}
+            className="gap-1.5"
+          >
+            <History className="w-4 h-4" />
+            {showAuditLog ? "Hide" : "Show"} History
+          </Button>
           {(!vendorOptions || vendorOptions.length === 0) && (
             <Button
               variant="outline"
+              size="sm"
               onClick={() => seedVendorsMutation.mutate()}
               disabled={seedVendorsMutation.isPending}
             >
@@ -173,31 +181,37 @@ export function VendorPicklistsTab() {
       </div>
 
       {/* Add New System Type */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-lg">Add New System Type</CardTitle>
-          <CardDescription>Bulk-add a system type with its vendors. Names are trimmed and de-duplicated automatically.</CardDescription>
+      <Card className="mb-6 border-dashed border-primary/30">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Plus className="w-4 h-4 text-primary" />
+            Add New System Type
+          </CardTitle>
+          <CardDescription className="text-xs">Create a new category with its vendors (comma-separated). Names are trimmed and de-duplicated.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1">
-              <Label className="text-xs text-muted-foreground">System Type Name</Label>
+              <Label className="text-xs text-muted-foreground mb-1 block">Category Name</Label>
               <Input
                 placeholder="e.g., Cloud PACS, Dose Monitoring"
                 value={newSystemTypeName}
                 onChange={(e) => setNewSystemTypeName(e.target.value)}
+                className="h-9"
               />
             </div>
             <div className="flex-[2]">
-              <Label className="text-xs text-muted-foreground">Vendors (comma-separated)</Label>
+              <Label className="text-xs text-muted-foreground mb-1 block">Vendors (comma-separated)</Label>
               <Input
                 placeholder="e.g., Vendor A, Vendor B, Vendor C, Other"
                 value={newSystemTypeVendors}
                 onChange={(e) => setNewSystemTypeVendors(e.target.value)}
+                className="h-9"
               />
             </div>
             <div className="flex items-end">
               <Button
+                size="sm"
                 onClick={() => {
                   if (!newSystemTypeName.trim()) {
                     toast.error("Please enter a system type name");
@@ -211,16 +225,17 @@ export function VendorPicklistsTab() {
                   addSystemTypeMutation.mutate({ systemType: newSystemTypeName.trim(), vendors });
                 }}
                 disabled={addSystemTypeMutation.isPending}
+                className="h-9"
               >
-                <Plus className="w-4 h-4 mr-1" />
-                {addSystemTypeMutation.isPending ? "Adding..." : "Add System Type"}
+                <Plus className="w-3.5 h-3.5 mr-1" />
+                {addSystemTypeMutation.isPending ? "Adding..." : "Create"}
               </Button>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* System Type Cards */}
+      {/* System Type Cards - Collapsible */}
       {Object.keys(vendorsByType).length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
@@ -230,7 +245,7 @@ export function VendorPicklistsTab() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 gap-3">
           {Object.entries(vendorsByType).sort(([a], [b]) => a.localeCompare(b)).map(([systemType, vendorsRaw]) => {
             const vendors = vendorsRaw ?? [];
             const inputValue = addInputs[systemType] ?? "";
@@ -240,26 +255,32 @@ export function VendorPicklistsTab() {
               : undefined;
             const similar = trimmed && !exactDup ? findSimilar(trimmed, vendors) : [];
             const activeCount = vendors.filter(v => v.isActive).length;
+            const hiddenCount = vendors.length - activeCount;
 
             return (
-              <Collapsible key={systemType} asChild>
-                <Card>
+              <Collapsible key={systemType}>
+                <Card className="overflow-hidden">
                   <CollapsibleTrigger asChild>
-                    <CardHeader className="pb-3 cursor-pointer hover:bg-muted/30 transition-colors rounded-t-lg group">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
-                          <Badge variant="outline" className="text-sm">{systemType}</Badge>
-                          <span className="text-sm text-muted-foreground font-normal">
-                            {activeCount} active / {vendors.length} total
-                          </span>
-                        </CardTitle>
+                    <div className="flex items-center justify-between px-5 py-3.5 cursor-pointer hover:bg-muted/20 transition-colors group">
+                      <div className="flex items-center gap-3">
+                        <ChevronRight className="w-4 h-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-90" />
+                        <span className="font-semibold text-sm">{systemType}</span>
                       </div>
-                    </CardHeader>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="text-xs font-normal px-2 py-0.5">
+                          {activeCount} vendor{activeCount !== 1 ? "s" : ""}
+                        </Badge>
+                        {hiddenCount > 0 && (
+                          <Badge variant="outline" className="text-xs font-normal px-2 py-0.5 text-muted-foreground">
+                            {hiddenCount} hidden
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
-                    <CardContent>
-                      {/* Always-visible add-vendor row */}
+                    <div className="border-t border-border/40 px-5 py-4">
+                      {/* Add vendor input */}
                       <div className="mb-4">
                         <div className="flex gap-2 items-start">
                           <div className="flex-1">
@@ -271,14 +292,14 @@ export function VendorPicklistsTab() {
                                 if (e.key === "Enter") { e.preventDefault(); submitAdd(systemType); }
                                 if (e.key === "Escape") setAddInputs(prev => ({ ...prev, [systemType]: "" }));
                               }}
-                              className="h-9"
+                              className="h-8 text-sm"
                             />
-                            {/* Inline duplicate / similarity warnings */}
+                            {/* Duplicate warning */}
                             {exactDup && (
                               <div className="mt-1.5 flex items-center gap-2 text-xs text-amber-400">
                                 <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
                                 <span>
-                                  "{exactDup.vendorName}" is already in this list
+                                  "{exactDup.vendorName}" already exists
                                   {!exactDup.isActive && (
                                     <>
                                       {" "}(hidden — {" "}
@@ -293,22 +314,21 @@ export function VendorPicklistsTab() {
                                 </span>
                               </div>
                             )}
+                            {/* Similarity warning */}
                             {!exactDup && similar.length > 0 && (
                               <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-amber-400">
                                 <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                                <span>Looks similar to:</span>
+                                <span>Similar:</span>
                                 {similar.map(s => (
                                   <button
                                     key={s}
                                     type="button"
                                     onClick={() => setAddInputs(prev => ({ ...prev, [systemType]: s }))}
                                     className="px-1.5 py-0.5 rounded border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300"
-                                    title="Use this existing vendor name"
                                   >
                                     {s}
                                   </button>
                                 ))}
-                                <span className="text-muted-foreground">— click to use, or keep typing if it's a different vendor.</span>
                               </div>
                             )}
                           </div>
@@ -316,80 +336,94 @@ export function VendorPicklistsTab() {
                             size="sm"
                             onClick={() => submitAdd(systemType)}
                             disabled={!trimmed || !!exactDup || addVendorMutation.isPending}
-                            className="h-9"
+                            className="h-8"
                           >
                             <Plus className="w-3.5 h-3.5 mr-1" />
                             Add
                           </Button>
-                          {trimmed && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setAddInputs(prev => ({ ...prev, [systemType]: "" }))}
-                              className="h-9"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </Button>
-                          )}
                         </div>
                       </div>
 
-                      {/* Vendor list */}
-                      <div className="border rounded-lg overflow-hidden">
-                        <table className="w-full border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
-                          <colgroup>
-                            <col style={{ width: '8%' }} /><col style={{ width: '55%' }} />
-                            <col style={{ width: '15%' }} /><col style={{ width: '22%' }} />
-                          </colgroup>
-                          <thead>
-                            <tr className="border-b border-border/30 bg-muted/15">
-                              {['#','Vendor','Status',''].map((h,i)=>(
-                                <th key={i} className={cn("px-3 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide", i===3?"text-right":"text-left")}>{h}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {vendors.map((vendor, idx) => (
-                              <tr key={vendor.id} className={cn("border-b border-border/20 hover:bg-muted/20 transition-colors", !vendor.isActive && "opacity-50")}>
-                                <td className="px-3 py-1.5 text-muted-foreground">{idx+1}</td>
-                                <td className="px-3 py-1.5">
-                                  {editVendorId === vendor.id ? (
-                                    <div className="flex gap-2 items-center">
-                                      <Input value={editVendorName} onChange={(e)=>setEditVendorName(e.target.value)}
-                                        onKeyDown={(e)=>{ if(e.key==="Enter"&&editVendorName.trim()) updateVendorMutation.mutate({id:vendor.id,vendorName:editVendorName.trim()}); if(e.key==="Escape") setEditVendorId(null); }}
-                                        className="h-6 text-xs" autoFocus />
-                                      <button onClick={()=>{ if(editVendorName.trim()) updateVendorMutation.mutate({id:vendor.id,vendorName:editVendorName.trim()}); }}
-                                        className="p-1 rounded hover:bg-muted/50"><Check className="w-3 h-3" /></button>
-                                    </div>
-                                  ) : (
-                                    <span className="font-medium">{vendor.vendorName}</span>
-                                  )}
-                                </td>
-                                <td className="px-3 py-1.5">
-                                  <button onClick={()=>toggleVendorMutation.mutate({id:vendor.id,isActive:vendor.isActive?0:1})}
-                                    className={cn("px-1.5 py-0 rounded text-[10px] font-semibold leading-5 border cursor-pointer transition-colors",
-                                      vendor.isActive?"bg-green-500/15 text-green-400 border-green-500/30 hover:bg-green-500/25":"bg-muted/30 text-muted-foreground border-border/40 hover:bg-muted/50")}>
-                                    {vendor.isActive?"Active":"Hidden"}
+                      {/* Vendor list as compact cards/chips */}
+                      <div className="space-y-1.5">
+                        {vendors.map((vendor) => (
+                          <div
+                            key={vendor.id}
+                            className={cn(
+                              "flex items-center justify-between px-3 py-2 rounded-md border transition-colors",
+                              vendor.isActive
+                                ? "bg-card border-border/50 hover:border-border"
+                                : "bg-muted/20 border-border/20 opacity-60"
+                            )}
+                          >
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              {editVendorId === vendor.id ? (
+                                <div className="flex gap-2 items-center flex-1">
+                                  <Input
+                                    value={editVendorName}
+                                    onChange={(e) => setEditVendorName(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" && editVendorName.trim()) updateVendorMutation.mutate({ id: vendor.id, vendorName: editVendorName.trim() });
+                                      if (e.key === "Escape") setEditVendorId(null);
+                                    }}
+                                    className="h-7 text-sm"
+                                    autoFocus
+                                  />
+                                  <button
+                                    onClick={() => { if (editVendorName.trim()) updateVendorMutation.mutate({ id: vendor.id, vendorName: editVendorName.trim() }); }}
+                                    className="p-1 rounded hover:bg-primary/20 text-primary"
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
                                   </button>
-                                </td>
-                                <td className="px-2 py-1 text-right">
-                                  <div className="flex gap-1 justify-end">
-                                    <button onClick={()=>{ setEditVendorId(vendor.id); setEditVendorName(vendor.vendorName); }}
-                                      className="p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors">
-                                      <Edit className="w-3 h-3" />
-                                    </button>
-                                    <button onClick={()=>{ if(confirm(`Remove "${vendor.vendorName}" from ${systemType}?`)) deleteVendorMutation.mutate({id:vendor.id}); }}
-                                      className="p-1 rounded hover:bg-red-500/10 text-muted-foreground hover:text-red-400 transition-colors">
-                                      <AlertCircle className="w-3 h-3" />
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                                  <button
+                                    onClick={() => setEditVendorId(null)}
+                                    className="p-1 rounded hover:bg-muted/50 text-muted-foreground"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className="text-sm font-medium truncate">{vendor.vendorName}</span>
+                              )}
+                            </div>
+
+                            {editVendorId !== vendor.id && (
+                              <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                                {/* Toggle visibility */}
+                                <button
+                                  onClick={() => toggleVendorMutation.mutate({ id: vendor.id, isActive: vendor.isActive ? 0 : 1 })}
+                                  className={cn(
+                                    "p-1.5 rounded transition-colors",
+                                    vendor.isActive
+                                      ? "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+                                      : "hover:bg-green-500/10 text-muted-foreground hover:text-green-400"
+                                  )}
+                                  title={vendor.isActive ? "Hide from dropdown" : "Show in dropdown"}
+                                >
+                                  {vendor.isActive ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                </button>
+                                {/* Edit */}
+                                <button
+                                  onClick={() => { setEditVendorId(vendor.id); setEditVendorName(vendor.vendorName); }}
+                                  className="p-1.5 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
+                                  title="Rename vendor"
+                                >
+                                  <Edit className="w-3.5 h-3.5" />
+                                </button>
+                                {/* Delete */}
+                                <button
+                                  onClick={() => { if (confirm(`Remove "${vendor.vendorName}" from ${systemType}?`)) deleteVendorMutation.mutate({ id: vendor.id }); }}
+                                  className="p-1.5 rounded hover:bg-red-500/10 text-muted-foreground hover:text-red-400 transition-colors"
+                                  title="Remove vendor"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
                       </div>
-                    </CardContent>
+                    </div>
                   </CollapsibleContent>
                 </Card>
               </Collapsible>
@@ -398,65 +432,63 @@ export function VendorPicklistsTab() {
         </div>
       )}
 
-      {/* Audit Log Section */}
-      <Card className="mt-8">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <History className="w-5 h-5" />
-            Change History
-          </CardTitle>
-          <CardDescription>Recent changes to vendor picklists</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!vendorAuditLogs || vendorAuditLogs.length === 0 ? (
-            <p className="text-muted-foreground text-sm py-4 text-center">No changes recorded yet.</p>
-          ) : (
-            <div className="rounded-md border max-h-[400px] overflow-y-auto">
-              <table className="w-full border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
-                <colgroup>
-                  <col style={{ width: '17%' }} /><col style={{ width: '10%' }} />
-                  <col style={{ width: '18%' }} /><col style={{ width: '35%' }} />
-                  <col style={{ width: '20%' }} />
-                </colgroup>
-                <thead className="sticky top-0 z-10 bg-muted/80 backdrop-blur">
-                  <tr className="border-b border-border/30">
-                    {['Date','Action','System Type','Details','By'].map((h,i)=>(
-                      <th key={i} className="text-left px-3 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {vendorAuditLogs.map((log) => {
-                    const actionLabel: Record<string, string> = { add:'Added', update:'Renamed', toggle:'Toggled', delete:'Deleted', add_system_type:'New Type', seed_defaults:'Seeded' };
-                    const actionColor: Record<string, string> = { add:'text-green-400', update:'text-blue-400', toggle:'text-yellow-400', delete:'text-red-400', add_system_type:'text-purple-400', seed_defaults:'text-muted-foreground' };
-                    let details = '';
-                    if (log.action==='add') details=`Added "${log.vendorName}"`;
-                    else if (log.action==='update') details=`"${log.previousValue}" → "${log.newValue}"`;
-                    else if (log.action==='toggle') details=`"${log.vendorName}" ${log.newValue==='active'?'activated':'deactivated'}`;
-                    else if (log.action==='delete') details=`Removed "${log.vendorName}"`;
-                    else if (log.action==='add_system_type') { try { const v=JSON.parse(log.newValue||'[]'); details=`Added ${v.length} vendors: ${v.join(', ')}`; } catch { details=log.newValue||''; } }
-                    else if (log.action==='seed_defaults') { try { const t=JSON.parse(log.newValue||'[]'); details=`Seeded ${t.length} system types`; } catch { details='Seeded defaults'; } }
-                    return (
-                      <tr key={log.id} className="border-b border-border/20 hover:bg-muted/20 transition-colors">
-                        <td className="px-3 py-1.5 text-muted-foreground whitespace-nowrap">
-                          {new Date(log.performedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}{' '}
-                          {new Date(log.performedAt).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}
-                        </td>
-                        <td className="px-3 py-1.5">
-                          <span className={cn('font-medium', actionColor[log.action]||'text-muted-foreground')}>{actionLabel[log.action]||log.action}</span>
-                        </td>
-                        <td className="px-3 py-1.5 truncate">{log.systemType}</td>
-                        <td className="px-3 py-1.5 truncate text-muted-foreground" title={details}>{details}</td>
-                        <td className="px-3 py-1.5 text-muted-foreground truncate">{log.performedBy}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Audit Log - Collapsible, cleaner format */}
+      {showAuditLog && (
+        <Card className="mt-6">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <History className="w-4 h-4 text-muted-foreground" />
+              Change History
+            </CardTitle>
+            <CardDescription className="text-xs">Recent vendor picklist changes</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {!vendorAuditLogs || vendorAuditLogs.length === 0 ? (
+              <p className="text-muted-foreground text-sm py-4 text-center">No changes recorded yet.</p>
+            ) : (
+              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                {vendorAuditLogs.map((log) => {
+                  const actionConfig: Record<string, { label: string; color: string; icon: string }> = {
+                    add: { label: "Added", color: "text-green-400", icon: "+" },
+                    update: { label: "Renamed", color: "text-blue-400", icon: "~" },
+                    toggle: { label: "Toggled", color: "text-yellow-400", icon: "⟳" },
+                    delete: { label: "Removed", color: "text-red-400", icon: "−" },
+                    add_system_type: { label: "New Category", color: "text-purple-400", icon: "★" },
+                    seed_defaults: { label: "Seeded", color: "text-muted-foreground", icon: "◆" },
+                  };
+                  const config = actionConfig[log.action] || { label: log.action, color: "text-muted-foreground", icon: "•" };
+
+                  let details = '';
+                  if (log.action === 'add') details = `"${log.vendorName}" → ${log.systemType}`;
+                  else if (log.action === 'update') details = `"${log.previousValue}" → "${log.newValue}"`;
+                  else if (log.action === 'toggle') details = `"${log.vendorName}" ${log.newValue === 'active' ? 'shown' : 'hidden'}`;
+                  else if (log.action === 'delete') details = `"${log.vendorName}" from ${log.systemType}`;
+                  else if (log.action === 'add_system_type') {
+                    try { const v = JSON.parse(log.newValue || '[]'); details = `${log.systemType} (${v.length} vendors)`; } catch { details = log.systemType || ''; }
+                  }
+                  else if (log.action === 'seed_defaults') {
+                    try { const t = JSON.parse(log.newValue || '[]'); details = `${t.length} system types`; } catch { details = 'defaults'; }
+                  }
+
+                  return (
+                    <div key={log.id} className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted/20 transition-colors text-sm">
+                      <span className={cn("font-mono text-xs w-5 text-center", config.color)}>{config.icon}</span>
+                      <span className={cn("font-medium w-20 flex-shrink-0", config.color)}>{config.label}</span>
+                      <span className="flex-1 text-muted-foreground truncate" title={details}>{details}</span>
+                      <span className="text-xs text-muted-foreground/60 flex-shrink-0 tabular-nums">
+                        {new Date(log.performedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </span>
+                      <span className="text-xs text-muted-foreground/60 flex-shrink-0 truncate max-w-[120px]" title={log.performedBy}>
+                        {log.performedBy?.split('@')[0]}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </>
   );
 }
