@@ -2,12 +2,18 @@ import { Client } from "@notionhq/client";
 import { ENV } from "./_core/env";
 
 /**
- * Notion API client for syncing intake responses
- * Only syncs organizations whose slug starts with "radone"
+ * Notion API client for syncing intake responses.
+ * The Notion questionnaire database has one row per org × question.
+ * Schema: Question (title), Question ID (rich_text), Answer (rich_text),
+ *         Section (select), Institution Group (select), Slug (rich_text),
+ *         Status (select), Updated By (rich_text), Files (files), Created At (date)
  */
 
 let notionClient: Client | null = null;
 let connectivityNotionClient: Client | null = null;
+
+const QUESTIONNAIRE_DB_ID = ENV.notionDatabaseId || "";
+const QUESTIONNAIRE_DATA_SOURCE_ID = ENV.notionDatabaseId || "";
 
 export function getNotionClient(): Client | null {
   if (!ENV.notionApiKey || !ENV.notionDatabaseId) {
@@ -35,14 +41,190 @@ export function getConnectivityNotionClient(): Client | null {
 }
 
 /**
- * Check if organization should sync to Notion
+ * All orgs sync to Notion now (no radone filter).
  */
-export function shouldSyncToNotion(organizationSlug: string): boolean {
-  return organizationSlug.toLowerCase().startsWith("radone");
+export function shouldSyncToNotion(_organizationSlug: string): boolean {
+  return !!ENV.notionApiKey && !!ENV.notionDatabaseId;
 }
 
 /**
- * Upload file to Notion and return file upload ID
+ * Find the Notion page ID for a specific org+question combination.
+ * Uses dataSources.query with Institution Group select filter + paginated scan for Question ID match.
+ */
+export async function findNotionPageForQuestion(
+  slug: string,
+  questionId: string
+): Promise<string | null> {
+  const client = getNotionClient();
+  if (!client) return null;
+
+  try {
+    let cursor: string | undefined = undefined;
+    do {
+      const result: any = await (client as any).dataSources.query({
+        data_source_id: QUESTIONNAIRE_DATA_SOURCE_ID,
+        filter: {
+          property: "Institution Group",
+          select: { equals: slug },
+        },
+        page_size: 100,
+        start_cursor: cursor,
+      });
+
+      for (const page of result.results) {
+        const pageQid = page.properties?.["Question ID"]?.rich_text?.[0]?.plain_text || "";
+        if (pageQid === questionId) {
+          return page.id;
+        }
+      }
+
+      cursor = result.has_more ? result.next_cursor : undefined;
+    } while (cursor);
+
+    return null;
+  } catch (error) {
+    console.error(`Error finding Notion page for ${slug}/${questionId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Update the Answer field on an existing Notion row for a specific org+question.
+ * Also updates Status to "Complete" and Updated By.
+ */
+export async function syncAnswerToNotion(
+  slug: string,
+  questionId: string,
+  answer: string,
+  updatedBy: string
+): Promise<boolean> {
+  const client = getNotionClient();
+  if (!client || !shouldSyncToNotion(slug)) return false;
+
+  try {
+    const pageId = await findNotionPageForQuestion(slug, questionId);
+    if (!pageId) {
+      console.warn(`Notion page not found for ${slug}/${questionId} — skipping sync`);
+      return false;
+    }
+
+    await client.pages.update({
+      page_id: pageId,
+      properties: {
+        "Answer": { rich_text: [{ text: { content: answer.substring(0, 2000) } }] },
+        "Status": { select: { name: answer ? "Complete" : "Not Started" } },
+        "Updated By": { rich_text: [{ text: { content: updatedBy || "" } }] },
+      },
+    });
+
+    return true;
+  } catch (error) {
+    console.error(`Error syncing answer to Notion for ${slug}/${questionId}:`, error);
+    return false;
+  }
+}
+
+/**
+ * Add file URL(s) to the Files column of an existing Notion row.
+ * Appends to existing files rather than replacing them.
+ */
+export async function syncFileToNotion(
+  slug: string,
+  questionId: string,
+  fileName: string,
+  fileUrl: string
+): Promise<boolean> {
+  const client = getNotionClient();
+  if (!client || !shouldSyncToNotion(slug)) return false;
+
+  try {
+    const pageId = await findNotionPageForQuestion(slug, questionId);
+    if (!pageId) {
+      console.warn(`Notion page not found for ${slug}/${questionId} — skipping file sync`);
+      return false;
+    }
+
+    // Get existing files so we can append
+    const page = await client.pages.retrieve({ page_id: pageId }) as any;
+    const existingFiles = page.properties?.Files?.files || [];
+
+    const updatedFiles = [
+      ...existingFiles.map((f: any) => {
+        if (f.type === "external") {
+          return { type: "external", name: f.name, external: { url: f.external.url } };
+        }
+        // For Notion-hosted files, we can't re-use them in an update — skip
+        return null;
+      }).filter(Boolean),
+      {
+        type: "external",
+        name: fileName,
+        external: { url: fileUrl },
+      },
+    ];
+
+    await client.pages.update({
+      page_id: pageId,
+      properties: {
+        "Files": { files: updatedFiles },
+        "Status": { select: { name: "Complete" } },
+      },
+    });
+
+    return true;
+  } catch (error) {
+    console.error(`Error syncing file to Notion for ${slug}/${questionId}:`, error);
+    return false;
+  }
+}
+
+/**
+ * Remove a file from the Files column of a Notion row by URL.
+ */
+export async function removeFileFromNotion(
+  slug: string,
+  questionId: string,
+  fileUrl: string
+): Promise<boolean> {
+  const client = getNotionClient();
+  if (!client || !shouldSyncToNotion(slug)) return false;
+
+  try {
+    const pageId = await findNotionPageForQuestion(slug, questionId);
+    if (!pageId) return false;
+
+    const page = await client.pages.retrieve({ page_id: pageId }) as any;
+    const existingFiles = page.properties?.Files?.files || [];
+
+    const updatedFiles = existingFiles
+      .filter((f: any) => {
+        if (f.type === "external") return f.external.url !== fileUrl;
+        return true;
+      })
+      .map((f: any) => {
+        if (f.type === "external") {
+          return { type: "external", name: f.name, external: { url: f.external.url } };
+        }
+        return null;
+      })
+      .filter(Boolean);
+
+    await client.pages.update({
+      page_id: pageId,
+      properties: {
+        "Files": { files: updatedFiles },
+      },
+    });
+
+    return true;
+  } catch (error) {
+    console.error(`Error removing file from Notion for ${slug}/${questionId}:`, error);
+    return false;
+  }
+}
+
+/**
+ * Upload file to Notion and return file upload ID (legacy - kept for compatibility)
  */
 export async function uploadFileToNotion(
   file: Buffer,
@@ -53,7 +235,6 @@ export async function uploadFileToNotion(
   if (!client) return null;
 
   try {
-    // Step 1: Create file upload object
     const createResponse = await fetch("https://api.notion.com/v1/file_uploads", {
       method: "POST",
       headers: {
@@ -73,7 +254,6 @@ export async function uploadFileToNotion(
     const fileUploadId = createData.id;
     const uploadUrl = createData.upload_url;
 
-    // Step 2: Send file contents
     const formData = new FormData();
     const blob = new Blob([file as any], { type: mimeType });
     formData.append("file", blob, filename);
@@ -102,6 +282,7 @@ export async function uploadFileToNotion(
 /**
  * Read an intake response page from Notion for an organization.
  * Returns the page properties or null if not found.
+ * @deprecated Use findNotionPageForQuestion instead
  */
 export async function readIntakeResponseFromNotion(
   organizationSlug: string
@@ -131,14 +312,14 @@ export async function readIntakeResponseFromNotion(
 }
 
 /**
- * Create or update a page in Notion database for an organization.
- * Uses databases.query() with an exact slug filter instead of search() for reliable matching.
+ * Legacy sync function — kept for backward compatibility.
+ * @deprecated Use syncAnswerToNotion and syncFileToNotion instead
  */
 export async function syncIntakeResponseToNotion(
   organizationName: string,
   organizationSlug: string,
   responses: Record<string, any>,
-  fileUploads?: Record<string, string[]> // questionId -> array of file upload IDs
+  fileUploads?: Record<string, string[]>
 ): Promise<string | null> {
   const client = getNotionClient();
   if (!client || !shouldSyncToNotion(organizationSlug)) {
@@ -146,7 +327,6 @@ export async function syncIntakeResponseToNotion(
   }
 
   try {
-    // Query for existing page by exact slug match (reliable, unlike search())
     const queryResponse = await (client.databases as any).query({
       database_id: ENV.notionDatabaseId,
       filter: {
@@ -187,12 +367,10 @@ export async function syncIntakeResponseToNotion(
     }
 
     if (queryResponse.results.length > 0) {
-      // Update existing page
       const pageId = queryResponse.results[0].id;
       await client.pages.update({ page_id: pageId, properties });
       return pageId;
     } else {
-      // Create new page
       const newPage = await client.pages.create({
         parent: { database_id: ENV.notionDatabaseId },
         properties,

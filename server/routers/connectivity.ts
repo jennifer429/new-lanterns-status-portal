@@ -21,9 +21,10 @@ function getStr(prop: any): string {
   }
 }
 
-function getBool(prop: any): boolean {
-  if (!prop) return false;
-  return prop.type === "checkbox" ? Boolean(prop.checkbox) : false;
+/** Get multi_select values as an array. */
+function getMultiSelect(prop: any): string[] {
+  if (!prop || prop.type !== "multi_select") return [];
+  return prop.multi_select.map((s: any) => s.name);
 }
 
 /** Case-insensitive lookup — tries each candidate name in order. */
@@ -44,58 +45,89 @@ function normalise(s: string): string {
 }
 
 /**
- * Decide whether a Notion row's "site" field belongs to the given org.
- * Requires the row to have a site label — rows without a site are excluded
- * so they don't leak onto every org's dashboard. Matches exactly, or when
- * the row's site contains the org slug/name as a substring (min 3 chars to
- * avoid accidental short-string matches).
+ * Check if a row's "Institution Group" multi-select includes the given org.
+ * The Notion DB uses "Institution Group" as a multi_select with values like
+ * "RRAL", "Marshall", "Munson", etc.
  */
-function siteMatchesOrg(
-  rowSite: string,
+function institutionGroupMatchesOrg(
+  groups: string[],
   slugNorm: string,
   nameNorm: string | null,
 ): boolean {
-  if (!rowSite) return false;
-  const siteNorm = normalise(rowSite);
-  const MIN_LEN = 3;
-  return (
-    siteNorm === slugNorm ||
-    (nameNorm !== null && siteNorm === nameNorm) ||
-    (slugNorm.length >= MIN_LEN && siteNorm.includes(slugNorm)) ||
-    (nameNorm !== null && nameNorm.length >= MIN_LEN && siteNorm.includes(nameNorm))
-  );
+  if (groups.length === 0) return false;
+  for (const g of groups) {
+    const gNorm = normalise(g);
+    if (gNorm === slugNorm) return true;
+    if (nameNorm && gNorm === nameNorm) return true;
+  }
+  return false;
+}
+
+// ── Field mapping for the current Notion schema ──────────────────────────────
+// The Integration Connection Registry has these fields:
+//   Flow Name (title), Protocol / Message Type (select), Direction (select),
+//   System Flow (text), Sender System / AE Title (text), Sender IP / Port (text),
+//   Receiver System / AE Title (text), Receiver IP / Port (text),
+//   SRC AE Title (text), DST AE Title (text), ENV (select: Prod/Test/Both),
+//   Status (select), Institution Group (multi_select), Notes (text),
+//   Router Present (select), Router Type (select), Modalities (multi_select),
+//   Rad Group (text), # (number), Last Verified (date), Verified By (text)
+
+/**
+ * Parse "IP / Port" combined field into separate IP and port.
+ * Examples: "10.1.2.3:104", "10.1.2.3 : 104", "192.234.130.18:5940"
+ */
+function parseIpPort(value: string): { ip: string; port: string } {
+  if (!value) return { ip: "", port: "" };
+  // Try colon separator
+  const colonMatch = value.match(/^([\d.]+)\s*:\s*(\d+)$/);
+  if (colonMatch) return { ip: colonMatch[1], port: colonMatch[2] };
+  // Try space separator
+  const spaceMatch = value.match(/^([\d.]+)\s+(\d+)$/);
+  if (spaceMatch) return { ip: spaceMatch[1], port: spaceMatch[2] };
+  // Just an IP
+  const ipOnly = value.match(/^([\d.]+)$/);
+  if (ipOnly) return { ip: ipOnly[1], port: "" };
+  return { ip: value.trim(), port: "" };
 }
 
 // ── Schema / write helpers ────────────────────────────────────────────────────
 
-const FIELD_CANDIDATES: Record<string, string[]> = {
-  site:              ["Site", "Organization", "Org", "Client", "Site Name", "Facility"],
-  trafficType:       ["Traffic Type", "Type", "Protocol", "Connection Type", "Connection"],
-  connectionDetails: ["connection details", "Connection Details", "Details", "Config"],
-  sourceSystem:      ["Source System", "Source", "From System", "From", "Sending System"],
-  destinationSystem: ["Destination System", "Destination", "Dest", "To System", "To", "Receiving System"],
-  sourceIp:          ["Source IP", "Src IP", "Source IP Address", "Source Host"],
-  sourcePort:        ["Source Port", "Src Port", "Source Port Number"],
-  destIp:            ["Dest IP", "Destination IP", "Dest IP Address", "Destination IP Address", "Destination Host"],
-  destPort:          ["Dest Port", "Destination Port", "Dest Port Number"],
-  sourceAeTitle:     ["Source AE Title", "Source AE", "Src AE", "Calling AE Title", "Calling AE"],
-  destAeTitle:       ["Dest AE Title", "Destination AE Title", "Dest AE", "Destination AE", "Called AE Title", "Called AE"],
-  envTest:           ["Test", "Test Env", "Test Environment", "Env Test", "UAT"],
-  envProd:           ["Prod", "Production", "Prod Env", "Production Environment", "Env Prod", "Live"],
-  notes:             ["Notes", "Comments", "Note", "Comment", "Description"],
-  status:            ["Status"],
-  goLiveDate:        ["Go Live Date", "Go-Live Date", "GoLive", "Launch Date"],
-};
-
 type FieldInfo = { propName: string; propType: string };
 type SchemaMap = Partial<Record<string, FieldInfo>>;
+
+// Updated field candidates matching the current Notion schema
+const FIELD_CANDIDATES: Record<string, string[]> = {
+  flowName:          ["Flow Name", "Name"],
+  trafficType:       ["Protocol / Message Type", "Protocol", "Traffic Type", "Type", "Connection Type"],
+  direction:         ["Direction"],
+  systemFlow:        ["System Flow"],
+  senderSystem:      ["Sender System / AE Title", "Sender System", "Source System", "Source", "From System"],
+  senderIpPort:      ["Sender IP / Port", "Sender IP", "Source IP"],
+  receiverSystem:    ["Receiver System / AE Title", "Receiver System", "Destination System", "Dest", "To System"],
+  receiverIpPort:    ["Receiver IP / Port", "Receiver IP", "Dest IP", "Destination IP"],
+  srcAeTitle:        ["SRC AE Title", "Source AE Title", "Source AE", "Src AE", "Calling AE Title"],
+  dstAeTitle:        ["DST AE Title", "Dest AE Title", "Destination AE Title", "Dest AE", "Called AE Title"],
+  env:               ["ENV", "Environment"],
+  status:            ["Status"],
+  institutionGroup:  ["Institution Group"],
+  notes:             ["Notes", "Comments", "Note"],
+  routerPresent:     ["Router Present"],
+  routerType:        ["Router Type"],
+  modalities:        ["Modalities"],
+  radGroup:          ["Rad Group"],
+  number:            ["#"],
+  lastVerified:      ["Last Verified"],
+  verifiedBy:        ["Verified By"],
+  issueLink:         ["Issue Link"],
+};
 
 function buildSchemaMap(dbSchema: any): { schemaMap: SchemaMap; titlePropName: string } {
   const properties = dbSchema.properties as Record<string, any>;
 
   // Find the title property (there's always exactly one)
   const titlePropName =
-    Object.entries(properties).find(([, v]) => (v as any).type === "title")?.[0] ?? "Name";
+    Object.entries(properties).find(([, v]) => (v as any).type === "title")?.[0] ?? "Flow Name";
 
   // Build a lowercase → { propName, propType } lookup
   const lc = Object.fromEntries(
@@ -117,13 +149,17 @@ function buildNotionProp(type: string, value: string | boolean): any {
     case "title":        return { title: [{ text: { content: String(value) } }] };
     case "rich_text":    return { rich_text: [{ text: { content: String(value) } }] };
     case "select":       return value ? { select: { name: String(value) } } : { select: null };
+    case "multi_select": {
+      const vals = String(value).split(",").map(s => s.trim()).filter(Boolean);
+      return { multi_select: vals.map(name => ({ name })) };
+    }
     case "checkbox":     return { checkbox: Boolean(value) };
     case "number":       return { number: parseFloat(String(value)) || null };
     default:             return { rich_text: [{ text: { content: String(value) } }] };
   }
 }
 
-/** Build the Notion properties object for a row. */
+/** Build the Notion properties object for a row (write back). */
 function buildRowProperties(
   row: Record<string, any>,
   schemaMap: SchemaMap,
@@ -132,36 +168,52 @@ function buildRowProperties(
 ): Record<string, any> {
   const props: Record<string, any> = {};
 
-  // Always set the title property (page name = site name)
-  props[titlePropName] = buildNotionProp("title", siteName || row.sourceSystem || "?");
+  // Set the title property (Flow Name)
+  const flowName = row.flowName || `${row.sourceSystem} → ${row.destinationSystem}`;
+  props[titlePropName] = buildNotionProp("title", flowName);
 
   const set = (field: string, value: string | boolean) => {
     const info = schemaMap[field];
     if (!info) return;
-    // Skip if this field IS the title — already set above
     if (info.propName === titlePropName) return;
     const v = String(value);
-    // Don't write empty strings to select (would create blank option)
     if (info.propType === "select" && !v) return;
-    // Skip status fields (read-only in Notion)
     if (info.propType === "status") return;
     props[info.propName] = buildNotionProp(info.propType, value);
   };
 
-  set("site",              siteName);
-  set("trafficType",       row.trafficType      || "");
-  set("connectionDetails", row.connectionDetails|| "");
-  set("sourceSystem",      row.sourceSystem     || "");
-  set("destinationSystem", row.destinationSystem|| "");
-  set("sourceIp",          row.sourceIp         || "");
-  set("sourcePort",        row.sourcePort       || "");
-  set("destIp",            row.destIp           || "");
-  set("destPort",          row.destPort         || "");
-  set("sourceAeTitle",     row.sourceAeTitle    || "");
-  set("destAeTitle",       row.destAeTitle      || "");
-  set("envTest",           Boolean(row.envTest));
-  set("envProd",           Boolean(row.envProd));
-  set("notes",             row.notes            || "");
+  // Map our internal fields to Notion fields
+  set("trafficType",     row.trafficType || "");
+  set("senderSystem",    row.sourceSystem || "");
+  set("receiverSystem",  row.destinationSystem || "");
+  set("srcAeTitle",      row.sourceAeTitle || "");
+  set("dstAeTitle",      row.destAeTitle || "");
+  set("notes",           row.notes || "");
+
+  // Combine IP + Port back into "IP / Port" format for Notion
+  if (row.sourceIp || row.sourcePort) {
+    const senderIpPort = row.sourcePort ? `${row.sourceIp}:${row.sourcePort}` : row.sourceIp;
+    set("senderIpPort", senderIpPort);
+  }
+  if (row.destIp || row.destPort) {
+    const receiverIpPort = row.destPort ? `${row.destIp}:${row.destPort}` : row.destIp;
+    set("receiverIpPort", receiverIpPort);
+  }
+
+  // Map envTest/envProd booleans to ENV select
+  let envValue = "";
+  if (row.envTest && row.envProd) envValue = "Both";
+  else if (row.envProd) envValue = "Prod";
+  else if (row.envTest) envValue = "Test";
+  if (envValue) set("env", envValue);
+
+  // Set Institution Group as multi_select with the site name
+  if (siteName) {
+    const info = schemaMap["institutionGroup"];
+    if (info && info.propType === "multi_select") {
+      props[info.propName] = { multi_select: [{ name: siteName }] };
+    }
+  }
 
   return props;
 }
@@ -173,12 +225,10 @@ function rowKey(trafficType: string, sourceSystem: string, destinationSystem: st
 
 // ── Helpers to resolve data source ID and database ID ────────────────────────
 
-/** Get the data source ID for querying (v5 SDK uses dataSources.query). */
 function getDataSourceId(): string {
   return ENV.notionConnectivityDataSourceId || "";
 }
 
-/** Get the database ID for schema retrieval and page creation. */
 function getDatabaseId(): string {
   return ENV.notionConnectivityDbId || "";
 }
@@ -200,49 +250,6 @@ async function getSchemaMap(client: any, dbId: string) {
   return buildSchemaMap(schema);
 }
 
-/**
- * Parse the "connection details" free-text field to extract structured data.
- * The field contains pipe-separated key-value pairs like:
- *   "NL NAT: 34.53.119.94  | Munson IP: 204.63.202.18  | Port: 6661 (alt 13009)"
- */
-function parseConnectionDetails(details: string): {
-  sourceIp: string;
-  destIp: string;
-  sourcePort: string;
-  destPort: string;
-  sourceAeTitle: string;
-  destAeTitle: string;
-} {
-  const result = { sourceIp: "", destIp: "", sourcePort: "", destPort: "", sourceAeTitle: "", destAeTitle: "" };
-  if (!details) return result;
-
-  // Split by pipe and parse key-value pairs
-  const parts = details.split("|").map(s => s.trim()).filter(Boolean);
-  for (const part of parts) {
-    const lower = part.toLowerCase();
-    // Extract IP addresses
-    if (lower.includes("nl nat") || lower.includes("source ip") || lower.includes("src ip")) {
-      const match = part.match(/:\s*([\d.]+)/);
-      if (match) result.sourceIp = match[1];
-    } else if (lower.includes("ip") && !lower.includes("nl") && !lower.includes("source")) {
-      const match = part.match(/:\s*([\d.]+)/);
-      if (match) result.destIp = match[1];
-    }
-    // Extract ports
-    if (lower.includes("port")) {
-      const match = part.match(/:\s*(\d+)/);
-      if (match) result.destPort = match[1];
-    }
-    // Extract AE titles
-    if (lower.includes("ae")) {
-      const match = part.match(/:\s*(.+)/);
-      if (match) result.destAeTitle = match[1].trim();
-    }
-  }
-
-  return result;
-}
-
 // ── Router ────────────────────────────────────────────────────────────────────
 
 const ConnectivityRowSchema = z.object({
@@ -261,15 +268,19 @@ const ConnectivityRowSchema = z.object({
   notes:             z.string(),
   connectionDetails: z.string().optional(),
   status:            z.string().optional(),
+  flowName:          z.string().optional(),
+  direction:         z.string().optional(),
+  systemFlow:        z.string().optional(),
+  routerPresent:     z.string().optional(),
+  routerType:        z.string().optional(),
+  modalities:        z.string().optional(),
 });
 
 export const connectivityRouter = router({
   /**
    * Fetch connectivity rows from the Notion database and filter by org.
+   * Filters by "Institution Group" multi-select field.
    * Returns `configured: false` when the Notion API key is missing.
-   *
-   * In Notion SDK v5, databases.query was replaced by dataSources.query
-   * which uses data_source_id instead of database_id.
    */
   getForOrg: publicProcedure
     .input(z.object({
@@ -284,7 +295,7 @@ export const connectivityRouter = router({
       }
 
       try {
-        // Use dataSources.query (v5 SDK) with data_source_id
+        // Fetch all pages from the data source
         const response = await (client as any).dataSources.query({
           data_source_id: dsId,
           page_size: 100,
@@ -298,34 +309,51 @@ export const connectivityRouter = router({
           .map((page: any) => {
             const p = page.properties as Record<string, any>;
 
-            // Get the raw "connection details" field
-            const connectionDetails = getStr(pick(p, "connection details", "Connection Details", "Details", "Config"));
-            // Parse structured data from connection details
-            const parsed = parseConnectionDetails(connectionDetails);
+            // Get Institution Group for filtering
+            const institutionGroups = getMultiSelect(pick(p, "Institution Group"));
+
+            // Get the ENV select value and convert to booleans
+            const envValue = getStr(pick(p, "ENV", "Environment"));
+            const envTest = envValue === "Test" || envValue === "Both";
+            const envProd = envValue === "Prod" || envValue === "Both";
+
+            // Parse combined IP/Port fields
+            const senderIpPortRaw = getStr(pick(p, "Sender IP / Port", "Sender IP"));
+            const receiverIpPortRaw = getStr(pick(p, "Receiver IP / Port", "Receiver IP"));
+            const senderParsed = parseIpPort(senderIpPortRaw);
+            const receiverParsed = parseIpPort(receiverIpPortRaw);
 
             return {
               id: page.id,
-              site:              getStr(pick(p, ...FIELD_CANDIDATES.site)),
-              trafficType:       getStr(pick(p, ...FIELD_CANDIDATES.trafficType)),
-              connectionDetails,
-              // Use parsed values as fallback if dedicated columns don't exist
-              sourceSystem:      getStr(pick(p, ...FIELD_CANDIDATES.sourceSystem)) || "",
-              destinationSystem: getStr(pick(p, ...FIELD_CANDIDATES.destinationSystem)) || "",
-              sourceIp:          getStr(pick(p, ...FIELD_CANDIDATES.sourceIp)) || parsed.sourceIp,
-              sourcePort:        getStr(pick(p, ...FIELD_CANDIDATES.sourcePort)) || parsed.sourcePort,
-              destIp:            getStr(pick(p, ...FIELD_CANDIDATES.destIp)) || parsed.destIp,
-              destPort:          getStr(pick(p, ...FIELD_CANDIDATES.destPort)) || parsed.destPort,
-              sourceAeTitle:     getStr(pick(p, ...FIELD_CANDIDATES.sourceAeTitle)) || parsed.sourceAeTitle,
-              destAeTitle:       getStr(pick(p, ...FIELD_CANDIDATES.destAeTitle)) || parsed.destAeTitle,
-              envTest:           getBool(pick(p, ...FIELD_CANDIDATES.envTest)),
-              envProd:           getBool(pick(p, ...FIELD_CANDIDATES.envProd)),
-              notes:             getStr(pick(p, ...FIELD_CANDIDATES.notes)),
-              status:            getStr(pick(p, ...FIELD_CANDIDATES.status)),
+              institutionGroups,
+              flowName:          getStr(pick(p, "Flow Name")),
+              trafficType:       getStr(pick(p, "Protocol / Message Type", "Traffic Type")),
+              direction:         getStr(pick(p, "Direction")),
+              systemFlow:        getStr(pick(p, "System Flow")),
+              sourceSystem:      getStr(pick(p, "Sender System / AE Title", "Sender System", "Source System")),
+              destinationSystem: getStr(pick(p, "Receiver System / AE Title", "Receiver System", "Destination System")),
+              sourceIp:          senderParsed.ip,
+              sourcePort:        senderParsed.port,
+              destIp:            receiverParsed.ip,
+              destPort:          receiverParsed.port,
+              sourceAeTitle:     getStr(pick(p, "SRC AE Title", "Source AE Title")),
+              destAeTitle:       getStr(pick(p, "DST AE Title", "Dest AE Title")),
+              envTest,
+              envProd,
+              notes:             getStr(pick(p, "Notes")),
+              status:            getStr(pick(p, "Status")),
+              routerPresent:     getStr(pick(p, "Router Present")),
+              routerType:        getStr(pick(p, "Router Type")),
+              modalities:        getStr(pick(p, "Modalities")),
+              connectionDetails: "", // Legacy field — no longer used
             };
           })
-          .filter((row: any) => siteMatchesOrg(row.site, slugNorm, nameNorm));
+          .filter((row: any) => institutionGroupMatchesOrg(row.institutionGroups, slugNorm, nameNorm));
 
-        return { rows, configured: true };
+        // Remove the internal institutionGroups field before returning
+        const cleanRows = rows.map(({ institutionGroups, ...rest }) => rest);
+
+        return { rows: cleanRows, configured: true };
       } catch (error: any) {
         console.error("Notion connectivity fetch error:", error?.message ?? error);
         return { rows: [], configured: true, error: String(error?.message ?? "Unknown error") };
@@ -369,13 +397,13 @@ export const connectivityRouter = router({
         for (const page of existing.results) {
           if ((page as any).object !== "page" || (page as any).archived) continue;
           const p = (page as any).properties as Record<string, any>;
-          const site = getStr(pick(p, ...FIELD_CANDIDATES.site));
-          if (!siteMatchesOrg(site, slugNorm, nameNorm)) continue;
+          const groups = getMultiSelect(pick(p, "Institution Group"));
+          if (!institutionGroupMatchesOrg(groups, slugNorm, nameNorm)) continue;
 
           const k = rowKey(
-            getStr(pick(p, ...FIELD_CANDIDATES.trafficType)),
-            getStr(pick(p, ...FIELD_CANDIDATES.sourceSystem)),
-            getStr(pick(p, ...FIELD_CANDIDATES.destinationSystem)),
+            getStr(pick(p, "Protocol / Message Type", "Traffic Type")),
+            getStr(pick(p, "Sender System / AE Title", "Sender System", "Source System")),
+            getStr(pick(p, "Receiver System / AE Title", "Receiver System", "Destination System")),
           );
           notionMap.set(k, (page as any).id);
         }

@@ -141,3 +141,18 @@
 - [x] Audit log hidden by default, toggled via "Show History" button
 - [x] Vendor items displayed as compact card rows with eye/edit/delete icons
 - [x] Document design decision: collapsible cards pattern for all admin controls
+
+## Notion Questionnaire Database — Full Matrix & File Sync
+
+- [x] Delete test orgs from MySQL and archive their Notion rows (9 test orgs removed)
+- [x] Fix Lodi Memorial slug leading space
+- [x] Add Institution Group, Slug, Created At, Updated By columns to Notion questionnaire DB
+- [x] Migrate all 517 MySQL intake responses to Notion (with question text, section, status)
+- [x] Backfill 28 file-only rows into Notion with Files column linked to actual file URLs
+- [x] Create full site×question matrix: 20 orgs × 45 questions = 900 total rows (554 blank rows created)
+- [x] Rewrite server/notion.ts — per-row sync (syncAnswerToNotion, syncFileToNotion, removeFileFromNotion)
+- [x] Wire intake.saveResponse to sync answer to Notion (fire-and-forget)
+- [x] Wire intake.saveResponses (batch) to sync each answer to Notion
+- [x] Wire intake.uploadFile to sync file URL to Notion Files column
+- [x] Wire intake.deleteFile to remove file from Notion Files column
+- [x] Remove radone-only filter — all orgs now sync to Notion

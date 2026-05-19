@@ -8,6 +8,7 @@ import { uploadToGoogleDrive } from "./files";
 import { logFileActivity } from "../fileAuditLog";
 import { resolveOrgByIdentifier } from "../_core/orgLookup";
 import { fileUploadInput } from "../_core/fileValidation";
+import { syncAnswerToNotion, syncFileToNotion, removeFileFromNotion } from "../notion";
 
 export const intakeRouter = router({
   /**
@@ -168,6 +169,10 @@ export const intakeRouter = router({
             ON DUPLICATE KEY UPDATE response = VALUES(response), updatedBy = VALUES(updatedBy)`
       );
 
+      // Sync answer to Notion (fire-and-forget, don't block the response)
+      syncAnswerToNotion(org.slug, input.questionId, input.response, input.userEmail)
+        .catch(err => console.error('[notion] sync answer error:', err.message));
+
       return { success: true, action: "upserted" };
     }),
 
@@ -216,6 +221,11 @@ export const intakeRouter = router({
               VALUES (${org.id}, ${questionIdStr}, 'intake', ${responseStr}, ${userEmail})
               ON DUPLICATE KEY UPDATE response = VALUES(response), updatedBy = VALUES(updatedBy)`
         );
+
+        // Sync each answer to Notion (fire-and-forget)
+        syncAnswerToNotion(org.slug, questionIdStr, responseStr, userEmail)
+          .catch(err => console.error('[notion] batch sync error:', err.message));
+
         saved++;
       }
 
@@ -404,6 +414,10 @@ export const intakeRouter = router({
           fileUrl,
           notes: `Questionnaire Q: ${input.questionId}`,
         }).catch(() => {});
+
+        // Sync file to Notion Files column (fire-and-forget)
+        syncFileToNotion(org.slug, input.questionId, input.fileName, fileUrl)
+          .catch(err => console.error('[notion] file sync error:', err.message));
 
         return {
           success: true,
@@ -617,6 +631,12 @@ export const intakeRouter = router({
 
       // Delete from database (S3 file remains)
       await db.delete(intakeFileAttachments).where(eq(intakeFileAttachments.id, input.fileId));
+
+      // Remove file from Notion Files column (fire-and-forget)
+      if (file.fileUrl) {
+        removeFileFromNotion(org.slug, file.questionId, file.fileUrl)
+          .catch(err => console.error('[notion] file removal error:', err.message));
+      }
 
       return { success: true };
     }),
