@@ -156,3 +156,13 @@
 - [x] Wire intake.uploadFile to sync file URL to Notion Files column
 - [x] Wire intake.deleteFile to remove file from Notion Files column
 - [x] Remove radone-only filter — all orgs now sync to Notion
+
+## Notion → MySQL Periodic Sync-Back
+
+- [x] Create Sync Log Notion database (Run Timestamp, Status, Rows Fetched/Updated/Failed, Error Details, Duration)
+- [x] Create Sync Config Notion database/page (Last Successful Sync, Consecutive Failures, Enabled)
+- [x] Write sync-back heartbeat job (query Notion by last_edited_time, upsert MySQL, write log)
+- [x] Add safeguards: skip empty-answer overwrites, diff check, updatedBy = notion-sync@system
+- [x] Add owner notification on consecutive failures
+- [x] Add health check tRPC endpoint (reads Sync Config page)
+- [ ] Test end-to-end: manually edit Notion answer → verify it appears in portal (BLOCKED: need to share Sync Log + Config databases with Implementations-Updates integration)

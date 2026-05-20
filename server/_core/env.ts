@@ -15,6 +15,9 @@ const envSchema = z.object({
   NOTION_DATABASE_ID: z.string().default(""),
   NOTION_CONNECTIVITY_DATABASE_ID: z.string().default(""),
   NOTION_CONNECTIVITY_DATASOURCE_ID: z.string().default(""),
+  NOTION_SYNC_LOG_DATASOURCE_ID: z.string().default(""),
+  NOTION_SYNC_CONFIG_DATASOURCE_ID: z.string().default(""),
+  NOTION_SYNC_CONFIG_PAGE_ID: z.string().default(""),
   GOOGLE_SERVICE_ACCOUNT_EMAIL: z.string().default(""),
   GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: z.string().default(""),
   GOOGLE_DRIVE_FOLDER_ID: z.string().default("1STogLQnTku6B0iAkAAqt7oFKFtaUy1Nu"),
@@ -54,6 +57,9 @@ export const ENV = {
   // Fall back to the connectivity DB ID so only one env var needs to be set.
   notionConnectivityDataSourceId:
     e.NOTION_CONNECTIVITY_DATASOURCE_ID || e.NOTION_CONNECTIVITY_DATABASE_ID || e.NOTION_DATABASE_ID,
+  notionSyncLogDataSourceId: e.NOTION_SYNC_LOG_DATASOURCE_ID,
+  notionSyncConfigDataSourceId: e.NOTION_SYNC_CONFIG_DATASOURCE_ID,
+  notionSyncConfigPageId: e.NOTION_SYNC_CONFIG_PAGE_ID,
   googleServiceAccountEmail: e.GOOGLE_SERVICE_ACCOUNT_EMAIL,
   googleServiceAccountPrivateKey: e.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY,
   googleDriveFolderId: e.GOOGLE_DRIVE_FOLDER_ID,
