@@ -297,6 +297,7 @@ export async function syncSystemsFromNotion(): Promise<SystemsSyncResult> {
 
 /**
  * Run both contacts and systems sync. Returns combined stats.
+ * Logging is handled by the cron hourly aggregation — not per-run.
  */
 export async function runContactsSystemsSync(): Promise<{
   contacts: ContactsSyncResult;

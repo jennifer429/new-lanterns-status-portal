@@ -187,3 +187,8 @@
 - [ ] Update frontend contacts-table to use Notion-backed CRUD
 - [ ] Update frontend systems-list to use Notion-backed CRUD
 - [ ] Test end-to-end: add/edit/delete from portal, verify in Notion
+
+## Sync Logging Improvements
+- [x] Change Notion Sync Log from every-run to hourly aggregated entries
+- [x] Add purge job: delete Sync Log entries older than 7 days (run every 3 days at 3 AM)
+- [x] Fix "archived ancestor" error on Sync Config page (user restored from Notion trash)
