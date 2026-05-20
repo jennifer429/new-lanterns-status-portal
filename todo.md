@@ -171,3 +171,19 @@
 - [x] Delete duplicate RRAL::A.2 row in Notion
 - [x] Write sync quality check script (scripts/sync-quality-check.mjs): no dupes, no data loss, consistency, coverage
 - [x] Quality check results: 6/7 passed, 1 dupe fixed, all 20 sampled answers match perfectly
+
+## Contacts & Systems as Notion Databases
+- [x] Create Contacts Notion database (Site, Role, Name, Phone, Email)
+- [x] Create Systems Notion database (Site, System Type, Vendor, Product Name, Notes)
+- [x] Set env vars for new database IDs (NOTION_CONTACTS_DATASOURCE_ID, NOTION_CONTACTS_DATABASE_ID, NOTION_SYSTEMS_DATASOURCE_ID, NOTION_SYSTEMS_DATABASE_ID)
+- [x] Migrate existing contacts JSON blobs into Contacts database rows (45 contacts, 72 systems)
+- [x] Migrate existing systems JSON blobs into Systems database rows
+- [x] Create normalized MySQL tables (contacts, systems) as read-cache
+- [x] Create contacts tRPC router (getForOrg, createRow, updateRow, archiveRow) — dual-write: Notion + MySQL
+- [x] Create systems tRPC router (getForOrg, createRow, updateRow, archiveRow) — dual-write: Notion + MySQL
+- [x] Add contacts/systems Notion → MySQL sync-back to cron (every 5 min, offset +2)
+- [x] Add admin "Refresh Sync" button (triggerFullSync: questionnaire + contacts + systems)
+- [x] Write vitest for syncHealth router (7 tests passing)
+- [ ] Update frontend contacts-table to use Notion-backed CRUD
+- [ ] Update frontend systems-list to use Notion-backed CRUD
+- [ ] Test end-to-end: add/edit/delete from portal, verify in Notion

@@ -237,7 +237,7 @@ export type InsertIntakeFileAttachment = typeof intakeFileAttachments.$inferInse
 export const activityFeed = mysqlTable("activityFeed", {
   id: int("id").autoincrement().primaryKey(),
   organizationId: int("organizationId").notNull(),
-  source: mysqlEnum("source", ["manual"]).notNull(),
+  source: mysqlEnum("source", ["manual", "clickup", "linear"]).notNull(),
   sourceId: varchar("sourceId", { length: 100 }),
   author: varchar("author", { length: 255 }),
   message: text("message").notNull(),
@@ -580,3 +580,53 @@ export const taskOrgAssignment = mysqlTable("taskOrgAssignment", {
 
 export type TaskOrgAssignment = typeof taskOrgAssignment.$inferSelect;
 export type InsertTaskOrgAssignment = typeof taskOrgAssignment.$inferInsert;
+
+/**
+ * Contacts — normalized table for site contacts.
+ * Source of truth is Notion; MySQL is the read-cache for performance.
+ * Synced from Notion via cron job.
+ */
+export const contacts = mysqlTable("contacts", {
+  id: int("id").autoincrement().primaryKey(),
+  notionPageId: varchar("notionPageId", { length: 64 }).unique(), // Notion page ID for sync
+  organizationId: int("organizationId").notNull(), // FK to organizations.id
+  name: varchar("name", { length: 255 }).notNull(),
+  role: varchar("role", { length: 100 }),
+  email: varchar("email", { length: 320 }),
+  phone: varchar("phone", { length: 100 }),
+  notes: text("notes"),
+  partner: varchar("partner", { length: 100 }),
+  site: varchar("site", { length: 100 }),
+  updatedBy: varchar("updatedBy", { length: 255 }),
+  isArchived: tinyint("isArchived").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Contact = typeof contacts.$inferSelect;
+export type InsertContact = typeof contacts.$inferInsert;
+
+/**
+ * Systems — normalized table for site systems/infrastructure.
+ * Source of truth is Notion; MySQL is the read-cache for performance.
+ * Synced from Notion via cron job.
+ */
+export const systems = mysqlTable("systems", {
+  id: int("id").autoincrement().primaryKey(),
+  notionPageId: varchar("notionPageId", { length: 64 }).unique(), // Notion page ID for sync
+  organizationId: int("organizationId").notNull(), // FK to organizations.id
+  systemName: varchar("systemName", { length: 255 }).notNull(),
+  systemType: varchar("systemType", { length: 100 }),
+  vendor: varchar("vendor", { length: 255 }),
+  version: varchar("version", { length: 100 }),
+  notes: text("notes"),
+  partner: varchar("partner", { length: 100 }),
+  site: varchar("site", { length: 100 }),
+  updatedBy: varchar("updatedBy", { length: 255 }),
+  isArchived: tinyint("isArchived").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type System = typeof systems.$inferSelect;
+export type InsertSystem = typeof systems.$inferInsert;

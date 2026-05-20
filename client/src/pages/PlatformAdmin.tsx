@@ -17,7 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ClipboardList, Users, FileText, Download, LogOut, Settings, ChevronDown, ListChecks, History, FolderOpen, Eye } from "lucide-react";
+import { ClipboardList, Users, FileText, Download, LogOut, Settings, ChevronDown, ListChecks, History, FolderOpen, Eye, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { AdminChatWidget } from "@/components/AdminChatWidget";
 import { AiAuditLog } from "@/components/AiAuditLog";
@@ -126,6 +126,23 @@ export default function PlatformAdmin() {
     onSuccess: () => { window.location.href = "/login"; },
   });
 
+  const fullSyncMutation = trpc.syncHealth.triggerFullSync.useMutation({
+    onSuccess: (data) => {
+      const q = data.questionnaire;
+      const c = data.contacts;
+      const s = data.systems;
+      toast.success(
+        `Sync complete (${data.durationMs}ms)\n` +
+        `Questionnaire: ${q.rowsUpdated} updated, ${q.rowsFailed} failed\n` +
+        `Contacts: ${c.upserted} synced, ${c.failed} failed\n` +
+        `Systems: ${s.upserted} synced, ${s.failed} failed`
+      );
+    },
+    onError: (err) => {
+      toast.error(`Sync failed: ${err.message}`);
+    },
+  });
+
   const handleExportAll = () => {
     const lines = ["Type,Name,Email,Organization,Partner,Role,Status,Completion %,Last Login"];
     scopedOrgs.forEach(org => {
@@ -210,6 +227,17 @@ export default function PlatformAdmin() {
                   </SelectContent>
                 </Select>
               )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fullSyncMutation.mutate()}
+                disabled={fullSyncMutation.isPending}
+                className="gap-2 h-8 sm:h-9 px-2 sm:px-3"
+                title="Refresh all data from Notion (questionnaire, contacts, systems)"
+              >
+                <RefreshCw className={`w-4 h-4 ${fullSyncMutation.isPending ? "animate-spin" : ""}`} />
+                <span className="hidden sm:inline">{fullSyncMutation.isPending ? "Syncing..." : "Refresh Sync"}</span>
+              </Button>
               <Button variant="outline" size="sm" onClick={handleExportAll} className="gap-2 h-8 sm:h-9 px-2 sm:px-3" title="Export a CSV summary of all organizations and users">
                 <Download className="w-4 h-4" />
                 <span className="hidden sm:inline">Export Orgs &amp; Users</span>
