@@ -21,9 +21,9 @@ import { intakeResponses, organizations } from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { notifyOwner } from "./_core/notification";
 
-const QUESTIONNAIRE_DATA_SOURCE_ID = ENV.notionDatabaseId || "";
-const SYNC_LOG_DATA_SOURCE_ID = ENV.notionSyncLogDataSourceId || "";
-const SYNC_CONFIG_DATA_SOURCE_ID = ENV.notionSyncConfigDataSourceId || "";
+const QUESTIONNAIRE_DATA_SOURCE_ID = ENV.notionDataSourceId || "";
+const SYNC_LOG_DATABASE_ID = ENV.notionSyncLogDataSourceId || "";
+// Sync Config uses pages.retrieve/update (page_id), no data_source needed
 const SYNC_CONFIG_PAGE_ID = ENV.notionSyncConfigPageId || "";
 
 const MAX_CONSECUTIVE_FAILURES_BEFORE_ALERT = 3;
@@ -110,14 +110,14 @@ async function updateSyncConfig(
  * Write a log entry to the Sync Log database.
  */
 async function writeSyncLog(client: Client, result: SyncResult): Promise<void> {
-  if (!SYNC_LOG_DATA_SOURCE_ID) return;
+  if (!SYNC_LOG_DATABASE_ID) return;
 
   try {
     const now = new Date().toISOString();
     const runLabel = `Sync ${now.slice(0, 16).replace("T", " ")}`;
 
     await client.pages.create({
-      parent: { database_id: SYNC_LOG_DATA_SOURCE_ID },
+      parent: { database_id: SYNC_LOG_DATABASE_ID },
       properties: {
         "Run": { title: [{ text: { content: runLabel } }] },
         "Timestamp": { date: { start: now } },
@@ -154,15 +154,16 @@ async function fetchChangedRows(
 
   try {
     do {
-      const response: any = await (client as any).databases.query({
-        database_id: QUESTIONNAIRE_DATA_SOURCE_ID,
+      const queryParams: any = {
+        data_source_id: QUESTIONNAIRE_DATA_SOURCE_ID,
         filter: {
           timestamp: "last_edited_time",
           last_edited_time: { after: since },
         },
         page_size: 100,
-        start_cursor: cursor,
-      });
+      };
+      if (cursor) queryParams.start_cursor = cursor;
+      const response: any = await (client as any).dataSources.query(queryParams);
 
       for (const page of response.results) {
         const props = page.properties;

@@ -165,4 +165,9 @@
 - [x] Add safeguards: skip empty-answer overwrites, diff check, updatedBy = notion-sync@system
 - [x] Add owner notification on consecutive failures
 - [x] Add health check tRPC endpoint (reads Sync Config page)
-- [ ] Test end-to-end: manually edit Notion answer → verify it appears in portal (BLOCKED: need to share Sync Log + Config databases with Implementations-Updates integration)
+- [x] Test end-to-end: manually edit Notion answer → verify it appears in portal
+- [x] Fix notionSyncBack.ts to use dataSources.query (not databases.query which doesn't exist in SDK v5)
+- [x] Fix NOTION_DATASOURCE_ID and NOTION_SYNC_LOG_DATASOURCE_ID env vars to correct IDs
+- [x] Delete duplicate RRAL::A.2 row in Notion
+- [x] Write sync quality check script (scripts/sync-quality-check.mjs): no dupes, no data loss, consistency, coverage
+- [x] Quality check results: 6/7 passed, 1 dupe fixed, all 20 sampled answers match perfectly

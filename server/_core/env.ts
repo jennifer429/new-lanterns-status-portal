@@ -13,6 +13,7 @@ const envSchema = z.object({
   BUILT_IN_FORGE_API_KEY: z.string().default(""),
   NOTION_API_KEY: z.string().default(""),
   NOTION_DATABASE_ID: z.string().default(""),
+  NOTION_DATASOURCE_ID: z.string().default(""),
   NOTION_CONNECTIVITY_DATABASE_ID: z.string().default(""),
   NOTION_CONNECTIVITY_DATASOURCE_ID: z.string().default(""),
   NOTION_SYNC_LOG_DATASOURCE_ID: z.string().default(""),
@@ -52,6 +53,7 @@ export const ENV = {
   forgeApiKey: e.BUILT_IN_FORGE_API_KEY,
   notionApiKey: e.NOTION_API_KEY,
   notionDatabaseId: e.NOTION_DATABASE_ID,
+  notionDataSourceId: e.NOTION_DATASOURCE_ID || e.NOTION_DATABASE_ID,
   notionConnectivityDbId: e.NOTION_CONNECTIVITY_DATABASE_ID || e.NOTION_DATABASE_ID,
   // In Notion SDK v5, the data_source_id is the same UUID as the database_id.
   // Fall back to the connectivity DB ID so only one env var needs to be set.

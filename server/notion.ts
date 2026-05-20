@@ -13,7 +13,7 @@ let notionClient: Client | null = null;
 let connectivityNotionClient: Client | null = null;
 
 const QUESTIONNAIRE_DB_ID = ENV.notionDatabaseId || "";
-const QUESTIONNAIRE_DATA_SOURCE_ID = ENV.notionDatabaseId || "";
+const QUESTIONNAIRE_DATA_SOURCE_ID = ENV.notionDataSourceId || ENV.notionDatabaseId || "";
 
 export function getNotionClient(): Client | null {
   if (!ENV.notionApiKey || !ENV.notionDatabaseId) {
