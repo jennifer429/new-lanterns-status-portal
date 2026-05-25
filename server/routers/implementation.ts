@@ -4,6 +4,7 @@ import { publicProcedure, router } from "../_core/trpc";
 import { requireDb } from "../db";
 import { organizations, taskCompletion } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
+import { syncTaskCompletionToNotion } from "../notionTaskValidation";
 
 export const implementationRouter = router({
   /**
@@ -108,6 +109,22 @@ export const implementationRouter = router({
           ...payload,
         });
       }
+
+      // Fire-and-forget dual-write to Notion
+      syncTaskCompletionToNotion({
+        organizationId: org.id,
+        orgSlug: input.organizationSlug,
+        taskId: input.taskId,
+        sectionName: payload.sectionName,
+        completed: payload.completed,
+        inProgress: payload.inProgress,
+        blocked: payload.blocked,
+        notApplicable: payload.notApplicable,
+        completedAt: payload.completedAt,
+        completedBy: payload.completedBy,
+        targetDate: payload.targetDate,
+        notes: payload.notes,
+      }).catch((err) => console.error("[notion-task] dual-write error:", err));
 
       return { success: true };
     }),

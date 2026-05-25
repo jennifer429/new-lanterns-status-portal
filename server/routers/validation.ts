@@ -4,6 +4,7 @@ import { publicProcedure, router } from "../_core/trpc";
 import { requireDb } from "../db";
 import { organizations, validationResults } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
+import { syncValidationResultToNotion } from "../notionTaskValidation";
 
 export const validationRouter = router({
   /**
@@ -103,6 +104,19 @@ export const validationRouter = router({
           ...payload,
         });
       }
+
+      // Fire-and-forget dual-write to Notion
+      syncValidationResultToNotion({
+        organizationId: org.id,
+        orgSlug: input.organizationSlug,
+        testKey: input.testKey,
+        actual: payload.actual,
+        status: payload.status,
+        signOff: payload.signOff,
+        notes: payload.notes,
+        testedDate: payload.testedDate,
+        updatedBy: payload.updatedBy,
+      }).catch((err) => console.error("[notion-validation] dual-write error:", err));
 
       return { success: true };
     }),

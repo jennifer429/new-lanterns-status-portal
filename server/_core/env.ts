@@ -25,6 +25,10 @@ const envSchema = z.object({
   NOTION_SYSTEMS_DATASOURCE_ID: z.string().default(""),
   NOTION_TASK_DEFINITIONS_DATABASE_ID: z.string().default(""),
   NOTION_TEST_DEFINITIONS_DATABASE_ID: z.string().default(""),
+  NOTION_TASK_COMPLETION_DATABASE_ID: z.string().default(""),
+  NOTION_TASK_COMPLETION_DATASOURCE_ID: z.string().default(""),
+  NOTION_VALIDATION_RESULTS_DATABASE_ID: z.string().default(""),
+  NOTION_VALIDATION_RESULTS_DATASOURCE_ID: z.string().default(""),
   GOOGLE_SERVICE_ACCOUNT_EMAIL: z.string().default(""),
   GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: z.string().default(""),
   GOOGLE_DRIVE_FOLDER_ID: z.string().default("1STogLQnTku6B0iAkAAqt7oFKFtaUy1Nu"),
@@ -54,6 +58,12 @@ const ENV_OVERRIDES: Record<string, string> = {
   NOTION_TASK_DEFINITIONS_DATABASE_ID: "0c6fc19c-9422-472b-a44e-c140df00b621",
   // Test Definitions database
   NOTION_TEST_DEFINITIONS_DATABASE_ID: "a1e174e5-c7a4-45eb-8601-3f2a497f102e",
+  // Task Completion Records database
+  NOTION_TASK_COMPLETION_DATABASE_ID: "bf0d616d-9f92-42b9-86a3-497814b14e46",
+  NOTION_TASK_COMPLETION_DATASOURCE_ID: "ddf65e15-4b76-459a-a0fc-15c0fab023b0",
+  // Validation Results database
+  NOTION_VALIDATION_RESULTS_DATABASE_ID: "17813c6e-932c-4b1f-9c60-c4645f9cfbbb",
+  NOTION_VALIDATION_RESULTS_DATASOURCE_ID: "2294cf68-e0b5-40b9-87d5-60c2da095926",
 };
 
 const e = envSchema.parse({ ...process.env, ...ENV_OVERRIDES });
@@ -95,6 +105,10 @@ export const ENV = {
   notionSystemsDataSourceId: e.NOTION_SYSTEMS_DATASOURCE_ID || e.NOTION_SYSTEMS_DATABASE_ID,
   notionTaskDefinitionsDbId: e.NOTION_TASK_DEFINITIONS_DATABASE_ID,
   notionTestDefinitionsDbId: e.NOTION_TEST_DEFINITIONS_DATABASE_ID,
+  notionTaskCompletionDbId: e.NOTION_TASK_COMPLETION_DATABASE_ID,
+  notionTaskCompletionDataSourceId: e.NOTION_TASK_COMPLETION_DATASOURCE_ID || e.NOTION_TASK_COMPLETION_DATABASE_ID,
+  notionValidationResultsDbId: e.NOTION_VALIDATION_RESULTS_DATABASE_ID,
+  notionValidationResultsDataSourceId: e.NOTION_VALIDATION_RESULTS_DATASOURCE_ID || e.NOTION_VALIDATION_RESULTS_DATABASE_ID,
   googleServiceAccountEmail: e.GOOGLE_SERVICE_ACCOUNT_EMAIL,
   googleServiceAccountPrivateKey: e.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY,
   googleDriveFolderId: e.GOOGLE_DRIVE_FOLDER_ID,

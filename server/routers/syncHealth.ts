@@ -8,6 +8,7 @@
 import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getSyncHealth, runNotionSyncBack } from "../notionSyncBack";
 import { runContactsSystemsSync } from "../notionSyncContacts";
+import { runTaskValidationSyncBack } from "../notionSyncBackTasks";
 import { z } from "zod";
 
 export const syncHealthRouter = router({
@@ -55,9 +56,10 @@ export const syncHealthRouter = router({
     const startTime = Date.now();
 
     // Run all syncs in parallel
-    const [questionnaireResult, contactsSystemsResult] = await Promise.all([
+    const [questionnaireResult, contactsSystemsResult, taskValidationResult] = await Promise.all([
       runNotionSyncBack(),
       runContactsSystemsSync(),
+      runTaskValidationSyncBack(),
     ]);
 
     return {
@@ -65,6 +67,8 @@ export const syncHealthRouter = router({
       questionnaire: questionnaireResult,
       contacts: contactsSystemsResult.contacts,
       systems: contactsSystemsResult.systems,
+      tasks: taskValidationResult.tasks,
+      validation: taskValidationResult.validation,
     };
   }),
 });

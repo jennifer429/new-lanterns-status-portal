@@ -14,6 +14,7 @@ import cron from "node-cron";
 import { Client } from "@notionhq/client";
 import { runNotionSyncBack } from "./notionSyncBack";
 import { runContactsSystemsSync } from "./notionSyncContacts";
+import { runTaskValidationSyncBack } from "./notionSyncBackTasks";
 import { ENV } from "./_core/env";
 
 const SYNC_LOG_DATABASE_ID = ENV.notionSyncLogDataSourceId || "";
@@ -26,6 +27,8 @@ interface HourlyStats {
   questionnaire: { fetched: number; updated: number; failed: number; skipped: number };
   contacts: { fetched: number; upserted: number; failed: number };
   systems: { fetched: number; upserted: number; failed: number };
+  tasks: { fetched: number; upserted: number; failed: number };
+  validation: { fetched: number; upserted: number; failed: number };
   errors: string[];
   totalDurationMs: number;
 }
@@ -38,6 +41,8 @@ function resetHourlyStats(): HourlyStats {
     questionnaire: { fetched: 0, updated: 0, failed: 0, skipped: 0 },
     contacts: { fetched: 0, upserted: 0, failed: 0 },
     systems: { fetched: 0, upserted: 0, failed: 0 },
+    tasks: { fetched: 0, upserted: 0, failed: 0 },
+    validation: { fetched: 0, upserted: 0, failed: 0 },
     errors: [],
     totalDurationMs: 0,
   };
@@ -53,9 +58,9 @@ async function writeHourlySyncLog(stats: HourlyStats): Promise<void> {
   const now = new Date().toISOString();
   const hourLabel = now.slice(0, 13).replace("T", " ") + ":00"; // e.g. "2026-05-20 10:00"
 
-  const totalFailed = stats.questionnaire.failed + stats.contacts.failed + stats.systems.failed;
-  const totalUpdated = stats.questionnaire.updated + stats.contacts.upserted + stats.systems.upserted;
-  const totalFetched = stats.questionnaire.fetched + stats.contacts.fetched + stats.systems.fetched;
+  const totalFailed = stats.questionnaire.failed + stats.contacts.failed + stats.systems.failed + stats.tasks.failed + stats.validation.failed;
+  const totalUpdated = stats.questionnaire.updated + stats.contacts.upserted + stats.systems.upserted + stats.tasks.upserted + stats.validation.upserted;
+  const totalFetched = stats.questionnaire.fetched + stats.contacts.fetched + stats.systems.fetched + stats.tasks.fetched + stats.validation.fetched;
 
   const status = totalFailed > 0 ? (totalUpdated > 0 ? "Partial" : "Failed") : "Success";
 
@@ -64,6 +69,8 @@ async function writeHourlySyncLog(stats: HourlyStats): Promise<void> {
     `Questionnaire: ${stats.questionnaire.updated} updated, ${stats.questionnaire.failed} failed, ${stats.questionnaire.skipped} skipped`,
     `Contacts: ${stats.contacts.upserted} upserted, ${stats.contacts.failed} failed`,
     `Systems: ${stats.systems.upserted} upserted, ${stats.systems.failed} failed`,
+    `Tasks: ${stats.tasks.upserted} upserted, ${stats.tasks.failed} failed`,
+    `Validation: ${stats.validation.upserted} upserted, ${stats.validation.failed} failed`,
     ...(stats.errors.length > 0 ? [`Errors: ${stats.errors.slice(0, 5).join("; ")}`] : []),
   ].join("\n");
 
@@ -198,6 +205,30 @@ export function startCronJobs(): void {
     }
   });
 
+  // Task Completions & Validation Results Notion → MySQL sync: every 5 minutes (offset by 3 min)
+  cron.schedule("3,8,13,18,23,28,33,38,43,48,53,58 * * * *", async () => {
+    const start = Date.now();
+    try {
+      const result = await runTaskValidationSyncBack();
+      hourlyStats.tasks.fetched += result.tasks.fetched;
+      hourlyStats.tasks.upserted += result.tasks.upserted;
+      hourlyStats.tasks.failed += result.tasks.failed;
+      hourlyStats.validation.fetched += result.validation.fetched;
+      hourlyStats.validation.upserted += result.validation.upserted;
+      hourlyStats.validation.failed += result.validation.failed;
+      hourlyStats.totalDurationMs += Date.now() - start;
+      if (result.tasks.errors.length > 0) {
+        hourlyStats.errors.push(`T: ${result.tasks.errors[0].substring(0, 80)}`);
+      }
+      if (result.validation.errors.length > 0) {
+        hourlyStats.errors.push(`V: ${result.validation.errors[0].substring(0, 80)}`);
+      }
+    } catch (error: any) {
+      hourlyStats.errors.push(`TV: ${error.message?.substring(0, 100)}`);
+      console.error("[cron] Task/Validation sync-back failed:", error);
+    }
+  });
+
   // Purge old Sync Log entries: every 3 days at 3:00 AM
   cron.schedule("0 3 */3 * *", async () => {
     try {
@@ -210,5 +241,6 @@ export function startCronJobs(): void {
   console.log("[cron] Registered: Notion sync-back (every 5 minutes)");
   console.log("[cron] Registered: Contacts/Systems sync (every 5 minutes, offset +2)");
   console.log("[cron] Registered: Hourly sync log flush");
+  console.log("[cron] Registered: Task/Validation sync-back (every 5 minutes, offset +3)");
   console.log("[cron] Registered: Sync log purge (every 3 days at 3:00 AM, entries > 7 days)");
 }

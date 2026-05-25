@@ -8,6 +8,7 @@ import { SECTION_DEFS as TASK_SECTION_DEFS } from "@shared/taskDefs";
 import { eq, and, desc, count, sql } from "drizzle-orm";
 import { createCustomerFolder } from "../googleDrive";
 import { resolveOrgByIdentifier } from "../_core/orgLookup";
+import { syncTaskCompletionToNotion } from "../notionTaskValidation";
 
 /**
  * Organizations router - handles organization CRUD and data access
@@ -200,6 +201,26 @@ export const organizationsRouter = router({
           completedBy: input.completedBy,
           notes: input.notes,
         });
+      }
+
+      // Fire-and-forget dual-write to Notion
+      // Look up org slug for Notion page naming
+      const [orgForSlug] = await db.select({ slug: organizations.slug }).from(organizations).where(eq(organizations.id, input.organizationId)).limit(1);
+      if (orgForSlug) {
+        syncTaskCompletionToNotion({
+          organizationId: input.organizationId,
+          orgSlug: orgForSlug.slug,
+          taskId: input.taskId,
+          sectionName: input.sectionName,
+          completed: input.completed ? 1 : 0,
+          inProgress: 0,
+          blocked: 0,
+          notApplicable: 0,
+          completedAt: input.completed ? new Date() : null,
+          completedBy: input.completedBy ?? null,
+          targetDate: null,
+          notes: input.notes ?? null,
+        }).catch((err) => console.error("[notion-task] dual-write error:", err));
       }
 
       return { success: true };

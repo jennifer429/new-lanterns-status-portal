@@ -214,3 +214,15 @@
 - [x] Wire Summary generation into syncAnswerToNotion (portal → Notion writes)
 - [x] Wire Summary regeneration into notionSyncBack (Notion → MySQL sync-back)
 - [x] Write vitest tests for generateAnswerSummary (11 tests passing)
+
+## Task Completion & Validation Results — Notion Dual-Write + Sync-Back
+
+- [x] Build Notion dual-write helper for task completions (syncTaskCompletionToNotion)
+- [x] Build Notion dual-write helper for validation results (syncValidationResultToNotion)
+- [x] Wire dual-write into task completion router mutations
+- [x] Wire dual-write into validation result router mutations
+- [x] Build sync-back module (Notion → MySQL) for task completions
+- [x] Build sync-back module (Notion → MySQL) for validation results
+- [x] Register periodic sync-back cron job (5-min interval)
+- [x] Integrate into triggerFullSync
+- [x] Write vitest tests for dual-write and sync-back (7 tests passing)
