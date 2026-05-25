@@ -1,0 +1,60 @@
+{
+  "query": "SELECT organizationId, testKey, updatedAt FROM validationResults WHERE organizationId IN (1170001, 240001) AND testKey IN ('0:0', '0:1', '0:2', '0:3', '1:4') ORDER BY organizationId, testKey;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT organizationId, testKey, updatedAt FROM validationResults WHERE organizationId IN (1170001, 240001) AND testKey IN ('0:0', '0:1', '0:2', '0:3', '1:4') ORDER BY organizationId, testKey;",
+  "rows": [
+    {
+      "organizationId": "240001",
+      "testKey": "0:0",
+      "updatedAt": "2026-03-30 15:04:31"
+    },
+    {
+      "organizationId": "240001",
+      "testKey": "0:1",
+      "updatedAt": "2026-05-04 15:08:02"
+    },
+    {
+      "organizationId": "240001",
+      "testKey": "0:2",
+      "updatedAt": "2026-03-30 15:04:31"
+    },
+    {
+      "organizationId": "240001",
+      "testKey": "0:3",
+      "updatedAt": "2026-03-30 15:04:37"
+    },
+    {
+      "organizationId": "240001",
+      "testKey": "1:4",
+      "updatedAt": "2026-05-04 15:08:14"
+    },
+    {
+      "organizationId": "1170001",
+      "testKey": "0:0",
+      "updatedAt": "2026-05-07 15:38:42"
+    },
+    {
+      "organizationId": "1170001",
+      "testKey": "0:1",
+      "updatedAt": "2026-05-07 15:38:42"
+    },
+    {
+      "organizationId": "1170001",
+      "testKey": "0:2",
+      "updatedAt": "2026-05-07 15:38:42"
+    },
+    {
+      "organizationId": "1170001",
+      "testKey": "0:3",
+      "updatedAt": "2026-05-07 15:38:42"
+    },
+    {
+      "organizationId": "1170001",
+      "testKey": "1:4",
+      "updatedAt": "2026-04-30 15:28:00"
+    }
+  ],
+  "messages": [],
+  "stdout": "organizationId\ttestKey\tupdatedAt\n240001\t0:0\t2026-03-30 15:04:31\n240001\t0:1\t2026-05-04 15:08:02\n240001\t0:2\t2026-03-30 15:04:31\n240001\t0:3\t2026-03-30 15:04:37\n240001\t1:4\t2026-05-04 15:08:14\n1170001\t0:0\t2026-05-07 15:38:42\n1170001\t0:1\t2026-05-07 15:38:42\n1170001\t0:2\t2026-05-07 15:38:42\n1170001\t0:3\t2026-05-07 15:38:42\n1170001\t1:4\t2026-04-30 15:28:00\n",
+  "stderr": "",
+  "execution_time_ms": 276
+}

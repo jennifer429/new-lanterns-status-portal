@@ -1,0 +1,9 @@
+{
+  "query": "UPDATE syncCheckpoints SET lastSuccessfulSync = DATE_SUB(NOW(), INTERVAL 7 DAY), consecutiveFailures = 0 WHERE pipeline IN ('task-completions', 'validation-results');",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute UPDATE syncCheckpoints SET lastSuccessfulSync = DATE_SUB(NOW(), INTERVAL 7 DAY), consecutiveFailures = 0 WHERE pipeline IN ('task-completions', 'validation-results');",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 264
+}

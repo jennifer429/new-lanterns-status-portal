@@ -234,11 +234,7 @@ export async function runTaskValidationSyncBack(): Promise<TaskValidationSyncRes
 
   // ── Task Completions ──────────────────────────────────────────────────────
   try {
-    const allTaskRows = await fetchChangedTaskCompletions(lastTaskSyncTime);
-    // Filter out rows where "Last Updated From" = "Notion" AND the row's last_edited_time
-    // is within 2 minutes of when we last wrote (our own markLastUpdatedFrom echo).
-    // But always process rows that are genuinely out of sync.
-    const taskRows = allTaskRows.filter(row => row.lastUpdatedFrom !== "Notion");
+    const taskRows = await fetchChangedTaskCompletions(lastTaskSyncTime);
     result.tasks.fetched = taskRows.length;
 
     for (const row of taskRows) {
@@ -259,9 +255,6 @@ export async function runTaskValidationSyncBack(): Promise<TaskValidationSyncRes
       // Checkpoint = NOW (after markLastUpdatedFrom bumped last_edited_time)
       // This ensures the checkpoint is AFTER the mark writes, preventing re-fetch
       await writeSyncCheckpoint(TASK_PIPELINE, new Date().toISOString());
-    } else if (result.tasks.failed === 0 && allTaskRows.length > 0 && taskRows.length === 0) {
-      // All rows were filtered (already marked "Notion") — still advance checkpoint
-      await writeSyncCheckpoint(TASK_PIPELINE, new Date().toISOString());
     } else if (result.tasks.failed > 0) {
       await incrementFailures(TASK_PIPELINE);
     }
@@ -272,8 +265,7 @@ export async function runTaskValidationSyncBack(): Promise<TaskValidationSyncRes
 
   // ── Validation Results ────────────────────────────────────────────────────
   try {
-    const allValRows = await fetchChangedValidationResults(lastValidationSyncTime);
-    const valRows = allValRows.filter(row => row.lastUpdatedFrom !== "Notion");
+    const valRows = await fetchChangedValidationResults(lastValidationSyncTime);
     result.validation.fetched = valRows.length;
 
     for (const row of valRows) {
@@ -292,9 +284,6 @@ export async function runTaskValidationSyncBack(): Promise<TaskValidationSyncRes
         await markLastUpdatedFrom(row.pageId);
       }
       // Checkpoint = NOW (after markLastUpdatedFrom bumped last_edited_time)
-      await writeSyncCheckpoint(VALIDATION_PIPELINE, new Date().toISOString());
-    } else if (result.validation.failed === 0 && allValRows.length > 0 && valRows.length === 0) {
-      // All rows were filtered — still advance checkpoint
       await writeSyncCheckpoint(VALIDATION_PIPELINE, new Date().toISOString());
     } else if (result.validation.failed > 0) {
       await incrementFailures(VALIDATION_PIPELINE);
