@@ -1,0 +1,40 @@
+{
+  "query": "SELECT DISTINCT organizationId FROM validationResults LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT DISTINCT organizationId FROM validationResults LIMIT 20;",
+  "rows": [
+    {
+      "organizationId": "630002"
+    },
+    {
+      "organizationId": "1170001"
+    },
+    {
+      "organizationId": "240002"
+    },
+    {
+      "organizationId": "990001"
+    },
+    {
+      "organizationId": "1140001"
+    },
+    {
+      "organizationId": "510001"
+    },
+    {
+      "organizationId": "60008"
+    },
+    {
+      "organizationId": "630001"
+    },
+    {
+      "organizationId": "240001"
+    },
+    {
+      "organizationId": "60009"
+    }
+  ],
+  "messages": [],
+  "stdout": "organizationId\n630002\n1170001\n240002\n990001\n1140001\n510001\n60008\n630001\n240001\n60009\n",
+  "stderr": "",
+  "execution_time_ms": 261
+}

@@ -2,12 +2,12 @@
  * Notion → MySQL Sync-Back for Task Completions and Validation Results
  *
  * Polls Notion for rows edited since the last sync checkpoint and upserts
- * them into MySQL. Checkpoints are persisted to Notion (same design as the
- * questionnaire sync) so they survive server restarts.
+ * them into MySQL. Checkpoints are persisted to the `syncCheckpoints` MySQL
+ * table so they survive server restarts without depending on Notion page access.
  *
- * Sync Config pages in "Questionnaire Sync Config" database:
- *   - task-sync-state: 36b85719-79e7-81c5-b61e-c2ddc42d0ee2
- *   - validation-sync-state: 36b85719-79e7-8130-82cf-db0ba8d3c27b
+ * Pipeline identifiers:
+ *   - "task-completions"
+ *   - "validation-results"
  *
  * Called by the cron scheduler every 5 minutes (offset from questionnaire sync).
  */
@@ -15,7 +15,7 @@
 import { Client } from "@notionhq/client";
 import { ENV } from "./_core/env";
 import { requireDb } from "./db";
-import { taskCompletion, validationResults } from "../drizzle/schema";
+import { taskCompletion, validationResults, syncCheckpoints } from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import {
   fetchChangedTaskCompletions,
@@ -48,71 +48,83 @@ async function markLastUpdatedFrom(pageId: string): Promise<void> {
   }
 }
 
-// ── Sync state (persisted to Notion) ──────────────────────────────────────────
+// ── Sync state (persisted to MySQL) ──────────────────────────────────────────
 
-// Page IDs in the "Questionnaire Sync Config" database
-const TASK_SYNC_CONFIG_PAGE_ID = "36b85719-79e7-81c5-b61e-c2ddc42d0ee2";
-const VALIDATION_SYNC_CONFIG_PAGE_ID = "36b85719-79e7-8130-82cf-db0ba8d3c27b";
+// Pipeline identifiers
+const TASK_PIPELINE = "task-completions";
+const VALIDATION_PIPELINE = "validation-results";
 
-// Fallback: look back 7 days if Notion config is unreadable
+// Fallback: look back 7 days if no checkpoint exists yet
 const FALLBACK_LOOKBACK_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
- * Read the last successful sync timestamp from a Notion config page.
+ * Read the last successful sync timestamp from MySQL.
  */
-async function readSyncCheckpoint(pageId: string): Promise<string> {
-  const client = getNotionClient();
-  if (!client) return new Date(Date.now() - FALLBACK_LOOKBACK_MS).toISOString();
-
+async function readSyncCheckpoint(pipeline: string): Promise<string> {
   try {
-    const page = await client.pages.retrieve({ page_id: pageId }) as any;
-    const lastSync = page.properties?.["Last Successful Sync"]?.date?.start;
-    if (lastSync) return lastSync;
+    const db = await requireDb();
+    const [row] = await db
+      .select()
+      .from(syncCheckpoints)
+      .where(eq(syncCheckpoints.pipeline, pipeline))
+      .limit(1);
+    if (row?.lastSuccessfulSync) {
+      return row.lastSuccessfulSync.toISOString();
+    }
   } catch (err: any) {
-    console.warn(`[task-val-sync] Failed to read checkpoint from ${pageId}:`, err.message);
+    console.warn(`[task-val-sync] Failed to read checkpoint for ${pipeline}:`, err.message);
   }
-
   return new Date(Date.now() - FALLBACK_LOOKBACK_MS).toISOString();
 }
 
 /**
- * Write the last successful sync timestamp to a Notion config page.
+ * Write the last successful sync timestamp to MySQL.
  */
-async function writeSyncCheckpoint(pageId: string, timestamp: string): Promise<void> {
-  const client = getNotionClient();
-  if (!client) return;
-
+async function writeSyncCheckpoint(pipeline: string, timestamp: string): Promise<void> {
   try {
-    await client.pages.update({
-      page_id: pageId,
-      properties: {
-        "Last Successful Sync": { date: { start: timestamp } },
-        "Consecutive Failures": { number: 0 },
-      },
-    });
+    const db = await requireDb();
+    await db
+      .insert(syncCheckpoints)
+      .values({
+        pipeline,
+        lastSuccessfulSync: new Date(timestamp),
+        consecutiveFailures: 0,
+      })
+      .onDuplicateKeyUpdate({
+        set: {
+          lastSuccessfulSync: new Date(timestamp),
+          consecutiveFailures: 0,
+        },
+      });
   } catch (err: any) {
-    console.warn(`[task-val-sync] Failed to write checkpoint to ${pageId}:`, err.message);
+    console.warn(`[task-val-sync] Failed to write checkpoint for ${pipeline}:`, err.message);
   }
 }
 
 /**
- * Increment the consecutive failures counter on a Notion config page.
+ * Increment the consecutive failures counter in MySQL.
  */
-async function incrementFailures(pageId: string): Promise<void> {
-  const client = getNotionClient();
-  if (!client) return;
-
+async function incrementFailures(pipeline: string): Promise<void> {
   try {
-    const page = await client.pages.retrieve({ page_id: pageId }) as any;
-    const current = page.properties?.["Consecutive Failures"]?.number || 0;
-    await client.pages.update({
-      page_id: pageId,
-      properties: {
-        "Consecutive Failures": { number: current + 1 },
-      },
-    });
+    const db = await requireDb();
+    const [row] = await db
+      .select()
+      .from(syncCheckpoints)
+      .where(eq(syncCheckpoints.pipeline, pipeline))
+      .limit(1);
+    const current = row?.consecutiveFailures || 0;
+    await db
+      .insert(syncCheckpoints)
+      .values({
+        pipeline,
+        lastSuccessfulSync: new Date(Date.now() - FALLBACK_LOOKBACK_MS),
+        consecutiveFailures: current + 1,
+      })
+      .onDuplicateKeyUpdate({
+        set: { consecutiveFailures: current + 1 },
+      });
   } catch (err: any) {
-    console.warn(`[task-val-sync] Failed to increment failures on ${pageId}:`, err.message);
+    console.warn(`[task-val-sync] Failed to increment failures for ${pipeline}:`, err.message);
   }
 }
 
@@ -216,9 +228,9 @@ export async function runTaskValidationSyncBack(): Promise<TaskValidationSyncRes
     durationMs: 0,
   };
 
-  // Read checkpoints from Notion (persisted across restarts)
-  const lastTaskSyncTime = await readSyncCheckpoint(TASK_SYNC_CONFIG_PAGE_ID);
-  const lastValidationSyncTime = await readSyncCheckpoint(VALIDATION_SYNC_CONFIG_PAGE_ID);
+  // Read checkpoints from MySQL (persisted across restarts)
+  const lastTaskSyncTime = await readSyncCheckpoint(TASK_PIPELINE);
+  const lastValidationSyncTime = await readSyncCheckpoint(VALIDATION_PIPELINE);
 
   // ── Task Completions ──────────────────────────────────────────────────────
   try {
@@ -242,13 +254,13 @@ export async function runTaskValidationSyncBack(): Promise<TaskValidationSyncRes
 
     // Advance checkpoint — advance even if all rows were filtered (they were processed)
     if (result.tasks.failed === 0 && allTaskRows.length > 0) {
-      await writeSyncCheckpoint(TASK_SYNC_CONFIG_PAGE_ID, new Date().toISOString());
+      await writeSyncCheckpoint(TASK_PIPELINE, new Date().toISOString());
     } else if (result.tasks.failed > 0) {
-      await incrementFailures(TASK_SYNC_CONFIG_PAGE_ID);
+      await incrementFailures(TASK_PIPELINE);
     }
   } catch (err: any) {
     result.tasks.errors.push(`Fetch error: ${err.message?.substring(0, 100)}`);
-    await incrementFailures(TASK_SYNC_CONFIG_PAGE_ID);
+    await incrementFailures(TASK_PIPELINE);
   }
 
   // ── Validation Results ────────────────────────────────────────────────────
@@ -272,13 +284,13 @@ export async function runTaskValidationSyncBack(): Promise<TaskValidationSyncRes
 
     // Advance checkpoint — advance even if all rows were filtered (they were processed)
     if (result.validation.failed === 0 && allValRows.length > 0) {
-      await writeSyncCheckpoint(VALIDATION_SYNC_CONFIG_PAGE_ID, new Date().toISOString());
+      await writeSyncCheckpoint(VALIDATION_PIPELINE, new Date().toISOString());
     } else if (result.validation.failed > 0) {
-      await incrementFailures(VALIDATION_SYNC_CONFIG_PAGE_ID);
+      await incrementFailures(VALIDATION_PIPELINE);
     }
   } catch (err: any) {
     result.validation.errors.push(`Fetch error: ${err.message?.substring(0, 100)}`);
-    await incrementFailures(VALIDATION_SYNC_CONFIG_PAGE_ID);
+    await incrementFailures(VALIDATION_PIPELINE);
   }
 
   result.durationMs = Date.now() - startTime;

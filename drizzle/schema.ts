@@ -680,3 +680,20 @@ export const reconciliationLog = mysqlTable("reconciliationLog", {
 });
 export type ReconciliationLog = typeof reconciliationLog.$inferSelect;
 export type InsertReconciliationLog = typeof reconciliationLog.$inferInsert;
+
+/**
+ * Sync Checkpoints - persists the last successful sync timestamp for each pipeline.
+ * Survives server restarts (unlike in-memory timestamps).
+ */
+export const syncCheckpoints = mysqlTable("syncCheckpoints", {
+  id: int("id").primaryKey().autoincrement(),
+  /** Pipeline identifier (e.g. "task-completions", "validation-results") */
+  pipeline: varchar("pipeline", { length: 100 }).notNull().unique(),
+  /** ISO timestamp of the last successful sync */
+  lastSuccessfulSync: timestamp("lastSuccessfulSync").notNull(),
+  /** Number of consecutive failures since last success */
+  consecutiveFailures: int("consecutiveFailures").default(0).notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type SyncCheckpoint = typeof syncCheckpoints.$inferSelect;
+export type InsertSyncCheckpoint = typeof syncCheckpoints.$inferInsert;
