@@ -290,3 +290,9 @@
 - [x] Fix: Changed startup lookback from 1 hour to 7 days to catch edits missed during downtime
 - [x] Fix: Added "Last Updated From" filter to skip rows already marked by sync-back (prevents feedback loop)
 - [x] Fix: Added missing mock for notionSyncBackTasks in syncHealth.test.ts (was causing timeout)
+
+## Sync Infrastructure Improvements (May 25)
+
+- [x] Purge duplicate/noisy Sync Log entries from Notion (1,406 stale entries archived)
+- [x] Persist task/validation sync checkpoint to Notion (same design as questionnaire Sync Config)
+- [x] Investigate and fix duplicate cron instances (root cause: 3 pipelines each writing per-run logs; fixed by removing per-run writes + added cronStarted guard)

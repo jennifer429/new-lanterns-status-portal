@@ -340,13 +340,21 @@ async function purgeSyncLogEntries(): Promise<void> {
     console.error("[cron] Sync log purge failed:", error);
   }
 }
+// ── Cron registration ─────────────────────────────────────────────────────────
 
-// ── Cron registration ───────────────────────────────────────────────────────
+let cronStarted = false;
 
 /**
  * Start all cron jobs. Call this once from the server entry point.
+ * Guarded against double-registration (e.g. during tsx watch hot-reload).
  */
 export function startCronJobs(): void {
+  if (cronStarted) {
+    console.warn("[cron] startCronJobs called again — skipping (already registered)");
+    return;
+  }
+  cronStarted = true;
+
   // Questionnaire Notion → MySQL sync: every 5 minutes
   cron.schedule("*/5 * * * *", async () => {
     const start = Date.now();
