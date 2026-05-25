@@ -1,8 +1,8 @@
 /**
  * Sync Health Router
  *
- * Provides tRPC endpoints to check sync status and manually trigger syncs.
- * Includes questionnaire sync and contacts/systems sync.
+ * Provides tRPC endpoints to check sync status, manually trigger syncs,
+ * and power the Sync Dashboard page.
  */
 
 import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
@@ -10,6 +10,8 @@ import { getSyncHealth, runNotionSyncBack } from "../notionSyncBack";
 import { runContactsSystemsSync } from "../notionSyncContacts";
 import { runTaskValidationSyncBack } from "../notionSyncBackTasks";
 import { getLastSyncedTimestamps } from "../cron";
+import { getQueueStats } from "../notionRetryQueue";
+import { getReconciliationHistory } from "../notionReconciliation";
 import { z } from "zod";
 
 export const syncHealthRouter = router({
@@ -20,6 +22,30 @@ export const syncHealthRouter = router({
     const health = await getSyncHealth();
     const lastSynced = getLastSyncedTimestamps();
     return { ...health, lastSynced };
+  }),
+
+  /**
+   * Full sync dashboard data — admin only.
+   * Returns queue stats, reconciliation history, and per-DB health in one call.
+   */
+  dashboard: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user.role !== "admin") {
+      throw new Error("Only admins can view sync dashboard");
+    }
+
+    const [health, lastSynced, queueStats, reconciliationHistory] = await Promise.all([
+      getSyncHealth(),
+      Promise.resolve(getLastSyncedTimestamps()),
+      getQueueStats(),
+      getReconciliationHistory(24),
+    ]);
+
+    return {
+      health,
+      lastSynced,
+      retryQueue: queueStats,
+      reconciliation: reconciliationHistory,
+    };
   }),
 
   /**

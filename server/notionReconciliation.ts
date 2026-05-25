@@ -9,7 +9,7 @@
  */
 
 import { getDb } from "./db";
-import { taskCompletion, validationResults, organizations } from "../drizzle/schema";
+import { taskCompletion, validationResults, organizations, reconciliationLog } from "../drizzle/schema";
 import { eq, desc, sql } from "drizzle-orm";
 import { Client } from "@notionhq/client";
 import { ENV } from "./_core/env";
@@ -175,8 +175,10 @@ async function reconcileValidationResults(client: Client): Promise<OutOfSyncRow[
 /**
  * Main reconciliation entry point. Called by cron every hour.
  * Checks both task completions and validation results, notifies owner if any are out of sync.
+ * Persists results to reconciliationLog table for dashboard display.
  */
 export async function runReconciliation(): Promise<{ checked: number; outOfSync: number }> {
+  const startTime = Date.now();
   const client = getNotionClient();
   if (!client) {
     console.log("[reconciliation] No Notion client configured — skipping");
@@ -185,31 +187,76 @@ export async function runReconciliation(): Promise<{ checked: number; outOfSync:
 
   console.log("[reconciliation] Starting hourly reconciliation check...");
 
-  const taskIssues = await reconcileTaskCompletions(client);
-  const validationIssues = await reconcileValidationResults(client);
-  const allIssues = [...taskIssues, ...validationIssues];
+  try {
+    const taskIssues = await reconcileTaskCompletions(client);
+    const validationIssues = await reconcileValidationResults(client);
+    const allIssues = [...taskIssues, ...validationIssues];
+    const durationMs = Date.now() - startTime;
+    const stats = { checked: 50 + 50, outOfSync: allIssues.length };
 
-  const stats = { checked: 20, outOfSync: allIssues.length };
+    // Persist to reconciliationLog
+    const db = await getDb();
+    await db.insert(reconciliationLog).values({
+      rowsChecked: stats.checked,
+      outOfSync: allIssues.length,
+      issues: allIssues.length > 0 ? JSON.stringify(allIssues) : null,
+      durationMs,
+      status: allIssues.length > 0 ? "issues_found" : "healthy",
+    });
 
-  if (allIssues.length > 0) {
-    console.warn(`[reconciliation] Found ${allIssues.length} out-of-sync rows`);
+    if (allIssues.length > 0) {
+      console.warn(`[reconciliation] Found ${allIssues.length} out-of-sync rows`);
+      const issueList = allIssues
+        .map(i => `• ${i.type} | ${i.orgSlug}/${i.key} | Drift: ${i.driftMinutes}min | MySQL: ${i.mysqlUpdatedAt} | Notion: ${i.notionUpdatedAt}`)
+        .join("\n");
 
-    // Build notification content
-    const issueList = allIssues
-      .map(i => `• ${i.type} | ${i.orgSlug}/${i.key} | Drift: ${i.driftMinutes}min | MySQL: ${i.mysqlUpdatedAt} | Notion: ${i.notionUpdatedAt}`)
-      .join("\n");
+      const cleanupPlan = allIssues.length <= 3
+        ? "\n\nCleanup plan: Trigger a full sync from the admin panel to reconcile these rows."
+        : `\n\nCleanup plan: ${allIssues.length} rows are out of sync. Trigger a full sync from the admin panel. If the issue persists after sync, check Notion API access and the retry queue for stuck items.`;
 
-    const cleanupPlan = allIssues.length <= 3
-      ? "\n\nCleanup plan: Trigger a full sync from the admin panel to reconcile these rows."
-      : `\n\nCleanup plan: ${allIssues.length} rows are out of sync. Trigger a full sync from the admin panel. If the issue persists after sync, check Notion API access and the retry queue for stuck items.`;
+      await notifyOwner({
+        title: `⚠️ Sync Reconciliation: ${allIssues.length} row(s) out of sync`,
+        content: `Hourly reconciliation found rows where MySQL and Notion timestamps differ by more than 10 minutes:\n\n${issueList}${cleanupPlan}`,
+      }).catch(err => console.error("[reconciliation] Failed to notify owner:", err));
+    } else {
+      console.log("[reconciliation] All sampled rows are in sync ✓");
+    }
 
-    await notifyOwner({
-      title: `⚠️ Sync Reconciliation: ${allIssues.length} row(s) out of sync`,
-      content: `Hourly reconciliation found rows where MySQL and Notion timestamps differ by more than 10 minutes:\n\n${issueList}${cleanupPlan}`,
-    }).catch(err => console.error("[reconciliation] Failed to notify owner:", err));
-  } else {
-    console.log("[reconciliation] All sampled rows are in sync ✓");
+    return stats;
+  } catch (err: any) {
+    const durationMs = Date.now() - startTime;
+    // Persist error to log
+    const db = await getDb();
+    await db.insert(reconciliationLog).values({
+      rowsChecked: 0,
+      outOfSync: 0,
+      durationMs,
+      status: "error",
+      errorMessage: err?.message || String(err),
+    }).catch(() => {});
+    console.error("[reconciliation] Error:", err);
+    return { checked: 0, outOfSync: 0 };
   }
+}
 
-  return stats;
+
+/**
+ * Get recent reconciliation log entries for the sync dashboard.
+ */
+export async function getReconciliationHistory(limit = 24): Promise<Array<{
+  id: number;
+  rowsChecked: number;
+  outOfSync: number;
+  issues: string | null;
+  durationMs: number | null;
+  status: string;
+  errorMessage: string | null;
+  createdAt: Date;
+}>> {
+  const db = await getDb();
+  return db
+    .select()
+    .from(reconciliationLog)
+    .orderBy(desc(reconciliationLog.createdAt))
+    .limit(limit);
 }

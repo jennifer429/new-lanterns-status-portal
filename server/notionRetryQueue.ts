@@ -142,3 +142,47 @@ export async function processRetryQueue(): Promise<{ processed: number; succeede
 
   return stats;
 }
+
+/**
+ * Get retry queue statistics and recent items for the sync dashboard.
+ */
+export async function getQueueStats(): Promise<{
+  pending: number;
+  succeeded: number;
+  failedPermanent: number;
+  recentItems: Array<{
+    id: number;
+    writeType: string;
+    retryCount: number;
+    lastError: string | null;
+    status: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
+}> {
+  const db = await getDb();
+  const allItems = await db
+    .select()
+    .from(notionRetryQueue)
+    .limit(200);
+
+  const pending = allItems.filter(i => i.status === "pending").length;
+  const succeeded = allItems.filter(i => i.status === "succeeded").length;
+  const failedPermanent = allItems.filter(i => i.status === "failed_permanent").length;
+
+  // Get 20 most recent items for display
+  const recentItems = allItems
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    .slice(0, 20)
+    .map(i => ({
+      id: i.id,
+      writeType: i.writeType,
+      retryCount: i.retryCount,
+      lastError: i.lastError,
+      status: i.status,
+      createdAt: i.createdAt,
+      updatedAt: i.updatedAt,
+    }));
+
+  return { pending, succeeded, failedPermanent, recentItems };
+}

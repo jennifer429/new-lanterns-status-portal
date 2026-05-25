@@ -656,3 +656,27 @@ export const notionRetryQueue = mysqlTable("notionRetryQueue", {
 });
 export type NotionRetryQueue = typeof notionRetryQueue.$inferSelect;
 export type InsertNotionRetryQueue = typeof notionRetryQueue.$inferInsert;
+
+
+/**
+ * Reconciliation Log - tracks hourly reconciliation check results.
+ * Each row represents one reconciliation run with stats and any issues found.
+ */
+export const reconciliationLog = mysqlTable("reconciliationLog", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Number of rows checked (sampled) */
+  rowsChecked: int("rowsChecked").default(0).notNull(),
+  /** Number of rows found out of sync */
+  outOfSync: int("outOfSync").default(0).notNull(),
+  /** JSON array of out-of-sync row details */
+  issues: text("issues"),
+  /** Duration of the reconciliation run in ms */
+  durationMs: int("durationMs"),
+  /** Overall status: "healthy" | "issues_found" | "error" */
+  status: varchar("status", { length: 30 }).default("healthy").notNull(),
+  /** Error message if the run failed */
+  errorMessage: text("errorMessage"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type ReconciliationLog = typeof reconciliationLog.$inferSelect;
+export type InsertReconciliationLog = typeof reconciliationLog.$inferInsert;

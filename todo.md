@@ -271,3 +271,10 @@
 - [x] Add "Last Updated From" column to all 3 databases (Questionnaire, Task Completion, Validation Results)
 - [x] Set "Last Updated From" on every write (portal = "Portal", sync-back = "Notion")
 - [x] Create pre-built Notion views: Workflow Decisions, By Status (board), By Site (table), All Answers by Site
+
+## Sync Dashboard Page
+
+- [ ] Add tRPC endpoints for sync dashboard data (queue depth, reconciliation history, per-DB health)
+- [ ] Build Sync Dashboard frontend page with retry queue table, reconciliation log, per-DB status cards
+- [ ] Wire into admin navigation as new tab
+- [ ] Write vitest tests for dashboard endpoints

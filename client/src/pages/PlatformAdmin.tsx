@@ -372,6 +372,7 @@ export default function PlatformAdmin() {
                 <DropdownMenuItem onClick={() => setActiveTab("audit-log")} className="cursor-pointer">
                   <History className="mr-2 h-4 w-4" />AI Audit Log
                 </DropdownMenuItem>
+
                 {isPlatformAdmin && (
                   <>
                     <DropdownMenuSeparator />
