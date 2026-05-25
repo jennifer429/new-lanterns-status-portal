@@ -49,10 +49,15 @@ export function generateAnswerSummary(answer: string): string {
     return "";
   }
 
-  // Case 1: Array (multi-select like modalities)
+  // Case 1: Array (multi-select like modalities, or array of objects like systems/endpoints)
   if (Array.isArray(parsed)) {
     if (parsed.length === 0) return "None selected";
-    return parsed.join(", ");
+    // If first element is an object, route to Case 3 logic below
+    if (typeof parsed[0] === "object" && parsed[0] !== null) {
+      // handled in Case 3
+    } else {
+      return parsed.join(", ");
+    }
   }
 
   // Case 2: Workflow configuration object { paths, systems, notes }
@@ -105,12 +110,66 @@ export function generateAnswerSummary(answer: string): string {
     return summary.trim();
   }
 
-  // Case 3: Other JSON objects (e.g., ARCH.systems) — try to summarize keys
+  // Case 3: Array of system/endpoint objects (ARCH.systems, IW.systems, CONN.endpoints)
+  // These have shape: [{ id, name, type, notes/description }] or [{ id, trafficType, sourceSystem, ... }]
+  if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === "object") {
+    // Connectivity endpoints (have trafficType field)
+    if ("trafficType" in parsed[0]) {
+      const items = parsed.map((ep: any) => {
+        const parts: string[] = [];
+        if (ep.trafficType) parts.push(ep.trafficType);
+        if (ep.sourceSystem && ep.destinationSystem) parts.push(`${ep.sourceSystem} → ${ep.destinationSystem}`);
+        return parts.join(": ") || "(unnamed endpoint)";
+      });
+      return items.length <= 4
+        ? items.join(" | ")
+        : `${items.slice(0, 3).join(" | ")} (+${items.length - 3} more)`;
+    }
+    // Systems: { name, type, notes/description }
+    if ("type" in parsed[0] || "name" in parsed[0]) {
+      const items = parsed
+        .filter((s: any) => s.name || s.type)
+        .map((s: any) => {
+          if (s.name && s.type) return `${s.name} (${s.type})`;
+          return s.name || s.type || "(unnamed)";
+        });
+      if (items.length === 0) return "No systems defined";
+      return items.length <= 6
+        ? items.join(", ")
+        : `${items.slice(0, 5).join(", ")} (+${items.length - 5} more)`;
+    }
+    // Generic array of objects — show count
+    return `${parsed.length} items`;
+  }
+
+  // Case 4: Contacts object { admin: {...}, additional_contacts: [...] }
+  if (parsed && typeof parsed === "object" && (parsed.admin || parsed.additional_contacts)) {
+    const parts: string[] = [];
+    if (parsed.admin?.name) parts.push(`Admin: ${parsed.admin.name}`);
+    if (parsed.additional_contacts?.length) {
+      const names = parsed.additional_contacts
+        .filter((c: any) => c.name)
+        .map((c: any) => c.name);
+      if (names.length <= 3) {
+        parts.push(names.join(", "));
+      } else {
+        parts.push(`${names.slice(0, 2).join(", ")} (+${names.length - 2} more)`);
+      }
+    }
+    return parts.join(" | ") || "Contacts defined";
+  }
+
+  // Case 5: Other JSON objects — try to summarize keys with values
   if (parsed && typeof parsed === "object") {
-    const keys = Object.keys(parsed);
-    if (keys.length === 0) return "Empty object";
-    if (keys.length <= 5) return keys.join(", ");
-    return `${keys.slice(0, 5).join(", ")} (+${keys.length - 5} more)`;
+    const entries = Object.entries(parsed).filter(([_, v]) => v !== null && v !== "" && v !== undefined);
+    if (entries.length === 0) return "Empty object";
+    const summary = entries.slice(0, 4).map(([k, v]) => {
+      if (typeof v === "string" && v.length <= 40) return `${k}: ${v}`;
+      if (typeof v === "boolean" || typeof v === "number") return `${k}: ${v}`;
+      return k;
+    });
+    if (entries.length > 4) summary.push(`(+${entries.length - 4} more)`);
+    return summary.join(", ");
   }
 
   return "";

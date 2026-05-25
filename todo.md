@@ -226,3 +226,13 @@
 - [x] Register periodic sync-back cron job (5-min interval)
 - [x] Integrate into triggerFullSync
 - [x] Write vitest tests for dual-write and sync-back (7 tests passing)
+
+## Fix [object Object] Summaries for ARCH.systems, CONN.endpoints, A.contacts
+
+- [x] Add deep parsing for ARCH.systems arrays (name + type)
+- [x] Add deep parsing for IW.systems arrays (name + type)
+- [x] Add deep parsing for CONN.endpoints arrays (trafficType + source → dest)
+- [x] Add deep parsing for A.contacts objects (admin + additional_contacts)
+- [x] Add generic object fallback for remaining JSON types
+- [x] Update vitest tests (18 tests passing)
+- [x] Re-backfill Notion: checked 94 JSON answers, updated 13 summaries
