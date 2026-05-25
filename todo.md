@@ -236,3 +236,7 @@
 - [x] Add generic object fallback for remaining JSON types
 - [x] Update vitest tests (18 tests passing)
 - [x] Re-backfill Notion: checked 94 JSON answers, updated 13 summaries
+- [x] Condense workflow summaries to single-line format with inline notes (✓ Path ("note") · ✓ Path2 | sys: val)
+- [x] Truncate long notes to 30 chars with "..." suffix
+- [x] Re-backfill all Notion rows with new format
+- [x] Confirm automation hooks regenerate on every portal write and sync-back

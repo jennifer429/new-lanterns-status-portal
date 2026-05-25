@@ -61,23 +61,31 @@ export function generateAnswerSummary(answer: string): string {
   }
 
   // Case 2: Workflow configuration object { paths, systems, notes }
+  // Single-line format: "✓ Path1 (note) · ✓ Path2 | Sys: val"
   if (parsed && typeof parsed === "object" && parsed.paths) {
-    const activePaths: string[] = [];
-    const notes: string[] = [];
-
-    for (const [key, value] of Object.entries(parsed.paths)) {
-      if (value === true) {
-        activePaths.push(PATH_LABELS[key] || key);
-      }
-    }
-
-    // Collect non-empty notes
+    // Build a map of path notes for inline display
+    const noteMap: Record<string, string> = {};
     if (parsed.notes && typeof parsed.notes === "object") {
       for (const [key, value] of Object.entries(parsed.notes)) {
         if (value && typeof value === "string" && value.trim()) {
           const pathKey = key.replace(/_note$/, "");
-          const label = PATH_LABELS[pathKey] || pathKey;
-          notes.push(`${label}: "${value.trim()}"`);
+          noteMap[pathKey] = value.trim();
+        }
+      }
+    }
+
+    // Build path items with inline notes
+    const pathItems: string[] = [];
+    for (const [key, value] of Object.entries(parsed.paths)) {
+      if (value === true) {
+        const label = PATH_LABELS[key] || key;
+        const note = noteMap[key];
+        if (note) {
+          // Truncate long notes to keep it tight
+          const shortNote = note.length > 30 ? note.substring(0, 27) + "..." : note;
+          pathItems.push(`✓ ${label} ("${shortNote}")`);
+        } else {
+          pathItems.push(`✓ ${label}`);
         }
       }
     }
@@ -92,22 +100,17 @@ export function generateAnswerSummary(answer: string): string {
       }
     }
 
-    if (activePaths.length === 0 && notes.length === 0) {
+    if (pathItems.length === 0 && systems.length === 0) {
       return "No workflows active";
     }
 
-    let summary = "";
-    if (activePaths.length > 0) {
-      summary += `Active: ${activePaths.join(" · ")}`;
-    }
+    // Single-line: paths joined by " · ", then systems appended with " | "
+    let summary = pathItems.join(" · ");
     if (systems.length > 0) {
-      summary += `\nSystems: ${systems.join(" · ")}`;
-    }
-    if (notes.length > 0) {
-      summary += `\nNotes: ${notes.join(" · ")}`;
+      summary += ` | ${systems.join(", ")}`;
     }
 
-    return summary.trim();
+    return summary;
   }
 
   // Case 3: Array of system/endpoint objects (ARCH.systems, IW.systems, CONN.endpoints)

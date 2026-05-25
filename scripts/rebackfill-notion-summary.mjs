@@ -74,19 +74,29 @@ function generateAnswerSummary(answer) {
     return parsed.join(", ");
   }
 
-  // Workflow config
+  // Workflow config — single-line format: ✓ Path ("note") · ✓ Path2 | Sys: val
   if (parsed && typeof parsed === "object" && parsed.paths) {
-    const activePaths = [];
-    const notes = [];
-    for (const [key, value] of Object.entries(parsed.paths)) {
-      if (value === true) activePaths.push(PATH_LABELS[key] || key);
-    }
+    // Build note map for inline display
+    const noteMap = {};
     if (parsed.notes && typeof parsed.notes === "object") {
       for (const [key, value] of Object.entries(parsed.notes)) {
         if (value && typeof value === "string" && value.trim()) {
           const pathKey = key.replace(/_note$/, "");
-          const label = PATH_LABELS[pathKey] || pathKey;
-          notes.push(`${label}: "${value.trim()}"`);
+          noteMap[pathKey] = value.trim();
+        }
+      }
+    }
+    // Build path items with inline notes
+    const pathItems = [];
+    for (const [key, value] of Object.entries(parsed.paths)) {
+      if (value === true) {
+        const label = PATH_LABELS[key] || key;
+        const note = noteMap[key];
+        if (note) {
+          const shortNote = note.length > 30 ? note.substring(0, 27) + "..." : note;
+          pathItems.push(`✓ ${label} ("${shortNote}")`);
+        } else {
+          pathItems.push(`✓ ${label}`);
         }
       }
     }
@@ -96,12 +106,10 @@ function generateAnswerSummary(answer) {
         if (value && typeof value === "string" && value.trim()) systems.push(`${key}: ${value.trim()}`);
       }
     }
-    if (activePaths.length === 0 && notes.length === 0) return "No workflows active";
-    let summary = "";
-    if (activePaths.length > 0) summary += `Active: ${activePaths.join(" · ")}`;
-    if (systems.length > 0) summary += `\nSystems: ${systems.join(" · ")}`;
-    if (notes.length > 0) summary += `\nNotes: ${notes.join(" · ")}`;
-    return summary.trim();
+    if (pathItems.length === 0 && systems.length === 0) return "No workflows active";
+    let summary = pathItems.join(" · ");
+    if (systems.length > 0) summary += ` | ${systems.join(", ")}`;
+    return summary;
   }
 
   // Contacts

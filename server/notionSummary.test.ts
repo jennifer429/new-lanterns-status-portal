@@ -21,28 +21,32 @@ describe("generateAnswerSummary", () => {
     expect(generateAnswerSummary("[]")).toBe("None selected");
   });
 
-  it("summarizes workflow config with active paths", () => {
+  it("summarizes workflow config with active paths and inline notes", () => {
     const answer = JSON.stringify({
       paths: { ordersFromRIS: true, ordersFromEHR: false, manualEntry: true },
       systems: {},
       notes: { ordersFromRIS_note: "Primary workflow" },
     });
     const result = generateAnswerSummary(answer);
-    expect(result).toContain("Active: Orders from RIS");
-    expect(result).toContain("Manual Entry");
-    expect(result).toContain('Orders from RIS: "Primary workflow"');
+    // Single-line format: ✓ Path ("note") · ✓ Path2
+    expect(result).toContain('✓ Orders from RIS ("Primary workflow")');
+    expect(result).toContain("✓ Manual Entry");
     expect(result).not.toContain("Orders from EHR");
+    // Should be a single line (no newlines)
+    expect(result).not.toContain("\n");
   });
 
-  it("summarizes workflow config with systems", () => {
+  it("summarizes workflow config with systems inline", () => {
     const answer = JSON.stringify({
       paths: { priorsPush: true },
       systems: { priorsPushSource: "Laurel Bridge" },
       notes: {},
     });
     const result = generateAnswerSummary(answer);
-    expect(result).toContain("Active: Priors Push");
-    expect(result).toContain("Systems: priorsPushSource: Laurel Bridge");
+    // Single-line: ✓ Priors Push | priorsPushSource: Laurel Bridge
+    expect(result).toContain("✓ Priors Push");
+    expect(result).toContain("| priorsPushSource: Laurel Bridge");
+    expect(result).not.toContain("\n");
   });
 
   it("returns 'No workflows active' when all paths are false", () => {
@@ -54,17 +58,17 @@ describe("generateAnswerSummary", () => {
     expect(generateAnswerSummary(answer)).toBe("No workflows active");
   });
 
-  it("handles images workflow config", () => {
+  it("handles images workflow config with inline notes", () => {
     const answer = JSON.stringify({
       paths: { imagesFromModalities: true, imagesViaVNA: true, imagesViaAI: false },
       systems: {},
       notes: { imagesFromModalities_note: "All scanners" },
     });
     const result = generateAnswerSummary(answer);
-    expect(result).toContain("Images from Modalities");
-    expect(result).toContain("Images via VNA");
+    expect(result).toContain('✓ Images from Modalities ("All scanners")');
+    expect(result).toContain("✓ Images via VNA");
     expect(result).not.toContain("Images via AI");
-    expect(result).toContain('Images from Modalities: "All scanners"');
+    expect(result).not.toContain("\n");
   });
 
   it("handles reports workflow config", () => {
@@ -74,9 +78,23 @@ describe("generateAnswerSummary", () => {
       notes: {},
     });
     const result = generateAnswerSummary(answer);
-    expect(result).toContain("Reports to RIS");
-    expect(result).toContain("Reports to Portal");
+    expect(result).toContain("✓ Reports to RIS");
+    expect(result).toContain("✓ Reports to Portal");
     expect(result).not.toContain("Reports to EHR");
+    expect(result).not.toContain("\n");
+  });
+
+  it("truncates long notes to 30 chars", () => {
+    const answer = JSON.stringify({
+      paths: { ordersFromRIS: true },
+      systems: {},
+      notes: { ordersFromRIS_note: "This is a very long note that exceeds thirty characters easily" },
+    });
+    const result = generateAnswerSummary(answer);
+    expect(result).toContain("✓ Orders from RIS");
+    expect(result).toContain("...");
+    // Should not contain the full note
+    expect(result).not.toContain("exceeds thirty characters easily");
   });
 
   // ── New tests for ARCH.systems, IW.systems, CONN.endpoints, contacts ──
