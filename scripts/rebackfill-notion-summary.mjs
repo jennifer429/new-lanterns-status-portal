@@ -93,7 +93,8 @@ function generateAnswerSummary(answer) {
         const label = PATH_LABELS[key] || key;
         const note = noteMap[key];
         if (note) {
-          const shortNote = note.length > 30 ? note.substring(0, 27) + "..." : note;
+          // NOTE: 50-char limit — matches server/notionSummary.ts
+          const shortNote = note.length > 50 ? note.substring(0, 47) + "..." : note;
           pathItems.push(`✓ ${label} ("${shortNote}")`);
         } else {
           pathItems.push(`✓ ${label}`);

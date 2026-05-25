@@ -81,8 +81,12 @@ export function generateAnswerSummary(answer: string): string {
         const label = PATH_LABELS[key] || key;
         const note = noteMap[key];
         if (note) {
-          // Truncate long notes to keep it tight
-          const shortNote = note.length > 30 ? note.substring(0, 27) + "..." : note;
+          // NOTE: 50-char limit chosen because ~90% of real notes fit untruncated.
+          // Do NOT change without reviewing Notion column width impact.
+          const NOTE_TRUNCATE_LIMIT = 50;
+          const shortNote = note.length > NOTE_TRUNCATE_LIMIT
+            ? note.substring(0, NOTE_TRUNCATE_LIMIT - 3) + "..."
+            : note;
           pathItems.push(`✓ ${label} ("${shortNote}")`);
         } else {
           pathItems.push(`✓ ${label}`);

@@ -84,17 +84,29 @@ describe("generateAnswerSummary", () => {
     expect(result).not.toContain("\n");
   });
 
-  it("truncates long notes to 30 chars", () => {
+  it("truncates long notes to 50 chars", () => {
     const answer = JSON.stringify({
       paths: { ordersFromRIS: true },
       systems: {},
-      notes: { ordersFromRIS_note: "This is a very long note that exceeds thirty characters easily" },
+      notes: { ordersFromRIS_note: "This is a very long note that exceeds fifty characters and should be truncated" },
     });
     const result = generateAnswerSummary(answer);
     expect(result).toContain("✓ Orders from RIS");
     expect(result).toContain("...");
     // Should not contain the full note
-    expect(result).not.toContain("exceeds thirty characters easily");
+    expect(result).not.toContain("should be truncated");
+  });
+
+  it("does NOT truncate notes under 50 chars", () => {
+    const answer = JSON.stringify({
+      paths: { ordersFromRIS: true },
+      systems: {},
+      notes: { ordersFromRIS_note: "Primary workflow via Cloverleaf" },
+    });
+    const result = generateAnswerSummary(answer);
+    // 31 chars - should display in full
+    expect(result).toContain('✓ Orders from RIS ("Primary workflow via Cloverleaf")');
+    expect(result).not.toContain("...");
   });
 
   // ── New tests for ARCH.systems, IW.systems, CONN.endpoints, contacts ──
