@@ -1,0 +1,31 @@
+{
+  "query": "SELECT o.id, o.name, o.slug FROM organizations o WHERE o.name LIKE '%Lodi%' OR o.slug LIKE '%lodi%'; SELECT vr.id, vr.organizationId, vr.testKey, vr.updatedAt FROM validationResults vr WHERE vr.organizationId IN (SELECT id FROM organizations WHERE name LIKE '%Lodi%') ORDER BY vr.updatedAt ASC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT o.id, o.name, o.slug FROM organizations o WHERE o.name LIKE '%Lodi%' OR o.slug LIKE '%lodi%'; SELECT vr.id, vr.organizationId, vr.testKey, vr.updatedAt FROM validationResults vr WHERE vr.organizationId IN (SELECT id FROM organizations WHERE name LIKE '%Lodi%') ORDER BY vr.updatedAt ASC;",
+  "rows": [
+    {
+      "id": "1170001",
+      "name": " Lodi Memorial",
+      "slug": "Lodi Memorial"
+    }
+  ],
+  "messages": [
+    "id\torganizationId\ttestKey\tupdatedAt",
+    "600010\t1170001\t2:1\t2026-04-30 15:28:00",
+    "600013\t1170001\t2:3\t2026-04-30 15:28:00",
+    "600008\t1170001\t1:4\t2026-04-30 15:28:00",
+    "600012\t1170001\t1:3\t2026-04-30 15:28:00",
+    "600005\t1170001\t1:0\t2026-04-30 15:28:00",
+    "600006\t1170001\t1:2\t2026-04-30 15:28:00",
+    "600009\t1170001\t2:0\t2026-04-30 15:28:00",
+    "600007\t1170001\t1:1\t2026-04-30 15:28:00",
+    "600011\t1170001\t2:2\t2026-04-30 15:28:00",
+    "600014\t1170001\t3:0\t2026-04-30 15:28:33",
+    "600001\t1170001\t0:3\t2026-05-07 15:38:42",
+    "600002\t1170001\t0:2\t2026-05-07 15:38:42",
+    "600004\t1170001\t0:0\t2026-05-07 15:38:42",
+    "600003\t1170001\t0:1\t2026-05-07 15:38:42"
+  ],
+  "stdout": "id\tname\tslug\n1170001\t Lodi Memorial\tLodi Memorial\nid\torganizationId\ttestKey\tupdatedAt\n600010\t1170001\t2:1\t2026-04-30 15:28:00\n600013\t1170001\t2:3\t2026-04-30 15:28:00\n600008\t1170001\t1:4\t2026-04-30 15:28:00\n600012\t1170001\t1:3\t2026-04-30 15:28:00\n600005\t1170001\t1:0\t2026-04-30 15:28:00\n600006\t1170001\t1:2\t2026-04-30 15:28:00\n600009\t1170001\t2:0\t2026-04-30 15:28:00\n600007\t1170001\t1:1\t2026-04-30 15:28:00\n600011\t1170001\t2:2\t2026-04-30 15:28:00\n600014\t1170001\t3:0\t2026-04-30 15:28:33\n600001\t1170001\t0:3\t2026-05-07 15:38:42\n600002\t1170001\t0:2\t2026-05-07 15:38:42\n600004\t1170001\t0:0\t2026-05-07 15:38:42\n600003\t1170001\t0:1\t2026-05-07 15:38:42\n",
+  "stderr": "",
+  "execution_time_ms": 269
+}

@@ -166,7 +166,7 @@ async function upsertTaskCompletion(row: NotionTaskRow): Promise<void> {
   if (existing) {
     await db
       .update(taskCompletion)
-      .set(payload)
+      .set({ ...payload, updatedAt: new Date() })
       .where(eq(taskCompletion.id, existing.id));
   } else {
     await db.insert(taskCompletion).values({
@@ -203,7 +203,7 @@ async function upsertValidationResult(row: NotionValidationRow): Promise<void> {
   if (existing) {
     await db
       .update(validationResults)
-      .set(payload)
+      .set({ ...payload, updatedAt: new Date() })
       .where(eq(validationResults.id, existing.id));
   } else {
     await db.insert(validationResults).values({
@@ -235,8 +235,9 @@ export async function runTaskValidationSyncBack(): Promise<TaskValidationSyncRes
   // ── Task Completions ──────────────────────────────────────────────────────
   try {
     const allTaskRows = await fetchChangedTaskCompletions(lastTaskSyncTime);
-    // Skip rows where "Last Updated From" = "Notion" — those are our own sync-back
-    // writes that bumped last_edited_time. Only process rows edited by humans or Portal.
+    // Filter out rows where "Last Updated From" = "Notion" AND the row's last_edited_time
+    // is within 2 minutes of when we last wrote (our own markLastUpdatedFrom echo).
+    // But always process rows that are genuinely out of sync.
     const taskRows = allTaskRows.filter(row => row.lastUpdatedFrom !== "Notion");
     result.tasks.fetched = taskRows.length;
 
@@ -244,16 +245,22 @@ export async function runTaskValidationSyncBack(): Promise<TaskValidationSyncRes
       try {
         await upsertTaskCompletion(row);
         result.tasks.upserted++;
-        // Mark source in Notion so staff know this was a Notion-initiated edit
-        await markLastUpdatedFrom(row.pageId);
       } catch (err: any) {
         result.tasks.failed++;
         result.tasks.errors.push(`${row.taskKey}: ${err.message?.substring(0, 80)}`);
       }
     }
 
-    // Advance checkpoint — advance even if all rows were filtered (they were processed)
-    if (result.tasks.failed === 0 && allTaskRows.length > 0) {
+    // Mark source AFTER all upserts succeed, then advance checkpoint past the marks
+    if (result.tasks.failed === 0 && taskRows.length > 0) {
+      for (const row of taskRows) {
+        await markLastUpdatedFrom(row.pageId);
+      }
+      // Checkpoint = NOW (after markLastUpdatedFrom bumped last_edited_time)
+      // This ensures the checkpoint is AFTER the mark writes, preventing re-fetch
+      await writeSyncCheckpoint(TASK_PIPELINE, new Date().toISOString());
+    } else if (result.tasks.failed === 0 && allTaskRows.length > 0 && taskRows.length === 0) {
+      // All rows were filtered (already marked "Notion") — still advance checkpoint
       await writeSyncCheckpoint(TASK_PIPELINE, new Date().toISOString());
     } else if (result.tasks.failed > 0) {
       await incrementFailures(TASK_PIPELINE);
@@ -266,7 +273,6 @@ export async function runTaskValidationSyncBack(): Promise<TaskValidationSyncRes
   // ── Validation Results ────────────────────────────────────────────────────
   try {
     const allValRows = await fetchChangedValidationResults(lastValidationSyncTime);
-    // Skip rows where "Last Updated From" = "Notion" — same feedback loop prevention
     const valRows = allValRows.filter(row => row.lastUpdatedFrom !== "Notion");
     result.validation.fetched = valRows.length;
 
@@ -274,16 +280,21 @@ export async function runTaskValidationSyncBack(): Promise<TaskValidationSyncRes
       try {
         await upsertValidationResult(row);
         result.validation.upserted++;
-        // Mark source in Notion so staff know this was a Notion-initiated edit
-        await markLastUpdatedFrom(row.pageId);
       } catch (err: any) {
         result.validation.failed++;
         result.validation.errors.push(`${row.testKey}: ${err.message?.substring(0, 80)}`);
       }
     }
 
-    // Advance checkpoint — advance even if all rows were filtered (they were processed)
-    if (result.validation.failed === 0 && allValRows.length > 0) {
+    // Mark source AFTER all upserts succeed, then advance checkpoint past the marks
+    if (result.validation.failed === 0 && valRows.length > 0) {
+      for (const row of valRows) {
+        await markLastUpdatedFrom(row.pageId);
+      }
+      // Checkpoint = NOW (after markLastUpdatedFrom bumped last_edited_time)
+      await writeSyncCheckpoint(VALIDATION_PIPELINE, new Date().toISOString());
+    } else if (result.validation.failed === 0 && allValRows.length > 0 && valRows.length === 0) {
+      // All rows were filtered — still advance checkpoint
       await writeSyncCheckpoint(VALIDATION_PIPELINE, new Date().toISOString());
     } else if (result.validation.failed > 0) {
       await incrementFailures(VALIDATION_PIPELINE);
