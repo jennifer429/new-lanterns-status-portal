@@ -1,0 +1,40 @@
+{
+  "query": "SELECT id, outOfSync, status, createdAt FROM reconciliationLog ORDER BY createdAt DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, outOfSync, status, createdAt FROM reconciliationLog ORDER BY createdAt DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "30002",
+      "outOfSync": "20",
+      "status": "issues_found",
+      "createdAt": "2026-05-25 17:30:28"
+    },
+    {
+      "id": "30001",
+      "outOfSync": "20",
+      "status": "issues_found",
+      "createdAt": "2026-05-25 17:30:19"
+    },
+    {
+      "id": "3",
+      "outOfSync": "20",
+      "status": "issues_found",
+      "createdAt": "2026-05-25 16:30:22"
+    },
+    {
+      "id": "2",
+      "outOfSync": "20",
+      "status": "issues_found",
+      "createdAt": "2026-05-25 16:30:07"
+    },
+    {
+      "id": "1",
+      "outOfSync": "0",
+      "status": "healthy",
+      "createdAt": "2026-05-25 16:30:03"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\toutOfSync\tstatus\tcreatedAt\n30002\t20\tissues_found\t2026-05-25 17:30:28\n30001\t20\tissues_found\t2026-05-25 17:30:19\n3\t20\tissues_found\t2026-05-25 16:30:22\n2\t20\tissues_found\t2026-05-25 16:30:07\n1\t0\thealthy\t2026-05-25 16:30:03\n",
+  "stderr": "",
+  "execution_time_ms": 269
+}

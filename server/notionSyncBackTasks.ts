@@ -46,8 +46,12 @@ async function markLastUpdatedFrom(pageId: string): Promise<void> {
 
 // ── Sync state ─────────────────────────────────────────────────────────────────
 
-let lastTaskSyncTime: string = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-let lastValidationSyncTime: string = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+// Look back 7 days on startup to catch any edits missed during downtime.
+// After the first successful sync, advances to "now" and stays current.
+const STARTUP_LOOKBACK_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+let lastTaskSyncTime: string = new Date(Date.now() - STARTUP_LOOKBACK_MS).toISOString();
+let lastValidationSyncTime: string = new Date(Date.now() - STARTUP_LOOKBACK_MS).toISOString();
 
 export interface TaskValidationSyncResult {
   tasks: { fetched: number; upserted: number; failed: number; errors: string[] };
@@ -151,7 +155,10 @@ export async function runTaskValidationSyncBack(): Promise<TaskValidationSyncRes
 
   // ── Task Completions ──────────────────────────────────────────────────────
   try {
-    const taskRows = await fetchChangedTaskCompletions(lastTaskSyncTime);
+    const allTaskRows = await fetchChangedTaskCompletions(lastTaskSyncTime);
+    // Skip rows where "Last Updated From" = "Notion" — those are our own sync-back
+    // writes that bumped last_edited_time. Only process rows edited by humans or Portal.
+    const taskRows = allTaskRows.filter(row => row.lastUpdatedFrom !== "Notion");
     result.tasks.fetched = taskRows.length;
 
     for (const row of taskRows) {
@@ -166,8 +173,8 @@ export async function runTaskValidationSyncBack(): Promise<TaskValidationSyncRes
       }
     }
 
-    // Advance checkpoint only on success
-    if (result.tasks.failed === 0 && taskRows.length > 0) {
+    // Advance checkpoint — advance even if all rows were filtered (they were processed)
+    if (result.tasks.failed === 0 && allTaskRows.length > 0) {
       lastTaskSyncTime = new Date().toISOString();
     }
   } catch (err: any) {
@@ -176,7 +183,9 @@ export async function runTaskValidationSyncBack(): Promise<TaskValidationSyncRes
 
   // ── Validation Results ────────────────────────────────────────────────────
   try {
-    const valRows = await fetchChangedValidationResults(lastValidationSyncTime);
+    const allValRows = await fetchChangedValidationResults(lastValidationSyncTime);
+    // Skip rows where "Last Updated From" = "Notion" — same feedback loop prevention
+    const valRows = allValRows.filter(row => row.lastUpdatedFrom !== "Notion");
     result.validation.fetched = valRows.length;
 
     for (const row of valRows) {
@@ -191,8 +200,8 @@ export async function runTaskValidationSyncBack(): Promise<TaskValidationSyncRes
       }
     }
 
-    // Advance checkpoint only on success
-    if (result.validation.failed === 0 && valRows.length > 0) {
+    // Advance checkpoint — advance even if all rows were filtered (they were processed)
+    if (result.validation.failed === 0 && allValRows.length > 0) {
       lastValidationSyncTime = new Date().toISOString();
     }
   } catch (err: any) {

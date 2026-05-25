@@ -283,3 +283,10 @@
 - [x] Reconciliation: write to Notion Sync Log when out-of-sync rows found
 - [x] Daily summary: always write once at midnight UTC (proof of life)
 - [x] Keep 7-day purge unchanged
+
+## Production Sync Fix (20 rows out of sync)
+
+- [x] Root cause: in-memory 1-hour lookback on server restart missed May 20 Notion edits permanently
+- [x] Fix: Changed startup lookback from 1 hour to 7 days to catch edits missed during downtime
+- [x] Fix: Added "Last Updated From" filter to skip rows already marked by sync-back (prevents feedback loop)
+- [x] Fix: Added missing mock for notionSyncBackTasks in syncHealth.test.ts (was causing timeout)

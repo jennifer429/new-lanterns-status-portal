@@ -70,6 +70,14 @@ vi.mock("./notionSyncContacts", () => ({
   }),
 }));
 
+vi.mock("./notionSyncBackTasks", () => ({
+  runTaskValidationSyncBack: vi.fn().mockResolvedValue({
+    tasks: { fetched: 5, upserted: 4, failed: 0, errors: [] },
+    validation: { fetched: 3, upserted: 3, failed: 0, errors: [] },
+    durationMs: 200,
+  }),
+}));
+
 describe("syncHealth router", () => {
   describe("status (public)", () => {
     it("returns sync health status without auth", async () => {

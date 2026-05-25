@@ -246,6 +246,7 @@ export interface NotionTaskRow {
   notes: string;
   completedAt: string;
   lastEdited: string;
+  lastUpdatedFrom: string;
 }
 
 export interface NotionValidationRow {
@@ -259,6 +260,7 @@ export interface NotionValidationRow {
   testedDate: string;
   updatedBy: string;
   lastEdited: string;
+  lastUpdatedFrom: string;
 }
 
 /**
@@ -290,6 +292,7 @@ export async function fetchChangedTaskCompletions(since: string): Promise<Notion
         const taskKey = props?.["Task Key"]?.rich_text?.[0]?.plain_text || "";
 
         if (orgId && taskKey) {
+          const lastUpdatedFrom = props?.["Last Updated From"]?.rich_text?.[0]?.plain_text || "";
           results.push({
             pageId: page.id,
             organizationId: orgId,
@@ -301,6 +304,7 @@ export async function fetchChangedTaskCompletions(since: string): Promise<Notion
             notes: props?.["Notes"]?.rich_text?.[0]?.plain_text || "",
             completedAt: props?.["Completed At"]?.rich_text?.[0]?.plain_text || "",
             lastEdited: page.last_edited_time || "",
+            lastUpdatedFrom,
           });
         }
       }
@@ -344,6 +348,7 @@ export async function fetchChangedValidationResults(since: string): Promise<Noti
         const testKey = props?.["Test Key"]?.rich_text?.[0]?.plain_text || "";
 
         if (orgId && testKey) {
+          const lastUpdatedFrom = props?.["Last Updated From"]?.rich_text?.[0]?.plain_text || "";
           results.push({
             pageId: page.id,
             organizationId: orgId,
@@ -355,6 +360,7 @@ export async function fetchChangedValidationResults(since: string): Promise<Noti
             testedDate: props?.["Tested Date"]?.rich_text?.[0]?.plain_text || "",
             updatedBy: props?.["Updated By"]?.rich_text?.[0]?.plain_text || "",
             lastEdited: page.last_edited_time || "",
+            lastUpdatedFrom,
           });
         }
       }
