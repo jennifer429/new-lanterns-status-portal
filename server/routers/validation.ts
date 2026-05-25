@@ -109,6 +109,7 @@ export const validationRouter = router({
       syncValidationResultToNotion({
         organizationId: org.id,
         orgSlug: input.organizationSlug,
+        orgName: org.name,
         testKey: input.testKey,
         actual: payload.actual,
         status: payload.status,

@@ -101,6 +101,7 @@ async function findValidationPage(
 export interface TaskCompletionPayload {
   organizationId: number;
   orgSlug: string;
+  orgName: string;
   taskId: string;
   sectionName: string;
   completed: number;
@@ -132,6 +133,7 @@ export async function syncTaskCompletionToNotion(payload: TaskCompletionPayload)
       "Completed By": { rich_text: [{ text: { content: payload.completedBy || "" } }] },
       "Target Date": { rich_text: [{ text: { content: payload.targetDate || "" } }] },
       "Completed At": { rich_text: [{ text: { content: payload.completedAt ? payload.completedAt.toISOString() : "" } }] },
+      "Site": { rich_text: [{ text: { content: payload.orgName || payload.orgSlug } }] },
     };
 
     if (pageId) {
@@ -162,6 +164,7 @@ export async function syncTaskCompletionToNotion(payload: TaskCompletionPayload)
 export interface ValidationResultPayload {
   organizationId: number;
   orgSlug: string;
+  orgName: string;
   testKey: string;
   actual: string | null;
   status: string;
@@ -189,6 +192,7 @@ export async function syncValidationResultToNotion(payload: ValidationResultPayl
       "Notes": { rich_text: [{ text: { content: (payload.notes || "").substring(0, 2000) } }] },
       "Tested Date": { rich_text: [{ text: { content: payload.testedDate || "" } }] },
       "Updated By": { rich_text: [{ text: { content: payload.updatedBy || "" } }] },
+      "Site": { rich_text: [{ text: { content: payload.orgName || payload.orgSlug } }] },
     };
 
     if (pageId) {

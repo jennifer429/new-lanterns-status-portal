@@ -20,6 +20,27 @@ import { ENV } from "./_core/env";
 const SYNC_LOG_DATABASE_ID = ENV.notionSyncLogDataSourceId || "";
 const PURGE_AGE_DAYS = 7;
 
+// ── Last Synced Timestamps ─────────────────────────────────────────────────
+
+export interface LastSyncedTimestamps {
+  questionnaire: string | null;
+  contactsSystems: string | null;
+  taskValidation: string | null;
+  lastFullSync: string | null;
+}
+
+const lastSynced: LastSyncedTimestamps = {
+  questionnaire: null,
+  contactsSystems: null,
+  taskValidation: null,
+  lastFullSync: null,
+};
+
+/** Get the last successful sync timestamps for all jobs. */
+export function getLastSyncedTimestamps(): LastSyncedTimestamps {
+  return { ...lastSynced };
+}
+
 // ── Hourly aggregation accumulators ─────────────────────────────────────────
 
 interface HourlyStats {
@@ -157,6 +178,7 @@ export function startCronJobs(): void {
       hourlyStats.questionnaire.failed += result.rowsFailed;
       hourlyStats.questionnaire.skipped += result.rowsSkipped;
       hourlyStats.totalDurationMs += Date.now() - start;
+      lastSynced.questionnaire = new Date().toISOString();
       if (result.errorDetails) {
         hourlyStats.errors.push(`Q: ${result.errorDetails.substring(0, 100)}`);
       }
@@ -184,6 +206,7 @@ export function startCronJobs(): void {
       if (result.systems.errors.length > 0) {
         hourlyStats.errors.push(`S: ${result.systems.errors[0].substring(0, 80)}`);
       }
+      lastSynced.contactsSystems = new Date().toISOString();
       console.log(
         `[cron] Contacts/Systems sync — contacts: ${result.contacts.upserted} upserted / ${result.contacts.failed} failed, ` +
         `systems: ${result.systems.upserted} upserted / ${result.systems.failed} failed`
@@ -217,6 +240,7 @@ export function startCronJobs(): void {
       hourlyStats.validation.upserted += result.validation.upserted;
       hourlyStats.validation.failed += result.validation.failed;
       hourlyStats.totalDurationMs += Date.now() - start;
+      lastSynced.taskValidation = new Date().toISOString();
       if (result.tasks.errors.length > 0) {
         hourlyStats.errors.push(`T: ${result.tasks.errors[0].substring(0, 80)}`);
       }

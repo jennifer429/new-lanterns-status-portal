@@ -205,11 +205,12 @@ export const organizationsRouter = router({
 
       // Fire-and-forget dual-write to Notion
       // Look up org slug for Notion page naming
-      const [orgForSlug] = await db.select({ slug: organizations.slug }).from(organizations).where(eq(organizations.id, input.organizationId)).limit(1);
+      const [orgForSlug] = await db.select({ slug: organizations.slug, name: organizations.name }).from(organizations).where(eq(organizations.id, input.organizationId)).limit(1);
       if (orgForSlug) {
         syncTaskCompletionToNotion({
           organizationId: input.organizationId,
           orgSlug: orgForSlug.slug,
+          orgName: orgForSlug.name,
           taskId: input.taskId,
           sectionName: input.sectionName,
           completed: input.completed ? 1 : 0,

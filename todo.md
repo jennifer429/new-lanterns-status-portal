@@ -237,6 +237,16 @@
 - [x] Update vitest tests (18 tests passing)
 - [x] Re-backfill Notion: checked 94 JSON answers, updated 13 summaries
 - [x] Condense workflow summaries to single-line format with inline notes (✓ Path ("note") · ✓ Path2 | sys: val)
-- [x] Truncate long notes to 30 chars with "..." suffix
+- [x] Truncate long notes to 50 chars with "..." suffix (bumped from 30 for better readability)
 - [x] Re-backfill all Notion rows with new format
 - [x] Confirm automation hooks regenerate on every portal write and sync-back
+
+## Site Relation + Last Synced Timestamp
+
+- [x] Add "Site" relation column to Task Completion Records Notion database
+- [x] Add "Site" relation column to Validation Results Notion database
+- [x] Populate Site column for existing rows (already populated during migration)
+- [x] Update dual-write code to set Site (orgName) on every new write
+- [x] Add Last Synced timestamp tracking to cron jobs (questionnaire, contacts/systems, tasks/validation)
+- [x] Expose Last Synced via tRPC syncHealth.status endpoint
+- [x] Display Last Synced in portal admin panel header (relative time, auto-refreshes every 60s)

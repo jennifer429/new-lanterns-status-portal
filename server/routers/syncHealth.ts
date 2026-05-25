@@ -9,6 +9,7 @@ import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getSyncHealth, runNotionSyncBack } from "../notionSyncBack";
 import { runContactsSystemsSync } from "../notionSyncContacts";
 import { runTaskValidationSyncBack } from "../notionSyncBackTasks";
+import { getLastSyncedTimestamps } from "../cron";
 import { z } from "zod";
 
 export const syncHealthRouter = router({
@@ -17,7 +18,8 @@ export const syncHealthRouter = router({
    */
   status: publicProcedure.query(async () => {
     const health = await getSyncHealth();
-    return health;
+    const lastSynced = getLastSyncedTimestamps();
+    return { ...health, lastSynced };
   }),
 
   /**

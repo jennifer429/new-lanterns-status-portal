@@ -17,7 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ClipboardList, Users, FileText, Download, LogOut, Settings, ChevronDown, ListChecks, History, FolderOpen, Eye, RefreshCw } from "lucide-react";
+import { ClipboardList, Users, FileText, Download, LogOut, Settings, ChevronDown, ListChecks, History, FolderOpen, Eye, RefreshCw, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { AdminChatWidget } from "@/components/AdminChatWidget";
 import { AiAuditLog } from "@/components/AiAuditLog";
@@ -58,6 +58,17 @@ function csvEscape(value: string | number | null | undefined): string {
     return `"${str.replace(/"/g, '""')}"`;
   }
   return str;
+}
+
+function formatTimeAgo(date: Date): string {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
 }
 
 export default function PlatformAdmin() {
@@ -124,6 +135,10 @@ export default function PlatformAdmin() {
 
   const logoutMutation = trpc.auth.logout.useMutation({
     onSuccess: () => { window.location.href = "/login"; },
+  });
+
+  const { data: syncStatus } = trpc.syncHealth.status.useQuery(undefined, {
+    refetchInterval: 60_000, // refresh every minute
   });
 
   const fullSyncMutation = trpc.syncHealth.triggerFullSync.useMutation({
@@ -227,17 +242,35 @@ export default function PlatformAdmin() {
                   </SelectContent>
                 </Select>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => fullSyncMutation.mutate()}
-                disabled={fullSyncMutation.isPending}
-                className="gap-2 h-8 sm:h-9 px-2 sm:px-3"
-                title="Refresh all data from Notion (questionnaire, contacts, systems)"
-              >
-                <RefreshCw className={`w-4 h-4 ${fullSyncMutation.isPending ? "animate-spin" : ""}`} />
-                <span className="hidden sm:inline">{fullSyncMutation.isPending ? "Syncing..." : "Refresh Sync"}</span>
-              </Button>
+              <div className="flex items-center gap-2">
+                {syncStatus?.lastSynced && (() => {
+                  const timestamps = [
+                    syncStatus.lastSynced.questionnaire,
+                    syncStatus.lastSynced.contactsSystems,
+                    syncStatus.lastSynced.taskValidation,
+                  ].filter(Boolean) as string[];
+                  const latest = timestamps.length > 0
+                    ? new Date(Math.max(...timestamps.map(t => new Date(t).getTime())))
+                    : null;
+                  return latest ? (
+                    <span className="hidden lg:flex items-center gap-1 text-xs text-muted-foreground" title={`Last sync: ${latest.toLocaleString()}`}>
+                      <Clock className="w-3 h-3" />
+                      {formatTimeAgo(latest)}
+                    </span>
+                  ) : null;
+                })()}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fullSyncMutation.mutate()}
+                  disabled={fullSyncMutation.isPending}
+                  className="gap-2 h-8 sm:h-9 px-2 sm:px-3"
+                  title="Refresh all data from Notion (questionnaire, contacts, systems)"
+                >
+                  <RefreshCw className={`w-4 h-4 ${fullSyncMutation.isPending ? "animate-spin" : ""}`} />
+                  <span className="hidden sm:inline">{fullSyncMutation.isPending ? "Syncing..." : "Refresh Sync"}</span>
+                </Button>
+              </div>
               <Button variant="outline" size="sm" onClick={handleExportAll} className="gap-2 h-8 sm:h-9 px-2 sm:px-3" title="Export a CSV summary of all organizations and users">
                 <Download className="w-4 h-4" />
                 <span className="hidden sm:inline">Export Orgs &amp; Users</span>

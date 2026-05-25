@@ -114,6 +114,7 @@ export const implementationRouter = router({
       syncTaskCompletionToNotion({
         organizationId: org.id,
         orgSlug: input.organizationSlug,
+        orgName: org.name,
         taskId: input.taskId,
         sectionName: payload.sectionName,
         completed: payload.completed,
