@@ -4,10 +4,11 @@
  * Registers all periodic jobs using node-cron.
  * Called once at server startup.
  *
- * Strategy:
- *   - Sync every 5 minutes (questionnaire + contacts/systems)
- *   - Log aggregated stats to Notion Sync Log hourly (not every run)
- *   - Purge Sync Log entries older than 7 days every 3 days
+ * Notion Sync Log strategy:
+ *   - Hourly flush: only writes to Notion Sync Log on failure/partial (not success)
+ *   - Reconciliation: writes to Notion Sync Log when out-of-sync rows are found
+ *   - Daily summary: always writes once at midnight UTC (proof of life)
+ *   - Purge: entries older than 7 days archived every 3 days
  */
 
 import cron from "node-cron";
@@ -107,21 +108,109 @@ function resetHourlyStats(): HourlyStats {
   };
 }
 
-// ── Sync Log writer ─────────────────────────────────────────────────────────
+// ── Daily aggregation accumulators ──────────────────────────────────────────
 
-async function writeHourlySyncLog(stats: HourlyStats): Promise<void> {
+interface DailyStats {
+  totalRuns: number;
+  totalFetched: number;
+  totalUpdated: number;
+  totalFailed: number;
+  totalSkipped: number;
+  totalDurationMs: number;
+  hoursWithFailures: number;
+  reconciliationIssues: number;
+}
+
+let dailyStats: DailyStats = resetDailyStats();
+
+function resetDailyStats(): DailyStats {
+  return {
+    totalRuns: 0,
+    totalFetched: 0,
+    totalUpdated: 0,
+    totalFailed: 0,
+    totalSkipped: 0,
+    totalDurationMs: 0,
+    hoursWithFailures: 0,
+    reconciliationIssues: 0,
+  };
+}
+
+// ── Notion Sync Log writers ─────────────────────────────────────────────────
+
+/**
+ * Write an entry to the Notion Sync Log database.
+ * Used for: hourly failure logs, reconciliation issues, and daily summaries.
+ */
+async function writeToNotionSyncLog(entry: {
+  runLabel: string;
+  status: "Success" | "Partial" | "Failed";
+  rowsFetched: number;
+  rowsUpdated: number;
+  rowsFailed: number;
+  rowsSkipped: number;
+  durationMs: number;
+  errorDetails: string;
+}): Promise<void> {
   if (!ENV.notionApiKey || !SYNC_LOG_DATABASE_ID) return;
-  if (stats.runs === 0) return; // nothing to log
 
   const client = new Client({ auth: ENV.notionApiKey });
   const now = new Date().toISOString();
-  const hourLabel = now.slice(0, 13).replace("T", " ") + ":00"; // e.g. "2026-05-20 10:00"
+
+  try {
+    await client.pages.create({
+      parent: { database_id: SYNC_LOG_DATABASE_ID },
+      properties: {
+        "Run": { title: [{ text: { content: entry.runLabel } }] },
+        "Timestamp": { date: { start: now } },
+        "Status": { select: { name: entry.status } },
+        "Rows Fetched": { number: entry.rowsFetched },
+        "Rows Updated": { number: entry.rowsUpdated },
+        "Rows Failed": { number: entry.rowsFailed },
+        "Rows Skipped": { number: entry.rowsSkipped },
+        "Duration Ms": { number: entry.durationMs },
+        "Error Details": {
+          rich_text: entry.errorDetails
+            ? [{ text: { content: entry.errorDetails.substring(0, 2000) } }]
+            : [],
+        },
+      },
+    });
+  } catch (error) {
+    console.error("[cron] Failed to write to Notion Sync Log:", error);
+  }
+}
+
+/**
+ * Hourly flush: only writes to Notion Sync Log if there were failures or partial results.
+ * Skips writing entirely when everything was successful (reduces noise).
+ */
+async function writeHourlySyncLog(stats: HourlyStats): Promise<void> {
+  if (stats.runs === 0) return; // nothing ran this hour
 
   const totalFailed = stats.questionnaire.failed + stats.contacts.failed + stats.systems.failed + stats.tasks.failed + stats.validation.failed;
   const totalUpdated = stats.questionnaire.updated + stats.contacts.upserted + stats.systems.upserted + stats.tasks.upserted + stats.validation.upserted;
   const totalFetched = stats.questionnaire.fetched + stats.contacts.fetched + stats.systems.fetched + stats.tasks.fetched + stats.validation.fetched;
 
-  const status = totalFailed > 0 ? (totalUpdated > 0 ? "Partial" : "Failed") : "Success";
+  const status: "Success" | "Partial" | "Failed" = totalFailed > 0 ? (totalUpdated > 0 ? "Partial" : "Failed") : "Success";
+
+  // Accumulate into daily stats
+  dailyStats.totalRuns += stats.runs;
+  dailyStats.totalFetched += totalFetched;
+  dailyStats.totalUpdated += totalUpdated;
+  dailyStats.totalFailed += totalFailed;
+  dailyStats.totalSkipped += stats.questionnaire.skipped;
+  dailyStats.totalDurationMs += stats.totalDurationMs;
+  if (totalFailed > 0) dailyStats.hoursWithFailures++;
+
+  // Only write to Notion on failure/partial — skip success (reduces noise)
+  if (status === "Success") {
+    console.log(`[cron] Hourly stats: ${stats.runs} runs, ${totalUpdated} updated, 0 failed — skipping Notion log (success)`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const hourLabel = now.slice(0, 13).replace("T", " ") + ":00";
 
   const details = [
     `Runs: ${stats.runs}`,
@@ -133,27 +222,80 @@ async function writeHourlySyncLog(stats: HourlyStats): Promise<void> {
     ...(stats.errors.length > 0 ? [`Errors: ${stats.errors.slice(0, 5).join("; ")}`] : []),
   ].join("\n");
 
-  try {
-    await client.pages.create({
-      parent: { database_id: SYNC_LOG_DATABASE_ID },
-      properties: {
-        "Run": { title: [{ text: { content: `Hourly Summary ${hourLabel}` } }] },
-        "Timestamp": { date: { start: now } },
-        "Status": { select: { name: status } },
-        "Rows Fetched": { number: totalFetched },
-        "Rows Updated": { number: totalUpdated },
-        "Rows Failed": { number: totalFailed },
-        "Rows Skipped": { number: stats.questionnaire.skipped },
-        "Duration Ms": { number: stats.totalDurationMs },
-        "Error Details": {
-          rich_text: [{ text: { content: details.substring(0, 2000) } }],
-        },
-      },
-    });
-    console.log(`[cron] Hourly sync log written — ${status} (${stats.runs} runs, ${totalUpdated} updated, ${totalFailed} failed)`);
-  } catch (error) {
-    console.error("[cron] Failed to write hourly sync log:", error);
-  }
+  await writeToNotionSyncLog({
+    runLabel: `⚠️ Hourly ${hourLabel}`,
+    status,
+    rowsFetched: totalFetched,
+    rowsUpdated: totalUpdated,
+    rowsFailed: totalFailed,
+    rowsSkipped: stats.questionnaire.skipped,
+    durationMs: stats.totalDurationMs,
+    errorDetails: details,
+  });
+
+  console.log(`[cron] Hourly sync log written — ${status} (${stats.runs} runs, ${totalUpdated} updated, ${totalFailed} failed)`);
+}
+
+/**
+ * Write reconciliation results to Notion Sync Log when issues are found.
+ */
+async function writeReconciliationToNotionLog(result: { checked: number; outOfSync: number; details?: string }): Promise<void> {
+  if (result.outOfSync === 0) return; // Only log when there are issues
+
+  dailyStats.reconciliationIssues += result.outOfSync;
+
+  await writeToNotionSyncLog({
+    runLabel: `🔄 Reconciliation: ${result.outOfSync} out of sync`,
+    status: "Failed",
+    rowsFetched: result.checked,
+    rowsUpdated: 0,
+    rowsFailed: result.outOfSync,
+    rowsSkipped: 0,
+    durationMs: 0,
+    errorDetails: result.details || `${result.outOfSync} rows have >10min drift between MySQL and Notion`,
+  });
+
+  console.log(`[cron] Reconciliation logged to Notion — ${result.outOfSync} out of sync`);
+}
+
+/**
+ * Daily summary: always writes once at midnight UTC.
+ * Proof of life — confirms the system ran all day even if everything was healthy.
+ */
+async function writeDailySummary(): Promise<void> {
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+  const status: "Success" | "Partial" | "Failed" =
+    dailyStats.totalFailed > 0
+      ? (dailyStats.totalUpdated > 0 ? "Partial" : "Failed")
+      : "Success";
+
+  const details = [
+    `Total runs: ${dailyStats.totalRuns}`,
+    `Total fetched: ${dailyStats.totalFetched}`,
+    `Total updated: ${dailyStats.totalUpdated}`,
+    `Total failed: ${dailyStats.totalFailed}`,
+    `Total skipped: ${dailyStats.totalSkipped}`,
+    `Hours with failures: ${dailyStats.hoursWithFailures}`,
+    `Reconciliation issues: ${dailyStats.reconciliationIssues}`,
+    `Total duration: ${Math.round(dailyStats.totalDurationMs / 1000)}s`,
+  ].join("\n");
+
+  await writeToNotionSyncLog({
+    runLabel: `📊 Daily Summary ${yesterday}`,
+    status,
+    rowsFetched: dailyStats.totalFetched,
+    rowsUpdated: dailyStats.totalUpdated,
+    rowsFailed: dailyStats.totalFailed,
+    rowsSkipped: dailyStats.totalSkipped,
+    durationMs: dailyStats.totalDurationMs,
+    errorDetails: details,
+  });
+
+  console.log(`[cron] Daily summary written for ${yesterday} — ${status}`);
+
+  // Reset daily stats for the new day
+  dailyStats = resetDailyStats();
 }
 
 // ── Purge old Sync Log entries ──────────────────────────────────────────────
@@ -255,17 +397,6 @@ export function startCronJobs(): void {
     }
   });
 
-  // Hourly: flush aggregated stats to Notion Sync Log
-  cron.schedule("0 * * * *", async () => {
-    try {
-      const statsToFlush = { ...hourlyStats };
-      hourlyStats = resetHourlyStats();
-      await writeHourlySyncLog(statsToFlush);
-    } catch (error) {
-      console.error("[cron] Hourly sync log flush failed:", error);
-    }
-  });
-
   // Task Completions & Validation Results Notion → MySQL sync: every 5 minutes (offset by 3 min)
   cron.schedule("3,8,13,18,23,28,33,38,43,48,53,58 * * * *", async () => {
     const start = Date.now();
@@ -291,6 +422,17 @@ export function startCronJobs(): void {
     }
   });
 
+  // Hourly flush: aggregate stats, write to Notion only on failure/partial
+  cron.schedule("0 * * * *", async () => {
+    try {
+      const statsToFlush = { ...hourlyStats };
+      hourlyStats = resetHourlyStats();
+      await writeHourlySyncLog(statsToFlush);
+    } catch (error) {
+      console.error("[cron] Hourly sync log flush failed:", error);
+    }
+  });
+
   // Staleness check: every 5 minutes, check if sync is stale and notify owner
   cron.schedule("4,9,14,19,24,29,34,39,44,49,54,59 * * * *", () => {
     checkStalenessAndNotify();
@@ -306,12 +448,27 @@ export function startCronJobs(): void {
   });
 
   // Hourly reconciliation: compare MySQL ↔ Notion timestamps, flag drift, notify owner
+  // Also writes to Notion Sync Log when out-of-sync rows are found
   cron.schedule("30 * * * *", async () => {
     try {
       const result = await runReconciliation();
       console.log(`[cron] Reconciliation complete — checked: ${result.checked}, out of sync: ${result.outOfSync}`);
+
+      // Write to Notion Sync Log if issues found
+      if (result.outOfSync > 0) {
+        await writeReconciliationToNotionLog(result);
+      }
     } catch (error: any) {
       console.error("[cron] Reconciliation failed:", error);
+    }
+  });
+
+  // Daily summary: always writes once at midnight UTC (proof of life)
+  cron.schedule("0 0 * * *", async () => {
+    try {
+      await writeDailySummary();
+    } catch (error) {
+      console.error("[cron] Daily summary failed:", error);
     }
   });
 
@@ -326,10 +483,11 @@ export function startCronJobs(): void {
 
   console.log("[cron] Registered: Notion sync-back (every 5 minutes)");
   console.log("[cron] Registered: Contacts/Systems sync (every 5 minutes, offset +2)");
-  console.log("[cron] Registered: Hourly sync log flush");
   console.log("[cron] Registered: Task/Validation sync-back (every 5 minutes, offset +3)");
+  console.log("[cron] Registered: Hourly flush to Notion Sync Log (failures/partial only)");
   console.log("[cron] Registered: Staleness check (every 5 minutes, offset +4)");
   console.log("[cron] Registered: Retry queue (every 5 minutes, offset +1)");
-  console.log("[cron] Registered: Hourly reconciliation (at :30 past each hour)");
+  console.log("[cron] Registered: Hourly reconciliation (at :30 past each hour) → logs to Notion on issues");
+  console.log("[cron] Registered: Daily summary (midnight UTC) → always writes to Notion");
   console.log("[cron] Registered: Sync log purge (every 3 days at 3:00 AM, entries > 7 days)");
 }

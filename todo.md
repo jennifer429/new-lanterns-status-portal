@@ -274,7 +274,12 @@
 
 ## Sync Dashboard Page
 
-- [ ] Add tRPC endpoints for sync dashboard data (queue depth, reconciliation history, per-DB health)
-- [ ] Build Sync Dashboard frontend page with retry queue table, reconciliation log, per-DB status cards
-- [ ] Wire into admin navigation as new tab
-- [ ] Write vitest tests for dashboard endpoints
+- [x] ~~Removed~~ — sync monitoring moved to Notion Sync Log database (no portal dashboard)
+
+## Sync Log Noise Reduction
+
+- [x] Remove per-run writeSyncLog calls from notionSyncBack.ts (was writing every 5 min)
+- [x] Hourly flush: only write to Notion Sync Log on failure/partial (skip success)
+- [x] Reconciliation: write to Notion Sync Log when out-of-sync rows found
+- [x] Daily summary: always write once at midnight UTC (proof of life)
+- [x] Keep 7-day purge unchanged

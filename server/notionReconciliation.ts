@@ -177,7 +177,7 @@ async function reconcileValidationResults(client: Client): Promise<OutOfSyncRow[
  * Checks both task completions and validation results, notifies owner if any are out of sync.
  * Persists results to reconciliationLog table for dashboard display.
  */
-export async function runReconciliation(): Promise<{ checked: number; outOfSync: number }> {
+export async function runReconciliation(): Promise<{ checked: number; outOfSync: number; details?: string }> {
   const startTime = Date.now();
   const client = getNotionClient();
   if (!client) {
@@ -222,7 +222,11 @@ export async function runReconciliation(): Promise<{ checked: number; outOfSync:
       console.log("[reconciliation] All sampled rows are in sync ✓");
     }
 
-    return stats;
+    const details = allIssues.length > 0
+      ? allIssues.map(i => `${i.type} | ${i.orgSlug}/${i.key} | Drift: ${i.driftMinutes}min`).join("\n")
+      : undefined;
+
+    return { ...stats, details };
   } catch (err: any) {
     const durationMs = Date.now() - startTime;
     // Persist error to log

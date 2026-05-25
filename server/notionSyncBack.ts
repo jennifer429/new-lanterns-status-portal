@@ -329,7 +329,6 @@ export async function runNotionSyncBack(): Promise<SyncResult> {
         lastSuccessfulSync: new Date().toISOString(),
         consecutiveFailures: 0,
       });
-      await writeSyncLog(client, result);
       console.log("[notion-sync] Success — 0 changes found");
       return result;
     }
@@ -416,7 +415,6 @@ export async function runNotionSyncBack(): Promise<SyncResult> {
       });
     }
 
-    await writeSyncLog(client, result);
     console.log(
       `[notion-sync] ${status} — fetched: ${rowsFetched}, updated: ${rowsUpdated}, failed: ${rowsFailed}, skipped: ${rowsSkipped}`
     );
@@ -435,7 +433,6 @@ export async function runNotionSyncBack(): Promise<SyncResult> {
 
     try {
       await updateSyncConfig(client, { consecutiveFailures: newFailures });
-      await writeSyncLog(client, result);
 
       if (newFailures >= MAX_CONSECUTIVE_FAILURES_BEFORE_ALERT) {
         await notifyOwner({
