@@ -1,6 +1,7 @@
 import { Client } from "@notionhq/client";
 import { ENV } from "./_core/env";
 import { generateAnswerSummary } from "./notionSummary";
+import { enqueueFailedWrite } from "./notionRetryQueue";
 
 /**
  * Notion API client for syncing intake responses.
@@ -119,9 +120,13 @@ export async function syncAnswerToNotion(
     };
 
     // Only set Summary if there's a meaningful summary (JSON answers)
+    // Prefix with "⚙️ Auto" so staff know this column is machine-generated
     if (summary) {
-      properties["Summary"] = { rich_text: [{ text: { content: summary.substring(0, 2000) } }] };
+      properties["Summary"] = { rich_text: [{ text: { content: `⚙️ Auto: ${summary}`.substring(0, 2000) } }] };
     }
+
+    // "Last Updated From" column — tracks whether the last edit came from Portal or Notion
+    properties["Last Updated From"] = { rich_text: [{ text: { content: "Portal" } }] };
 
     await client.pages.update({
       page_id: pageId,
@@ -129,8 +134,13 @@ export async function syncAnswerToNotion(
     });
 
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Error syncing answer to Notion for ${slug}/${questionId}:`, error);
+    // Enqueue for retry
+    enqueueFailedWrite(
+      { writeType: "questionnaire", data: { slug, questionId, answer, updatedBy } },
+      error.message || "Unknown error"
+    ).catch(() => {});
     return false;
   }
 }

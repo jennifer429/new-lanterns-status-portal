@@ -250,3 +250,24 @@
 - [x] Add Last Synced timestamp tracking to cron jobs (questionnaire, contacts/systems, tasks/validation)
 - [x] Expose Last Synced via tRPC syncHealth.status endpoint
 - [x] Display Last Synced in portal admin panel header (relative time, auto-refreshes every 60s)
+
+## Sync Safeguards
+
+### Safeguard 1: Staleness Alert
+- [x] Show yellow warning banner in admin panel when sync is >15min stale
+- [x] Send notifyOwner alert when sync staleness exceeds 15 minutes (throttled to 1/hour)
+- [x] Only show banner to NL admins (not regular users)
+
+### Safeguard 2: Retry Queue + Reconciliation
+- [x] Create MySQL table for failed dual-write queue (notionRetryQueue)
+- [x] On dual-write failure, insert into retry queue instead of just logging
+- [x] Add cron job to retry queued writes (every 5 min, max 3 attempts)
+- [x] Notify owner on persistent failures (3+ consecutive retries)
+- [x] Add hourly reconciliation: compare MySQL updatedAt vs Notion last_edited_time
+- [x] Flag out-of-sync rows and notify owner with details + cleanup plan
+
+### Safeguard 3: Notion Table UX
+- [x] Add "⚙️ Auto:" prefix to Summary column values
+- [x] Add "Last Updated From" column to all 3 databases (Questionnaire, Task Completion, Validation Results)
+- [x] Set "Last Updated From" on every write (portal = "Portal", sync-back = "Notion")
+- [x] Create pre-built Notion views: Workflow Decisions, By Status (board), By Site (table), All Answers by Site

@@ -15,6 +15,9 @@ import { Client } from "@notionhq/client";
 import { runNotionSyncBack } from "./notionSyncBack";
 import { runContactsSystemsSync } from "./notionSyncContacts";
 import { runTaskValidationSyncBack } from "./notionSyncBackTasks";
+import { processRetryQueue } from "./notionRetryQueue";
+import { runReconciliation } from "./notionReconciliation";
+import { notifyOwner } from "./_core/notification";
 import { ENV } from "./_core/env";
 
 const SYNC_LOG_DATABASE_ID = ENV.notionSyncLogDataSourceId || "";
@@ -39,6 +42,41 @@ const lastSynced: LastSyncedTimestamps = {
 /** Get the last successful sync timestamps for all jobs. */
 export function getLastSyncedTimestamps(): LastSyncedTimestamps {
   return { ...lastSynced };
+}
+
+// Track whether we already sent a staleness alert (avoid spamming)
+let stalenessAlertSent = false;
+const STALENESS_THRESHOLD_MS = 15 * 60 * 1000; // 15 minutes
+
+/** Check if sync is stale and notify owner. Resets when sync recovers. */
+function checkStalenessAndNotify(): void {
+  const timestamps = [
+    lastSynced.questionnaire,
+    lastSynced.contactsSystems,
+    lastSynced.taskValidation,
+  ].filter(Boolean) as string[];
+
+  // If no sync has ever completed, skip (server just started)
+  if (timestamps.length === 0) return;
+
+  const latest = Math.max(...timestamps.map(t => new Date(t).getTime()));
+  const ageMs = Date.now() - latest;
+
+  if (ageMs > STALENESS_THRESHOLD_MS && !stalenessAlertSent) {
+    stalenessAlertSent = true;
+    const minutesAgo = Math.floor(ageMs / 60000);
+    notifyOwner({
+      title: "\u26a0\ufe0f Sync Stale Alert",
+      content: `Notion sync has not completed successfully in ${minutesAgo} minutes. ` +
+        `Last successful sync: ${new Date(latest).toISOString()}. ` +
+        `Portal data may be out of date. Check server logs for errors.`,
+    }).catch(err => console.error("[cron] Failed to send staleness alert:", err));
+    console.warn(`[cron] STALENESS ALERT: sync is ${minutesAgo} minutes stale`);
+  } else if (ageMs <= STALENESS_THRESHOLD_MS && stalenessAlertSent) {
+    // Sync recovered — reset alert flag
+    stalenessAlertSent = false;
+    console.log("[cron] Sync recovered from staleness");
+  }
 }
 
 // ── Hourly aggregation accumulators ─────────────────────────────────────────
@@ -253,6 +291,30 @@ export function startCronJobs(): void {
     }
   });
 
+  // Staleness check: every 5 minutes, check if sync is stale and notify owner
+  cron.schedule("4,9,14,19,24,29,34,39,44,49,54,59 * * * *", () => {
+    checkStalenessAndNotify();
+  });
+
+  // Retry queue: process failed dual-writes every 5 minutes (offset by 1 min)
+  cron.schedule("1,6,11,16,21,26,31,36,41,46,51,56 * * * *", async () => {
+    try {
+      await processRetryQueue();
+    } catch (error: any) {
+      console.error("[cron] Retry queue processing failed:", error);
+    }
+  });
+
+  // Hourly reconciliation: compare MySQL ↔ Notion timestamps, flag drift, notify owner
+  cron.schedule("30 * * * *", async () => {
+    try {
+      const result = await runReconciliation();
+      console.log(`[cron] Reconciliation complete — checked: ${result.checked}, out of sync: ${result.outOfSync}`);
+    } catch (error: any) {
+      console.error("[cron] Reconciliation failed:", error);
+    }
+  });
+
   // Purge old Sync Log entries: every 3 days at 3:00 AM
   cron.schedule("0 3 */3 * *", async () => {
     try {
@@ -266,5 +328,8 @@ export function startCronJobs(): void {
   console.log("[cron] Registered: Contacts/Systems sync (every 5 minutes, offset +2)");
   console.log("[cron] Registered: Hourly sync log flush");
   console.log("[cron] Registered: Task/Validation sync-back (every 5 minutes, offset +3)");
+  console.log("[cron] Registered: Staleness check (every 5 minutes, offset +4)");
+  console.log("[cron] Registered: Retry queue (every 5 minutes, offset +1)");
+  console.log("[cron] Registered: Hourly reconciliation (at :30 past each hour)");
   console.log("[cron] Registered: Sync log purge (every 3 days at 3:00 AM, entries > 7 days)");
 }

@@ -630,3 +630,29 @@ export const systems = mysqlTable("systems", {
 
 export type System = typeof systems.$inferSelect;
 export type InsertSystem = typeof systems.$inferInsert;
+
+
+/**
+ * Retry queue for failed Notion dual-writes.
+ * When a dual-write to Notion fails, the payload is stored here and retried by cron.
+ * After 3 consecutive failures, the owner is notified.
+ */
+export const notionRetryQueue = mysqlTable("notionRetryQueue", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Type of write: "taskCompletion" | "validationResult" | "questionnaire" */
+  writeType: varchar("writeType", { length: 50 }).notNull(),
+  /** JSON payload to replay (contains all data needed to retry the Notion write) */
+  payload: text("payload").notNull(),
+  /** Number of retry attempts so far */
+  retryCount: int("retryCount").default(0).notNull(),
+  /** Last error message from the failed attempt */
+  lastError: text("lastError"),
+  /** Whether the owner has been notified about persistent failure */
+  ownerNotified: tinyint("ownerNotified").default(0).notNull(),
+  /** Status: "pending" | "succeeded" | "failed_permanent" */
+  status: varchar("status", { length: 30 }).default("pending").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type NotionRetryQueue = typeof notionRetryQueue.$inferSelect;
+export type InsertNotionRetryQueue = typeof notionRetryQueue.$inferInsert;

@@ -21,6 +21,29 @@ import {
   type NotionValidationRow,
 } from "./notionTaskValidation";
 
+// Notion client for marking "Last Updated From" after sync-back
+let _notionClient: Client | null = null;
+function getNotionClient(): Client | null {
+  if (!ENV.notionApiKey) return null;
+  if (!_notionClient) _notionClient = new Client({ auth: ENV.notionApiKey });
+  return _notionClient;
+}
+
+async function markLastUpdatedFrom(pageId: string): Promise<void> {
+  const client = getNotionClient();
+  if (!client) return;
+  try {
+    await client.pages.update({
+      page_id: pageId,
+      properties: {
+        "Last Updated From": { rich_text: [{ text: { content: "Notion" } }] },
+      },
+    });
+  } catch {
+    // Non-fatal — don't block sync for a metadata update
+  }
+}
+
 // ── Sync state ─────────────────────────────────────────────────────────────────
 
 let lastTaskSyncTime: string = new Date(Date.now() - 60 * 60 * 1000).toISOString();
@@ -135,6 +158,8 @@ export async function runTaskValidationSyncBack(): Promise<TaskValidationSyncRes
       try {
         await upsertTaskCompletion(row);
         result.tasks.upserted++;
+        // Mark source in Notion so staff know this was a Notion-initiated edit
+        await markLastUpdatedFrom(row.pageId);
       } catch (err: any) {
         result.tasks.failed++;
         result.tasks.errors.push(`${row.taskKey}: ${err.message?.substring(0, 80)}`);
@@ -158,6 +183,8 @@ export async function runTaskValidationSyncBack(): Promise<TaskValidationSyncRes
       try {
         await upsertValidationResult(row);
         result.validation.upserted++;
+        // Mark source in Notion so staff know this was a Notion-initiated edit
+        await markLastUpdatedFrom(row.pageId);
       } catch (err: any) {
         result.validation.failed++;
         result.validation.errors.push(`${row.testKey}: ${err.message?.substring(0, 80)}`);

@@ -17,7 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ClipboardList, Users, FileText, Download, LogOut, Settings, ChevronDown, ListChecks, History, FolderOpen, Eye, RefreshCw, Clock } from "lucide-react";
+import { ClipboardList, Users, FileText, Download, LogOut, Settings, ChevronDown, ListChecks, History, FolderOpen, Eye, RefreshCw, Clock, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { AdminChatWidget } from "@/components/AdminChatWidget";
 import { AiAuditLog } from "@/components/AiAuditLog";
@@ -300,6 +300,28 @@ export default function PlatformAdmin() {
               </DropdownMenu>
             </div>
           </div>
+
+          {/* Staleness Alert Banner — only visible to NL admins */}
+          {isPlatformAdmin && syncStatus?.lastSynced && (() => {
+            const timestamps = [
+              syncStatus.lastSynced.questionnaire,
+              syncStatus.lastSynced.contactsSystems,
+              syncStatus.lastSynced.taskValidation,
+            ].filter(Boolean) as string[];
+            if (timestamps.length === 0) return null;
+            const latest = new Date(Math.max(...timestamps.map(t => new Date(t).getTime())));
+            const minutesAgo = Math.floor((Date.now() - latest.getTime()) / 60000);
+            if (minutesAgo < 15) return null;
+            return (
+              <div className="mt-3 px-3 py-2 rounded-md bg-yellow-500/10 border border-yellow-500/30 flex items-center gap-2 text-sm text-yellow-400">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>Sync is stale — last successful sync was <strong>{minutesAgo} minutes ago</strong>. Data on the portal may not reflect recent Notion edits.</span>
+                <Button variant="ghost" size="sm" className="ml-auto text-yellow-400 hover:text-yellow-300 h-7 px-2" onClick={() => fullSyncMutation.mutate()} disabled={fullSyncMutation.isPending}>
+                  {fullSyncMutation.isPending ? "Syncing..." : "Retry Now"}
+                </Button>
+              </div>
+            );
+          })()}
 
           {/* Tab Navigation */}
           <div className="flex items-center gap-2 sm:gap-4 mt-3 sm:mt-6 border-b border-border overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">

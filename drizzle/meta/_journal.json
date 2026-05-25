@@ -330,6 +330,13 @@
       "when": 1779246804579,
       "tag": "0046_fast_bulldozer",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "5",
+      "when": 1779724243013,
+      "tag": "0047_aberrant_northstar",
+      "breakpoints": true
     }
   ]
 }

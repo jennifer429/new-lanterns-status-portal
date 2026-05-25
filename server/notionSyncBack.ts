@@ -356,20 +356,22 @@ export async function runNotionSyncBack(): Promise<SyncResult> {
         await upsertAnswer(orgId, row.questionId, row.answer);
         rowsUpdated++;
 
-        // Regenerate Summary column in Notion for JSON answers
+        // Regenerate Summary column in Notion for JSON answers + mark source as Notion
         const summary = generateAnswerSummary(row.answer);
-        if (summary) {
-          try {
-            await client.pages.update({
-              page_id: row.pageId,
-              properties: {
-                "Summary": { rich_text: [{ text: { content: summary.substring(0, 2000) } }] },
-              },
-            });
-          } catch (summaryErr: any) {
-            // Non-fatal: log but don't fail the sync
-            console.warn(`[notion-sync] Failed to update Summary for ${row.slug}/${row.questionId}:`, summaryErr.message);
+        try {
+          const updateProps: any = {
+            "Last Updated From": { rich_text: [{ text: { content: "Notion" } }] },
+          };
+          if (summary) {
+            updateProps["Summary"] = { rich_text: [{ text: { content: `\u2699\ufe0f Auto: ${summary}`.substring(0, 2000) } }] };
           }
+          await client.pages.update({
+            page_id: row.pageId,
+            properties: updateProps,
+          });
+        } catch (summaryErr: any) {
+          // Non-fatal: log but don't fail the sync
+          console.warn(`[notion-sync] Failed to update Summary/Source for ${row.slug}/${row.questionId}:`, summaryErr.message);
         }
       } catch (error: any) {
         errors.push(`${row.slug}/${row.questionId}: ${error.message}`);

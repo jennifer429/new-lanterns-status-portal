@@ -10,6 +10,7 @@
 
 import { Client } from "@notionhq/client";
 import { ENV } from "./_core/env";
+import { enqueueFailedWrite } from "./notionRetryQueue";
 
 const TASK_COMPLETION_DS_ID = ENV.notionTaskCompletionDataSourceId;
 const VALIDATION_RESULTS_DS_ID = ENV.notionValidationResultsDataSourceId;
@@ -134,6 +135,7 @@ export async function syncTaskCompletionToNotion(payload: TaskCompletionPayload)
       "Target Date": { rich_text: [{ text: { content: payload.targetDate || "" } }] },
       "Completed At": { rich_text: [{ text: { content: payload.completedAt ? payload.completedAt.toISOString() : "" } }] },
       "Site": { rich_text: [{ text: { content: payload.orgName || payload.orgSlug } }] },
+      "Last Updated From": { rich_text: [{ text: { content: "Portal" } }] },
     };
 
     if (pageId) {
@@ -155,8 +157,13 @@ export async function syncTaskCompletionToNotion(payload: TaskCompletionPayload)
     }
 
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error(`[notion-task] Sync failed for ${payload.orgSlug}/${payload.taskId}:`, error);
+    // Enqueue for retry instead of silently failing
+    enqueueFailedWrite(
+      { writeType: "taskCompletion", data: payload as any },
+      error.message || "Unknown error"
+    ).catch(() => {});
     return false;
   }
 }
@@ -193,6 +200,7 @@ export async function syncValidationResultToNotion(payload: ValidationResultPayl
       "Tested Date": { rich_text: [{ text: { content: payload.testedDate || "" } }] },
       "Updated By": { rich_text: [{ text: { content: payload.updatedBy || "" } }] },
       "Site": { rich_text: [{ text: { content: payload.orgName || payload.orgSlug } }] },
+      "Last Updated From": { rich_text: [{ text: { content: "Portal" } }] },
     };
 
     if (pageId) {
@@ -214,8 +222,13 @@ export async function syncValidationResultToNotion(payload: ValidationResultPayl
     }
 
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error(`[notion-validation] Sync failed for ${payload.orgSlug}/${payload.testKey}:`, error);
+    // Enqueue for retry instead of silently failing
+    enqueueFailedWrite(
+      { writeType: "validationResult", data: payload as any },
+      error.message || "Unknown error"
+    ).catch(() => {});
     return false;
   }
 }
