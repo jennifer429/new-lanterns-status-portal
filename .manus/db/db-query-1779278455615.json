@@ -1,0 +1,70 @@
+{
+  "query": "SELECT DISTINCT taskId FROM taskCompletion ORDER BY taskId LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT DISTINCT taskId FROM taskCompletion ORDER BY taskId LIMIT 20;",
+  "rows": [
+    {
+      "taskId": "A.1"
+    },
+    {
+      "taskId": "A.2"
+    },
+    {
+      "taskId": "A.3"
+    },
+    {
+      "taskId": "config:proc"
+    },
+    {
+      "taskId": "config:provider"
+    },
+    {
+      "taskId": "config:sso"
+    },
+    {
+      "taskId": "config:users"
+    },
+    {
+      "taskId": "config:worklist"
+    },
+    {
+      "taskId": "hl7:adt"
+    },
+    {
+      "taskId": "hl7:orm"
+    },
+    {
+      "taskId": "hl7:orm-spec"
+    },
+    {
+      "taskId": "hl7:oru"
+    },
+    {
+      "taskId": "hl7:oru-spec"
+    },
+    {
+      "taskId": "hl7:validate"
+    },
+    {
+      "taskId": "INFO.1"
+    },
+    {
+      "taskId": "INFO.3"
+    },
+    {
+      "taskId": "network:dicom-p"
+    },
+    {
+      "taskId": "network:dicom-t"
+    },
+    {
+      "taskId": "network:firewall"
+    },
+    {
+      "taskId": "network:hl7-port"
+    }
+  ],
+  "messages": [],
+  "stdout": "taskId\nA.1\nA.2\nA.3\nconfig:proc\nconfig:provider\nconfig:sso\nconfig:users\nconfig:worklist\nhl7:adt\nhl7:orm\nhl7:orm-spec\nhl7:oru\nhl7:oru-spec\nhl7:validate\nINFO.1\nINFO.3\nnetwork:dicom-p\nnetwork:dicom-t\nnetwork:firewall\nnetwork:hl7-port\n",
+  "stderr": "",
+  "execution_time_ms": 261
+}

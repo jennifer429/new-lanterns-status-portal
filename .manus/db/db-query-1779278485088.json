@@ -1,0 +1,120 @@
+{
+  "query": "SELECT tc.organizationId, o.name as orgName, tc.taskId, tc.completed, tc.notApplicable, tc.inProgress, tc.blocked, tc.targetDate, tc.notes FROM taskCompletion tc LEFT JOIN organizations o ON tc.organizationId = o.id WHERE tc.taskId LIKE '%:%' AND (tc.completed=1 OR tc.inProgress=1 OR tc.blocked=1 OR tc.notes IS NOT NULL) LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT tc.organizationId, o.name as orgName, tc.taskId, tc.completed, tc.notApplicable, tc.inProgress, tc.blocked, tc.targetDate, tc.notes FROM taskCompletion tc LEFT JOIN organizations o ON tc.organizationId = o.id WHERE tc.taskId LIKE '%:%' AND (tc.completed=1 OR tc.inProgress=1 OR tc.blocked=1 OR tc.notes IS NOT NULL) LIMIT 10;",
+  "rows": [
+    {
+      "organizationId": "630001",
+      "orgName": "San Ramon Hospital",
+      "taskId": "hl7:validate",
+      "completed": "0",
+      "notApplicable": "0",
+      "inProgress": "1",
+      "blocked": "0",
+      "targetDate": "2026-03-19",
+      "notes": "NULL"
+    },
+    {
+      "organizationId": "630001",
+      "orgName": "San Ramon Hospital",
+      "taskId": "hl7:orm-spec",
+      "completed": "1",
+      "notApplicable": "0",
+      "inProgress": "0",
+      "blocked": "0",
+      "targetDate": "2026-03-19",
+      "notes": "NULL"
+    },
+    {
+      "organizationId": "630001",
+      "orgName": "San Ramon Hospital",
+      "taskId": "hl7:oru",
+      "completed": "1",
+      "notApplicable": "0",
+      "inProgress": "0",
+      "blocked": "0",
+      "targetDate": "2026-03-27",
+      "notes": "NULL"
+    },
+    {
+      "organizationId": "630001",
+      "orgName": "San Ramon Hospital",
+      "taskId": "hl7:orm",
+      "completed": "0",
+      "notApplicable": "0",
+      "inProgress": "1",
+      "blocked": "0",
+      "targetDate": "2026-03-27",
+      "notes": "NULL"
+    },
+    {
+      "organizationId": "630001",
+      "orgName": "San Ramon Hospital",
+      "taskId": "hl7:oru-spec",
+      "completed": "1",
+      "notApplicable": "0",
+      "inProgress": "0",
+      "blocked": "0",
+      "targetDate": "2026-03-27",
+      "notes": "NULL"
+    },
+    {
+      "organizationId": "630001",
+      "orgName": "San Ramon Hospital",
+      "taskId": "config:worklist",
+      "completed": "0",
+      "notApplicable": "0",
+      "inProgress": "1",
+      "blocked": "0",
+      "targetDate": "2026-04-06",
+      "notes": "NULL"
+    },
+    {
+      "organizationId": "630001",
+      "orgName": "San Ramon Hospital",
+      "taskId": "config:provider",
+      "completed": "0",
+      "notApplicable": "0",
+      "inProgress": "1",
+      "blocked": "0",
+      "targetDate": "2026-03-23",
+      "notes": "Phone numbers directory? - F/u "
+    },
+    {
+      "organizationId": "630001",
+      "orgName": "San Ramon Hospital",
+      "taskId": "config:proc",
+      "completed": "1",
+      "notApplicable": "0",
+      "inProgress": "0",
+      "blocked": "0",
+      "targetDate": "2026-03-11",
+      "notes": "NULL"
+    },
+    {
+      "organizationId": "630001",
+      "orgName": "San Ramon Hospital",
+      "taskId": "network:firewall",
+      "completed": "1",
+      "notApplicable": "0",
+      "inProgress": "0",
+      "blocked": "0",
+      "targetDate": "2026-03-20",
+      "notes": "NULL"
+    },
+    {
+      "organizationId": "630001",
+      "orgName": "San Ramon Hospital",
+      "taskId": "network:vpn",
+      "completed": "1",
+      "notApplicable": "0",
+      "inProgress": "0",
+      "blocked": "0",
+      "targetDate": "2026-03-20",
+      "notes": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "organizationId\torgName\ttaskId\tcompleted\tnotApplicable\tinProgress\tblocked\ttargetDate\tnotes\n630001\tSan Ramon Hospital\thl7:validate\t0\t0\t1\t0\t2026-03-19\tNULL\n630001\tSan Ramon Hospital\thl7:orm-spec\t1\t0\t0\t0\t2026-03-19\tNULL\n630001\tSan Ramon Hospital\thl7:oru\t1\t0\t0\t0\t2026-03-27\tNULL\n630001\tSan Ramon Hospital\thl7:orm\t0\t0\t1\t0\t2026-03-27\tNULL\n630001\tSan Ramon Hospital\thl7:oru-spec\t1\t0\t0\t0\t2026-03-27\tNULL\n630001\tSan Ramon Hospital\tconfig:worklist\t0\t0\t1\t0\t2026-04-06\tNULL\n630001\tSan Ramon Hospital\tconfig:provider\t0\t0\t1\t0\t2026-03-23\tPhone numbers directory? - F/u \n630001\tSan Ramon Hospital\tconfig:proc\t1\t0\t0\t0\t2026-03-11\tNULL\n630001\tSan Ramon Hospital\tnetwork:firewall\t1\t0\t0\t0\t2026-03-20\tNULL\n630001\tSan Ramon Hospital\tnetwork:vpn\t1\t0\t0\t0\t2026-03-20\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 278
+}

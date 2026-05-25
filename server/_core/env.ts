@@ -23,6 +23,8 @@ const envSchema = z.object({
   NOTION_CONTACTS_DATASOURCE_ID: z.string().default(""),
   NOTION_SYSTEMS_DATABASE_ID: z.string().default(""),
   NOTION_SYSTEMS_DATASOURCE_ID: z.string().default(""),
+  NOTION_TASK_DEFINITIONS_DATABASE_ID: z.string().default(""),
+  NOTION_TEST_DEFINITIONS_DATABASE_ID: z.string().default(""),
   GOOGLE_SERVICE_ACCOUNT_EMAIL: z.string().default(""),
   GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: z.string().default(""),
   GOOGLE_DRIVE_FOLDER_ID: z.string().default("1STogLQnTku6B0iAkAAqt7oFKFtaUy1Nu"),
@@ -48,6 +50,10 @@ const ENV_OVERRIDES: Record<string, string> = {
   // Systems v2 database
   NOTION_SYSTEMS_DATABASE_ID: "6eac7e0d-8a38-4279-86f4-db6a1bf6061b",
   NOTION_SYSTEMS_DATASOURCE_ID: "5bff84ad-ebe7-408f-9296-563608cac725",
+  // Task Definitions database
+  NOTION_TASK_DEFINITIONS_DATABASE_ID: "0c6fc19c-9422-472b-a44e-c140df00b621",
+  // Test Definitions database
+  NOTION_TEST_DEFINITIONS_DATABASE_ID: "a1e174e5-c7a4-45eb-8601-3f2a497f102e",
 };
 
 const e = envSchema.parse({ ...process.env, ...ENV_OVERRIDES });
@@ -87,6 +93,8 @@ export const ENV = {
   notionContactsDataSourceId: e.NOTION_CONTACTS_DATASOURCE_ID || e.NOTION_CONTACTS_DATABASE_ID,
   notionSystemsDbId: e.NOTION_SYSTEMS_DATABASE_ID,
   notionSystemsDataSourceId: e.NOTION_SYSTEMS_DATASOURCE_ID || e.NOTION_SYSTEMS_DATABASE_ID,
+  notionTaskDefinitionsDbId: e.NOTION_TASK_DEFINITIONS_DATABASE_ID,
+  notionTestDefinitionsDbId: e.NOTION_TEST_DEFINITIONS_DATABASE_ID,
   googleServiceAccountEmail: e.GOOGLE_SERVICE_ACCOUNT_EMAIL,
   googleServiceAccountPrivateKey: e.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY,
   googleDriveFolderId: e.GOOGLE_DRIVE_FOLDER_ID,

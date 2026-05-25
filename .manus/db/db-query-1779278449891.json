@@ -1,0 +1,142 @@
+{
+  "query": "SELECT DISTINCT organizationId FROM taskCompletion ORDER BY organizationId; SELECT DISTINCT taskId FROM taskCompletion ORDER BY taskId LIMIT 30;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT DISTINCT organizationId FROM taskCompletion ORDER BY organizationId; SELECT DISTINCT taskId FROM taskCompletion ORDER BY taskId LIMIT 30;",
+  "rows": [
+    {
+      "organizationId": "1"
+    },
+    {
+      "organizationId": "60008"
+    },
+    {
+      "organizationId": "60009"
+    },
+    {
+      "organizationId": "240001"
+    },
+    {
+      "organizationId": "240002"
+    },
+    {
+      "organizationId": "510001"
+    },
+    {
+      "organizationId": "630001"
+    },
+    {
+      "organizationId": "630002"
+    },
+    {
+      "organizationId": "990001"
+    },
+    {
+      "organizationId": "1140001"
+    },
+    {
+      "organizationId": "1170001"
+    },
+    {
+      "organizationId": "1380001"
+    },
+    {
+      "organizationId": "1410001"
+    },
+    {
+      "organizationId": "taskId"
+    },
+    {
+      "organizationId": "A.1"
+    },
+    {
+      "organizationId": "A.2"
+    },
+    {
+      "organizationId": "A.3"
+    },
+    {
+      "organizationId": "config:proc"
+    },
+    {
+      "organizationId": "config:provider"
+    },
+    {
+      "organizationId": "config:sso"
+    },
+    {
+      "organizationId": "config:users"
+    },
+    {
+      "organizationId": "config:worklist"
+    },
+    {
+      "organizationId": "hl7:adt"
+    },
+    {
+      "organizationId": "hl7:orm"
+    },
+    {
+      "organizationId": "hl7:orm-spec"
+    },
+    {
+      "organizationId": "hl7:oru"
+    },
+    {
+      "organizationId": "hl7:oru-spec"
+    },
+    {
+      "organizationId": "hl7:validate"
+    },
+    {
+      "organizationId": "INFO.1"
+    },
+    {
+      "organizationId": "INFO.3"
+    },
+    {
+      "organizationId": "network:dicom-p"
+    },
+    {
+      "organizationId": "network:dicom-t"
+    },
+    {
+      "organizationId": "network:firewall"
+    },
+    {
+      "organizationId": "network:hl7-port"
+    },
+    {
+      "organizationId": "network:vpn"
+    },
+    {
+      "organizationId": "prod:addendum"
+    },
+    {
+      "organizationId": "prod:adjustments"
+    },
+    {
+      "organizationId": "prod:cancel"
+    },
+    {
+      "organizationId": "prod:data-quality"
+    },
+    {
+      "organizationId": "prod:downtime"
+    },
+    {
+      "organizationId": "prod:golive"
+    },
+    {
+      "organizationId": "prod:normal-wf"
+    },
+    {
+      "organizationId": "prod:start"
+    },
+    {
+      "organizationId": "prod:stat"
+    }
+  ],
+  "messages": [],
+  "stdout": "organizationId\n1\n60008\n60009\n240001\n240002\n510001\n630001\n630002\n990001\n1140001\n1170001\n1380001\n1410001\ntaskId\nA.1\nA.2\nA.3\nconfig:proc\nconfig:provider\nconfig:sso\nconfig:users\nconfig:worklist\nhl7:adt\nhl7:orm\nhl7:orm-spec\nhl7:oru\nhl7:oru-spec\nhl7:validate\nINFO.1\nINFO.3\nnetwork:dicom-p\nnetwork:dicom-t\nnetwork:firewall\nnetwork:hl7-port\nnetwork:vpn\nprod:addendum\nprod:adjustments\nprod:cancel\nprod:data-quality\nprod:downtime\nprod:golive\nprod:normal-wf\nprod:start\nprod:stat\n",
+  "stderr": "",
+  "execution_time_ms": 1167
+}

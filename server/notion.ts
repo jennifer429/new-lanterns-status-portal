@@ -1,5 +1,6 @@
 import { Client } from "@notionhq/client";
 import { ENV } from "./_core/env";
+import { generateAnswerSummary } from "./notionSummary";
 
 /**
  * Notion API client for syncing intake responses.
@@ -108,13 +109,23 @@ export async function syncAnswerToNotion(
       return false;
     }
 
+    // Generate human-readable summary for JSON answers
+    const summary = generateAnswerSummary(answer);
+
+    const properties: any = {
+      "Answer": { rich_text: [{ text: { content: answer.substring(0, 2000) } }] },
+      "Status": { select: { name: answer ? "Complete" : "Not Started" } },
+      "Updated By": { rich_text: [{ text: { content: updatedBy || "" } }] },
+    };
+
+    // Only set Summary if there's a meaningful summary (JSON answers)
+    if (summary) {
+      properties["Summary"] = { rich_text: [{ text: { content: summary.substring(0, 2000) } }] };
+    }
+
     await client.pages.update({
       page_id: pageId,
-      properties: {
-        "Answer": { rich_text: [{ text: { content: answer.substring(0, 2000) } }] },
-        "Status": { select: { name: answer ? "Complete" : "Not Started" } },
-        "Updated By": { rich_text: [{ text: { content: updatedBy || "" } }] },
-      },
+      properties,
     });
 
     return true;

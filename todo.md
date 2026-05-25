@@ -192,3 +192,25 @@
 - [x] Change Notion Sync Log from every-run to hourly aggregated entries
 - [x] Add purge job: delete Sync Log entries older than 7 days (run every 3 days at 3 AM)
 - [x] Fix "archived ancestor" error on Sync Config page (user restored from Notion trash)
+
+## Tasks & Tests as Notion Databases (same workflow as questionnaires)
+- [ ] Create Notion "Task Definitions" database (Key, Title, Description, Section, Duration, IntakeLink, IntakeLinkLabel, SpecLink, SpecLinkLabel, Active, SortOrder)
+- [ ] Create Notion "Test Definitions" database (Key, Name, Description, Phase, RelatedQuestions, Active, SortOrder)
+- [ ] Migrate hardcoded taskDefs.ts (39 tasks across 7 sections) into Notion Task Definitions rows
+- [ ] Migrate hardcoded validation phases (28 tests across 4 phases) into Notion Test Definitions rows
+- [ ] Add env vars: NOTION_TASKS_DATABASE_ID, NOTION_TASKS_DATASOURCE_ID, NOTION_TESTS_DATABASE_ID, NOTION_TESTS_DATASOURCE_ID
+- [ ] Create MySQL cache tables: taskDefinitions, testDefinitions
+- [ ] Update implementation router: read task defs from MySQL (not hardcoded), write status to Notion + MySQL
+- [ ] Update validation router: read test defs from MySQL (not hardcoded), write status to Notion + MySQL
+- [ ] Add cron sync-back for task/test definitions (Notion → MySQL every 5 min, offset +4)
+- [ ] Update admin Refresh Sync to include task/test definitions
+- [ ] Write vitest for new routers
+
+## Notion Summary Column for JSON Answers
+
+- [x] Add "Summary" RICH_TEXT column to Notion questionnaire database
+- [x] Write generateAnswerSummary() utility (server/notionSummary.ts)
+- [x] Backfill all 79 existing JSON rows with human-readable summaries
+- [x] Wire Summary generation into syncAnswerToNotion (portal → Notion writes)
+- [x] Wire Summary regeneration into notionSyncBack (Notion → MySQL sync-back)
+- [x] Write vitest tests for generateAnswerSummary (11 tests passing)

@@ -1,0 +1,40 @@
+{
+  "query": "SELECT id, email, role, name FROM users WHERE role='admin' OR role='platform-admin' LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, email, role, name FROM users WHERE role='admin' OR role='platform-admin' LIMIT 5;",
+  "rows": [
+    {
+      "id": "150169",
+      "email": "ashley.morgan@radiologyone.com",
+      "role": "admin",
+      "name": "Ashley Morgan"
+    },
+    {
+      "id": "150170",
+      "email": "kevin.kadakia@radiologyone.com",
+      "role": "admin",
+      "name": "Kevin Kadakia"
+    },
+    {
+      "id": "1320055",
+      "email": "jstar@newlantern.ai",
+      "role": "admin",
+      "name": "jstar"
+    },
+    {
+      "id": "1410041",
+      "email": "test@newlantern.ai",
+      "role": "admin",
+      "name": "Test User"
+    },
+    {
+      "id": "1530005",
+      "email": "admin@newlantern.ai",
+      "role": "admin",
+      "name": "New Lantern Admin"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\temail\trole\tname\n150169\tashley.morgan@radiologyone.com\tadmin\tAshley Morgan\n150170\tkevin.kadakia@radiologyone.com\tadmin\tKevin Kadakia\n1320055\tjstar@newlantern.ai\tadmin\tjstar\n1410041\ttest@newlantern.ai\tadmin\tTest User\n1530005\tadmin@newlantern.ai\tadmin\tNew Lantern Admin\n",
+  "stderr": "",
+  "execution_time_ms": 272
+}
