@@ -1,0 +1,8 @@
+{
+  "query": "SELECT ir.questionId, ir.answer FROM intakeResponses ir JOIN organizations o ON ir.organizationId = o.id WHERE o.slug = 'RRAL' AND (ir.questionId LIKE '%CONN%' OR ir.questionId LIKE '%conn%' OR ir.questionId LIKE '%endpoint%' OR ir.questionId LIKE '%network%' OR ir.questionId LIKE '%ip%' OR ir.questionId LIKE '%port%' OR ir.questionId LIKE '%dicom%' OR ir.questionId LIKE '%hl7%' OR ir.questionId LIKE '%ae%') ORDER BY ir.questionId;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT ir.questionId, ir.answer FROM intakeResponses ir JOIN organizations o ON ir.organizationId = o.id WHERE o.slug = 'RRAL' AND (ir.questionId LIKE '%CONN%' OR ir.questionId LIKE '%conn%' OR ir.questionId LIKE '%endpoint%' OR ir.questionId LIKE '%network%' OR ir.questionId LIKE '%ip%' OR ir.questionId LIKE '%port%' OR ir.questionId LIKE '%dicom%' OR ir.questionId LIKE '%hl7%' OR ir.questionId LIKE '%ae%') ORDER BY ir.questionId;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'ir.answer' in 'field list'"
+  ]
+}

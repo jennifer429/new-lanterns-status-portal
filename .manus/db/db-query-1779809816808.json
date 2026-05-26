@@ -1,0 +1,15 @@
+{
+  "query": "SELECT ir.questionId, ir.section, LEFT(ir.response, 500) as response FROM intakeResponses ir JOIN organizations o ON ir.organizationId = o.id WHERE o.slug = 'RRAL' AND (ir.questionId LIKE '%CONN%' OR ir.questionId LIKE '%conn%' OR ir.section LIKE '%connect%' OR ir.section LIKE '%network%') ORDER BY ir.questionId;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT ir.questionId, ir.section, LEFT(ir.response, 500) as response FROM intakeResponses ir JOIN organizations o ON ir.organizationId = o.id WHERE o.slug = 'RRAL' AND (ir.questionId LIKE '%CONN%' OR ir.questionId LIKE '%conn%' OR ir.section LIKE '%connect%' OR ir.section LIKE '%network%') ORDER BY ir.questionId;",
+  "rows": [
+    {
+      "questionId": "CONN.endpoints",
+      "section": "intake",
+      "response": "[{\"id\":\"conn_1go1fuxu\",\"trafficType\":\"Orders\",\"sourceSystem\":\"iguana\",\"destinationSystem\":\"Silverback\",\"sourceIp\":\"209.235.182.50\",\"sourcePort\":\"\",\"destIp\":\"2108\",\"destPort\":\"\",\"sourceAeTitle\":\"\",\"destAeTitle\":\"\",\"envTest\":false,\"envProd\":true,\"notes\":\"Prod\"},{\"id\":\"conn_prime_oru_test\",\"trafficType\":\"Reports\",\"sourceSystem\":\"Silverback\",\"destinationSystem\":\"Epic (RRAL via Health Connect)\",\"sourceIp\":\"\",\"sourcePort\":\"\",\"destIp\":\"10.34.101.5\",\"destPort\":\"5462\",\"sourceAeTitle\":\"\",\"destAeTitle\":\"\","
+    }
+  ],
+  "messages": [],
+  "stdout": "questionId\tsection\tresponse\nCONN.endpoints\tintake\t[{\"id\":\"conn_1go1fuxu\",\"trafficType\":\"Orders\",\"sourceSystem\":\"iguana\",\"destinationSystem\":\"Silverback\",\"sourceIp\":\"209.235.182.50\",\"sourcePort\":\"\",\"destIp\":\"2108\",\"destPort\":\"\",\"sourceAeTitle\":\"\",\"destAeTitle\":\"\",\"envTest\":false,\"envProd\":true,\"notes\":\"Prod\"},{\"id\":\"conn_prime_oru_test\",\"trafficType\":\"Reports\",\"sourceSystem\":\"Silverback\",\"destinationSystem\":\"Epic (RRAL via Health Connect)\",\"sourceIp\":\"\",\"sourcePort\":\"\",\"destIp\":\"10.34.101.5\",\"destPort\":\"5462\",\"sourceAeTitle\":\"\",\"destAeTitle\":\"\",\n",
+  "stderr": "",
+  "execution_time_ms": 263
+}
