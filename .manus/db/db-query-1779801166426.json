@@ -1,0 +1,80 @@
+{
+  "query": "SELECT tc.organizationId, tc.taskId, tc.updatedAt, tc.notionLastEdited, o.slug FROM taskCompletion tc JOIN organizations o ON o.id = tc.organizationId WHERE o.slug = 'boulder' AND tc.taskId LIKE 'prod:%' ORDER BY tc.updatedAt DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT tc.organizationId, tc.taskId, tc.updatedAt, tc.notionLastEdited, o.slug FROM taskCompletion tc JOIN organizations o ON o.id = tc.organizationId WHERE o.slug = 'boulder' AND tc.taskId LIKE 'prod:%' ORDER BY tc.updatedAt DESC LIMIT 10;",
+  "rows": [
+    {
+      "organizationId": "240002",
+      "taskId": "prod:adjustments",
+      "updatedAt": "2026-05-26 12:05:45",
+      "notionLastEdited": "2026-05-25 16:43:00",
+      "slug": "Boulder"
+    },
+    {
+      "organizationId": "240002",
+      "taskId": "prod:volume",
+      "updatedAt": "2026-05-26 12:05:44",
+      "notionLastEdited": "2026-05-25 18:03:00",
+      "slug": "Boulder"
+    },
+    {
+      "organizationId": "240002",
+      "taskId": "prod:downtime",
+      "updatedAt": "2026-05-26 12:05:43",
+      "notionLastEdited": "2026-05-25 16:43:00",
+      "slug": "Boulder"
+    },
+    {
+      "organizationId": "240002",
+      "taskId": "prod:cancel",
+      "updatedAt": "2026-05-26 12:05:42",
+      "notionLastEdited": "2026-05-25 16:43:00",
+      "slug": "Boulder"
+    },
+    {
+      "organizationId": "240002",
+      "taskId": "prod:addendum",
+      "updatedAt": "2026-05-26 12:05:41",
+      "notionLastEdited": "2026-05-25 16:43:00",
+      "slug": "Boulder"
+    },
+    {
+      "organizationId": "240002",
+      "taskId": "prod:stat",
+      "updatedAt": "2026-05-26 12:05:40",
+      "notionLastEdited": "2026-05-25 16:43:00",
+      "slug": "Boulder"
+    },
+    {
+      "organizationId": "240002",
+      "taskId": "prod:normal-wf",
+      "updatedAt": "2026-05-26 12:05:39",
+      "notionLastEdited": "2026-05-25 16:43:00",
+      "slug": "Boulder"
+    },
+    {
+      "organizationId": "240002",
+      "taskId": "prod:start",
+      "updatedAt": "2026-05-26 12:05:38",
+      "notionLastEdited": "2026-05-25 16:43:00",
+      "slug": "Boulder"
+    },
+    {
+      "organizationId": "240002",
+      "taskId": "prod:golive",
+      "updatedAt": "2026-05-26 12:00:46",
+      "notionLastEdited": "2026-05-25 16:43:00",
+      "slug": "Boulder"
+    },
+    {
+      "organizationId": "240002",
+      "taskId": "prod:data-quality",
+      "updatedAt": "2026-05-26 12:00:25",
+      "notionLastEdited": "2026-05-25 16:43:00",
+      "slug": "Boulder"
+    }
+  ],
+  "messages": [],
+  "stdout": "organizationId\ttaskId\tupdatedAt\tnotionLastEdited\tslug\n240002\tprod:adjustments\t2026-05-26 12:05:45\t2026-05-25 16:43:00\tBoulder\n240002\tprod:volume\t2026-05-26 12:05:44\t2026-05-25 18:03:00\tBoulder\n240002\tprod:downtime\t2026-05-26 12:05:43\t2026-05-25 16:43:00\tBoulder\n240002\tprod:cancel\t2026-05-26 12:05:42\t2026-05-25 16:43:00\tBoulder\n240002\tprod:addendum\t2026-05-26 12:05:41\t2026-05-25 16:43:00\tBoulder\n240002\tprod:stat\t2026-05-26 12:05:40\t2026-05-25 16:43:00\tBoulder\n240002\tprod:normal-wf\t2026-05-26 12:05:39\t2026-05-25 16:43:00\tBoulder\n240002\tprod:start\t2026-05-26 12:05:38\t2026-05-25 16:43:00\tBoulder\n240002\tprod:golive\t2026-05-26 12:00:46\t2026-05-25 16:43:00\tBoulder\n240002\tprod:data-quality\t2026-05-26 12:00:25\t2026-05-25 16:43:00\tBoulder\n",
+  "stderr": "",
+  "execution_time_ms": 273
+}

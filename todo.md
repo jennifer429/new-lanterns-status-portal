@@ -316,7 +316,7 @@
 
 ## Claude Scan Fixes
 - [ ] Convert file audit log from Google Sheets to Notion database
-- [ ] Gate /org/admin links behind role checks (UserMenu, Implementation, Validation)
+- [x] Gate /org/admin links behind role checks (UserMenu, Implementation, Validation) — already gated with user?.role === "admin"
 - [ ] Fix password reset test assertion (error message mismatch)
 - [ ] Fix vendor-options test assertions (limit:5 → limit:50, addSystemType return shape)
 - [ ] Update CLAUDE.md to reflect actual routers, tables, and endpoints
@@ -329,3 +329,10 @@
 - [x] Update reconciliation to only flag rows where notionLastEdited = null and stale > 10min
 - [x] Write tests proving: skip on same version, write on new version, portal nulls the field (8 tests, all pass)
 - [x] Backfill existing rows with current Notion last_edited_time values (290 tasks + 68 validation = all filled)
+
+## Cleanup & Organization (May 26)
+- [x] Move active Notion databases under INTERFACES page (6 databases moved)
+- [x] Remove dead ENV properties from env.ts (notionSyncConfigDataSourceId, notionTaskDefinitionsDbId, notionTestDefinitionsDbId, notionTaskCompletionDbId, notionValidationResultsDbId)
+- [x] Remove NOTION_SYNC_CONFIG_DATASOURCE_ID test assertion (env var still exists but property is unused)
+- [x] Archive one-time migration scripts from scripts/ directory (17 files moved to scripts/archived/)
+- [x] Gate /org/admin links behind role checks (UserMenu, Implementation, Validation) — already gated with user?.role === "admin"

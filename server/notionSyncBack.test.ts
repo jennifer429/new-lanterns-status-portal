@@ -12,12 +12,6 @@ describe("Notion Sync-Back", () => {
     expect(val!.length).toBeGreaterThan(10);
   });
 
-  it("should have NOTION_SYNC_CONFIG_DATASOURCE_ID configured", () => {
-    const val = process.env.NOTION_SYNC_CONFIG_DATASOURCE_ID;
-    expect(val).toBeTruthy();
-    expect(val!.length).toBeGreaterThan(10);
-  });
-
   it("should have NOTION_SYNC_CONFIG_PAGE_ID configured", () => {
     const val = process.env.NOTION_SYNC_CONFIG_PAGE_ID;
     expect(val).toBeTruthy();

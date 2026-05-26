@@ -30,7 +30,7 @@ interface AuditEntry {
 }
 
 const NOTION_FILE_AUDIT_DATASOURCE_ID = process.env.NOTION_FILE_AUDIT_DATASOURCE_ID || "";
-const NOTION_API_KEY = process.env.NOTION_API_KEY || process.env.Notion_API_Key || "";
+const NOTION_API_KEY = process.env.NOTION_API_KEY || "";
 
 /**
  * Log a file activity event to the Notion database.
