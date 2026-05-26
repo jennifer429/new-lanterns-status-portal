@@ -307,3 +307,9 @@
 - [x] Investigate org 1140001 — orphan test data deleted from MySQL + archived in Notion
 - [x] Rename Notion Sync Log from "Questionnaire Sync Log" to "Portal Sync Log"
 - [x] Add filtered views to Notion Sync Log (Failures Only, Last 7 Days)
+
+## Dirty-Check Sync (prevent phantom drift)
+- [x] Implement dirty-check in upsertTaskCompletion — skip write if data identical
+- [x] Implement dirty-check in upsertValidationResult — skip write if data identical
+- [x] Write vitest tests proving: skip on identical, write on real change, new row always inserts (13 tests, all pass)
+- [x] Fix 3 consecutive failures on sync pipelines (reset to 0, server running healthy)

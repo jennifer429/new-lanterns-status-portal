@@ -1,0 +1,28 @@
+{
+  "query": "SELECT vr.organizationId, vr.testKey, vr.status, vr.actual, vr.updatedAt, vr.updatedBy, o.slug FROM validationResults vr JOIN organizations o ON o.id = vr.organizationId WHERE o.slug = 'jcrhc' AND vr.testKey IN ('3:2', '3:3') ORDER BY vr.testKey;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT vr.organizationId, vr.testKey, vr.status, vr.actual, vr.updatedAt, vr.updatedBy, o.slug FROM validationResults vr JOIN organizations o ON o.id = vr.organizationId WHERE o.slug = 'jcrhc' AND vr.testKey IN ('3:2', '3:3') ORDER BY vr.testKey;",
+  "rows": [
+    {
+      "organizationId": "60008",
+      "testKey": "3:2",
+      "status": "Not Tested",
+      "actual": "NULL",
+      "updatedAt": "2026-05-25 22:03:06",
+      "updatedBy": "NULL",
+      "slug": "jcrhc"
+    },
+    {
+      "organizationId": "60008",
+      "testKey": "3:3",
+      "status": "Not Tested",
+      "actual": "NULL",
+      "updatedAt": "2026-05-25 22:03:06",
+      "updatedBy": "NULL",
+      "slug": "jcrhc"
+    }
+  ],
+  "messages": [],
+  "stdout": "organizationId\ttestKey\tstatus\tactual\tupdatedAt\tupdatedBy\tslug\n60008\t3:2\tNot Tested\tNULL\t2026-05-25 22:03:06\tNULL\tjcrhc\n60008\t3:3\tNot Tested\tNULL\t2026-05-25 22:03:06\tNULL\tjcrhc\n",
+  "stderr": "",
+  "execution_time_ms": 275
+}

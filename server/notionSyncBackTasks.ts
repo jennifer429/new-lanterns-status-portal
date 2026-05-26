@@ -129,14 +129,14 @@ async function incrementFailures(pipeline: string): Promise<void> {
 }
 
 export interface TaskValidationSyncResult {
-  tasks: { fetched: number; upserted: number; failed: number; errors: string[] };
-  validation: { fetched: number; upserted: number; failed: number; errors: string[] };
+  tasks: { fetched: number; upserted: number; skipped: number; failed: number; errors: string[] };
+  validation: { fetched: number; upserted: number; skipped: number; failed: number; errors: string[] };
   durationMs: number;
 }
 
 // ── Upsert helpers ─────────────────────────────────────────────────────────────
 
-async function upsertTaskCompletion(row: NotionTaskRow): Promise<void> {
+async function upsertTaskCompletion(row: NotionTaskRow): Promise<"inserted" | "updated" | "skipped"> {
   const db = await requireDb();
   const flags = statusToTaskFlags(row.status);
 
@@ -164,20 +164,38 @@ async function upsertTaskCompletion(row: NotionTaskRow): Promise<void> {
   };
 
   if (existing) {
+    // Dirty check: only write if something actually changed
+    const isIdentical =
+      existing.sectionName === payload.sectionName &&
+      existing.completed === payload.completed &&
+      existing.inProgress === payload.inProgress &&
+      existing.blocked === payload.blocked &&
+      existing.notApplicable === payload.notApplicable &&
+      (existing.completedAt?.toISOString() || null) === (payload.completedAt?.toISOString() || null) &&
+      (existing.completedBy || null) === payload.completedBy &&
+      (existing.targetDate || null) === payload.targetDate &&
+      (existing.notes || null) === payload.notes;
+
+    if (isIdentical) {
+      return "skipped";
+    }
+
     await db
       .update(taskCompletion)
       .set({ ...payload, updatedAt: new Date() })
       .where(eq(taskCompletion.id, existing.id));
+    return "updated";
   } else {
     await db.insert(taskCompletion).values({
       organizationId: row.organizationId,
       taskId: row.taskKey,
       ...payload,
     });
+    return "inserted";
   }
 }
 
-async function upsertValidationResult(row: NotionValidationRow): Promise<void> {
+async function upsertValidationResult(row: NotionValidationRow): Promise<"inserted" | "updated" | "skipped"> {
   const db = await requireDb();
 
   const [existing] = await db
@@ -201,16 +219,31 @@ async function upsertValidationResult(row: NotionValidationRow): Promise<void> {
   };
 
   if (existing) {
+    // Dirty check: only write if something actually changed
+    const isIdentical =
+      (existing.actual || null) === payload.actual &&
+      existing.status === payload.status &&
+      (existing.signOff || null) === payload.signOff &&
+      (existing.notes || null) === payload.notes &&
+      (existing.testedDate || null) === payload.testedDate &&
+      (existing.updatedBy || null) === payload.updatedBy;
+
+    if (isIdentical) {
+      return "skipped";
+    }
+
     await db
       .update(validationResults)
       .set({ ...payload, updatedAt: new Date() })
       .where(eq(validationResults.id, existing.id));
+    return "updated";
   } else {
     await db.insert(validationResults).values({
       organizationId: row.organizationId,
       testKey: row.testKey,
       ...payload,
     });
+    return "inserted";
   }
 }
 
@@ -223,8 +256,8 @@ async function upsertValidationResult(row: NotionValidationRow): Promise<void> {
 export async function runTaskValidationSyncBack(): Promise<TaskValidationSyncResult> {
   const startTime = Date.now();
   const result: TaskValidationSyncResult = {
-    tasks: { fetched: 0, upserted: 0, failed: 0, errors: [] },
-    validation: { fetched: 0, upserted: 0, failed: 0, errors: [] },
+    tasks: { fetched: 0, upserted: 0, skipped: 0, failed: 0, errors: [] },
+    validation: { fetched: 0, upserted: 0, skipped: 0, failed: 0, errors: [] },
     durationMs: 0,
   };
 
@@ -239,8 +272,12 @@ export async function runTaskValidationSyncBack(): Promise<TaskValidationSyncRes
 
     for (const row of taskRows) {
       try {
-        await upsertTaskCompletion(row);
-        result.tasks.upserted++;
+        const action = await upsertTaskCompletion(row);
+        if (action === "skipped") {
+          result.tasks.skipped++;
+        } else {
+          result.tasks.upserted++;
+        }
       } catch (err: any) {
         result.tasks.failed++;
         result.tasks.errors.push(`${row.taskKey}: ${err.message?.substring(0, 80)}`);
@@ -272,8 +309,12 @@ export async function runTaskValidationSyncBack(): Promise<TaskValidationSyncRes
 
     for (const row of valRows) {
       try {
-        await upsertValidationResult(row);
-        result.validation.upserted++;
+        const action = await upsertValidationResult(row);
+        if (action === "skipped") {
+          result.validation.skipped++;
+        } else {
+          result.validation.upserted++;
+        }
       } catch (err: any) {
         result.validation.failed++;
         result.validation.errors.push(`${row.testKey}: ${err.message?.substring(0, 80)}`);
@@ -300,11 +341,12 @@ export async function runTaskValidationSyncBack(): Promise<TaskValidationSyncRes
   result.durationMs = Date.now() - startTime;
 
   const totalUpserted = result.tasks.upserted + result.validation.upserted;
+  const totalSkipped = result.tasks.skipped + result.validation.skipped;
   const totalFailed = result.tasks.failed + result.validation.failed;
-  if (totalUpserted > 0 || totalFailed > 0) {
+  if (totalUpserted > 0 || totalFailed > 0 || totalSkipped > 0) {
     console.log(
-      `[cron] Task/Validation sync-back — tasks: ${result.tasks.upserted}/${result.tasks.fetched} upserted, ` +
-      `validation: ${result.validation.upserted}/${result.validation.fetched} upserted, ` +
+      `[cron] Task/Validation sync-back — tasks: ${result.tasks.upserted} written/${result.tasks.skipped} skipped/${result.tasks.fetched} fetched, ` +
+      `validation: ${result.validation.upserted} written/${result.validation.skipped} skipped/${result.validation.fetched} fetched, ` +
       `${totalFailed} failed (${result.durationMs}ms)`
     );
   }

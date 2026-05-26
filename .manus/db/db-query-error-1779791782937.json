@@ -1,0 +1,8 @@
+{
+  "query": "SELECT orgId, testKey, status, result, updatedAt, notionPageId FROM validationResults WHERE orgId = (SELECT id FROM organizations WHERE slug = 'jcrhc' LIMIT 1) AND testKey IN ('3:3', '3:2') ORDER BY testKey;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT orgId, testKey, status, result, updatedAt, notionPageId FROM validationResults WHERE orgId = (SELECT id FROM organizations WHERE slug = 'jcrhc' LIMIT 1) AND testKey IN ('3:3', '3:2') ORDER BY testKey;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'orgid' in 'where clause'"
+  ]
+}
