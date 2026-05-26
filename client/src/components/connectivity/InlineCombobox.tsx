@@ -34,7 +34,7 @@ export function InlineCombobox({
           <ChevronsUpDown className="ml-0.5 h-2.5 w-2.5 shrink-0 text-muted-foreground/40" />
         </button>
       </PopoverTrigger>
-      <PopoverContent className={cn('p-0', popoverWidth || 'w-[220px]')} align="start">
+      <PopoverContent className={cn('p-0', popoverWidth || 'w-[280px]')} align="start">
         <Command>
           <CommandInput placeholder="Search or type..." value={search} onValueChange={setSearch} />
           <CommandList>

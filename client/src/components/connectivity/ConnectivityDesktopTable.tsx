@@ -83,7 +83,7 @@ export function ConnectivityDesktopTable({
             {/* Section header — collapsible */}
             <button
               onClick={() => toggleGroup(type)}
-              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/10 transition-colors text-left"
+              className="w-full flex items-center gap-3 px-5 py-3 hover:bg-muted/10 transition-colors text-left"
             >
               {isExpanded(type) ? (
                 <ChevronDown className="w-4 h-4 text-muted-foreground/60 shrink-0" />
@@ -91,7 +91,7 @@ export function ConnectivityDesktopTable({
                 <ChevronRight className="w-4 h-4 text-muted-foreground/60 shrink-0" />
               )}
               <span className={cn(
-                'text-xs font-semibold px-2 py-0.5 rounded border',
+                'text-xs font-semibold px-2.5 py-1 rounded border',
                 getTypeColor(type)
               )}>
                 {type}
@@ -101,21 +101,21 @@ export function ConnectivityDesktopTable({
               </span>
             </button>
 
-            {/* Section content — connection rows */}
+            {/* Section content — connection rows with horizontal scroll */}
             {isExpanded(type) && (
-              <div className="pb-2">
-                <table className="w-full border-collapse" style={{ minWidth: '900px' }}>
+              <div className="pb-3 overflow-x-auto">
+                <table className="w-full border-collapse" style={{ minWidth: '1100px' }}>
                   <colgroup>
-                    {/* Source System */}  <col style={{ width: '160px' }} />
-                    {/* Arrow */}          <col style={{ width: '40px' }} />
-                    {/* Dest System */}    <col style={{ width: '160px' }} />
-                    {/* Src IP:Port */}    <col style={{ width: '170px' }} />
-                    {/* Dst IP:Port */}    <col style={{ width: '170px' }} />
-                    {/* Src AE */}         <col style={{ width: '100px' }} />
-                    {/* Dst AE */}         <col style={{ width: '100px' }} />
+                    {/* Source System */}  <col style={{ width: '200px' }} />
+                    {/* Arrow */}          <col style={{ width: '36px' }} />
+                    {/* Dest System */}    <col style={{ width: '200px' }} />
+                    {/* Src IP:Port */}    <col style={{ width: '180px' }} />
+                    {/* Dst IP:Port */}    <col style={{ width: '180px' }} />
+                    {/* Src AE */}         <col style={{ width: '110px' }} />
+                    {/* Dst AE */}         <col style={{ width: '110px' }} />
                     {/* Env */}            <col style={{ width: '70px' }} />
-                    {/* Notes */}          <col style={{ minWidth: '140px' }} />
-                    {/* Actions */}        <col style={{ width: '50px' }} />
+                    {/* Notes */}          <col style={{ minWidth: '200px' }} />
+                    {/* Actions */}        <col style={{ width: '56px' }} />
                   </colgroup>
 
                   {/* Sub-header */}
@@ -126,7 +126,7 @@ export function ConnectivityDesktopTable({
                         'Source IP:Port', 'Dest IP:Port',
                         'Src AE', 'Dst AE', 'Env', 'Notes', '',
                       ].map((h, i) => (
-                        <th key={i} className="text-left px-2 py-1.5 text-[10px] font-medium text-muted-foreground/40 uppercase tracking-wider whitespace-nowrap select-none">
+                        <th key={i} className="text-left px-3 py-2 text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wider whitespace-nowrap select-none">
                           {h}
                         </th>
                       ))}
@@ -138,10 +138,10 @@ export function ConnectivityDesktopTable({
                       const globalIdx = group.indices[localIdx];
                       return (
                         <tr key={row.id}
-                          className="group border-b border-border/15 last:border-b-0 hover:bg-muted/8 transition-colors">
+                          className="group border-b border-border/10 last:border-b-0 hover:bg-muted/8 transition-colors">
 
                           {/* Source System */}
-                          <td className="px-2 py-1 align-middle">
+                          <td className="px-3 py-1.5 align-middle">
                             <InlineCombobox
                               value={row.sourceSystem} onChange={v => onSetField(globalIdx, 'sourceSystem', v)}
                               options={systemNames} placeholder="Source…"
@@ -154,7 +154,7 @@ export function ConnectivityDesktopTable({
                           </td>
 
                           {/* Dest System */}
-                          <td className="px-2 py-1 align-middle">
+                          <td className="px-3 py-1.5 align-middle">
                             <InlineCombobox
                               value={row.destinationSystem} onChange={v => onSetField(globalIdx, 'destinationSystem', v)}
                               options={systemNames} placeholder="Dest…"
@@ -162,46 +162,46 @@ export function ConnectivityDesktopTable({
                           </td>
 
                           {/* Source IP:Port (merged) */}
-                          <td className="px-2 py-1 align-middle">
-                            <div className="flex items-center gap-0.5">
+                          <td className="px-3 py-1.5 align-middle">
+                            <div className="flex items-center gap-1">
                               <InlineCell value={row.sourceIp} onChange={v => onSetField(globalIdx, 'sourceIp', v)}
-                                placeholder="10.1.2.3" className="flex-1 min-w-0" />
-                              <span className="text-[10px] text-muted-foreground/25 shrink-0">:</span>
+                                placeholder="10.1.2.3" className="flex-1 min-w-0 font-mono text-[11px]" />
+                              <span className="text-[10px] text-muted-foreground/30 shrink-0">:</span>
                               <InlineCell value={row.sourcePort} onChange={v => onSetField(globalIdx, 'sourcePort', v)}
-                                placeholder="104" className="w-12 shrink-0 text-right" />
+                                placeholder="104" className="w-14 shrink-0 text-right font-mono text-[11px]" />
                             </div>
                           </td>
 
                           {/* Dest IP:Port (merged) */}
-                          <td className="px-2 py-1 align-middle">
-                            <div className="flex items-center gap-0.5">
+                          <td className="px-3 py-1.5 align-middle">
+                            <div className="flex items-center gap-1">
                               <InlineCell value={row.destIp} onChange={v => onSetField(globalIdx, 'destIp', v)}
-                                placeholder="10.1.2.50" className="flex-1 min-w-0" />
-                              <span className="text-[10px] text-muted-foreground/25 shrink-0">:</span>
+                                placeholder="10.1.2.50" className="flex-1 min-w-0 font-mono text-[11px]" />
+                              <span className="text-[10px] text-muted-foreground/30 shrink-0">:</span>
                               <InlineCell value={row.destPort} onChange={v => onSetField(globalIdx, 'destPort', v)}
-                                placeholder="11112" className="w-12 shrink-0 text-right" />
+                                placeholder="11112" className="w-14 shrink-0 text-right font-mono text-[11px]" />
                             </div>
                           </td>
 
                           {/* Src AE Title */}
-                          <td className="px-2 py-1 align-middle">
+                          <td className="px-3 py-1.5 align-middle">
                             <InlineCell value={row.sourceAeTitle} onChange={v => onSetField(globalIdx, 'sourceAeTitle', v)}
-                              placeholder="SRC_AE" />
+                              placeholder="SRC_AE" className="font-mono text-[11px]" />
                           </td>
 
                           {/* Dst AE Title */}
-                          <td className="px-2 py-1 align-middle">
+                          <td className="px-3 py-1.5 align-middle">
                             <InlineCell value={row.destAeTitle} onChange={v => onSetField(globalIdx, 'destAeTitle', v)}
-                              placeholder="DST_AE" />
+                              placeholder="DST_AE" className="font-mono text-[11px]" />
                           </td>
 
                           {/* Env — single badge style */}
-                          <td className="px-2 py-1 align-middle">
-                            <div className="flex items-center gap-0.5">
+                          <td className="px-3 py-1.5 align-middle">
+                            <div className="flex items-center gap-1">
                               <button onClick={() => onSetField(globalIdx, 'envTest', !row.envTest)}
                                 title={row.envTest ? 'Test (click to remove)' : 'Add test env'}
                                 className={cn(
-                                  'px-1.5 py-0.5 rounded text-[10px] font-bold border transition-colors',
+                                  'px-2 py-0.5 rounded text-[10px] font-bold border transition-colors',
                                   row.envTest
                                     ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30'
                                     : 'text-muted-foreground/20 border-transparent hover:text-muted-foreground/40'
@@ -209,7 +209,7 @@ export function ConnectivityDesktopTable({
                               <button onClick={() => onSetField(globalIdx, 'envProd', !row.envProd)}
                                 title={row.envProd ? 'Prod (click to remove)' : 'Add prod env'}
                                 className={cn(
-                                  'px-1.5 py-0.5 rounded text-[10px] font-bold border transition-colors',
+                                  'px-2 py-0.5 rounded text-[10px] font-bold border transition-colors',
                                   row.envProd
                                     ? 'bg-green-500/15 text-green-400 border-green-500/30'
                                     : 'text-muted-foreground/20 border-transparent hover:text-muted-foreground/40'
@@ -218,20 +218,20 @@ export function ConnectivityDesktopTable({
                           </td>
 
                           {/* Notes */}
-                          <td className="px-2 py-1 align-middle">
+                          <td className="px-3 py-1.5 align-middle">
                             <InlineCell value={row.notes} onChange={v => onSetField(globalIdx, 'notes', v)} placeholder="Notes…" />
                           </td>
 
                           {/* Row actions — appear on hover */}
-                          <td className="px-1 py-1 align-middle">
+                          <td className="px-2 py-1.5 align-middle">
                             <div className="flex items-center gap-0.5 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                               <button onClick={() => onDupRow(globalIdx)} title="Duplicate"
-                                className="p-1 rounded hover:bg-muted/60 text-muted-foreground/50 hover:text-foreground transition-colors">
-                                <Copy className="w-3 h-3" />
+                                className="p-1.5 rounded hover:bg-muted/60 text-muted-foreground/50 hover:text-foreground transition-colors">
+                                <Copy className="w-3.5 h-3.5" />
                               </button>
                               <button onClick={() => onRemoveRow(globalIdx)} title="Delete"
-                                className="p-1 rounded hover:bg-red-500/20 text-muted-foreground/50 hover:text-red-400 transition-colors">
-                                <Trash2 className="w-3 h-3" />
+                                className="p-1.5 rounded hover:bg-red-500/20 text-muted-foreground/50 hover:text-red-400 transition-colors">
+                                <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           </td>
@@ -248,8 +248,8 @@ export function ConnectivityDesktopTable({
 
       {/* Notion-style "+ New row" footer */}
       <button onClick={onAddRow}
-        className="flex w-full items-center gap-1.5 px-4 py-2 text-[11px] text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted/10 transition-colors border-t border-border/30 select-none">
-        <Plus className="w-3 h-3" />
+        className="flex w-full items-center gap-1.5 px-5 py-2.5 text-[11px] text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted/10 transition-colors border-t border-border/30 select-none">
+        <Plus className="w-3.5 h-3.5" />
         New row
       </button>
     </div>
