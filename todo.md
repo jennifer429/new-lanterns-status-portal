@@ -336,3 +336,13 @@
 - [x] Remove NOTION_SYNC_CONFIG_DATASOURCE_ID test assertion (env var still exists but property is unused)
 - [x] Archive one-time migration scripts from scripts/ directory (17 files moved to scripts/archived/)
 - [x] Gate /org/admin links behind role checks (UserMenu, Implementation, Validation) — already gated with user?.role === "admin"
+
+## Fix: Notion pages.create for new task/validation rows (May 26)
+- [x] Fix dataSources.createPages → pages.create (method doesn't exist in SDK)
+- [x] Add separate database_id env properties (pages.create needs database_id, dataSources.query needs data_source_id)
+- [x] Verify retry queue draining successfully (20 succeeded, 0 failed on first cycle; 442 pending will drain over ~2 hours)
+
+## Fix: RRAL Connectivity blank page (May 26)
+- [x] Root cause: intake questionnaire CONN.endpoints save only writes to MySQL + questionnaire Notion DB, NOT to Integration Connection Registry
+- [x] Manually pushed 8 RRAL connectivity rows from intake data to Integration Connection Registry
+- [ ] Wire intake CONN.endpoints save to also push rows to Integration Connection Registry (prevents future blank connectivity pages)

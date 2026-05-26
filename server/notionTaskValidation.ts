@@ -14,6 +14,9 @@ import { enqueueFailedWrite } from "./notionRetryQueue";
 
 const TASK_COMPLETION_DS_ID = ENV.notionTaskCompletionDataSourceId;
 const VALIDATION_RESULTS_DS_ID = ENV.notionValidationResultsDataSourceId;
+// pages.create requires the database_id (not data_source_id)
+const TASK_COMPLETION_DB_ID = ENV.notionTaskCompletionDatabaseId;
+const VALIDATION_RESULTS_DB_ID = ENV.notionValidationResultsDatabaseId;
 
 let notionClient: Client | null = null;
 
@@ -142,17 +145,15 @@ export async function syncTaskCompletionToNotion(payload: TaskCompletionPayload)
       // Update existing
       await client.pages.update({ page_id: pageId, properties });
     } else {
-      // Create new page
-      await (client as any).dataSources.createPages({
-        data_source_id: TASK_COMPLETION_DS_ID,
-        pages: [{
-          properties: {
-            "Name": { title: [{ text: { content: `${payload.orgSlug}/${payload.taskId}` } }] },
-            "Organization ID": { number: payload.organizationId },
-            "Task Key": { rich_text: [{ text: { content: payload.taskId } }] },
-            ...properties,
-          },
-        }],
+      // Create new page using pages.create (needs database_id, not data_source_id)
+      await client.pages.create({
+        parent: { database_id: TASK_COMPLETION_DB_ID! },
+        properties: {
+          "Name": { title: [{ text: { content: `${payload.orgSlug}/${payload.taskId}` } }] },
+          "Organization ID": { number: payload.organizationId },
+          "Task Key": { rich_text: [{ text: { content: payload.taskId } }] },
+          ...properties,
+        },
       });
     }
 
@@ -207,17 +208,15 @@ export async function syncValidationResultToNotion(payload: ValidationResultPayl
       // Update existing
       await client.pages.update({ page_id: pageId, properties });
     } else {
-      // Create new page
-      await (client as any).dataSources.createPages({
-        data_source_id: VALIDATION_RESULTS_DS_ID,
-        pages: [{
-          properties: {
-            "Name": { title: [{ text: { content: `${payload.orgSlug}/${payload.testKey}` } }] },
-            "Organization ID": { number: payload.organizationId },
-            "Test Key": { rich_text: [{ text: { content: payload.testKey } }] },
-            ...properties,
-          },
-        }],
+      // Create new page using pages.create (needs database_id, not data_source_id)
+      await client.pages.create({
+        parent: { database_id: VALIDATION_RESULTS_DB_ID! },
+        properties: {
+          "Name": { title: [{ text: { content: `${payload.orgSlug}/${payload.testKey}` } }] },
+          "Organization ID": { number: payload.organizationId },
+          "Test Key": { rich_text: [{ text: { content: payload.testKey } }] },
+          ...properties,
+        },
       });
     }
 
