@@ -345,4 +345,5 @@
 ## Fix: RRAL Connectivity blank page (May 26)
 - [x] Root cause: intake questionnaire CONN.endpoints save only writes to MySQL + questionnaire Notion DB, NOT to Integration Connection Registry
 - [x] Manually pushed 8 RRAL connectivity rows from intake data to Integration Connection Registry
-- [ ] Wire intake CONN.endpoints save to also push rows to Integration Connection Registry (prevents future blank connectivity pages)
+- [x] Wire intake CONN.endpoints save to also push rows to Integration Connection Registry (prevents future blank connectivity pages)
+- [x] Purge 361 duplicate retry queue entries (418 → 57 unique pending, will drain in ~15 min)

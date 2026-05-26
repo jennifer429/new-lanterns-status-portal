@@ -276,6 +276,86 @@ const ConnectivityRowSchema = z.object({
   modalities:        z.string().optional(),
 });
 
+/**
+ * Sync connectivity rows to the Integration Connection Registry (Notion).
+ * Called from the intake save path when CONN.endpoints is saved.
+ * This is the same logic as the syncToNotion tRPC mutation but callable directly.
+ */
+export async function syncConnectivityToNotion(
+  orgSlug: string,
+  orgName: string,
+  rows: Array<Record<string, any>>,
+): Promise<{ ok: boolean; created: number; updated: number; errors: string[] }> {
+  const client = getConnectivityNotionClient();
+  const dbId = getDatabaseId();
+  const dsId = getDataSourceId();
+  if (!client || !dbId || !dsId) {
+    return { ok: false, created: 0, updated: 0, errors: ["Notion not configured"] };
+  }
+
+  try {
+    // 1. Fetch DB schema to resolve property names
+    const dbSchema = await client.databases.retrieve({ database_id: dbId });
+    const { schemaMap, titlePropName } = buildSchemaMap(dbSchema);
+
+    // 2. Fetch existing Notion pages for this org so we can match for updates
+    const slugNorm = normalise(orgSlug);
+    const nameNorm = normalise(orgName);
+    const existing = await (client as any).dataSources.query({
+      data_source_id: dsId,
+      page_size: 100,
+    });
+
+    // Build composite-key → Notion page ID map for this site
+    const notionMap = new Map<string, string>();
+    for (const page of existing.results) {
+      if ((page as any).object !== "page" || (page as any).archived) continue;
+      const p = (page as any).properties as Record<string, any>;
+      const groups = getMultiSelect(pick(p, "Institution Group"));
+      if (!institutionGroupMatchesOrg(groups, slugNorm, nameNorm)) continue;
+
+      const k = rowKey(
+        getStr(pick(p, "Protocol / Message Type", "Traffic Type")),
+        getStr(pick(p, "Sender System / AE Title", "Sender System", "Source System")),
+        getStr(pick(p, "Receiver System / AE Title", "Receiver System", "Destination System")),
+      );
+      notionMap.set(k, (page as any).id);
+    }
+
+    // 3. Upsert each row
+    let created = 0;
+    let updated = 0;
+    const errors: string[] = [];
+
+    for (const row of rows) {
+      try {
+        const properties = buildRowProperties(row, schemaMap, titlePropName, orgName);
+        const k = rowKey(row.trafficType || "", row.sourceSystem || "", row.destinationSystem || "");
+        const existingId = notionMap.get(k);
+
+        if (existingId) {
+          await client.pages.update({ page_id: existingId, properties });
+          updated++;
+        } else {
+          await client.pages.create({
+            parent: { database_id: dbId },
+            properties,
+          });
+          created++;
+        }
+      } catch (err: any) {
+        errors.push(`Row "${row.trafficType} ${row.sourceSystem}→${row.destinationSystem}": ${err?.message ?? err}`);
+      }
+    }
+
+    console.log(`[connectivity-sync] ${orgSlug}: created=${created}, updated=${updated}, errors=${errors.length}`);
+    return { ok: true, created, updated, errors };
+  } catch (error: any) {
+    console.error(`[connectivity-sync] ${orgSlug} failed:`, error?.message ?? error);
+    return { ok: false, created: 0, updated: 0, errors: [String(error?.message ?? "Unknown error")] };
+  }
+}
+
 export const connectivityRouter = router({
   /**
    * Fetch connectivity rows from the Notion database and filter by org.

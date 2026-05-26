@@ -1,0 +1,22 @@
+{
+  "query": "SELECT writeType, COUNT(*) as cnt, MIN(retryCount) as min_retries, MAX(retryCount) as max_retries FROM notionRetryQueue WHERE status = 'pending' GROUP BY writeType;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT writeType, COUNT(*) as cnt, MIN(retryCount) as min_retries, MAX(retryCount) as max_retries FROM notionRetryQueue WHERE status = 'pending' GROUP BY writeType;",
+  "rows": [
+    {
+      "writeType": "validationResult",
+      "cnt": "380",
+      "min_retries": "0",
+      "max_retries": "0"
+    },
+    {
+      "writeType": "questionnaire",
+      "cnt": "38",
+      "min_retries": "0",
+      "max_retries": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "writeType\tcnt\tmin_retries\tmax_retries\nvalidationResult\t380\t0\t0\nquestionnaire\t38\t0\t0\n",
+  "stderr": "",
+  "execution_time_ms": 267
+}

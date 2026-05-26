@@ -9,6 +9,7 @@ import { logFileActivity } from "../fileAuditLog";
 import { resolveOrgByIdentifier } from "../_core/orgLookup";
 import { fileUploadInput } from "../_core/fileValidation";
 import { syncAnswerToNotion, syncFileToNotion, removeFileFromNotion } from "../notion";
+import { syncConnectivityToNotion } from "./connectivity";
 
 export const intakeRouter = router({
   /**
@@ -173,6 +174,17 @@ export const intakeRouter = router({
       syncAnswerToNotion(org.slug, input.questionId, input.response, input.userEmail)
         .catch(err => console.error('[notion] sync answer error:', err.message));
 
+      // If this is CONN.endpoints, also sync to the Integration Connection Registry
+      if (input.questionId === 'CONN.endpoints') {
+        try {
+          const endpoints = JSON.parse(input.response);
+          if (Array.isArray(endpoints) && endpoints.length > 0) {
+            syncConnectivityToNotion(org.slug, org.name, endpoints)
+              .catch(err => console.error('[connectivity-sync] auto-sync error:', err.message));
+          }
+        } catch { /* not valid JSON, skip */ }
+      }
+
       return { success: true, action: "upserted" };
     }),
 
@@ -225,6 +237,17 @@ export const intakeRouter = router({
         // Sync each answer to Notion (fire-and-forget)
         syncAnswerToNotion(org.slug, questionIdStr, responseStr, userEmail)
           .catch(err => console.error('[notion] batch sync error:', err.message));
+
+        // If this is CONN.endpoints, also sync to the Integration Connection Registry
+        if (questionIdStr === 'CONN.endpoints') {
+          try {
+            const endpoints = JSON.parse(responseStr);
+            if (Array.isArray(endpoints) && endpoints.length > 0) {
+              syncConnectivityToNotion(org.slug, org.name, endpoints)
+                .catch(err => console.error('[connectivity-sync] batch auto-sync error:', err.message));
+            }
+          } catch { /* not valid JSON, skip */ }
+        }
 
         saved++;
       }

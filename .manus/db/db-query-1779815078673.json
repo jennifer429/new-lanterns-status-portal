@@ -1,0 +1,80 @@
+{
+  "query": "SELECT writeType, JSON_EXTRACT(payload, '$.orgSlug') as orgSlug, JSON_EXTRACT(payload, '$.taskId') as taskId, JSON_EXTRACT(payload, '$.testKey') as testKey, COUNT(*) as dupes FROM notionRetryQueue WHERE status = 'pending' GROUP BY writeType, JSON_EXTRACT(payload, '$.orgSlug'), JSON_EXTRACT(payload, '$.taskId'), JSON_EXTRACT(payload, '$.testKey') HAVING COUNT(*) > 1 LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT writeType, JSON_EXTRACT(payload, '$.orgSlug') as orgSlug, JSON_EXTRACT(payload, '$.taskId') as taskId, JSON_EXTRACT(payload, '$.testKey') as testKey, COUNT(*) as dupes FROM notionRetryQueue WHERE status = 'pending' GROUP BY writeType, JSON_EXTRACT(payload, '$.orgSlug'), JSON_EXTRACT(payload, '$.taskId'), JSON_EXTRACT(payload, '$.testKey') HAVING COUNT(*) > 1 LIMIT 10;",
+  "rows": [
+    {
+      "writeType": "validationResult",
+      "orgSlug": "\"RRAL\"",
+      "taskId": "NULL",
+      "testKey": "\"2:2\"",
+      "dupes": "62"
+    },
+    {
+      "writeType": "validationResult",
+      "orgSlug": "\"RRAL\"",
+      "taskId": "NULL",
+      "testKey": "\"3:8\"",
+      "dupes": "8"
+    },
+    {
+      "writeType": "validationResult",
+      "orgSlug": "\"RRAL\"",
+      "taskId": "NULL",
+      "testKey": "\"3:9\"",
+      "dupes": "14"
+    },
+    {
+      "writeType": "validationResult",
+      "orgSlug": "\"RRAL\"",
+      "taskId": "NULL",
+      "testKey": "\"3:3\"",
+      "dupes": "39"
+    },
+    {
+      "writeType": "validationResult",
+      "orgSlug": "\"RRAL\"",
+      "taskId": "NULL",
+      "testKey": "\"2:0\"",
+      "dupes": "14"
+    },
+    {
+      "writeType": "questionnaire",
+      "orgSlug": "NULL",
+      "taskId": "NULL",
+      "testKey": "NULL",
+      "dupes": "38"
+    },
+    {
+      "writeType": "validationResult",
+      "orgSlug": "\"RRAL\"",
+      "taskId": "NULL",
+      "testKey": "\"3:2\"",
+      "dupes": "24"
+    },
+    {
+      "writeType": "validationResult",
+      "orgSlug": "\"RRAL\"",
+      "taskId": "NULL",
+      "testKey": "\"3:4\"",
+      "dupes": "8"
+    },
+    {
+      "writeType": "validationResult",
+      "orgSlug": "\"RRAL\"",
+      "taskId": "NULL",
+      "testKey": "\"3:6\"",
+      "dupes": "21"
+    },
+    {
+      "writeType": "validationResult",
+      "orgSlug": "\"RRAL\"",
+      "taskId": "NULL",
+      "testKey": "\"3:7\"",
+      "dupes": "11"
+    }
+  ],
+  "messages": [],
+  "stdout": "writeType\torgSlug\ttaskId\ttestKey\tdupes\nvalidationResult\t\"RRAL\"\tNULL\t\"2:2\"\t62\nvalidationResult\t\"RRAL\"\tNULL\t\"3:8\"\t8\nvalidationResult\t\"RRAL\"\tNULL\t\"3:9\"\t14\nvalidationResult\t\"RRAL\"\tNULL\t\"3:3\"\t39\nvalidationResult\t\"RRAL\"\tNULL\t\"2:0\"\t14\nquestionnaire\tNULL\tNULL\tNULL\t38\nvalidationResult\t\"RRAL\"\tNULL\t\"3:2\"\t24\nvalidationResult\t\"RRAL\"\tNULL\t\"3:4\"\t8\nvalidationResult\t\"RRAL\"\tNULL\t\"3:6\"\t21\nvalidationResult\t\"RRAL\"\tNULL\t\"3:7\"\t11\n",
+  "stderr": "",
+  "execution_time_ms": 286
+}
