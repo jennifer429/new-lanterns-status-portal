@@ -1,0 +1,8 @@
+{
+  "query": "SELECT organization_id, test_key, updated_at, last_updated_from FROM validation_results WHERE organization_id IN (1170001, 240001, 1140001) AND test_key IN ('0:0', '0:1', '0:2', '0:3', '1:4') ORDER BY organization_id, test_key;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT organization_id, test_key, updated_at, last_updated_from FROM validation_results WHERE organization_id IN (1170001, 240001, 1140001) AND test_key IN ('0:0', '0:1', '0:2', '0:3', '1:4') ORDER BY organization_id, test_key;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1146 (42S02) at line 1: Table 'hggexrhucg7apwzjrkh7lf.validation_results' doesn't exist"
+  ]
+}

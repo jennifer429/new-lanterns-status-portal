@@ -296,3 +296,14 @@
 - [x] Purge duplicate/noisy Sync Log entries from Notion (1,406 stale entries archived)
 - [x] Persist task/validation sync checkpoint to Notion (same design as questionnaire Sync Config)
 - [x] Investigate and fix duplicate cron instances (root cause: 3 pipelines each writing per-run logs; fixed by removing per-run writes + added cronStarted guard)
+
+## Sync Reliability Final Fixes (May 26)
+
+- [x] Remove lastUpdatedFrom !== "Notion" filter (was permanently blocking rows from re-sync)
+- [x] Add updatedAt: new Date() to all upserts (forces MySQL timestamp to advance on no-op data)
+- [x] Persist sync checkpoints to MySQL syncCheckpoints table (replaces broken Notion approach)
+- [x] Verify full sync resolved all 10 out-of-sync rows (confirmed May 26)
+- [x] Add error logging to task/validation sync catch blocks (console.error for production visibility)
+- [x] Investigate org 1140001 — orphan test data deleted from MySQL + archived in Notion
+- [x] Rename Notion Sync Log from "Questionnaire Sync Log" to "Portal Sync Log"
+- [x] Add filtered views to Notion Sync Log (Failures Only, Last 7 Days)

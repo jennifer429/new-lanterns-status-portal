@@ -1,0 +1,25 @@
+{
+  "query": "SELECT * FROM implementationOrgs WHERE id = 1140001 OR name LIKE '%1140%'; SELECT DISTINCT sectionName FROM taskCompletion WHERE organizationId = 1140001;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT * FROM implementationOrgs WHERE id = 1140001 OR name LIKE '%1140%'; SELECT DISTINCT sectionName FROM taskCompletion WHERE organizationId = 1140001;",
+  "rows": [
+    {
+      "sectionName": "Network & Connectivity"
+    },
+    {
+      "sectionName": "HL7 Interface Build"
+    },
+    {
+      "sectionName": "Worklist & Templates"
+    },
+    {
+      "sectionName": "Training & Go-Live Preparation"
+    },
+    {
+      "sectionName": "System Configuration"
+    }
+  ],
+  "messages": [],
+  "stdout": "sectionName\nNetwork & Connectivity\nHL7 Interface Build\nWorklist & Templates\nTraining & Go-Live Preparation\nSystem Configuration\n",
+  "stderr": "",
+  "execution_time_ms": 270
+}

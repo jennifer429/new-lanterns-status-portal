@@ -1,0 +1,46 @@
+{
+  "query": "SELECT id, organizationId, testKey, status, updatedBy, createdAt, updatedAt FROM validationResults WHERE organizationId = 1140001 ORDER BY testKey;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, organizationId, testKey, status, updatedBy, createdAt, updatedAt FROM validationResults WHERE organizationId = 1140001 ORDER BY testKey;",
+  "rows": [
+    {
+      "id": "630003",
+      "organizationId": "1140001",
+      "testKey": "0:0",
+      "status": "Pass",
+      "updatedBy": "NULL",
+      "createdAt": "2026-04-30 16:48:43",
+      "updatedAt": "2026-05-25 20:48:58"
+    },
+    {
+      "id": "630001",
+      "organizationId": "1140001",
+      "testKey": "0:1",
+      "status": "Pass",
+      "updatedBy": "NULL",
+      "createdAt": "2026-04-30 16:48:43",
+      "updatedAt": "2026-05-25 20:48:58"
+    },
+    {
+      "id": "630002",
+      "organizationId": "1140001",
+      "testKey": "0:2",
+      "status": "Pass",
+      "updatedBy": "NULL",
+      "createdAt": "2026-04-30 16:48:43",
+      "updatedAt": "2026-05-25 20:48:58"
+    },
+    {
+      "id": "630004",
+      "organizationId": "1140001",
+      "testKey": "0:3",
+      "status": "Pass",
+      "updatedBy": "NULL",
+      "createdAt": "2026-04-30 16:48:43",
+      "updatedAt": "2026-05-25 20:48:58"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\torganizationId\ttestKey\tstatus\tupdatedBy\tcreatedAt\tupdatedAt\n630003\t1140001\t0:0\tPass\tNULL\t2026-04-30 16:48:43\t2026-05-25 20:48:58\n630001\t1140001\t0:1\tPass\tNULL\t2026-04-30 16:48:43\t2026-05-25 20:48:58\n630002\t1140001\t0:2\tPass\tNULL\t2026-04-30 16:48:43\t2026-05-25 20:48:58\n630004\t1140001\t0:3\tPass\tNULL\t2026-04-30 16:48:43\t2026-05-25 20:48:58\n",
+  "stderr": "",
+  "execution_time_ms": 275
+}

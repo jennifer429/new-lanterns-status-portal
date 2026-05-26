@@ -1,0 +1,90 @@
+{
+  "query": "SELECT id, name FROM organizations ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, name FROM organizations ORDER BY id;",
+  "rows": [
+    {
+      "id": "60007",
+      "name": "Munson Medical Center"
+    },
+    {
+      "id": "60008",
+      "name": "JCRHC"
+    },
+    {
+      "id": "60009",
+      "name": "Baycare"
+    },
+    {
+      "id": "240001",
+      "name": "RRAL"
+    },
+    {
+      "id": "240002",
+      "name": "BRI - BCO"
+    },
+    {
+      "id": "450001",
+      "name": "NewOrg2 - Corrected"
+    },
+    {
+      "id": "480001",
+      "name": "RaDS Inc"
+    },
+    {
+      "id": "510001",
+      "name": "RaDS Inc- Pilot"
+    },
+    {
+      "id": "600001",
+      "name": "HCA - Florida West"
+    },
+    {
+      "id": "630001",
+      "name": "San Ramon Hospital"
+    },
+    {
+      "id": "630002",
+      "name": "Marshall Medical"
+    },
+    {
+      "id": "960001",
+      "name": "NMHS - Northern Mississippi Health Services"
+    },
+    {
+      "id": "990001",
+      "name": "RMC Anniston Radiology"
+    },
+    {
+      "id": "1020001",
+      "name": "SJMC St Joseph Medical Center"
+    },
+    {
+      "id": "1170001",
+      "name": " Lodi Memorial"
+    },
+    {
+      "id": "1200001",
+      "name": "HonorHealth"
+    },
+    {
+      "id": "1350001",
+      "name": "RAID Altru - LifeCare Medical Center"
+    },
+    {
+      "id": "1350002",
+      "name": "RAID - Life Care Medical Center"
+    },
+    {
+      "id": "1380001",
+      "name": "BRI - FRPI (Front Range Preventive Imaging)"
+    },
+    {
+      "id": "1410001",
+      "name": "RAID - Bigfork Valley Hospital"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\n60007\tMunson Medical Center\n60008\tJCRHC\n60009\tBaycare\n240001\tRRAL\n240002\tBRI - BCO\n450001\tNewOrg2 - Corrected\n480001\tRaDS Inc\n510001\tRaDS Inc- Pilot\n600001\tHCA - Florida West\n630001\tSan Ramon Hospital\n630002\tMarshall Medical\n960001\tNMHS - Northern Mississippi Health Services\n990001\tRMC Anniston Radiology\n1020001\tSJMC St Joseph Medical Center\n1170001\t Lodi Memorial\n1200001\tHonorHealth\n1350001\tRAID Altru - LifeCare Medical Center\n1350002\tRAID - Life Care Medical Center\n1380001\tBRI - FRPI (Front Range Preventive Imaging)\n1410001\tRAID - Bigfork Valley Hospital\n",
+  "stderr": "",
+  "execution_time_ms": 269
+}

@@ -1,0 +1,15 @@
+{
+  "query": "SELECT id, name, slug FROM organizations WHERE id BETWEEN 1100000 AND 1200000 ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, name, slug FROM organizations WHERE id BETWEEN 1100000 AND 1200000 ORDER BY id;",
+  "rows": [
+    {
+      "id": "1170001",
+      "name": " Lodi Memorial",
+      "slug": "Lodi Memorial"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tslug\n1170001\t Lodi Memorial\tLodi Memorial\n",
+  "stderr": "",
+  "execution_time_ms": 280
+}

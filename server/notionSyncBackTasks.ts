@@ -244,6 +244,7 @@ export async function runTaskValidationSyncBack(): Promise<TaskValidationSyncRes
       } catch (err: any) {
         result.tasks.failed++;
         result.tasks.errors.push(`${row.taskKey}: ${err.message?.substring(0, 80)}`);
+        console.error(`[task-val-sync] Task upsert failed for ${row.taskKey} (org ${row.organizationId}):`, err.message);
       }
     }
 
@@ -260,6 +261,7 @@ export async function runTaskValidationSyncBack(): Promise<TaskValidationSyncRes
     }
   } catch (err: any) {
     result.tasks.errors.push(`Fetch error: ${err.message?.substring(0, 100)}`);
+    console.error(`[task-val-sync] Task completions fetch/sync error:`, err.message, err.stack?.substring(0, 200));
     await incrementFailures(TASK_PIPELINE);
   }
 
@@ -275,6 +277,7 @@ export async function runTaskValidationSyncBack(): Promise<TaskValidationSyncRes
       } catch (err: any) {
         result.validation.failed++;
         result.validation.errors.push(`${row.testKey}: ${err.message?.substring(0, 80)}`);
+        console.error(`[task-val-sync] Validation upsert failed for ${row.testKey} (org ${row.organizationId}):`, err.message);
       }
     }
 
@@ -290,6 +293,7 @@ export async function runTaskValidationSyncBack(): Promise<TaskValidationSyncRes
     }
   } catch (err: any) {
     result.validation.errors.push(`Fetch error: ${err.message?.substring(0, 100)}`);
+    console.error(`[task-val-sync] Validation results fetch/sync error:`, err.message, err.stack?.substring(0, 200));
     await incrementFailures(VALIDATION_PIPELINE);
   }
 

@@ -1,0 +1,15 @@
+{
+  "query": "SELECT COUNT(*) as total, MIN(createdAt) as firstCreated, MAX(createdAt) as lastCreated FROM taskCompletion WHERE organizationId = 1140001;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT COUNT(*) as total, MIN(createdAt) as firstCreated, MAX(createdAt) as lastCreated FROM taskCompletion WHERE organizationId = 1140001;",
+  "rows": [
+    {
+      "total": "21",
+      "firstCreated": "2026-04-30 16:53:26",
+      "lastCreated": "2026-04-30 17:01:45"
+    }
+  ],
+  "messages": [],
+  "stdout": "total\tfirstCreated\tlastCreated\n21\t2026-04-30 16:53:26\t2026-04-30 17:01:45\n",
+  "stderr": "",
+  "execution_time_ms": 263
+}

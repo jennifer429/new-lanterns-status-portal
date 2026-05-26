@@ -1,0 +1,80 @@
+{
+  "query": "SELECT id, organizationId, taskId, completed, createdAt FROM taskCompletion WHERE organizationId = 1140001 LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, organizationId, taskId, completed, createdAt FROM taskCompletion WHERE organizationId = 1140001 LIMIT 10;",
+  "rows": [
+    {
+      "id": "870001",
+      "organizationId": "1140001",
+      "taskId": "config:provider",
+      "completed": "0",
+      "createdAt": "2026-04-30 16:53:26"
+    },
+    {
+      "id": "870002",
+      "organizationId": "1140001",
+      "taskId": "config:proc",
+      "completed": "0",
+      "createdAt": "2026-04-30 16:58:14"
+    },
+    {
+      "id": "870003",
+      "organizationId": "1140001",
+      "taskId": "config:sso",
+      "completed": "0",
+      "createdAt": "2026-04-30 16:58:24"
+    },
+    {
+      "id": "870004",
+      "organizationId": "1140001",
+      "taskId": "config:worklist",
+      "completed": "0",
+      "createdAt": "2026-04-30 16:58:27"
+    },
+    {
+      "id": "870005",
+      "organizationId": "1140001",
+      "taskId": "hl7:validate",
+      "completed": "0",
+      "createdAt": "2026-04-30 17:01:09"
+    },
+    {
+      "id": "870006",
+      "organizationId": "1140001",
+      "taskId": "hl7:oru",
+      "completed": "0",
+      "createdAt": "2026-04-30 17:01:09"
+    },
+    {
+      "id": "870007",
+      "organizationId": "1140001",
+      "taskId": "hl7:adt",
+      "completed": "0",
+      "createdAt": "2026-04-30 17:01:09"
+    },
+    {
+      "id": "870008",
+      "organizationId": "1140001",
+      "taskId": "hl7:orm-spec",
+      "completed": "0",
+      "createdAt": "2026-04-30 17:01:09"
+    },
+    {
+      "id": "870009",
+      "organizationId": "1140001",
+      "taskId": "hl7:orm",
+      "completed": "0",
+      "createdAt": "2026-04-30 17:01:09"
+    },
+    {
+      "id": "870010",
+      "organizationId": "1140001",
+      "taskId": "hl7:oru-spec",
+      "completed": "0",
+      "createdAt": "2026-04-30 17:01:09"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\torganizationId\ttaskId\tcompleted\tcreatedAt\n870001\t1140001\tconfig:provider\t0\t2026-04-30 16:53:26\n870002\t1140001\tconfig:proc\t0\t2026-04-30 16:58:14\n870003\t1140001\tconfig:sso\t0\t2026-04-30 16:58:24\n870004\t1140001\tconfig:worklist\t0\t2026-04-30 16:58:27\n870005\t1140001\thl7:validate\t0\t2026-04-30 17:01:09\n870006\t1140001\thl7:oru\t0\t2026-04-30 17:01:09\n870007\t1140001\thl7:adt\t0\t2026-04-30 17:01:09\n870008\t1140001\thl7:orm-spec\t0\t2026-04-30 17:01:09\n870009\t1140001\thl7:orm\t0\t2026-04-30 17:01:09\n870010\t1140001\thl7:oru-spec\t0\t2026-04-30 17:01:09\n",
+  "stderr": "",
+  "execution_time_ms": 279
+}
