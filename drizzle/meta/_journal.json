@@ -351,6 +351,13 @@
       "when": 1779735978380,
       "tag": "0049_serious_firebrand",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "5",
+      "when": 1779795464216,
+      "tag": "0050_youthful_natasha_romanoff",
+      "breakpoints": true
     }
   ]
 }

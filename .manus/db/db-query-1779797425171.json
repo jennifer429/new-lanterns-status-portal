@@ -1,0 +1,22 @@
+{
+  "query": "SELECT 'taskCompletion' as tbl, COUNT(*) as total, SUM(CASE WHEN notionLastEdited IS NOT NULL THEN 1 ELSE 0 END) as filled, SUM(CASE WHEN notionLastEdited IS NULL THEN 1 ELSE 0 END) as empty FROM taskCompletion UNION ALL SELECT 'validationResults', COUNT(*), SUM(CASE WHEN notionLastEdited IS NOT NULL THEN 1 ELSE 0 END), SUM(CASE WHEN notionLastEdited IS NULL THEN 1 ELSE 0 END) FROM validationResults;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT 'taskCompletion' as tbl, COUNT(*) as total, SUM(CASE WHEN notionLastEdited IS NOT NULL THEN 1 ELSE 0 END) as filled, SUM(CASE WHEN notionLastEdited IS NULL THEN 1 ELSE 0 END) as empty FROM taskCompletion UNION ALL SELECT 'validationResults', COUNT(*), SUM(CASE WHEN notionLastEdited IS NOT NULL THEN 1 ELSE 0 END), SUM(CASE WHEN notionLastEdited IS NULL THEN 1 ELSE 0 END) FROM validationResults;",
+  "rows": [
+    {
+      "tbl": "validationResults",
+      "total": "173",
+      "filled": "173",
+      "empty": "0"
+    },
+    {
+      "tbl": "taskCompletion",
+      "total": "290",
+      "filled": "290",
+      "empty": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "tbl\ttotal\tfilled\tempty\nvalidationResults\t173\t173\t0\ntaskCompletion\t290\t290\t0\n",
+  "stderr": "",
+  "execution_time_ms": 265
+}

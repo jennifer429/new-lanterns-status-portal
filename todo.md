@@ -313,3 +313,19 @@
 - [x] Implement dirty-check in upsertValidationResult — skip write if data identical
 - [x] Write vitest tests proving: skip on identical, write on real change, new row always inserts (13 tests, all pass)
 - [x] Fix 3 consecutive failures on sync pipelines (reset to 0, server running healthy)
+
+## Claude Scan Fixes
+- [ ] Convert file audit log from Google Sheets to Notion database
+- [ ] Gate /org/admin links behind role checks (UserMenu, Implementation, Validation)
+- [ ] Fix password reset test assertion (error message mismatch)
+- [ ] Fix vendor-options test assertions (limit:5 → limit:50, addSystemType return shape)
+- [ ] Update CLAUDE.md to reflect actual routers, tables, and endpoints
+
+## Option C: notionLastEdited version check
+- [x] Add notionLastEdited column to taskCompletion and validationResults schemas
+- [x] Run migration (pnpm db:push)
+- [x] Rewire sync-back to skip if notionLastEdited matches incoming last_edited_time
+- [x] Update portal dual-write to set notionLastEdited = null on write
+- [x] Update reconciliation to only flag rows where notionLastEdited = null and stale > 10min
+- [x] Write tests proving: skip on same version, write on new version, portal nulls the field (8 tests, all pass)
+- [x] Backfill existing rows with current Notion last_edited_time values (290 tasks + 68 validation = all filled)

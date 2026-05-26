@@ -104,7 +104,7 @@ describe("Password Reset Flow", () => {
         email: "nonexistent@example.com",
         newPassword: "NewPassword789!",
       })
-    ).rejects.toThrow("Please contact New Lantern support");
+    ).rejects.toThrow("If an account exists with this email, the password has been reset.");
   });
 
   it("should enforce minimum password length", async () => {

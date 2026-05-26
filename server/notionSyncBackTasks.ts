@@ -1,9 +1,12 @@
 /**
  * Notion → MySQL Sync-Back for Task Completions and Validation Results
  *
- * Polls Notion for rows edited since the last sync checkpoint and upserts
- * them into MySQL. Checkpoints are persisted to the `syncCheckpoints` MySQL
- * table so they survive server restarts without depending on Notion page access.
+ * Uses `notionLastEdited` column as a version check:
+ * - If the incoming Notion `last_edited_time` matches what's stored → skip (already processed)
+ * - If different → compare data, write if changed, store new `notionLastEdited`
+ * - New rows → insert with `notionLastEdited` set
+ *
+ * This eliminates echo loops: the sync only writes when Notion has a genuinely new version.
  *
  * Pipeline identifiers:
  *   - "task-completions"
@@ -136,9 +139,14 @@ export interface TaskValidationSyncResult {
 
 // ── Upsert helpers ─────────────────────────────────────────────────────────────
 
+/**
+ * Version-check upsert for task completions.
+ * Skip if notionLastEdited already matches the incoming last_edited_time.
+ */
 async function upsertTaskCompletion(row: NotionTaskRow): Promise<"inserted" | "updated" | "skipped"> {
   const db = await requireDb();
   const flags = statusToTaskFlags(row.status);
+  const notionTimestamp = row.lastEdited ? new Date(row.lastEdited) : null;
 
   const [existing] = await db
     .select()
@@ -151,34 +159,28 @@ async function upsertTaskCompletion(row: NotionTaskRow): Promise<"inserted" | "u
     )
     .limit(1);
 
-  const payload = {
-    sectionName: row.sectionName || existing?.sectionName || "",
-    completed: flags.completed,
-    inProgress: flags.inProgress,
-    blocked: flags.blocked,
-    notApplicable: flags.notApplicable,
-    completedAt: row.completedAt ? new Date(row.completedAt) : null,
-    completedBy: row.completedBy || null,
-    targetDate: row.targetDate || null,
-    notes: row.notes || null,
-  };
-
   if (existing) {
-    // Dirty check: only write if something actually changed
-    const isIdentical =
-      existing.sectionName === payload.sectionName &&
-      existing.completed === payload.completed &&
-      existing.inProgress === payload.inProgress &&
-      existing.blocked === payload.blocked &&
-      existing.notApplicable === payload.notApplicable &&
-      (existing.completedAt?.toISOString() || null) === (payload.completedAt?.toISOString() || null) &&
-      (existing.completedBy || null) === payload.completedBy &&
-      (existing.targetDate || null) === payload.targetDate &&
-      (existing.notes || null) === payload.notes;
-
-    if (isIdentical) {
+    // Version check: if notionLastEdited matches, we already processed this version
+    if (
+      existing.notionLastEdited &&
+      notionTimestamp &&
+      existing.notionLastEdited.getTime() === notionTimestamp.getTime()
+    ) {
       return "skipped";
     }
+
+    const payload = {
+      sectionName: row.sectionName || existing.sectionName || "",
+      completed: flags.completed,
+      inProgress: flags.inProgress,
+      blocked: flags.blocked,
+      notApplicable: flags.notApplicable,
+      completedAt: row.completedAt ? new Date(row.completedAt) : null,
+      completedBy: row.completedBy || null,
+      targetDate: row.targetDate || null,
+      notes: row.notes || null,
+      notionLastEdited: notionTimestamp,
+    };
 
     await db
       .update(taskCompletion)
@@ -186,17 +188,32 @@ async function upsertTaskCompletion(row: NotionTaskRow): Promise<"inserted" | "u
       .where(eq(taskCompletion.id, existing.id));
     return "updated";
   } else {
+    // New row — always insert
     await db.insert(taskCompletion).values({
       organizationId: row.organizationId,
       taskId: row.taskKey,
-      ...payload,
+      sectionName: row.sectionName || "",
+      completed: flags.completed,
+      inProgress: flags.inProgress,
+      blocked: flags.blocked,
+      notApplicable: flags.notApplicable,
+      completedAt: row.completedAt ? new Date(row.completedAt) : null,
+      completedBy: row.completedBy || null,
+      targetDate: row.targetDate || null,
+      notes: row.notes || null,
+      notionLastEdited: notionTimestamp,
     });
     return "inserted";
   }
 }
 
+/**
+ * Version-check upsert for validation results.
+ * Skip if notionLastEdited already matches the incoming last_edited_time.
+ */
 async function upsertValidationResult(row: NotionValidationRow): Promise<"inserted" | "updated" | "skipped"> {
   const db = await requireDb();
+  const notionTimestamp = row.lastEdited ? new Date(row.lastEdited) : null;
 
   const [existing] = await db
     .select()
@@ -209,28 +226,25 @@ async function upsertValidationResult(row: NotionValidationRow): Promise<"insert
     )
     .limit(1);
 
-  const payload = {
-    actual: row.actual || null,
-    status: row.status as any,
-    signOff: row.signOff || null,
-    notes: row.notes || null,
-    testedDate: row.testedDate || null,
-    updatedBy: row.updatedBy || null,
-  };
-
   if (existing) {
-    // Dirty check: only write if something actually changed
-    const isIdentical =
-      (existing.actual || null) === payload.actual &&
-      existing.status === payload.status &&
-      (existing.signOff || null) === payload.signOff &&
-      (existing.notes || null) === payload.notes &&
-      (existing.testedDate || null) === payload.testedDate &&
-      (existing.updatedBy || null) === payload.updatedBy;
-
-    if (isIdentical) {
+    // Version check: if notionLastEdited matches, we already processed this version
+    if (
+      existing.notionLastEdited &&
+      notionTimestamp &&
+      existing.notionLastEdited.getTime() === notionTimestamp.getTime()
+    ) {
       return "skipped";
     }
+
+    const payload = {
+      actual: row.actual || null,
+      status: row.status as any,
+      signOff: row.signOff || null,
+      notes: row.notes || null,
+      testedDate: row.testedDate || null,
+      updatedBy: row.updatedBy || null,
+      notionLastEdited: notionTimestamp,
+    };
 
     await db
       .update(validationResults)
@@ -238,10 +252,17 @@ async function upsertValidationResult(row: NotionValidationRow): Promise<"insert
       .where(eq(validationResults.id, existing.id));
     return "updated";
   } else {
+    // New row — always insert
     await db.insert(validationResults).values({
       organizationId: row.organizationId,
       testKey: row.testKey,
-      ...payload,
+      actual: row.actual || null,
+      status: row.status as any,
+      signOff: row.signOff || null,
+      notes: row.notes || null,
+      testedDate: row.testedDate || null,
+      updatedBy: row.updatedBy || null,
+      notionLastEdited: notionTimestamp,
     });
     return "inserted";
   }

@@ -95,13 +95,14 @@ export const validationRouter = router({
       if (existing) {
         await db
           .update(validationResults)
-          .set(payload)
+          .set({ ...payload, notionLastEdited: null })
           .where(eq(validationResults.id, existing.id));
       } else {
         await db.insert(validationResults).values({
           organizationId: org.id,
           testKey: input.testKey,
           ...payload,
+          notionLastEdited: null,
         });
       }
 

@@ -1,49 +1,40 @@
 /**
  * Hourly Reconciliation: MySQL ↔ Notion
  *
- * Compares updatedAt timestamps between MySQL and Notion for task completions
- * and validation results. Flags rows that are out of sync (>10 min drift)
- * and notifies the owner with a cleanup plan.
+ * NEW LOGIC (Option C — notionLastEdited version check):
+ * - Only flags rows where `notionLastEdited IS NULL` AND `updatedAt` is older than 10 minutes.
+ *   This means the portal wrote to MySQL (nulling notionLastEdited) but the dual-write to Notion
+ *   hasn't been confirmed by a subsequent sync-back cycle yet.
+ * - Rows with a non-null `notionLastEdited` are by definition in sync (sync-back set it).
+ * - No more Notion API calls needed for reconciliation — it's purely a MySQL query now.
  *
  * Runs hourly via cron. Does NOT auto-fix — just reports discrepancies.
  */
 
 import { getDb } from "./db";
 import { taskCompletion, validationResults, organizations, reconciliationLog } from "../drizzle/schema";
-import { eq, desc, sql } from "drizzle-orm";
-import { Client } from "@notionhq/client";
-import { ENV } from "./_core/env";
+import { eq, desc, sql, isNull, and, lt } from "drizzle-orm";
 import { notifyOwner } from "./_core/notification";
 
-const DRIFT_THRESHOLD_MS = 10 * 60 * 1000; // 10 minutes
+const STALE_THRESHOLD_MS = 10 * 60 * 1000; // 10 minutes
 
 interface OutOfSyncRow {
   type: "taskCompletion" | "validationResult";
   orgSlug: string;
   key: string;
   mysqlUpdatedAt: string;
-  notionUpdatedAt: string;
-  driftMinutes: number;
-}
-
-function getNotionClient(): Client | null {
-  if (!ENV.notionApiKey) return null;
-  return new Client({ auth: ENV.notionApiKey });
+  staleMinutes: number;
 }
 
 /**
- * Run reconciliation check for task completions.
- * Samples recently-updated MySQL rows and compares with Notion.
+ * Find task completions where notionLastEdited is null and updatedAt is stale (>10 min).
+ * These are rows the portal wrote but sync-back hasn't confirmed yet.
  */
-async function reconcileTaskCompletions(client: Client): Promise<OutOfSyncRow[]> {
-  const dsId = ENV.notionTaskCompletionDataSourceId;
-  if (!dsId) return [];
-
+async function findStaleTasks(): Promise<OutOfSyncRow[]> {
   const db = await getDb();
-  const outOfSync: OutOfSyncRow[] = [];
+  const cutoff = new Date(Date.now() - STALE_THRESHOLD_MS);
 
-  // Get the 50 most recently updated task completions from MySQL
-  const recentTasks = await db
+  const staleTasks = await db
     .select({
       id: taskCompletion.id,
       organizationId: taskCompletion.organizationId,
@@ -51,70 +42,41 @@ async function reconcileTaskCompletions(client: Client): Promise<OutOfSyncRow[]>
       updatedAt: taskCompletion.updatedAt,
     })
     .from(taskCompletion)
+    .where(
+      and(
+        isNull(taskCompletion.notionLastEdited),
+        lt(taskCompletion.updatedAt, cutoff)
+      )
+    )
     .orderBy(desc(taskCompletion.updatedAt))
     .limit(50);
 
-  // Get org slugs for these tasks
-  const orgIds = [...new Set(recentTasks.map(t => t.organizationId))];
+  if (staleTasks.length === 0) return [];
+
+  // Get org slugs
+  const orgIds = [...new Set(staleTasks.map(t => t.organizationId))];
   const orgs = orgIds.length > 0
     ? await db.select({ id: organizations.id, slug: organizations.slug }).from(organizations).where(sql`${organizations.id} IN (${sql.join(orgIds.map(id => sql`${id}`), sql`, `)})`)
     : [];
   const orgMap = new Map(orgs.map(o => [o.id, o.slug]));
 
-  // Check a sample of 10 against Notion
-  const sample = recentTasks.slice(0, 10);
-  for (const task of sample) {
-    const orgSlug = orgMap.get(task.organizationId) || "unknown";
-    try {
-      const result: any = await (client as any).dataSources.query({
-        data_source_id: dsId,
-        filter: {
-          and: [
-            { property: "Organization ID", number: { equals: task.organizationId } },
-            { property: "Task Key", rich_text: { equals: task.taskId } },
-          ],
-        },
-        page_size: 1,
-      });
-
-      const notionPage = result.results?.[0];
-      if (!notionPage) continue; // Not in Notion yet — not a sync issue
-
-      const notionUpdatedAt = new Date(notionPage.last_edited_time).getTime();
-      const mysqlUpdatedAt = task.updatedAt ? new Date(task.updatedAt).getTime() : 0;
-      const drift = Math.abs(notionUpdatedAt - mysqlUpdatedAt);
-
-      if (drift > DRIFT_THRESHOLD_MS) {
-        outOfSync.push({
-          type: "taskCompletion",
-          orgSlug,
-          key: task.taskId,
-          mysqlUpdatedAt: task.updatedAt ? new Date(task.updatedAt).toISOString() : "N/A",
-          notionUpdatedAt: new Date(notionUpdatedAt).toISOString(),
-          driftMinutes: Math.round(drift / 60000),
-        });
-      }
-    } catch (err) {
-      // Skip — don't block reconciliation for individual lookup failures
-      continue;
-    }
-  }
-
-  return outOfSync;
+  return staleTasks.map(task => ({
+    type: "taskCompletion" as const,
+    orgSlug: orgMap.get(task.organizationId) || "unknown",
+    key: task.taskId,
+    mysqlUpdatedAt: task.updatedAt ? new Date(task.updatedAt).toISOString() : "N/A",
+    staleMinutes: task.updatedAt ? Math.round((Date.now() - new Date(task.updatedAt).getTime()) / 60000) : 0,
+  }));
 }
 
 /**
- * Run reconciliation check for validation results.
+ * Find validation results where notionLastEdited is null and updatedAt is stale (>10 min).
  */
-async function reconcileValidationResults(client: Client): Promise<OutOfSyncRow[]> {
-  const dsId = ENV.notionValidationResultsDataSourceId;
-  if (!dsId) return [];
-
+async function findStaleValidationResults(): Promise<OutOfSyncRow[]> {
   const db = await getDb();
-  const outOfSync: OutOfSyncRow[] = [];
+  const cutoff = new Date(Date.now() - STALE_THRESHOLD_MS);
 
-  // Get the 50 most recently updated validation results from MySQL
-  const recentResults = await db
+  const staleResults = await db
     .select({
       id: validationResults.id,
       organizationId: validationResults.organizationId,
@@ -122,77 +84,50 @@ async function reconcileValidationResults(client: Client): Promise<OutOfSyncRow[
       updatedAt: validationResults.updatedAt,
     })
     .from(validationResults)
+    .where(
+      and(
+        isNull(validationResults.notionLastEdited),
+        lt(validationResults.updatedAt, cutoff)
+      )
+    )
     .orderBy(desc(validationResults.updatedAt))
     .limit(50);
 
-  const orgIds = [...new Set(recentResults.map(r => r.organizationId))];
+  if (staleResults.length === 0) return [];
+
+  // Get org slugs
+  const orgIds = [...new Set(staleResults.map(r => r.organizationId))];
   const orgs = orgIds.length > 0
     ? await db.select({ id: organizations.id, slug: organizations.slug }).from(organizations).where(sql`${organizations.id} IN (${sql.join(orgIds.map(id => sql`${id}`), sql`, `)})`)
     : [];
   const orgMap = new Map(orgs.map(o => [o.id, o.slug]));
 
-  // Check a sample of 10 against Notion
-  const sample = recentResults.slice(0, 10);
-  for (const result of sample) {
-    const orgSlug = orgMap.get(result.organizationId) || "unknown";
-    try {
-      const notionResult: any = await (client as any).dataSources.query({
-        data_source_id: dsId,
-        filter: {
-          and: [
-            { property: "Organization ID", number: { equals: result.organizationId } },
-            { property: "Test Key", rich_text: { equals: result.testKey } },
-          ],
-        },
-        page_size: 1,
-      });
-
-      const notionPage = notionResult.results?.[0];
-      if (!notionPage) continue;
-
-      const notionUpdatedAt = new Date(notionPage.last_edited_time).getTime();
-      const mysqlUpdatedAt = result.updatedAt ? new Date(result.updatedAt).getTime() : 0;
-      const drift = Math.abs(notionUpdatedAt - mysqlUpdatedAt);
-
-      if (drift > DRIFT_THRESHOLD_MS) {
-        outOfSync.push({
-          type: "validationResult",
-          orgSlug,
-          key: result.testKey,
-          mysqlUpdatedAt: result.updatedAt ? new Date(result.updatedAt).toISOString() : "N/A",
-          notionUpdatedAt: new Date(notionUpdatedAt).toISOString(),
-          driftMinutes: Math.round(drift / 60000),
-        });
-      }
-    } catch (err) {
-      continue;
-    }
-  }
-
-  return outOfSync;
+  return staleResults.map(result => ({
+    type: "validationResult" as const,
+    orgSlug: orgMap.get(result.organizationId) || "unknown",
+    key: result.testKey,
+    mysqlUpdatedAt: result.updatedAt ? new Date(result.updatedAt).toISOString() : "N/A",
+    staleMinutes: result.updatedAt ? Math.round((Date.now() - new Date(result.updatedAt).getTime()) / 60000) : 0,
+  }));
 }
 
 /**
  * Main reconciliation entry point. Called by cron every hour.
- * Checks both task completions and validation results, notifies owner if any are out of sync.
+ * Checks for rows where notionLastEdited is null and stale > 10 minutes.
+ * These represent portal writes that haven't been confirmed by sync-back.
  * Persists results to reconciliationLog table for dashboard display.
  */
 export async function runReconciliation(): Promise<{ checked: number; outOfSync: number; details?: string }> {
   const startTime = Date.now();
-  const client = getNotionClient();
-  if (!client) {
-    console.log("[reconciliation] No Notion client configured — skipping");
-    return { checked: 0, outOfSync: 0 };
-  }
 
-  console.log("[reconciliation] Starting hourly reconciliation check...");
+  console.log("[reconciliation] Starting hourly reconciliation check (notionLastEdited version)...");
 
   try {
-    const taskIssues = await reconcileTaskCompletions(client);
-    const validationIssues = await reconcileValidationResults(client);
+    const taskIssues = await findStaleTasks();
+    const validationIssues = await findStaleValidationResults();
     const allIssues = [...taskIssues, ...validationIssues];
     const durationMs = Date.now() - startTime;
-    const stats = { checked: 50 + 50, outOfSync: allIssues.length };
+    const stats = { checked: allIssues.length > 0 ? allIssues.length : 0, outOfSync: allIssues.length };
 
     // Persist to reconciliationLog
     const db = await getDb();
@@ -205,25 +140,25 @@ export async function runReconciliation(): Promise<{ checked: number; outOfSync:
     });
 
     if (allIssues.length > 0) {
-      console.warn(`[reconciliation] Found ${allIssues.length} out-of-sync rows`);
+      console.warn(`[reconciliation] Found ${allIssues.length} rows with stale notionLastEdited=null`);
       const issueList = allIssues
-        .map(i => `• ${i.type} | ${i.orgSlug}/${i.key} | Drift: ${i.driftMinutes}min | MySQL: ${i.mysqlUpdatedAt} | Notion: ${i.notionUpdatedAt}`)
+        .map(i => `• ${i.type} | ${i.orgSlug}/${i.key} | Stale: ${i.staleMinutes}min | MySQL updatedAt: ${i.mysqlUpdatedAt}`)
         .join("\n");
 
       const cleanupPlan = allIssues.length <= 3
-        ? "\n\nCleanup plan: Trigger a full sync from the admin panel to reconcile these rows."
-        : `\n\nCleanup plan: ${allIssues.length} rows are out of sync. Trigger a full sync from the admin panel. If the issue persists after sync, check Notion API access and the retry queue for stuck items.`;
+        ? "\n\nCleanup plan: These rows were written by the portal but sync-back hasn't confirmed them yet. Check if the Notion dual-write failed and retry, or trigger a full sync."
+        : `\n\nCleanup plan: ${allIssues.length} rows have pending Notion confirmation. Check the retry queue and Notion API access. Trigger a full sync if the issue persists.`;
 
       await notifyOwner({
-        title: `⚠️ Sync Reconciliation: ${allIssues.length} row(s) out of sync`,
-        content: `Hourly reconciliation found rows where MySQL and Notion timestamps differ by more than 10 minutes:\n\n${issueList}${cleanupPlan}`,
+        title: `⚠️ Sync Reconciliation: ${allIssues.length} row(s) pending Notion confirmation`,
+        content: `Hourly reconciliation found rows where the portal wrote to MySQL but sync-back hasn't confirmed the Notion write (notionLastEdited is null for >10 minutes):\n\n${issueList}${cleanupPlan}`,
       }).catch(err => console.error("[reconciliation] Failed to notify owner:", err));
     } else {
-      console.log("[reconciliation] All sampled rows are in sync ✓");
+      console.log("[reconciliation] All rows have confirmed notionLastEdited ✓");
     }
 
     const details = allIssues.length > 0
-      ? allIssues.map(i => `${i.type} | ${i.orgSlug}/${i.key} | Drift: ${i.driftMinutes}min`).join("\n")
+      ? allIssues.map(i => `${i.type} | ${i.orgSlug}/${i.key} | Stale: ${i.staleMinutes}min`).join("\n")
       : undefined;
 
     return { ...stats, details };

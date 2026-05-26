@@ -188,6 +188,7 @@ export const organizationsRouter = router({
             completedAt: input.completed ? new Date() : null,
             completedBy: input.completedBy,
             notes: input.notes,
+            notionLastEdited: null,
           })
           .where(eq(taskCompletion.id, existing.id));
       } else {
@@ -200,6 +201,7 @@ export const organizationsRouter = router({
           completedAt: input.completed ? new Date() : null,
           completedBy: input.completedBy,
           notes: input.notes,
+          notionLastEdited: null,
         });
       }
 

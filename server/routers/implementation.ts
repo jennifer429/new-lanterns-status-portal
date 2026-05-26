@@ -100,13 +100,14 @@ export const implementationRouter = router({
       if (existing) {
         await db
           .update(taskCompletion)
-          .set(payload)
+          .set({ ...payload, notionLastEdited: null })
           .where(eq(taskCompletion.id, existing.id));
       } else {
         await db.insert(taskCompletion).values({
           organizationId: org.id,
           taskId: input.taskId,
           ...payload,
+          notionLastEdited: null,
         });
       }
 

@@ -1,0 +1,31 @@
+{
+  "query": "SELECT COUNT(*) as cnt FROM vendorAuditLog; SELECT * FROM vendorAuditLog ORDER BY performedAt DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT COUNT(*) as cnt FROM vendorAuditLog; SELECT * FROM vendorAuditLog ORDER BY performedAt DESC LIMIT 5;",
+  "rows": [
+    {
+      "cnt": "1709"
+    },
+    {
+      "cnt": "id\taction\tsystemType\tvendorName\tpreviousValue\tnewValue\tperformedBy\tperformedAt"
+    },
+    {
+      "cnt": "720302\tadd\tAuditDelete_1779793272130\tDeleteAudit_1779793272130\tNULL\tDeleteAudit_1779793272130\tadmin@newlantern.ai\t2026-05-26 11:01:12"
+    },
+    {
+      "cnt": "720299\tadd\tAuditToggle_1779793272002\tToggleAudit_1779793272002\tNULL\tToggleAudit_1779793272002\tadmin@newlantern.ai\t2026-05-26 11:01:12"
+    },
+    {
+      "cnt": "720301\tdelete\tAuditToggle_1779793272002\tToggleAudit_1779793272002\tToggleAudit_1779793272002\tNULL\tadmin@newlantern.ai\t2026-05-26 11:01:12"
+    },
+    {
+      "cnt": "720300\ttoggle\tAuditToggle_1779793272002\tToggleAudit_1779793272002\tactive\tinactive\tadmin@newlantern.ai\t2026-05-26 11:01:12"
+    },
+    {
+      "cnt": "720303\tdelete\tAuditDelete_1779793272130\tDeleteAudit_1779793272130\tDeleteAudit_1779793272130\tNULL\tadmin@newlantern.ai\t2026-05-26 11:01:12"
+    }
+  ],
+  "messages": [],
+  "stdout": "cnt\n1709\nid\taction\tsystemType\tvendorName\tpreviousValue\tnewValue\tperformedBy\tperformedAt\n720302\tadd\tAuditDelete_1779793272130\tDeleteAudit_1779793272130\tNULL\tDeleteAudit_1779793272130\tadmin@newlantern.ai\t2026-05-26 11:01:12\n720299\tadd\tAuditToggle_1779793272002\tToggleAudit_1779793272002\tNULL\tToggleAudit_1779793272002\tadmin@newlantern.ai\t2026-05-26 11:01:12\n720301\tdelete\tAuditToggle_1779793272002\tToggleAudit_1779793272002\tToggleAudit_1779793272002\tNULL\tadmin@newlantern.ai\t2026-05-26 11:01:12\n720300\ttoggle\tAuditToggle_1779793272002\tToggleAudit_1779793272002\tactive\tinactive\tadmin@newlantern.ai\t2026-05-26 11:01:12\n720303\tdelete\tAuditDelete_1779793272130\tDeleteAudit_1779793272130\tDeleteAudit_1779793272130\tNULL\tadmin@newlantern.ai\t2026-05-26 11:01:12\n",
+  "stderr": "",
+  "execution_time_ms": 271
+}

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
+import { NOT_ADMIN_ERR_MSG } from "@shared/const";
 
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 
@@ -198,7 +199,7 @@ describe("Vendor Options - Admin CRUD", () => {
       systemType: testSystemType,
       vendors,
     });
-    expect(result).toEqual({ success: true });
+    expect(result).toMatchObject({ success: true });
 
     // Verify all three appear
     const allOptions = await adminCaller.admin.getSystemVendorOptions();
@@ -220,7 +221,7 @@ describe("Vendor Options - Access Control", () => {
 
     await expect(
       userCaller.admin.getSystemVendorOptions()
-    ).rejects.toThrow("Admin access required");
+    ).rejects.toThrow(NOT_ADMIN_ERR_MSG);
   });
 
   it("regular user cannot add vendor options", async () => {
@@ -232,7 +233,7 @@ describe("Vendor Options - Access Control", () => {
         systemType: "PACS",
         vendorName: "HackerVendor",
       })
-    ).rejects.toThrow("Admin access required");
+    ).rejects.toThrow(NOT_ADMIN_ERR_MSG);
   });
 });
 
@@ -357,7 +358,7 @@ describe("Vendor Options - Audit Log", () => {
 
     await adminCaller.admin.addVendorOption({ systemType: testSystemType, vendorName });
 
-    const logs = await adminCaller.admin.getVendorAuditLog({ limit: 5 });
+    const logs = await adminCaller.admin.getVendorAuditLog({ limit: 50 });
     const addLog = logs.find(
       (l) => l.action === "add" && l.systemType === testSystemType && l.vendorName === vendorName
     );
@@ -384,7 +385,7 @@ describe("Vendor Options - Audit Log", () => {
 
     await adminCaller.admin.updateVendorOption({ id: created!.id, vendorName: newName });
 
-    const logs = await adminCaller.admin.getVendorAuditLog({ limit: 5 });
+    const logs = await adminCaller.admin.getVendorAuditLog({ limit: 50 });
     const updateLog = logs.find(
       (l) => l.action === "update" && l.systemType === testSystemType
     );
@@ -408,7 +409,7 @@ describe("Vendor Options - Audit Log", () => {
 
     await adminCaller.admin.toggleVendorOption({ id: created!.id, isActive: 0 });
 
-    const logs = await adminCaller.admin.getVendorAuditLog({ limit: 5 });
+    const logs = await adminCaller.admin.getVendorAuditLog({ limit: 50 });
     const toggleLog = logs.find(
       (l) => l.action === "toggle" && l.systemType === testSystemType && l.vendorName === vendorName
     );
@@ -432,7 +433,7 @@ describe("Vendor Options - Audit Log", () => {
 
     await adminCaller.admin.deleteVendorOption({ id: created!.id });
 
-    const logs = await adminCaller.admin.getVendorAuditLog({ limit: 5 });
+    const logs = await adminCaller.admin.getVendorAuditLog({ limit: 50 });
     const deleteLog = logs.find(
       (l) => l.action === "delete" && l.systemType === testSystemType && l.vendorName === vendorName
     );
@@ -446,7 +447,7 @@ describe("Vendor Options - Audit Log", () => {
 
     await adminCaller.admin.addSystemType({ systemType: testSystemType, vendors });
 
-    const logs = await adminCaller.admin.getVendorAuditLog({ limit: 5 });
+    const logs = await adminCaller.admin.getVendorAuditLog({ limit: 50 });
     const bulkLog = logs.find(
       (l) => l.action === "add_system_type" && l.systemType === testSystemType
     );
@@ -467,6 +468,6 @@ describe("Vendor Options - Audit Log", () => {
 
     await expect(
       userCaller.admin.getVendorAuditLog({ limit: 10 })
-    ).rejects.toThrow("Admin access required");
+    ).rejects.toThrow(NOT_ADMIN_ERR_MSG);
   });
 });

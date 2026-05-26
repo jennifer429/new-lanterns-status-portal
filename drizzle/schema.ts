@@ -108,6 +108,8 @@ export const taskCompletion = mysqlTable("taskCompletion", {
   completedBy: varchar("completedBy", { length: 255 }),
   targetDate: varchar("targetDate", { length: 20 }), // YYYY-MM-DD target/due date
   notes: text("notes"),
+  /** Notion page last_edited_time — used as version check for sync-back. Null = portal wrote last (dual-write pending). */
+  notionLastEdited: timestamp("notionLastEdited"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -342,6 +344,8 @@ export const validationResults = mysqlTable("validationResults", {
   /** User-settable date for when this test was documented. Auto-populates with today's date. */
   testedDate: varchar("testedDate", { length: 10 }), // YYYY-MM-DD format
   updatedBy: varchar("updatedBy", { length: 320 }),
+  /** Notion page last_edited_time — used as version check for sync-back. Null = portal wrote last (dual-write pending). */
+  notionLastEdited: timestamp("notionLastEdited"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
