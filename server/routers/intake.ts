@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { publicProcedure, router } from "../_core/trpc";
+import { router, publicProcedure, protectedProcedure } from "../_core/trpc";
 import { requireDb } from "../db";
 import { intakeResponses, intakeFileAttachments, organizations, questions, onboardingFeedback, clients, partnerTemplates, partnerTaskTemplates, orgCustomTasks } from "../../drizzle/schema";
 import { eq, and, sql } from "drizzle-orm";
@@ -131,14 +131,14 @@ export const intakeRouter = router({
     }),
 
   /**
-   * Save or update an intake response
+   * Toggle completion status of an org custom task
    */
-  saveResponse: publicProcedure
+  toggleOrgCustomTaskPublic: publicProcedure
     .input(
       z.object({
         organizationSlug: z.string(),
-        questionId: z.string(), // Question identifier (e.g., "H.1", "A.2")
-        response: z.string(),
+        taskId: z.number(),
+        isCompleted: z.boolean(),
         userEmail: z.string(),
       })
     )
@@ -191,7 +191,7 @@ export const intakeRouter = router({
   /**
    * Save multiple responses at once (batch save for auto-save)
    */
-  saveResponses: publicProcedure
+  saveResponses: protectedProcedure
     .input(
       z.object({
         organizationSlug: z.string(),
@@ -336,7 +336,7 @@ export const intakeRouter = router({
    * Upload file for intake question
    * Uploads to Google Drive for RadOne organizations
    */
-  uploadFile: publicProcedure
+  uploadFile: protectedProcedure
     .input(
       z.object({
         organizationSlug: z.string().max(100),
@@ -665,14 +665,14 @@ export const intakeRouter = router({
     }),
 
   /**
-   * Submit onboarding feedback
+   * Delete an org custom task
    */
-  submitFeedback: publicProcedure
+  deleteOrgCustomTaskPublic: publicProcedure
     .input(
       z.object({
         organizationSlug: z.string(),
-        rating: z.number().min(1).max(5),
-        comments: z.string().optional(),
+        taskId: z.number(),
+        userEmail: z.string(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -723,7 +723,7 @@ export const intakeRouter = router({
   /**
    * Upload an adhoc file (meeting notes, transcripts, etc.) from the dashboard
    */
-  uploadAdhocFile: publicProcedure
+  uploadAdhocFile: protectedProcedure
     .input(
       z.object({
         organizationSlug: z.string().max(100),

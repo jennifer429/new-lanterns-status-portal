@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, publicProcedure } from "../_core/trpc";
+import { router, publicProcedure, protectedProcedure } from "../_core/trpc";
 import { getConnectivityNotionClient } from "../notion";
 import { ENV } from "../_core/env";
 
@@ -445,7 +445,7 @@ export const connectivityRouter = router({
    * Fetches the DB schema first to resolve actual property names, then
    * upserts each row (matched by trafficType + sourceSystem + destSystem).
    */
-  syncToNotion: publicProcedure
+  syncToNotion: protectedProcedure
     .input(z.object({
       organizationSlug: z.string(),
       organizationName: z.string(),
@@ -522,7 +522,7 @@ export const connectivityRouter = router({
     }),
 
   /** Create a new Notion page for one connectivity row. Returns the new Notion page ID. */
-  createRow: publicProcedure
+  createRow: protectedProcedure
     .input(z.object({ organizationName: z.string(), row: ConnectivityRowSchema }))
     .mutation(async ({ input }) => {
       const client = getConnectivityNotionClient();
@@ -538,7 +538,7 @@ export const connectivityRouter = router({
     }),
 
   /** Update an existing Notion page for one connectivity row. */
-  updateRow: publicProcedure
+  updateRow: protectedProcedure
     .input(z.object({ pageId: z.string(), organizationName: z.string(), row: ConnectivityRowSchema }))
     .mutation(async ({ input }) => {
       const client = getConnectivityNotionClient();
@@ -550,8 +550,8 @@ export const connectivityRouter = router({
       return { ok: true };
     }),
 
-  /** Archive (soft-delete) a Notion page. */
-  archiveRow: publicProcedure
+    /** Archive (delete) a Notion page. */
+  archiveRow: protectedProcedure
     .input(z.object({ pageId: z.string() }))
     .mutation(async ({ input }) => {
       const client = getConnectivityNotionClient();
