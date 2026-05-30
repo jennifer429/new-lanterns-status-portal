@@ -370,7 +370,23 @@ export const connectivityRouter = router({
     .query(async ({ input }) => {
       const client = getConnectivityNotionClient();
       const dsId = getDataSourceId();
+      const { db } = await import("../db");
+      const { connectivityCache } = await import("../../drizzle/schema");
+      const { eq } = await import("drizzle-orm");
+      
+      const slugNorm = normalise(input.organizationSlug);
+      const nameNorm = input.organizationName ? normalise(input.organizationName) : null;
+
       if (!client || !dsId) {
+        // Try to fetch from cache if Notion is not configured
+        try {
+          const [cached] = await db.select().from(connectivityCache).where(eq(connectivityCache.organizationSlug, slugNorm));
+          if (cached) {
+            return { rows: JSON.parse(cached.data), configured: false, fromCache: true };
+          }
+        } catch (e) {
+          console.error("Failed to read connectivity cache:", e);
+        }
         return { rows: [], configured: false };
       }
 
@@ -380,9 +396,6 @@ export const connectivityRouter = router({
           data_source_id: dsId,
           page_size: 100,
         });
-
-        const slugNorm = normalise(input.organizationSlug);
-        const nameNorm = input.organizationName ? normalise(input.organizationName) : null;
 
         const rows = (response.results as any[])
           .filter((page: any) => page.object === "page" && !page.archived)
@@ -433,9 +446,30 @@ export const connectivityRouter = router({
         // Remove the internal institutionGroups field before returning
         const cleanRows = rows.map(({ institutionGroups, ...rest }) => rest);
 
-        return { rows: cleanRows, configured: true };
+        // Update cache
+        try {
+          await db.insert(connectivityCache).values({
+            organizationSlug: slugNorm,
+            data: JSON.stringify(cleanRows),
+          }).onDuplicateKeyUpdate({
+            set: { data: JSON.stringify(cleanRows) }
+          });
+        } catch (e) {
+          console.error("Failed to update connectivity cache:", e);
+        }
+
+        return { rows: cleanRows, configured: true, fromCache: false };
       } catch (error: any) {
         console.error("Notion connectivity fetch error:", error?.message ?? error);
+        // Try to fetch from cache on error
+        try {
+          const [cached] = await db.select().from(connectivityCache).where(eq(connectivityCache.organizationSlug, slugNorm));
+          if (cached) {
+            return { rows: JSON.parse(cached.data), configured: true, fromCache: true, error: String(error?.message ?? "Unknown error") };
+          }
+        } catch (e) {
+          console.error("Failed to read connectivity cache:", e);
+        }
         return { rows: [], configured: true, error: String(error?.message ?? "Unknown error") };
       }
     }),

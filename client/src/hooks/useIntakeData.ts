@@ -108,13 +108,14 @@ export function useIntakeData(slug: string, clientSlug: string) {
       
       // Check the detailed status object returned by the new backend
       const status = data.status;
+      const orgName = org?.name || slug;
       if (status && (!status.drive || !status.notion)) {
-        toast.error("File uploaded with warnings", {
+        toast.error(`File uploaded to ${orgName} with warnings`, {
           description: `Saved to backup storage. ${!status.drive ? 'Google Drive sync failed. ' : ''}${!status.notion ? 'Notion sync failed.' : ''}`
         });
       } else {
-        toast.success("File uploaded", {
-          description: "Your file has been uploaded successfully to Google Drive."
+        toast.success(`File uploaded to ${orgName}`, {
+          description: `Your file has been successfully uploaded to the ${orgName} folder in Google Drive.`
         });
       }
     },
