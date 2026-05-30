@@ -1,0 +1,15 @@
+{
+  "query": "SELECT openId, email, name FROM users WHERE email = 'rbennett@tuscrad.com';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT openId, email, name FROM users WHERE email = 'rbennett@tuscrad.com';",
+  "rows": [
+    {
+      "openId": "rbennett@tuscrad.com",
+      "email": "rbennett@tuscrad.com",
+      "name": "Rhonda Bennett"
+    }
+  ],
+  "messages": [],
+  "stdout": "openId\temail\tname\nrbennett@tuscrad.com\trbennett@tuscrad.com\tRhonda Bennett\n",
+  "stderr": "",
+  "execution_time_ms": 277
+}

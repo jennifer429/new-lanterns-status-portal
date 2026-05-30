@@ -1,0 +1,18 @@
+{
+  "query": "SELECT id, email, name, role, clientId, lastSignedIn FROM users WHERE email LIKE '%rhonda%' OR name LIKE '%Rhonda%' OR email LIKE '%rbennett%' LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, email, name, role, clientId, lastSignedIn FROM users WHERE email LIKE '%rhonda%' OR name LIKE '%Rhonda%' OR email LIKE '%rbennett%' LIMIT 5;",
+  "rows": [
+    {
+      "id": "1800012",
+      "email": "rbennett@tuscrad.com",
+      "name": "Rhonda Bennett",
+      "role": "admin",
+      "clientId": "2",
+      "lastSignedIn": "2026-05-28 14:38:18"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\temail\tname\trole\tclientId\tlastSignedIn\n1800012\trbennett@tuscrad.com\tRhonda Bennett\tadmin\t2\t2026-05-28 14:38:18\n",
+  "stderr": "",
+  "execution_time_ms": 908
+}

@@ -752,31 +752,45 @@ export const intakeRouter = router({
       const sanitizedOrg = org.name.replace(/[^a-zA-Z0-9-]/g, "_");
       const storedName = `${sanitizedOrg}_${sanitizedEmail}_ADHOC_${timestamp}.${fileExt}`;
 
-      const fileUrl = await uploadToGoogleDrive(storedName, fileBuffer, org.name, org.googleDriveFolderId);
+      const { driveUrl, s3Url, driveFileId, s3Key } = await uploadToGoogleDrive(storedName, fileBuffer, org.name, org.googleDriveFolderId);
+      const finalUrl = driveUrl || s3Url;
 
       await db.insert(intakeFileAttachments).values({
         organizationId: org.id,
         questionId: "ADHOC",
         fileName: input.fileName,
-        fileUrl,
-        driveFileId: storedName,
+        fileUrl: finalUrl,
+        driveFileId: s3Key,
         fileSize: fileBuffer.length,
         mimeType: input.mimeType,
         uploadedBy: input.userEmail,
       });
 
       // Audit log
-      logFileActivity({
-        action: "upload",
-        userEmail: input.userEmail,
-        userRole: ctx.user?.role || "user",
-        organizationName: org.name,
-        fileName: input.fileName,
-        fileUrl,
-        notes: "Adhoc file upload",
-      }).catch(() => {});
+      let auditLogged = true;
+      try {
+        await logFileActivity({
+          action: "upload",
+          userEmail: input.userEmail,
+          userRole: ctx.user?.role || "user",
+          organizationName: org.name,
+          fileName: input.fileName,
+          fileUrl: finalUrl,
+          notes: `Adhoc Upload | Drive: ${driveUrl ? 'Yes' : 'No'} | S3: Yes`,
+        });
+      } catch (e) {
+        auditLogged = false;
+      }
 
-      return { success: true, fileUrl };
+      return { 
+        success: true, 
+        fileUrl: finalUrl,
+        status: {
+          drive: !!driveUrl,
+          s3: true,
+          audit: auditLogged
+        }
+      };
     }),
 
   /**

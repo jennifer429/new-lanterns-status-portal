@@ -1,0 +1,26 @@
+{
+  "query": "SELECT 'intakeFileAttachments' as tbl, COUNT(*) as cnt FROM intakeFileAttachments UNION ALL SELECT 'orgNotes', COUNT(*) FROM orgNotes UNION ALL SELECT 'fileAttachments', COUNT(*) FROM fileAttachments UNION ALL SELECT 'partnerDocuments', COUNT(*) FROM partnerDocuments;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT 'intakeFileAttachments' as tbl, COUNT(*) as cnt FROM intakeFileAttachments UNION ALL SELECT 'orgNotes', COUNT(*) FROM orgNotes UNION ALL SELECT 'fileAttachments', COUNT(*) FROM fileAttachments UNION ALL SELECT 'partnerDocuments', COUNT(*) FROM partnerDocuments;",
+  "rows": [
+    {
+      "tbl": "partnerDocuments",
+      "cnt": "24"
+    },
+    {
+      "tbl": "fileAttachments",
+      "cnt": "7"
+    },
+    {
+      "tbl": "intakeFileAttachments",
+      "cnt": "33"
+    },
+    {
+      "tbl": "orgNotes",
+      "cnt": "55"
+    }
+  ],
+  "messages": [],
+  "stdout": "tbl\tcnt\npartnerDocuments\t24\nfileAttachments\t7\nintakeFileAttachments\t33\norgNotes\t55\n",
+  "stderr": "",
+  "execution_time_ms": 265
+}

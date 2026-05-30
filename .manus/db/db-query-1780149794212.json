@@ -1,0 +1,16 @@
+{
+  "query": "SELECT CASE WHEN fileUrl LIKE '%drive.google%' THEN 'GDrive' WHEN fileUrl LIKE '%cloudfront%' THEN 'S3' ELSE 'Other' END as dest, COUNT(*) as cnt, MIN(createdAt) as earliest, MAX(createdAt) as latest FROM fileAttachments GROUP BY dest;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT CASE WHEN fileUrl LIKE '%drive.google%' THEN 'GDrive' WHEN fileUrl LIKE '%cloudfront%' THEN 'S3' ELSE 'Other' END as dest, COUNT(*) as cnt, MIN(createdAt) as earliest, MAX(createdAt) as latest FROM fileAttachments GROUP BY dest;",
+  "rows": [
+    {
+      "dest": "S3",
+      "cnt": "7",
+      "earliest": "2026-03-13 01:23:41",
+      "latest": "2026-03-13 03:28:38"
+    }
+  ],
+  "messages": [],
+  "stdout": "dest\tcnt\tearliest\tlatest\nS3\t7\t2026-03-13 01:23:41\t2026-03-13 03:28:38\n",
+  "stderr": "",
+  "execution_time_ms": 264
+}

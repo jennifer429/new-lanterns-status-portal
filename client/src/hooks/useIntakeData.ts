@@ -89,7 +89,7 @@ export function useIntakeData(slug: string, clientSlug: string) {
   });
 
   const uploadMutation = trpc.intake.uploadFile.useMutation({
-    onSuccess: (_, variables) => {
+    onSuccess: (data, variables) => {
       setUploadingFiles((prev) => {
         const next = new Set(prev);
         next.delete(variables.questionId);
@@ -105,6 +105,18 @@ export function useIntakeData(slug: string, clientSlug: string) {
       utils.intake.getFileCount.invalidate({
         organizationSlug: slug || "",
       });
+      
+      // Check the detailed status object returned by the new backend
+      const status = data.status;
+      if (status && (!status.drive || !status.notion)) {
+        toast.error("File uploaded with warnings", {
+          description: `Saved to backup storage. ${!status.drive ? 'Google Drive sync failed. ' : ''}${!status.notion ? 'Notion sync failed.' : ''}`
+        });
+      } else {
+        toast.success("File uploaded", {
+          description: "Your file has been uploaded successfully to Google Drive."
+        });
+      }
     },
     onError: (error, variables) => {
       setUploadingFiles((prev) => {
@@ -113,7 +125,7 @@ export function useIntakeData(slug: string, clientSlug: string) {
         return next;
       });
       console.error("File upload failed:", error);
-      alert(`File upload failed: ${error.message}. Please try again.`);
+      toast.error("Upload failed", { description: error.message });
     },
   });
 

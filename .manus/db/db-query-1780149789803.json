@@ -1,0 +1,16 @@
+{
+  "query": "SELECT CASE WHEN url LIKE '%drive.google%' THEN 'GDrive' WHEN url LIKE '%cloudfront%' THEN 'S3' ELSE 'Other' END as dest, COUNT(*) as cnt, MIN(createdAt) as earliest, MAX(createdAt) as latest FROM partnerDocuments GROUP BY dest;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT CASE WHEN url LIKE '%drive.google%' THEN 'GDrive' WHEN url LIKE '%cloudfront%' THEN 'S3' ELSE 'Other' END as dest, COUNT(*) as cnt, MIN(createdAt) as earliest, MAX(createdAt) as latest FROM partnerDocuments GROUP BY dest;",
+  "rows": [
+    {
+      "dest": "S3",
+      "cnt": "24",
+      "earliest": "2026-05-21 20:47:19",
+      "latest": "2026-05-22 14:51:51"
+    }
+  ],
+  "messages": [],
+  "stdout": "dest\tcnt\tearliest\tlatest\nS3\t24\t2026-05-21 20:47:19\t2026-05-22 14:51:51\n",
+  "stderr": "",
+  "execution_time_ms": 268
+}

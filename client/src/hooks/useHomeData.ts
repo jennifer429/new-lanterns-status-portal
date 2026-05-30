@@ -120,7 +120,21 @@ export function useHomeData(orgSlug: string) {
   );
 
   const uploadAdhocMutation = trpc.notes.uploadForOrg.useMutation({
-    onSuccess: () => { refetchAdhoc(); },
+    onSuccess: (data) => { 
+      refetchAdhoc(); 
+      
+      // Check the detailed status object returned by the new backend
+      const status = data.status;
+      if (status && (!status.drive || !status.notion)) {
+        toast.error("File uploaded with warnings", {
+          description: `Saved to backup storage. ${!status.drive ? 'Google Drive sync failed. ' : ''}${!status.notion ? 'Notion sync failed.' : ''}`
+        });
+      } else {
+        toast.success("File uploaded", {
+          description: `Your file has been successfully uploaded to the ${orgSlug} folder in Google Drive.`
+        });
+      }
+    },
   });
 
   const deleteNoteMutation = trpc.notes.delete.useMutation({
@@ -186,7 +200,6 @@ export function useHomeData(orgSlug: string) {
     }
     setAdhocUploading(false);
     if (ok > 0) {
-      toast.success(ok === 1 ? "File uploaded!" : `${ok} files uploaded!`);
       setAdhocFiles([]);
     }
   };

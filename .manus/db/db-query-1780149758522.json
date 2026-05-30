@@ -1,0 +1,59 @@
+{
+  "query": "SELECT id, fileName, LEFT(fileUrl, 100) as url_prefix, organizationId, createdAt FROM fileAttachments ORDER BY createdAt DESC LIMIT 15;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, fileName, LEFT(fileUrl, 100) as url_prefix, organizationId, createdAt FROM fileAttachments ORDER BY createdAt DESC LIMIT 15;",
+  "rows": [
+    {
+      "id": "180001",
+      "fileName": "Screenshot 2026-03-12 at 10.20.59 PM.png",
+      "url_prefix": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/intake/Boulder/IW.di",
+      "organizationId": "240002",
+      "createdAt": "2026-03-13 03:28:38"
+    },
+    {
+      "id": "150006",
+      "fileName": "Screenshot 2026-02-20 at 3.00.46 PM.png",
+      "url_prefix": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/intake/baycare/IW.di",
+      "organizationId": "60009",
+      "createdAt": "2026-03-13 02:40:44"
+    },
+    {
+      "id": "150005",
+      "fileName": "Screenshot 2026-02-20 at 4.57.29 PM.png",
+      "url_prefix": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/intake/baycare/IW.di",
+      "organizationId": "60009",
+      "createdAt": "2026-03-13 02:40:33"
+    },
+    {
+      "id": "150004",
+      "fileName": "Screenshot 2026-02-20 at 3.18.04 PM.png",
+      "url_prefix": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/intake/hca-flwest/IW",
+      "organizationId": "600001",
+      "createdAt": "2026-03-13 02:20:53"
+    },
+    {
+      "id": "150003",
+      "fileName": "589746065_10172686961010315_6972786183083418544_n.jpg",
+      "url_prefix": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/intake/hca-flwest/IW",
+      "organizationId": "600001",
+      "createdAt": "2026-03-13 02:20:41"
+    },
+    {
+      "id": "150002",
+      "fileName": "image (5).png",
+      "url_prefix": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/intake/baycare/IW.di",
+      "organizationId": "60009",
+      "createdAt": "2026-03-13 01:24:18"
+    },
+    {
+      "id": "150001",
+      "fileName": "Screenshot 2026-03-12 at 9.21.41 PM.png",
+      "url_prefix": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/intake/baycare/IW.di",
+      "organizationId": "60009",
+      "createdAt": "2026-03-13 01:23:41"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tfileName\turl_prefix\torganizationId\tcreatedAt\n180001\tScreenshot 2026-03-12 at 10.20.59 PM.png\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/intake/Boulder/IW.di\t240002\t2026-03-13 03:28:38\n150006\tScreenshot 2026-02-20 at 3.00.46 PM.png\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/intake/baycare/IW.di\t60009\t2026-03-13 02:40:44\n150005\tScreenshot 2026-02-20 at 4.57.29 PM.png\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/intake/baycare/IW.di\t60009\t2026-03-13 02:40:33\n150004\tScreenshot 2026-02-20 at 3.18.04 PM.png\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/intake/hca-flwest/IW\t600001\t2026-03-13 02:20:53\n150003\t589746065_10172686961010315_6972786183083418544_n.jpg\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/intake/hca-flwest/IW\t600001\t2026-03-13 02:20:41\n150002\timage (5).png\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/intake/baycare/IW.di\t60009\t2026-03-13 01:24:18\n150001\tScreenshot 2026-03-12 at 9.21.41 PM.png\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/intake/baycare/IW.di\t60009\t2026-03-13 01:23:41\n",
+  "stderr": "",
+  "execution_time_ms": 267
+}

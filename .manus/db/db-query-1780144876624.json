@@ -1,0 +1,26 @@
+{
+  "query": "SELECT 'aiAuditLogs' as tbl, COUNT(*) as cnt FROM aiAuditLogs UNION ALL SELECT 'partnerDocAudit', COUNT(*) FROM partnerDocAudit UNION ALL SELECT 'vendorAuditLog', COUNT(*) FROM vendorAuditLog UNION ALL SELECT 'activityFeed', COUNT(*) FROM activityFeed;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT 'aiAuditLogs' as tbl, COUNT(*) as cnt FROM aiAuditLogs UNION ALL SELECT 'partnerDocAudit', COUNT(*) FROM partnerDocAudit UNION ALL SELECT 'vendorAuditLog', COUNT(*) FROM vendorAuditLog UNION ALL SELECT 'activityFeed', COUNT(*) FROM activityFeed;",
+  "rows": [
+    {
+      "tbl": "activityFeed",
+      "cnt": "3"
+    },
+    {
+      "tbl": "partnerDocAudit",
+      "cnt": "24"
+    },
+    {
+      "tbl": "aiAuditLogs",
+      "cnt": "395"
+    },
+    {
+      "tbl": "vendorAuditLog",
+      "cnt": "3313"
+    }
+  ],
+  "messages": [],
+  "stdout": "tbl\tcnt\nactivityFeed\t3\npartnerDocAudit\t24\naiAuditLogs\t395\nvendorAuditLog\t3313\n",
+  "stderr": "",
+  "execution_time_ms": 279
+}

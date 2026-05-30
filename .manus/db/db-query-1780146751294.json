@@ -1,0 +1,109 @@
+{
+  "query": "SHOW TABLES;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SHOW TABLES;",
+  "rows": [
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "__drizzle_migrations"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "activityFeed"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "aiAuditLogs"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "clients"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "contacts"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "fileAttachments"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "implementationOrgs"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "intakeFileAttachments"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "intakeResponses"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "notionRetryQueue"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "onboardingFeedback"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "orgCustomTasks"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "orgNotes"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "organizations"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "partnerDocAudit"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "partnerDocuments"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "partnerTaskTemplates"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "partnerTemplates"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "passwordResetTokens"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "question_options"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "questions"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "reconciliationLog"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "responses"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "sectionProgress"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "specifications"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "syncCheckpoints"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "systemVendorOptions"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "systems"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "taskCompletion"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "taskOrgAssignment"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "users"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "validationResults"
+    },
+    {
+      "Tables_in_hgGEXRHUCG7apwzJRKH7LF": "vendorAuditLog"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_hgGEXRHUCG7apwzJRKH7LF\n__drizzle_migrations\nactivityFeed\naiAuditLogs\nclients\ncontacts\nfileAttachments\nimplementationOrgs\nintakeFileAttachments\nintakeResponses\nnotionRetryQueue\nonboardingFeedback\norgCustomTasks\norgNotes\norganizations\npartnerDocAudit\npartnerDocuments\npartnerTaskTemplates\npartnerTemplates\npasswordResetTokens\nquestion_options\nquestions\nreconciliationLog\nresponses\nsectionProgress\nspecifications\nsyncCheckpoints\nsystemVendorOptions\nsystems\ntaskCompletion\ntaskOrgAssignment\nusers\nvalidationResults\nvendorAuditLog\n",
+  "stderr": "",
+  "execution_time_ms": 269
+}

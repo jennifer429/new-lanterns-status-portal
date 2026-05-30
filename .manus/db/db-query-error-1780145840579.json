@@ -1,0 +1,8 @@
+{
+  "query": "SELECT 'intakeFile' as source, ifa.questionId as location, ifa.fileName, ifa.fileUrl, ifa.uploadedBy, ifa.createdAt\nFROM intakeFileAttachments ifa \nJOIN organizations o ON o.id = ifa.organizationId \nWHERE o.slug = 'RMCA'\nUNION ALL\nSELECT 'taskFile' as source, CONCAT('task:', fa.taskId) as location, fa.fileName, fa.fileUrl, fa.uploadedBy, fa.createdAt\nFROM fileAttachments fa\nJOIN organizations o ON o.id = fa.organizationId\nWHERE o.slug = 'RMCA'\nUNION ALL\nSELECT 'note' as source, CONCAT('note:', n.id) as location, n.fileName, n.fileUrl, n.authorEmail as uploadedBy, n.createdAt\nFROM orgNotes n\nJOIN organizations o ON o.id = n.organizationId\nWHERE o.slug = 'RMCA'\nORDER BY createdAt DESC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT 'intakeFile' as source, ifa.questionId as location, ifa.fileName, ifa.fileUrl, ifa.uploadedBy, ifa.createdAt\nFROM intakeFileAttachments ifa \nJOIN organizations o ON o.id = ifa.organizationId \nWHERE o.slug = 'RMCA'\nUNION ALL\nSELECT 'taskFile' as source, CONCAT('task:', fa.taskId) as location, fa.fileName, fa.fileUrl, fa.uploadedBy, fa.createdAt\nFROM fileAttachments fa\nJOIN organizations o ON o.id = fa.organizationId\nWHERE o.slug = 'RMCA'\nUNION ALL\nSELECT 'note' as source, CONCAT('note:', n.id) as location, n.fileName, n.fileUrl, n.authorEmail as uploadedBy, n.createdAt\nFROM orgNotes n\nJOIN organizations o ON o.id = n.organizationId\nWHERE o.slug = 'RMCA'\nORDER BY createdAt DESC;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'n.authoremail' in 'field list'"
+  ]
+}

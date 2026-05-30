@@ -347,3 +347,15 @@
 - [x] Manually pushed 8 RRAL connectivity rows from intake data to Integration Connection Registry
 - [x] Wire intake CONN.endpoints save to also push rows to Integration Connection Registry (prevents future blank connectivity pages)
 - [x] Purge 361 duplicate retry queue entries (418 → 57 unique pending, will drain in ~15 min)
+
+## Fix #1: Google Drive Upload Pipeline (May 30, 2026)
+
+- [ ] Set GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY as webdev secrets
+- [ ] Rewrite uploadFileToDrive to: 1) Upload to Drive (primary), 2) Upload to S3 (backup), 3) Sync Drive link to Notion, 4) Write audit log — with per-step status tracking
+- [ ] Return structured result from upload (driveUrl, s3Url, notionSynced, auditLogged) so frontend can report each step
+- [ ] Update fileAuditLog.ts to use ENV.notionApiKey instead of raw process.env (fix silent fallback)
+- [ ] Add NOTION_FILE_AUDIT_DATASOURCE_ID to ENV_OVERRIDES or verify it's set as a secret
+- [ ] Update frontend (useIntakeData, useHomeData) to show detailed success/failure toast per upload step
+- [ ] Write backfill script to copy 63 missing files from S3 to Google Drive and update DB URLs
+- [ ] Ensure per-org Drive folder IDs are created for all active orgs
+- [ ] Write vitest for the new upload pipeline
