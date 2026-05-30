@@ -131,7 +131,7 @@ describe("AI Org-Scoped Tools", () => {
           messages: [{ role: "user", content: "Show tasks" }],
           orgSlug: "boulder-community-health",
         })
-      ).rejects.toThrow("Admin access required");
+      ).rejects.toThrow(/permission/i);
     });
   });
 

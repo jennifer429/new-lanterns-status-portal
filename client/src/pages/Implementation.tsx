@@ -54,6 +54,7 @@ import { buildCSV, downloadCSV, parseCSV, readFileAsText, csvFilename } from "@/
 import { Download, Upload } from "lucide-react";
 import { SECTION_DEFS, type TaskDef, type SectionDef } from "@shared/taskDefs";
 import { SwimlaneView } from "@/components/SwimlaneView";
+import { StatusBadge } from "@/components/StatusBadge";
 import { LayoutGrid, List } from "lucide-react";
 
 // ── Inline editable text ───────────────────────────────────────────────────────
@@ -110,68 +111,7 @@ function InlineEdit({
   );
 }
 
-// ── Status badge component ────────────────────────────────────────────────────
 
-function StatusBadge({
-  status,
-  onClick,
-  size = "md",
-}: {
-  status: "done" | "na" | "open";
-  onClick: () => void;
-  size?: "sm" | "md";
-}) {
-  const sizeClasses = size === "sm" ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-xs";
-
-  if (status === "done") {
-    return (
-      <button
-        onClick={onClick}
-        className={cn(
-          "inline-flex items-center gap-1.5 rounded-md font-semibold transition-all border cursor-pointer",
-          "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25",
-          sizeClasses
-        )}
-        title="Click to change status"
-      >
-        <CheckCircle2 className="w-3.5 h-3.5" />
-        Done
-      </button>
-    );
-  }
-
-  if (status === "na") {
-    return (
-      <button
-        onClick={onClick}
-        className={cn(
-          "inline-flex items-center gap-1.5 rounded-md font-semibold transition-all border cursor-pointer",
-          "bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/25",
-          sizeClasses
-        )}
-        title="Click to change status"
-      >
-        <Ban className="w-3.5 h-3.5" />
-        N/A
-      </button>
-    );
-  }
-
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-md font-semibold transition-all border cursor-pointer",
-        "bg-muted/30 text-muted-foreground/60 border-border/40 hover:bg-muted/50 hover:text-foreground",
-        sizeClasses
-      )}
-      title="Click to set status"
-    >
-      <Circle className="w-3.5 h-3.5" />
-      Open
-    </button>
-  );
-}
 
 // ── Main component ─────────────────────────────────────────────────────────────
 

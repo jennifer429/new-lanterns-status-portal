@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { protectedProcedure, router } from "../_core/trpc";
+import { protectedProcedure, adminDbProcedure, router } from "../_core/trpc";
 import { requireDb } from "../db";
 import {
   partnerDocuments,
@@ -101,21 +101,18 @@ export const proceduralLibraryRouter = router({
     }),
 
   /** Upload a document to Google Drive and save metadata */
-  uploadDocument: protectedProcedure
+  uploadDocument: adminDbProcedure
     .input(z.object({
       title: z.string().min(1).max(500),
       ...fileUploadInput,
       clientId: z.number().optional(), // required for platform admins
     }))
     .mutation(async ({ ctx, input }) => {
-      const db = await requireDb();
+      const db = ctx.db;
 
       const targetClientId = resolveClientId(ctx.user, input.clientId);
       if (!targetClientId) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "A partner must be selected" });
-      }
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Only admins can upload documents" });
       }
 
       const fileBuffer = Buffer.from(input.fileData, "base64");
@@ -154,10 +151,10 @@ export const proceduralLibraryRouter = router({
     }),
 
   /** Delete a document (admin only) */
-  deleteDocument: protectedProcedure
+  deleteDocument: adminDbProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      const db = await requireDb();
+      const db = ctx.db;
 
       const [doc] = await db.select().from(partnerDocuments).where(eq(partnerDocuments.id, input.id));
       if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Document not found" });
@@ -165,9 +162,6 @@ export const proceduralLibraryRouter = router({
       // Partner admin can only delete their own partner's documents
       if (ctx.user.clientId && doc.clientId !== ctx.user.clientId) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Not your document" });
-      }
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Only admins can delete documents" });
       }
 
       // Delete audit entries first, then the document
@@ -257,15 +251,10 @@ export const proceduralLibraryRouter = router({
     }),
 
   /** Get audit trail for a specific document (admin only) */
-  getAuditTrail: protectedProcedure
+  getAuditTrail: adminDbProcedure
     .input(z.object({ documentId: z.number() }))
     .query(async ({ ctx, input }) => {
-      const db = await requireDb();
-
-      // Only admins can view audit trails
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Only admins can view audit trails" });
-      }
+      const db = ctx.db;
 
       const [doc] = await db.select().from(partnerDocuments).where(eq(partnerDocuments.id, input.documentId));
       if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Document not found" });

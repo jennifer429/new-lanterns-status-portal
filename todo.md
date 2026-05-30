@@ -4,9 +4,11 @@
 
 ## Remaining Refactoring
 
-- [ ] Extract shared admin table components (`StatusBadge`, `ActionButton`, `AdminTable`) — reduces ~200 lines of copy-paste across admin tabs
+- [x] Extract shared `StatusBadge` component to `client/src/components/StatusBadge.tsx` — used by Implementation.tsx and Validation.tsx
+- [ ] Extract shared `ActionButton` and `AdminTable` components — reduces remaining copy-paste across admin tabs
 - [ ] Split `server/routers/admin.ts` (~2,000 lines) into sub-routers by domain (questions, orgs, users, vendors, templates, metrics)
-- [ ] Migrate manual admin role checks in `notes.ts`, `proceduralLibrary.ts`, `ai.ts` to `adminDbProcedure` where endpoints are admin-only
+- [x] Migrate manual admin role checks in `ai.ts` (4 endpoints), `proceduralLibrary.ts` (3 endpoints), `syncHealth.ts` (4 endpoints) to `adminDbProcedure`/`adminProcedure`
+- [ ] Migrate manual admin role checks in `notes.ts` to `adminDbProcedure` where endpoints are admin-only
 
 ## Swimlane Task Flow View
 
@@ -350,12 +352,20 @@
 
 ## Fix #1: Google Drive Upload Pipeline (May 30, 2026)
 
-- [ ] Set GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY as webdev secrets
-- [ ] Rewrite uploadFileToDrive to: 1) Upload to Drive (primary), 2) Upload to S3 (backup), 3) Sync Drive link to Notion, 4) Write audit log — with per-step status tracking
-- [ ] Return structured result from upload (driveUrl, s3Url, notionSynced, auditLogged) so frontend can report each step
-- [ ] Update fileAuditLog.ts to use ENV.notionApiKey instead of raw process.env (fix silent fallback)
-- [ ] Add NOTION_FILE_AUDIT_DATASOURCE_ID to ENV_OVERRIDES or verify it's set as a secret
-- [ ] Update frontend (useIntakeData, useHomeData) to show detailed success/failure toast per upload step
-- [ ] Write backfill script to copy 63 missing files from S3 to Google Drive and update DB URLs
+- [x] Rewrite googleDrive.ts to use OAuth token (GOOGLE_DRIVE_TOKEN) instead of service account
+- [x] Add supportsAllDrives: true for Shared Drive support
+- [x] Backfill 63 missing files from S3 to Google Drive
+- [x] Update frontend (useIntakeData, useHomeData, ProceduralLibrary) to show clear Drive/Notion success/failure notifications
 - [ ] Ensure per-org Drive folder IDs are created for all active orgs
-- [ ] Write vitest for the new upload pipeline
+- [ ] Write vitest for the upload pipeline
+
+## Fix #2: Security Fixes (May 30, 2026)
+
+- [x] Secure resetPasswordDirect with token requirement
+- [x] Secure public write endpoints in intake and connectivity routers (changed to protectedProcedure)
+
+## Fix #3: Connectivity Caching & Toast Fixes (May 30, 2026)
+
+- [x] Implement MySQL caching for connectivity data (connectivityCache table)
+- [x] Fix upload success toasts to show org name instead of generic message
+- [x] Increase Vitest timeout for Notion integration tests
