@@ -108,6 +108,9 @@ async function upsertPage(opts: {
   title: string;
   properties: Record<string, any>;
   writeType: string;
+  // Original sync payload. Enqueued verbatim on failure so the retry queue can
+  // re-invoke the sync function with the exact shape it expects (see notionRetryQueue.ts).
+  payload: Record<string, any>;
 }): Promise<boolean> {
   const client = getClient();
   if (!client) return false;
@@ -135,7 +138,7 @@ async function upsertPage(opts: {
   } catch (error: any) {
     console.error(`[notion-dual] ${opts.writeType} sync failed (id=${opts.mysqlId}):`, error.message);
     enqueueFailedWrite(
-      { writeType: opts.writeType as any, data: { ...opts, properties: undefined, title: opts.title, mysqlId: opts.mysqlId } },
+      { writeType: opts.writeType as any, data: opts.payload },
       error.message || "Unknown error"
     ).catch(() => {});
     return false;
@@ -177,6 +180,17 @@ function dateProperty(val: Date | string | null | undefined): any {
   return { date: { start: iso } };
 }
 
+/**
+ * Format a date as YYYY-MM-DD for page titles. Tolerates both Date objects and
+ * ISO strings, since retried payloads are rehydrated from JSON (Date → string).
+ * Falls back to today's date if the value is missing or unparseable.
+ */
+function titleDate(val: Date | string | null | undefined): string {
+  const d = val instanceof Date ? val : new Date(val ?? Date.now());
+  const parsed = isNaN(d.getTime()) ? new Date() : d;
+  return parsed.toISOString().split("T")[0];
+}
+
 // ─── AI Chat Log ───────────────────────────────────────────────────────────────
 
 export interface AiChatLogPayload {
@@ -198,8 +212,9 @@ export async function syncAiChatLog(payload: AiChatLogPayload): Promise<boolean>
     dbId: DB_IDS.aiChatLog,
     dsId: DS_IDS.aiChatLog,
     mysqlId: payload.mysqlId,
-    title: `${payload.userEmail} - ${payload.createdAt.toISOString().split("T")[0]}`,
+    title: `${payload.userEmail} - ${titleDate(payload.createdAt)}`,
     writeType: "aiChatLog",
+    payload,
     properties: {
       "Organization ID": num(payload.organizationId),
       "Organization": richText(payload.orgName),
@@ -232,8 +247,9 @@ export async function syncActivityFeed(payload: ActivityFeedPayload): Promise<bo
     dbId: DB_IDS.activityFeed,
     dsId: DS_IDS.activityFeed,
     mysqlId: payload.mysqlId,
-    title: `${payload.eventType} - ${payload.actor || "system"} - ${payload.createdAt.toISOString().split("T")[0]}`,
+    title: `${payload.eventType} - ${payload.actor || "system"} - ${titleDate(payload.createdAt)}`,
     writeType: "activityFeed",
+    payload,
     properties: {
       "Organization ID": num(payload.organizationId),
       "Organization": richText(payload.orgName),
@@ -269,6 +285,7 @@ export async function syncOrgNote(payload: OrgNotePayload): Promise<boolean> {
     mysqlId: payload.mysqlId,
     title: payload.fileName || "Untitled Note",
     writeType: "orgNote",
+    payload,
     properties: {
       "Organization ID": num(payload.organizationId),
       "Organization": richText(payload.orgName),
@@ -309,6 +326,7 @@ export async function syncPartnerDocument(payload: PartnerDocPayload): Promise<b
     mysqlId: payload.mysqlId,
     title: payload.title || payload.fileName,
     writeType: "partnerDocument",
+    payload,
     properties: {
       "Client ID": num(payload.clientId),
       "Partner": richText(payload.partnerName),
@@ -342,8 +360,9 @@ export async function syncOnboardingFeedback(payload: OnboardingFeedbackPayload)
     dbId: DB_IDS.onboardingFeedback,
     dsId: DS_IDS.onboardingFeedback,
     mysqlId: payload.mysqlId,
-    title: `${payload.orgName} - ${payload.createdAt.toISOString().split("T")[0]}`,
+    title: `${payload.orgName} - ${titleDate(payload.createdAt)}`,
     writeType: "onboardingFeedback",
+    payload,
     properties: {
       "Organization ID": num(payload.organizationId),
       "Organization": richText(payload.orgName),
@@ -378,6 +397,7 @@ export async function syncOrgCustomTask(payload: OrgCustomTaskPayload): Promise<
     mysqlId: payload.mysqlId,
     title: payload.title,
     writeType: "orgCustomTask",
+    payload,
     properties: {
       "Organization ID": num(payload.organizationId),
       "Organization": richText(payload.orgName),
@@ -412,6 +432,7 @@ export async function syncSectionProgress(payload: SectionProgressPayload): Prom
     mysqlId: payload.mysqlId,
     title: `${payload.orgName} / ${payload.sectionName}`,
     writeType: "sectionProgress",
+    payload,
     properties: {
       "Organization ID": num(payload.organizationId),
       "Organization": richText(payload.orgName),
@@ -444,6 +465,7 @@ export async function syncVendorAudit(payload: VendorAuditPayload): Promise<bool
     mysqlId: payload.mysqlId,
     title: `Vendor #${payload.vendorId} - ${payload.action}`,
     writeType: "vendorAudit",
+    payload,
     properties: {
       "Vendor ID": num(payload.vendorId),
       "Action": select(payload.action),
@@ -479,6 +501,7 @@ export async function syncTaskFile(payload: TaskFilePayload): Promise<boolean> {
     mysqlId: payload.mysqlId,
     title: payload.fileName,
     writeType: "taskFile",
+    payload,
     properties: {
       "Organization ID": num(payload.organizationId),
       "Organization": richText(payload.orgName),
@@ -516,6 +539,7 @@ export async function syncIntakeFile(payload: IntakeFilePayload): Promise<boolea
     mysqlId: payload.mysqlId,
     title: payload.fileName,
     writeType: "intakeFile",
+    payload,
     properties: {
       "Organization ID": num(payload.organizationId),
       "Organization": richText(payload.orgName),
@@ -554,6 +578,7 @@ export async function syncPartnerTemplate(payload: PartnerTemplatePayload): Prom
     mysqlId: payload.mysqlId,
     title: payload.title || payload.fileName,
     writeType: "partnerTemplate",
+    payload,
     properties: {
       "Client ID": num(payload.clientId),
       "Partner": richText(payload.partnerName),
@@ -592,6 +617,7 @@ export async function syncPartnerTaskTemplate(payload: PartnerTaskTemplatePayloa
     mysqlId: payload.mysqlId,
     title: payload.title,
     writeType: "partnerTaskTemplate",
+    payload,
     properties: {
       "Client ID": num(payload.clientId),
       "Partner": richText(payload.partnerName),
@@ -625,6 +651,7 @@ export async function syncSpecification(payload: SpecificationPayload): Promise<
     mysqlId: payload.mysqlId,
     title: payload.title,
     writeType: "specification",
+    payload,
     properties: {
       "Key": richText(payload.key),
       "Description": richText(payload.description),
@@ -653,6 +680,7 @@ export async function syncSystemVendor(payload: SystemVendorPayload): Promise<bo
     mysqlId: payload.mysqlId,
     title: `${payload.vendorName} - ${payload.productName}`,
     writeType: "systemVendor",
+    payload,
     properties: {
       "System Type": select(payload.systemType),
       "Vendor Name": richText(payload.vendorName),
@@ -684,6 +712,7 @@ export async function syncQuestion(payload: QuestionPayload): Promise<boolean> {
     mysqlId: payload.mysqlId,
     title: payload.fullText.substring(0, 100),
     writeType: "question",
+    payload,
     properties: {
       "Key": richText(payload.key),
       "Section": richText(payload.section),
@@ -716,6 +745,7 @@ export async function syncQuestionOption(payload: QuestionOptionPayload): Promis
     mysqlId: payload.mysqlId,
     title: payload.label,
     writeType: "questionOption",
+    payload,
     properties: {
       "Question ID": num(payload.questionId),
       "Question Key": richText(payload.questionKey),
@@ -749,6 +779,7 @@ export async function syncPortalUser(payload: PortalUserPayload): Promise<boolea
     mysqlId: payload.mysqlId,
     title: payload.name || payload.email,
     writeType: "portalUser",
+    payload,
     properties: {
       "Email": email(payload.email),
       "Role": select(payload.role),
@@ -783,6 +814,7 @@ export async function syncClient(payload: ClientPayload): Promise<boolean> {
     mysqlId: payload.mysqlId,
     title: payload.name,
     writeType: "client",
+    payload,
     properties: {
       "Slug": richText(payload.slug),
       "Contact Name": richText(payload.contactName),
@@ -819,6 +851,7 @@ export async function syncOrganization(payload: OrganizationPayload): Promise<bo
     mysqlId: payload.mysqlId,
     title: payload.name,
     writeType: "organization",
+    payload,
     properties: {
       "Slug": richText(payload.slug),
       "Client ID": num(payload.clientId ?? null),
@@ -856,6 +889,7 @@ export async function syncImplementationOrg(payload: ImplementationOrgPayload): 
     mysqlId: payload.mysqlId,
     title: payload.name,
     writeType: "implementationOrg",
+    payload,
     properties: {
       "Organization ID": num(payload.organizationId),
       "Organization": richText(payload.orgName),
@@ -890,6 +924,7 @@ export async function syncPartnerDocAudit(payload: PartnerDocAuditPayload): Prom
     mysqlId: payload.mysqlId + 1000000, // Offset to avoid collision with document IDs
     title: `[Audit] ${payload.documentTitle || "Doc #" + payload.documentId} - ${payload.action}`,
     writeType: "partnerDocAudit",
+    payload,
     properties: {
       "File Name": richText(`Audit: ${payload.action} by ${payload.userName}`),
       "Category": select("audit"),
