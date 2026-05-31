@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Plus, Edit, History, ListChecks, ChevronRight, Check, AlertCircle, X, Trash2, Eye, EyeOff } from "lucide-react";
+import { Plus, Edit, ListChecks, ChevronRight, Check, AlertCircle, X, Trash2, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -77,10 +77,8 @@ export function VendorPicklistsTab() {
   const [newSystemTypeVendors, setNewSystemTypeVendors] = useState("");
   const [editVendorId, setEditVendorId] = useState<number | null>(null);
   const [editVendorName, setEditVendorName] = useState("");
-  const [showAuditLog, setShowAuditLog] = useState(false);
 
   const { data: vendorOptions, refetch: refetchVendorOptions } = trpc.admin.getSystemVendorOptions.useQuery();
-  const { data: vendorAuditLogs, refetch: refetchVendorAuditLogs } = trpc.admin.getVendorAuditLog.useQuery({ limit: 50 });
 
   const vendorsByType = useMemo(() => {
     if (!vendorOptions) return {} as Record<string, typeof vendorOptions>;
@@ -97,23 +95,23 @@ export function VendorPicklistsTab() {
     onSuccess: (_data, vars) => {
       toast.success(`Added "${vars.vendorName.trim()}" to ${vars.systemType}`);
       setAddInputs(prev => ({ ...prev, [vars.systemType]: "" }));
-      refetchVendorOptions(); refetchVendorAuditLogs();
+      refetchVendorOptions();
     },
     onError: (error: any) => toast.error(error.message || "Failed to add vendor"),
   });
 
   const updateVendorMutation = trpc.admin.updateVendorOption.useMutation({
-    onSuccess: () => { toast.success("Vendor updated"); setEditVendorId(null); setEditVendorName(""); refetchVendorOptions(); refetchVendorAuditLogs(); },
+    onSuccess: () => { toast.success("Vendor updated"); setEditVendorId(null); setEditVendorName(""); refetchVendorOptions(); },
     onError: (error: any) => toast.error(error.message || "Failed to update vendor"),
   });
 
   const deleteVendorMutation = trpc.admin.deleteVendorOption.useMutation({
-    onSuccess: () => { toast.success("Vendor removed"); refetchVendorOptions(); refetchVendorAuditLogs(); },
+    onSuccess: () => { toast.success("Vendor removed"); refetchVendorOptions(); },
     onError: (error: any) => toast.error(error.message || "Failed to remove vendor"),
   });
 
   const toggleVendorMutation = trpc.admin.toggleVendorOption.useMutation({
-    onSuccess: () => { refetchVendorOptions(); refetchVendorAuditLogs(); },
+    onSuccess: () => { refetchVendorOptions(); },
     onError: (error: any) => toast.error(error.message || "Failed to toggle vendor"),
   });
 
@@ -123,13 +121,13 @@ export function VendorPicklistsTab() {
       const skipped = result?.skipped ?? 0;
       toast.success(`Added ${added} vendor${added === 1 ? "" : "s"}${skipped ? ` (${skipped} skipped as duplicate)` : ""}`);
       setNewSystemTypeName(""); setNewSystemTypeVendors("");
-      refetchVendorOptions(); refetchVendorAuditLogs();
+      refetchVendorOptions();
     },
     onError: (error: any) => toast.error(error.message || "Failed to add system type"),
   });
 
   const seedVendorsMutation = trpc.admin.seedDefaultVendorOptions.useMutation({
-    onSuccess: (result) => { toast.success(result.message || "Defaults seeded"); refetchVendorOptions(); refetchVendorAuditLogs(); },
+    onSuccess: (result) => { toast.success(result.message || "Defaults seeded"); refetchVendorOptions(); },
     onError: (error: any) => toast.error(error.message || "Failed to seed defaults"),
   });
 
@@ -158,15 +156,6 @@ export function VendorPicklistsTab() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowAuditLog(!showAuditLog)}
-            className="gap-1.5"
-          >
-            <History className="w-4 h-4" />
-            {showAuditLog ? "Hide" : "Show"} History
-          </Button>
           {(!vendorOptions || vendorOptions.length === 0) && (
             <Button
               variant="outline"
@@ -258,7 +247,7 @@ export function VendorPicklistsTab() {
             const hiddenCount = vendors.length - activeCount;
 
             return (
-              <Collapsible key={systemType}>
+              <Collapsible key={systemType} defaultOpen>
                 <Card className="overflow-hidden">
                   <CollapsibleTrigger asChild>
                     <div className="flex items-center justify-between px-5 py-3.5 cursor-pointer hover:bg-muted/20 transition-colors group">
@@ -430,64 +419,6 @@ export function VendorPicklistsTab() {
             );
           })}
         </div>
-      )}
-
-      {/* Audit Log - Collapsible, cleaner format */}
-      {showAuditLog && (
-        <Card className="mt-6">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <History className="w-4 h-4 text-muted-foreground" />
-              Change History
-            </CardTitle>
-            <CardDescription className="text-xs">Recent vendor picklist changes</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {!vendorAuditLogs || vendorAuditLogs.length === 0 ? (
-              <p className="text-muted-foreground text-sm py-4 text-center">No changes recorded yet.</p>
-            ) : (
-              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
-                {vendorAuditLogs.map((log) => {
-                  const actionConfig: Record<string, { label: string; color: string; icon: string }> = {
-                    add: { label: "Added", color: "text-green-400", icon: "+" },
-                    update: { label: "Renamed", color: "text-blue-400", icon: "~" },
-                    toggle: { label: "Toggled", color: "text-yellow-400", icon: "⟳" },
-                    delete: { label: "Removed", color: "text-red-400", icon: "−" },
-                    add_system_type: { label: "New Category", color: "text-purple-400", icon: "★" },
-                    seed_defaults: { label: "Seeded", color: "text-muted-foreground", icon: "◆" },
-                  };
-                  const config = actionConfig[log.action] || { label: log.action, color: "text-muted-foreground", icon: "•" };
-
-                  let details = '';
-                  if (log.action === 'add') details = `"${log.vendorName}" → ${log.systemType}`;
-                  else if (log.action === 'update') details = `"${log.previousValue}" → "${log.newValue}"`;
-                  else if (log.action === 'toggle') details = `"${log.vendorName}" ${log.newValue === 'active' ? 'shown' : 'hidden'}`;
-                  else if (log.action === 'delete') details = `"${log.vendorName}" from ${log.systemType}`;
-                  else if (log.action === 'add_system_type') {
-                    try { const v = JSON.parse(log.newValue || '[]'); details = `${log.systemType} (${v.length} vendors)`; } catch { details = log.systemType || ''; }
-                  }
-                  else if (log.action === 'seed_defaults') {
-                    try { const t = JSON.parse(log.newValue || '[]'); details = `${t.length} system types`; } catch { details = 'defaults'; }
-                  }
-
-                  return (
-                    <div key={log.id} className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted/20 transition-colors text-sm">
-                      <span className={cn("font-mono text-xs w-5 text-center", config.color)}>{config.icon}</span>
-                      <span className={cn("font-medium w-20 flex-shrink-0", config.color)}>{config.label}</span>
-                      <span className="flex-1 text-muted-foreground truncate" title={details}>{details}</span>
-                      <span className="text-xs text-muted-foreground/60 flex-shrink-0 tabular-nums">
-                        {new Date(log.performedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </span>
-                      <span className="text-xs text-muted-foreground/60 flex-shrink-0 truncate max-w-[120px]" title={log.performedBy}>
-                        {log.performedBy?.split('@')[0]}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
       )}
     </>
   );
