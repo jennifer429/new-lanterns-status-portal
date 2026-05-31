@@ -23,8 +23,7 @@ import {
   type SystemEntry,
 } from "./systemConstants";
 import { SystemEditRow } from "./SystemEditRow";
-
-const ADD_NEW_VENDOR = "__add_new_vendor__";
+import { VendorCombobox } from "./VendorCombobox";
 
 export interface ArchitectureOverviewProps {
   slug: string;
@@ -65,8 +64,12 @@ export function ArchitectureOverview({
 
   const addVendorMutation = trpc.intake.addVendorOption.useMutation();
 
-  const submitNewVendor = async (systemType: string, opts: { selectAfter: boolean; multi?: boolean }) => {
-    const name = newVendorName.trim().replace(/\s+/g, " ");
+  const submitNewVendor = async (
+    systemType: string,
+    rawName: string,
+    opts: { selectAfter: boolean; multi?: boolean },
+  ) => {
+    const name = rawName.trim().replace(/\s+/g, " ");
     if (!name) return;
     try {
       const result = await addVendorMutation.mutateAsync({ systemType, vendorName: name });
@@ -504,7 +507,7 @@ export function ArchitectureOverview({
                           value={newVendorName}
                           onChange={(e) => setNewVendorName(e.target.value)}
                           onKeyDown={(e) => {
-                            if (e.key === "Enter") { e.preventDefault(); submitNewVendor(row.type, { selectAfter: true, multi: true }); }
+                            if (e.key === "Enter") { e.preventDefault(); submitNewVendor(row.type, newVendorName, { selectAfter: true, multi: true }); }
                             if (e.key === "Escape") cancelAddVendor();
                           }}
                           placeholder={`New ${row.label} vendor`}
@@ -512,7 +515,7 @@ export function ArchitectureOverview({
                         />
                         <button
                           type="button"
-                          onClick={() => submitNewVendor(row.type, { selectAfter: true, multi: true })}
+                          onClick={() => submitNewVendor(row.type, newVendorName, { selectAfter: true, multi: true })}
                           disabled={!newVendorName.trim() || addVendorMutation.isPending}
                           className="p-1 rounded hover:bg-indigo-500/20 text-indigo-300 disabled:opacity-40"
                           title="Add"
@@ -557,72 +560,22 @@ export function ArchitectureOverview({
                   {row.label}
                 </span>
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  {addingForType === row.type ? (
-                    <>
-                      <Input
-                        autoFocus
-                        value={newVendorName}
-                        onChange={(e) => setNewVendorName(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") { e.preventDefault(); submitNewVendor(row.type, { selectAfter: true }); }
-                          if (e.key === "Escape") cancelAddVendor();
-                        }}
-                        placeholder={`New ${row.label} vendor name`}
-                        className="flex-1 h-8 text-sm"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => submitNewVendor(row.type, { selectAfter: true })}
-                        disabled={!newVendorName.trim() || addVendorMutation.isPending}
-                        className="p-1.5 rounded hover:bg-purple-500/20 text-purple-300 disabled:opacity-40 shrink-0"
-                        title="Save vendor"
-                      >
-                        <Check className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={cancelAddVendor}
-                        className="p-1.5 rounded hover:bg-muted/50 text-muted-foreground shrink-0"
-                        title="Cancel"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <select
-                        value={current?.name || ""}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          if (v === ADD_NEW_VENDOR) {
-                            setAddingForType(row.type);
-                            setNewVendorName("");
-                          } else if (v) {
-                            setDefaultRowVendor(row.type, v);
-                          } else {
-                            clearDefaultRow(row.type);
-                          }
-                        }}
-                        className="flex-1 h-8 text-sm rounded-md border border-input bg-background/50 px-2 text-foreground"
-                      >
-                        <option value="">Select {row.label}...</option>
-                        {vendors.map((v) => (
-                          <option key={v} value={v}>
-                            {v}
-                          </option>
-                        ))}
-                        <option value={ADD_NEW_VENDOR}>+ Add new vendor…</option>
-                      </select>
-                      {current && (
-                        <button
-                          onClick={() => clearDefaultRow(row.type)}
-                          className="text-muted-foreground hover:text-red-400 shrink-0"
-                          title="Clear"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </>
+                  <VendorCombobox
+                    value={current?.name || ""}
+                    options={vendors.filter((v) => v !== "Other")}
+                    placeholder={`Select ${row.label}…`}
+                    disabled={addVendorMutation.isPending}
+                    onSelect={(v) => setDefaultRowVendor(row.type, v)}
+                    onAddNew={(name) => submitNewVendor(row.type, name, { selectAfter: true })}
+                  />
+                  {current && (
+                    <button
+                      onClick={() => clearDefaultRow(row.type)}
+                      className="text-muted-foreground hover:text-red-400 shrink-0"
+                      title="Clear"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                   )}
                 </div>
               </div>
