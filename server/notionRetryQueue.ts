@@ -18,7 +18,31 @@ import { notifyOwner } from "./_core/notification";
 const MAX_RETRIES = 3;
 
 export interface RetryPayload {
-  writeType: "taskCompletion" | "validationResult" | "questionnaire";
+  writeType:
+    | "taskCompletion"
+    | "validationResult"
+    | "questionnaire"
+    | "aiChatLog"
+    | "activityFeed"
+    | "orgNote"
+    | "partnerDocument"
+    | "onboardingFeedback"
+    | "orgCustomTask"
+    | "sectionProgress"
+    | "vendorAudit"
+    | "taskFile"
+    | "intakeFile"
+    | "partnerTemplate"
+    | "partnerTaskTemplate"
+    | "specification"
+    | "systemVendor"
+    | "question"
+    | "questionOption"
+    | "portalUser"
+    | "client"
+    | "organization"
+    | "implementationOrg"
+    | "partnerDocAudit";
   data: Record<string, any>;
 }
 
@@ -86,6 +110,111 @@ export async function processRetryQueue(): Promise<{ processed: number; succeede
         case "questionnaire": {
           const { syncAnswerToNotion } = await import("./notion");
           await syncAnswerToNotion(data.slug, data.questionId, data.answer, data.updatedBy);
+          break;
+        }
+        case "aiChatLog": {
+          const { syncAiChatLog } = await import("./notionDualWrite");
+          await syncAiChatLog(data as any);
+          break;
+        }
+        case "activityFeed": {
+          const { syncActivityFeed } = await import("./notionDualWrite");
+          await syncActivityFeed(data as any);
+          break;
+        }
+        case "orgNote": {
+          const { syncOrgNote } = await import("./notionDualWrite");
+          await syncOrgNote(data as any);
+          break;
+        }
+        case "partnerDocument": {
+          const { syncPartnerDocument } = await import("./notionDualWrite");
+          await syncPartnerDocument(data as any);
+          break;
+        }
+        case "onboardingFeedback": {
+          const { syncOnboardingFeedback } = await import("./notionDualWrite");
+          await syncOnboardingFeedback(data as any);
+          break;
+        }
+        case "orgCustomTask": {
+          const { syncOrgCustomTask } = await import("./notionDualWrite");
+          await syncOrgCustomTask(data as any);
+          break;
+        }
+        case "sectionProgress": {
+          const { syncSectionProgress } = await import("./notionDualWrite");
+          await syncSectionProgress(data as any);
+          break;
+        }
+        case "vendorAudit": {
+          const { syncVendorAudit } = await import("./notionDualWrite");
+          await syncVendorAudit(data as any);
+          break;
+        }
+        case "taskFile": {
+          const { syncTaskFile } = await import("./notionDualWrite");
+          await syncTaskFile(data as any);
+          break;
+        }
+        case "intakeFile": {
+          const { syncIntakeFile } = await import("./notionDualWrite");
+          await syncIntakeFile(data as any);
+          break;
+        }
+        case "partnerTemplate": {
+          const { syncPartnerTemplate } = await import("./notionDualWrite");
+          await syncPartnerTemplate(data as any);
+          break;
+        }
+        case "partnerTaskTemplate": {
+          const { syncPartnerTaskTemplate } = await import("./notionDualWrite");
+          await syncPartnerTaskTemplate(data as any);
+          break;
+        }
+        case "specification": {
+          const { syncSpecification } = await import("./notionDualWrite");
+          await syncSpecification(data as any);
+          break;
+        }
+        case "systemVendor": {
+          const { syncSystemVendor } = await import("./notionDualWrite");
+          await syncSystemVendor(data as any);
+          break;
+        }
+        case "question": {
+          const { syncQuestion } = await import("./notionDualWrite");
+          await syncQuestion(data as any);
+          break;
+        }
+        case "questionOption": {
+          const { syncQuestionOption } = await import("./notionDualWrite");
+          await syncQuestionOption(data as any);
+          break;
+        }
+        case "portalUser": {
+          const { syncPortalUser } = await import("./notionDualWrite");
+          await syncPortalUser(data as any);
+          break;
+        }
+        case "client": {
+          const { syncClient } = await import("./notionDualWrite");
+          await syncClient(data as any);
+          break;
+        }
+        case "organization": {
+          const { syncOrganization } = await import("./notionDualWrite");
+          await syncOrganization(data as any);
+          break;
+        }
+        case "implementationOrg": {
+          const { syncImplementationOrg } = await import("./notionDualWrite");
+          await syncImplementationOrg(data as any);
+          break;
+        }
+        case "partnerDocAudit": {
+          const { syncPartnerDocAudit } = await import("./notionDualWrite");
+          await syncPartnerDocAudit(data as any);
           break;
         }
         default:

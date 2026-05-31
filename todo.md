@@ -369,3 +369,55 @@
 - [x] Implement MySQL caching for connectivity data (connectivityCache table)
 - [x] Fix upload success toasts to show org name instead of generic message
 - [x] Increase Vitest timeout for Notion integration tests
+
+## Full Notion Database Migration — All MySQL-Only### Batch 1: Operational Data
+- [x] Create Notion DB: AI Chat Log (org, user, prompt, response, tokens, cost, toolCalls, timestamp)
+- [x] Create Notion DB: Activity Feed (org, user, action, details, timestamp)
+- [x] Create Notion DB: Org Notes & Files (org, label, fileName, fileUrl, driveFileId, fileSize, mimeType, uploadedBy, timestamp)
+- [x] Create Notion DB: Partner Documents (client, fileName, fileUrl, driveFileId, category, mimeType, fileSize, uploadedBy, timestamp)
+- [x] Create Notion DB: Onboarding Feedback (org, rating, comments, submittedBy, timestamp)
+- [x] Create Notion DB: Org Custom Tasks (org, taskId, title, section, description### Batch 2: Config & Audit Data
+- [x] Create Notion DB: Section Progress (org, sectionName, completedCount, totalCount, percentage, timestamp)
+- [x] Create Notion DB: Vendor Audit Log (vendorId, action, field, oldValue, newValue, performedBy, timestamp)
+- [x] Create Notion DB: File Attachments (org, taskId, fileName, fileUrl, fileSize, mimeType, uploadedBy, timestamp)
+- [x] Create Notion DB: Intake File Attachments (org, questionId, fileName, fileUrl, fileSize, mimeType, uploadedBy, timestamp)
+- [x] Create Notion DB: Partner Templates (client, questionId, title, fileName, url, mimeType, active, timestamp)
+- [x] Create Notion DB: Partner Task Templates (client, taskId, title, description, section, active, timestamp)
+- [x] Create Notion DB: Specifications (key, title, description, category, active, timestamp)
+- [x] Create Notion DB: System Vendor Options (systemType, vendorName, productName, active, timestamp)
+### Batch 3: Core Entity Data
+- [x] Create Notion DB: Questions (key, text, section, type, required, active, sortOrder)
+- [x] Create Notion DB: Question Options (questionId, label, value, sortOrder)
+- [x] Create Notion DB: Users (email, name, role, clientId, orgId, active, lastLogin, timestamp)
+- [x] Create Notion DB: Clients (name, slug, contactName, contactEmail, active, timestamp)
+- [x] Create Notion DB: Organizations (name, slug, clientId, contactName, contactEmail, status, startDate, goalDate, timestamp)
+- [x] Create Notion DB: Implementation Orgs (orgId, phase, status, assignedTo, timestamp)
+
+### Dual-Write Wiring
+- [x] Wire dual-write: AI Audit Logs (on every AI chat action)
+- [x] Wire dual-write: Activity Feed (on every activity event)
+- [x] Wire dual-write: Org Notes (on upload/delete)
+- [x] Wire dual-write: Partner Documents (on upload/delete)
+- [x] Wire dual-write: Onboarding Feedback (on submit)
+- [x] Wire dual-write: Org Custom Tasks (on create/update/delete)
+- [x] Wire dual-write: Section Progress (on progress update)
+- [x] Wire dual-write: Vendor Audit Log (on vendor change)
+- [x] Wire dual-write: File Attachments (on upload/delete)
+- [x] Wire dual-write: Intake File Attachments (on upload/delete)
+- [x] Wire dual-write: Partner Templates (on create/update/delete)
+- [x] Wire dual-write: Partner Task Templates (on create/update/delete)
+- [x] Wire dual-write: Specifications (on create/update/delete)
+- [x] Wire dual-write: System Vendor Options (on create/update/toggle)
+- [x] Wire dual-write: Questions (on create/archive)
+- [x] Wire dual-write: Question Options (on create/update/delete)
+- [x] Wire dual-write: Users (on create/update/deactivate)
+- [x] Wire dual-write: Clients (on create/update)
+- [x] Wire dual-write: Organizations (on create/update)
+- [x] Wire dual-write: Implementation Orgs (on status change)
+
+### Sync-Back & Cron
+- [x] Verified: New databases are MySQL → Notion only (dual-write). No Notion → MySQL sync-back needed (MySQL is source of truth for these tables)
+- [x] Retry queue already handles failures for all new write types (extended processRetryQueue switch)
+- [x] DB/DS IDs hardcoded in notionDualWrite.ts (same pattern as existing Notion integrations)
+- [ ] Write vitest tests for new dual-write module
+- [x] Backfill existing MySQL data to new Notion databases (admin endpoint: trpc.backfill.run + trpc.backfill.preview)

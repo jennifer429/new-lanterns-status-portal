@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { requireDb } from "../db";
+import { dispatch } from "../notionSyncDispatcher";
 import { organizations, clients, sectionProgress, taskCompletion, activityFeed, users, intakeResponses, questions, responses, intakeFileAttachments } from "../../drizzle/schema";
 import { questionnaireSections } from "@shared/questionnaireData";
 import { calculateProgress } from "@shared/progressCalculation";
@@ -51,6 +52,16 @@ export const organizationsRouter = router({
       const [org] = await db.insert(organizations).values({
         ...input,
         googleDriveFolderId: googleDriveFolderId || null,
+      });
+      dispatch.organization({
+        mysqlId: org.insertId || 0,
+        name: input.name,
+        slug: input.slug,
+        partnerName: "",
+        status: input.status || "active",
+        contactName: input.contactName || null,
+        contactEmail: input.contactEmail || null,
+        createdAt: new Date(),
       });
       return { success: true, organizationId: org.insertId, slug: input.slug };
     }),
@@ -143,9 +154,29 @@ export const organizationsRouter = router({
             expectedEnd: input.expectedEnd,
           })
           .where(eq(sectionProgress.id, existing.id));
+        dispatch.sectionProgress({
+          mysqlId: existing.id,
+          organizationId: input.organizationId,
+          orgName: "",
+          sectionName: input.sectionName,
+          status: input.status,
+          progress: input.progress,
+          expectedEnd: input.expectedEnd || null,
+          updatedAt: new Date(),
+        });
       } else {
         // Insert new
-        await db.insert(sectionProgress).values(input);
+        const [spRes] = await db.insert(sectionProgress).values(input);
+        dispatch.sectionProgress({
+          mysqlId: (spRes as any).insertId || 0,
+          organizationId: input.organizationId,
+          orgName: "",
+          sectionName: input.sectionName,
+          status: input.status,
+          progress: input.progress,
+          expectedEnd: input.expectedEnd || null,
+          updatedAt: new Date(),
+        });
       }
 
       return { success: true };
@@ -478,11 +509,20 @@ export const organizationsRouter = router({
 
       const author = input.authorName || org.contactName || "Hospital Team";
 
-      await db.insert(activityFeed).values({
+      const [afRes] = await db.insert(activityFeed).values({
         organizationId: input.organizationId,
         source: "manual",
         author: author,
         message: input.message,
+      });
+      dispatch.activity({
+        mysqlId: (afRes as any).insertId || 0,
+        organizationId: input.organizationId,
+        orgName: org.name,
+        eventType: "manual_message",
+        actor: author,
+        description: input.message,
+        createdAt: new Date(),
       });
 
       return { success: true };

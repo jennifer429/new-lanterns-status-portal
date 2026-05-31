@@ -5,6 +5,7 @@ import { questions, questionOptions, organizations, users, clients, intakeFileAt
 import { SECTION_DEFS as TASK_SECTION_DEFS } from "@shared/taskDefs";
 import { eq, and, or, desc, inArray, sql } from "drizzle-orm";
 import { uploadToGoogleDrive } from "./files";
+import { dispatch } from "../notionSyncDispatcher";
 import bcrypt from "bcrypt";
 import { triggerInviteSend } from "../_core/inviteTrigger";
 import { fileUploadInput } from "../_core/fileValidation";
@@ -84,8 +85,18 @@ export const adminRouter = router({
       }
 
       const [newQuestion] = await db.insert(questions).values(input);
-
-      return { success: true, questionId: newQuestion.insertId };
+      dispatch.question({
+        mysqlId: newQuestion.insertId || 0,
+        key: input.questionId,
+        section: input.sectionId,
+        type: input.type || "text",
+        required: !!input.required,
+        active: true,
+        sortOrder: input.sortOrder || 0,
+        fullText: input.questionText || "",
+        createdAt: new Date(),
+      });
+      return { success: true, questionId: newQuestion.insertId };;
     }),
 
   /**
@@ -169,8 +180,16 @@ export const adminRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { db } = ctx;
 
-      const [newOption] = await db.insert(questionOptions).values(input);
-
+       const [newOption] = await db.insert(questionOptions).values(input);
+      dispatch.questionOption({
+        mysqlId: newOption.insertId || 0,
+        questionId: input.questionId,
+        questionKey: String(input.questionId),
+        label: input.optionValue || "",
+        value: input.optionValue || "",
+        sortOrder: input.sortOrder || 0,
+        createdAt: new Date(),
+      });
       return { success: true, optionId: newOption.insertId };
     }),
 
@@ -277,14 +296,23 @@ export const adminRouter = router({
         throw new TRPCError({ code: "CONFLICT", message: "A partner with this slug already exists" });
       }
 
-      await db.insert(clients).values({
+      const [newClient] = await db.insert(clients).values({
         name: input.name,
         slug: input.slug,
         description: input.description || null,
         status: "active",
       });
-
-      return { success: true };
+      dispatch.client({
+        mysqlId: (newClient as any).insertId || 0,
+        name: input.name,
+        slug: input.slug,
+        contactName: null,
+        contactEmail: null,
+        active: true,
+        orgCount: 0,
+        createdAt: new Date(),
+      });
+      return { success: true };;
     }),
 
   /**
@@ -587,8 +615,22 @@ export const adminRouter = router({
         ...input,
         clientId, // Use auto-assigned or provided clientId
       });
-
-      return { success: true, organizationId: newOrg.insertId };
+      dispatch.organization({
+        mysqlId: newOrg.insertId || 0,
+        name: input.name,
+        slug: input.slug,
+        clientId: clientId || 0,
+        partnerName: "",
+        contactName: input.contactName || null,
+        contactEmail: input.contactEmail || null,
+        contactPhone: input.contactPhone || null,
+        status: "active",
+        startDate: null,
+        goalDate: null,
+        driveFolderId: null,
+        createdAt: new Date(),
+      });
+      return { success: true, organizationId: newOrg.insertId };;
     }),
 
   /**
@@ -1020,7 +1062,19 @@ export const adminRouter = router({
           loginMethod: "email",
           openId: `user-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         });
-
+      dispatch.portalUser({
+        mysqlId: (newUser as any).insertId || 0,
+        name: input.name,
+        email: input.email,
+        role: input.role,
+        clientId: input.clientId,
+        partnerName: null,
+        organizationId: input.organizationId || null,
+        orgName: null,
+        active: true,
+        lastLogin: null,
+        createdAt: new Date(),
+      });
 
       // Collect partner-admin CC list so they are notified of the new user's
       // initial invite. Only active admins on the same partner; never the
@@ -1375,7 +1429,7 @@ export const adminRouter = router({
       const s3Key = driveFileName;
 
       // Insert into database
-      await db.insert(partnerTemplates).values({
+      const [ptRes] = await db.insert(partnerTemplates).values({
         clientId: input.clientId,
         questionId: input.questionId,
         label: input.label,
@@ -1385,6 +1439,18 @@ export const adminRouter = router({
         fileSize: fileBuffer.length,
         mimeType: input.mimeType,
         uploadedBy: ctx.user.email || "unknown",
+      });
+      dispatch.partnerTemplate({
+        mysqlId: (ptRes as any).insertId || 0,
+        clientId: input.clientId,
+        partnerName: "",
+        questionId: input.questionId,
+        label: input.label,
+        fileName: input.fileName,
+        fileUrl,
+        active: true,
+        uploadedBy: ctx.user.email || "unknown",
+        createdAt: new Date(),
       });
 
       return { success: true, fileUrl };
@@ -1433,7 +1499,7 @@ export const adminRouter = router({
       const s3Key = driveFileName;
 
       // Insert new active template
-      await db.insert(partnerTemplates).values({
+      const [ptReplaceRes] = await db.insert(partnerTemplates).values({
         clientId: existing.clientId,
         questionId: existing.questionId,
         label: input.label,
@@ -1443,6 +1509,18 @@ export const adminRouter = router({
         fileSize: fileBuffer.length,
         mimeType: input.mimeType,
         uploadedBy: ctx.user.email || "unknown",
+      });
+      dispatch.partnerTemplate({
+        mysqlId: (ptReplaceRes as any).insertId || 0,
+        clientId: existing.clientId,
+        partnerName: "",
+        questionId: existing.questionId,
+        label: input.label,
+        fileName: input.fileName,
+        fileUrl,
+        active: true,
+        uploadedBy: ctx.user.email || "unknown",
+        createdAt: new Date(),
       });
 
       return { success: true, fileUrl };
@@ -1491,7 +1569,7 @@ export const adminRouter = router({
       const fileUrl = driveUrl || s3Url;
       const s3Key = driveFileName;
 
-      await db.insert(specifications).values({
+      const [specRes] = await db.insert(specifications).values({
         title: input.title,
         description: input.description || null,
         category: input.category || null,
@@ -1501,6 +1579,17 @@ export const adminRouter = router({
         fileSize: fileBuffer.length,
         mimeType: input.mimeType,
         uploadedBy: ctx.user.email || "unknown",
+      });
+      dispatch.specification({
+        mysqlId: (specRes as any).insertId || 0,
+        title: input.title,
+        category: input.category || null,
+        fileName: input.fileName,
+        fileUrl,
+        version: "1.0",
+        active: true,
+        uploadedBy: ctx.user.email || "unknown",
+        createdAt: new Date(),
       });
 
       return { success: true, fileUrl };
@@ -1628,20 +1717,38 @@ export const adminRouter = router({
 
       const maxOrder = existing.length > 0 ? existing[0].displayOrder : 0;
 
-      await db.insert(systemVendorOptions).values({
+      const [adminVendorRes] = await db.insert(systemVendorOptions).values({
         systemType,
         vendorName,
         displayOrder: maxOrder + 1,
         createdBy: ctx.user.email || "unknown",
       });
+      dispatch.systemVendor({
+        mysqlId: (adminVendorRes as any).insertId || 0,
+        systemType,
+        vendorName,
+        productName: vendorName,
+        active: true,
+        createdAt: new Date(),
+      });
 
       // Audit log
-      await db.insert(vendorAuditLog).values({
+      const [adminAuditRes] = await db.insert(vendorAuditLog).values({
         action: 'add',
         systemType,
         vendorName,
         newValue: vendorName,
         performedBy: ctx.user.email || "unknown",
+      });
+      dispatch.vendorAudit({
+        mysqlId: (adminAuditRes as any).insertId || 0,
+        vendorId: (adminVendorRes as any).insertId || 0,
+        action: 'add',
+        field: systemType,
+        oldValue: null,
+        newValue: vendorName,
+        performedBy: ctx.user.email || "unknown",
+        createdAt: new Date(),
       });
 
       return { success: true };
@@ -1680,13 +1787,23 @@ export const adminRouter = router({
         .set({ vendorName })
         .where(eq(systemVendorOptions.id, input.id));
 
-      await db.insert(vendorAuditLog).values({
+      const [updateAuditRes] = await db.insert(vendorAuditLog).values({
         action: 'update',
         systemType: current.systemType,
         vendorName,
         previousValue: current.vendorName,
         newValue: vendorName,
         performedBy: ctx.user.email || "unknown",
+      });
+      dispatch.vendorAudit({
+        mysqlId: (updateAuditRes as any).insertId || 0,
+        vendorId: input.id,
+        action: 'update',
+        field: current.systemType,
+        oldValue: current.vendorName,
+        newValue: vendorName,
+        performedBy: ctx.user.email || "unknown",
+        createdAt: new Date(),
       });
 
       return { success: true };
@@ -1713,13 +1830,23 @@ export const adminRouter = router({
 
       // Audit log
       if (currentToggle) {
-        await db.insert(vendorAuditLog).values({
+        const [toggleRes] = await db.insert(vendorAuditLog).values({
           action: 'toggle',
           systemType: currentToggle.systemType,
           vendorName: currentToggle.vendorName,
           previousValue: currentToggle.isActive === 1 ? 'active' : 'inactive',
           newValue: input.isActive === 1 ? 'active' : 'inactive',
           performedBy: ctx.user.email || "unknown",
+        });
+        dispatch.vendorAudit({
+          mysqlId: (toggleRes as any).insertId || 0,
+          vendorId: input.id,
+          action: 'toggle',
+          field: currentToggle.systemType,
+          oldValue: currentToggle.isActive === 1 ? 'active' : 'inactive',
+          newValue: input.isActive === 1 ? 'active' : 'inactive',
+          performedBy: ctx.user.email || "unknown",
+          createdAt: new Date(),
         });
       }
 
@@ -1743,12 +1870,22 @@ export const adminRouter = router({
 
       // Audit log
       if (currentDel) {
-        await db.insert(vendorAuditLog).values({
+        const [delRes] = await db.insert(vendorAuditLog).values({
           action: 'delete',
           systemType: currentDel.systemType,
           vendorName: currentDel.vendorName,
           previousValue: currentDel.vendorName,
           performedBy: ctx.user.email || "unknown",
+        });
+        dispatch.vendorAudit({
+          mysqlId: (delRes as any).insertId || 0,
+          vendorId: input.id,
+          action: 'delete',
+          field: currentDel.systemType,
+          oldValue: currentDel.vendorName,
+          newValue: null,
+          performedBy: ctx.user.email || "unknown",
+          createdAt: new Date(),
         });
       }
 
@@ -1806,12 +1943,22 @@ export const adminRouter = router({
         await db.insert(systemVendorOptions).values(toInsert);
       }
 
-      await db.insert(vendorAuditLog).values({
+      const [sysTypeAuditRes] = await db.insert(vendorAuditLog).values({
         action: 'add_system_type',
         systemType,
         vendorName: null,
         newValue: JSON.stringify(toInsert.map(t => t.vendorName)),
         performedBy: ctx.user.email || "unknown",
+      });
+      dispatch.vendorAudit({
+        mysqlId: (sysTypeAuditRes as any).insertId || 0,
+        vendorId: 0,
+        action: 'add_system_type',
+        field: systemType,
+        oldValue: null,
+        newValue: JSON.stringify(toInsert.map(t => t.vendorName)),
+        performedBy: ctx.user.email || "unknown",
+        createdAt: new Date(),
       });
 
       const skipped = cleaned.length - toInsert.length;
@@ -1858,12 +2005,22 @@ export const adminRouter = router({
       await db.insert(systemVendorOptions).values(values);
 
       // Audit log
-      await db.insert(vendorAuditLog).values({
+      const [seedAuditRes] = await db.insert(vendorAuditLog).values({
         action: 'seed_defaults',
         systemType: 'ALL',
         vendorName: null,
         newValue: JSON.stringify(Object.keys(defaults)),
         performedBy: ctx.user.email || "system",
+      });
+      dispatch.vendorAudit({
+        mysqlId: (seedAuditRes as any).insertId || 0,
+        vendorId: 0,
+        action: 'seed_defaults',
+        field: 'ALL',
+        oldValue: null,
+        newValue: JSON.stringify(Object.keys(defaults)),
+        performedBy: ctx.user.email || "system",
+        createdAt: new Date(),
       });
 
       return { success: true, message: "Seeded defaults", count: values.length };
@@ -1935,7 +2092,7 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Cannot create tasks for a different partner" });
       }
 
-      await db.insert(partnerTaskTemplates).values({
+      const [pttRes] = await db.insert(partnerTaskTemplates).values({
         clientId: input.clientId,
         title: input.title,
         description: input.description ?? null,
@@ -1944,6 +2101,18 @@ export const adminRouter = router({
         sortOrder: input.sortOrder ?? 0,
         createdBy: ctx.user.email ?? undefined,
         updatedBy: ctx.user.email ?? undefined,
+      });
+      dispatch.partnerTaskTemplate({
+        mysqlId: (pttRes as any).insertId || 0,
+        clientId: input.clientId,
+        partnerName: "",
+        title: input.title,
+        section: input.section ?? null,
+        type: input.type,
+        sortOrder: input.sortOrder ?? 0,
+        active: true,
+        createdBy: ctx.user.email || "unknown",
+        createdAt: new Date(),
       });
 
       return { success: true };
@@ -2081,6 +2250,18 @@ export const adminRouter = router({
         sortOrder: maxSort + 10,
         isActive: 1,
         createdBy: ctx.user.email ?? null,
+      });
+      dispatch.partnerTaskTemplate({
+        mysqlId: result.insertId || 0,
+        clientId: org.clientId,
+        partnerName: "",
+        title: customTask.title,
+        section: customTask.section ?? null,
+        type: customTask.type,
+        sortOrder: maxSort + 10,
+        active: true,
+        createdBy: ctx.user.email || "unknown",
+        createdAt: new Date(),
       });
 
       return { success: true, templateId: result.insertId };

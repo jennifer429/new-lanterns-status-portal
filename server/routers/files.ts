@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
+import { dispatch } from "../notionSyncDispatcher";
 import { requireDb } from "../db";
 import { fileAttachments, organizations, users } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
@@ -122,6 +123,18 @@ export const filesRouter = router({
         fileSize,
         mimeType: input.mimeType,
         uploadedBy: ctx.user.email || "unknown",
+      });
+      dispatch.taskFileAttachment({
+        mysqlId: result.insertId || 0,
+        organizationId: input.organizationId,
+        orgName: org.name,
+        taskId: input.taskId,
+        fileName: input.fileName,
+        fileUrl: finalUrl,
+        mimeType: input.mimeType,
+        fileSize,
+        uploadedBy: ctx.user.email || "unknown",
+        createdAt: new Date(),
       });
 
       // Audit log
