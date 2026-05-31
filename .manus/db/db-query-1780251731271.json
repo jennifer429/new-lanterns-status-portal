@@ -1,0 +1,54 @@
+{
+  "query": "SELECT 'users' as tbl, COUNT(*) as cnt FROM users UNION ALL SELECT 'organizations', COUNT(*) FROM organizations UNION ALL SELECT 'clients', COUNT(*) FROM clients UNION ALL SELECT 'questions', COUNT(*) FROM questions UNION ALL SELECT 'orgNotes', COUNT(*) FROM orgNotes UNION ALL SELECT 'partnerDocuments', COUNT(*) FROM partnerDocuments UNION ALL SELECT 'activityFeed', COUNT(*) FROM activityFeed UNION ALL SELECT 'sectionProgress', COUNT(*) FROM sectionProgress UNION ALL SELECT 'fileAttachments', COUNT(*) FROM fileAttachments UNION ALL SELECT 'intakeFileAttachments', COUNT(*) FROM intakeFileAttachments UNION ALL SELECT 'aiAuditLogs', COUNT(*) FROM aiAuditLogs;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT 'users' as tbl, COUNT(*) as cnt FROM users UNION ALL SELECT 'organizations', COUNT(*) FROM organizations UNION ALL SELECT 'clients', COUNT(*) FROM clients UNION ALL SELECT 'questions', COUNT(*) FROM questions UNION ALL SELECT 'orgNotes', COUNT(*) FROM orgNotes UNION ALL SELECT 'partnerDocuments', COUNT(*) FROM partnerDocuments UNION ALL SELECT 'activityFeed', COUNT(*) FROM activityFeed UNION ALL SELECT 'sectionProgress', COUNT(*) FROM sectionProgress UNION ALL SELECT 'fileAttachments', COUNT(*) FROM fileAttachments UNION ALL SELECT 'intakeFileAttachments', COUNT(*) FROM intakeFileAttachments UNION ALL SELECT 'aiAuditLogs', COUNT(*) FROM aiAuditLogs;",
+  "rows": [
+    {
+      "tbl": "clients",
+      "cnt": "7"
+    },
+    {
+      "tbl": "questions",
+      "cnt": "80"
+    },
+    {
+      "tbl": "orgNotes",
+      "cnt": "55"
+    },
+    {
+      "tbl": "organizations",
+      "cnt": "24"
+    },
+    {
+      "tbl": "users",
+      "cnt": "65"
+    },
+    {
+      "tbl": "activityFeed",
+      "cnt": "3"
+    },
+    {
+      "tbl": "fileAttachments",
+      "cnt": "7"
+    },
+    {
+      "tbl": "partnerDocuments",
+      "cnt": "24"
+    },
+    {
+      "tbl": "sectionProgress",
+      "cnt": "0"
+    },
+    {
+      "tbl": "intakeFileAttachments",
+      "cnt": "33"
+    },
+    {
+      "tbl": "aiAuditLogs",
+      "cnt": "439"
+    }
+  ],
+  "messages": [],
+  "stdout": "tbl\tcnt\nclients\t7\nquestions\t80\norgNotes\t55\norganizations\t24\nusers\t65\nactivityFeed\t3\nfileAttachments\t7\npartnerDocuments\t24\nsectionProgress\t0\nintakeFileAttachments\t33\naiAuditLogs\t439\n",
+  "stderr": "",
+  "execution_time_ms": 345
+}

@@ -1,0 +1,58 @@
+{
+  "query": "SELECT 'users' as tbl, COUNT(*) as cnt FROM users UNION ALL SELECT 'organizations', COUNT(*) FROM organizations UNION ALL SELECT 'clients', COUNT(*) FROM clients UNION ALL SELECT 'orgNotes', COUNT(*) FROM orgNotes UNION ALL SELECT 'partnerDocuments', COUNT(*) FROM partnerDocuments UNION ALL SELECT 'aiAuditLogs', COUNT(*) FROM aiAuditLogs UNION ALL SELECT 'activityFeed', COUNT(*) FROM activityFeed UNION ALL SELECT 'sectionProgress', COUNT(*) FROM sectionProgress UNION ALL SELECT 'orgCustomTasks', COUNT(*) FROM orgCustomTasks UNION ALL SELECT 'questions', COUNT(*) FROM questions UNION ALL SELECT 'specifications', COUNT(*) FROM specifications UNION ALL SELECT 'implementationOrgs', COUNT(*) FROM implementationOrgs",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT 'users' as tbl, COUNT(*) as cnt FROM users UNION ALL SELECT 'organizations', COUNT(*) FROM organizations UNION ALL SELECT 'clients', COUNT(*) FROM clients UNION ALL SELECT 'orgNotes', COUNT(*) FROM orgNotes UNION ALL SELECT 'partnerDocuments', COUNT(*) FROM partnerDocuments UNION ALL SELECT 'aiAuditLogs', COUNT(*) FROM aiAuditLogs UNION ALL SELECT 'activityFeed', COUNT(*) FROM activityFeed UNION ALL SELECT 'sectionProgress', COUNT(*) FROM sectionProgress UNION ALL SELECT 'orgCustomTasks', COUNT(*) FROM orgCustomTasks UNION ALL SELECT 'questions', COUNT(*) FROM questions UNION ALL SELECT 'specifications', COUNT(*) FROM specifications UNION ALL SELECT 'implementationOrgs', COUNT(*) FROM implementationOrgs",
+  "rows": [
+    {
+      "tbl": "partnerDocuments",
+      "cnt": "24"
+    },
+    {
+      "tbl": "clients",
+      "cnt": "7"
+    },
+    {
+      "tbl": "orgNotes",
+      "cnt": "55"
+    },
+    {
+      "tbl": "users",
+      "cnt": "65"
+    },
+    {
+      "tbl": "organizations",
+      "cnt": "24"
+    },
+    {
+      "tbl": "activityFeed",
+      "cnt": "3"
+    },
+    {
+      "tbl": "sectionProgress",
+      "cnt": "0"
+    },
+    {
+      "tbl": "orgCustomTasks",
+      "cnt": "0"
+    },
+    {
+      "tbl": "questions",
+      "cnt": "80"
+    },
+    {
+      "tbl": "aiAuditLogs",
+      "cnt": "439"
+    },
+    {
+      "tbl": "implementationOrgs",
+      "cnt": "16"
+    },
+    {
+      "tbl": "specifications",
+      "cnt": "13"
+    }
+  ],
+  "messages": [],
+  "stdout": "tbl\tcnt\npartnerDocuments\t24\nclients\t7\norgNotes\t55\nusers\t65\norganizations\t24\nactivityFeed\t3\nsectionProgress\t0\norgCustomTasks\t0\nquestions\t80\naiAuditLogs\t439\nimplementationOrgs\t16\nspecifications\t13\n",
+  "stderr": "",
+  "execution_time_ms": 278
+}

@@ -1,0 +1,18 @@
+{
+  "query": "SELECT id, LEFT(payload, 500) as payload_preview FROM notionRetryQueue WHERE id IN (90001, 90002);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, LEFT(payload, 500) as payload_preview FROM notionRetryQueue WHERE id IN (90001, 90002);",
+  "rows": [
+    {
+      "id": "90001",
+      "payload_preview": "{\"dbId\":\"2736e92a-7e47-46e4-8057-22060cfe2e97\",\"dsId\":\"27f0a0d3-7e20-4f99-9506-41cb6acfb98d\",\"mysqlId\":1050002,\"title\":\"jennifer@newlantern.ai - 2026-05-31\",\"writeType\":\"aiChatLog\"}"
+    },
+    {
+      "id": "90002",
+      "payload_preview": "{\"dbId\":\"2736e92a-7e47-46e4-8057-22060cfe2e97\",\"dsId\":\"27f0a0d3-7e20-4f99-9506-41cb6acfb98d\",\"mysqlId\":1050001,\"title\":\"jennifer@newlantern.ai - 2026-05-31\",\"writeType\":\"aiChatLog\"}"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tpayload_preview\n90001\t{\"dbId\":\"2736e92a-7e47-46e4-8057-22060cfe2e97\",\"dsId\":\"27f0a0d3-7e20-4f99-9506-41cb6acfb98d\",\"mysqlId\":1050002,\"title\":\"jennifer@newlantern.ai - 2026-05-31\",\"writeType\":\"aiChatLog\"}\n90002\t{\"dbId\":\"2736e92a-7e47-46e4-8057-22060cfe2e97\",\"dsId\":\"27f0a0d3-7e20-4f99-9506-41cb6acfb98d\",\"mysqlId\":1050001,\"title\":\"jennifer@newlantern.ai - 2026-05-31\",\"writeType\":\"aiChatLog\"}\n",
+  "stderr": "",
+  "execution_time_ms": 270
+}
