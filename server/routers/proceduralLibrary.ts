@@ -122,8 +122,8 @@ export const proceduralLibraryRouter = router({
       const driveFileName = `procedural-library_${targetClientId}_${timestamp}.${fileExt}`;
 
       // Upload to Google Drive
-      const { driveUrl, s3Url } = await uploadToGoogleDrive(driveFileName, fileBuffer, "");
-      const fileUrl = driveUrl || s3Url;
+      const { driveUrl, s3Url, driveFileId: uploadedDriveFileId, s3Key } = await uploadToGoogleDrive(driveFileName, fileBuffer, "");
+      const fileUrl = driveUrl ?? s3Url;
 
       // Insert metadata
       const [inserted] = await db.insert(partnerDocuments).values({
@@ -132,7 +132,7 @@ export const proceduralLibraryRouter = router({
         title: input.title,
         description: null,
         filename: input.fileName,
-        driveFileId: driveFileName,
+        driveFileId: uploadedDriveFileId ?? s3Key,
         url: fileUrl,
         mimeType: input.mimeType,
         size: fileBuffer.length,
@@ -147,7 +147,9 @@ export const proceduralLibraryRouter = router({
         category: null,
         fileName: input.fileName,
         fileUrl,
-        version: "1.0",
+        driveFileId: null,
+        mimeType: input.mimeType || null,
+        fileSize: fileBuffer.length,
         uploadedBy: ctx.user.name || ctx.user.email || "Unknown",
         active: true,
         createdAt: new Date(),
@@ -172,11 +174,7 @@ export const proceduralLibraryRouter = router({
         createdAt: new Date(),
       });
 
-      return {
-        success: true,
-        fileUrl,
-        status: { drive: !!driveUrl, s3: !!s3Url, notion: true },
-      };
+      return { success: true, fileUrl };
     }),
 
   /** Delete a document (admin only) */

@@ -421,3 +421,26 @@
 - [x] DB/DS IDs hardcoded in notionDualWrite.ts (same pattern as existing Notion integrations)
 - [ ] Write vitest tests for new dual-write module
 - [x] Backfill existing MySQL data to new Notion databases (admin endpoint: trpc.backfill.run + trpc.backfill.preview)
+
+## Fix TSC Errors (51 type errors blocking deployment) — May 31, 2026
+
+- [x] Fix requireDb() return type (explicit non-null Promise<ReturnType<typeof drizzle>>)
+- [x] Fix uploadToGoogleDrive return type destructuring in admin.ts (3 spots)
+- [x] Fix uploadToGoogleDrive return type destructuring in intake.ts (1 spot)
+- [x] Fix uploadToGoogleDrive return type destructuring in proceduralLibrary.ts (1 spot)
+- [x] Fix mislabeled toggleOrgCustomTaskPublic → saveResponse (correct input schema)
+- [x] Fix mislabeled deleteOrgCustomTaskPublic → submitFeedback (correct input schema)
+- [x] Fix connectivity.ts importing { db } → use requireDb()
+- [x] Fix ValidationStatus type missing in Validation.tsx
+- [x] Fix useHomeData.ts referencing .status.notion (doesn't exist on return type)
+- [x] Fix useIntakeData.ts referencing .status.notion (doesn't exist on return type)
+- [x] Fix ProceduralLibrary.tsx referencing .status.notion (doesn't exist on return type)
+- [x] Fix ConnectivityDesktopTable.tsx Map.keys() iteration (Array.from)
+- [x] Add 'done' to STATUS_TO_DB Record in Validation.tsx
+
+## Notion Property Naming Cleanup — Eliminate Translations
+
+- [ ] Rename Notion database properties to match MySQL column names exactly
+- [ ] Rename payload interfaces in notionDualWrite.ts to use MySQL column names
+- [ ] Update all dispatch calls in routers to use new payload field names
+- [ ] Final tsc check and deploy

@@ -89,10 +89,10 @@ export const adminRouter = router({
         mysqlId: newQuestion.insertId || 0,
         key: input.questionId,
         section: input.sectionId,
-        type: input.type || "text",
+        type: input.questionType || "text",
         required: !!input.required,
         active: true,
-        sortOrder: input.sortOrder || 0,
+        sortOrder: input.questionNumber || 0,
         fullText: input.questionText || "",
         createdAt: new Date(),
       });
@@ -185,9 +185,9 @@ export const adminRouter = router({
         mysqlId: newOption.insertId || 0,
         questionId: input.questionId,
         questionKey: String(input.questionId),
-        label: input.optionValue || "",
+        label: input.optionLabel || "",
         value: input.optionValue || "",
-        sortOrder: input.sortOrder || 0,
+        sortOrder: input.displayOrder || 0,
         createdAt: new Date(),
       });
       return { success: true, optionId: newOption.insertId };
@@ -1424,9 +1424,8 @@ export const adminRouter = router({
       const timestamp = Date.now();
       const fileExt = input.fileName.split('.').pop();
       const driveFileName = `partner-templates_${input.clientId}_${input.questionId}_${timestamp}.${fileExt}`;
-      const { driveUrl, s3Url } = await uploadToGoogleDrive(driveFileName, fileBuffer, "");
-      const fileUrl = driveUrl || s3Url;
-      const s3Key = driveFileName;
+      const { driveUrl, s3Url, s3Key } = await uploadToGoogleDrive(driveFileName, fileBuffer, "");
+      const fileUrl = driveUrl ?? s3Url;
 
       // Insert into database
       const [ptRes] = await db.insert(partnerTemplates).values({
@@ -1445,9 +1444,11 @@ export const adminRouter = router({
         clientId: input.clientId,
         partnerName: "",
         questionId: input.questionId,
-        label: input.label,
+        title: input.label,
         fileName: input.fileName,
         fileUrl,
+        mimeType: input.mimeType,
+        fileSize: fileBuffer.length,
         active: true,
         uploadedBy: ctx.user.email || "unknown",
         createdAt: new Date(),
@@ -1494,9 +1495,8 @@ export const adminRouter = router({
       const timestamp = Date.now();
       const fileExt = input.fileName.split('.').pop();
       const driveFileName = `partner-templates_${existing.clientId}_${existing.questionId}_${timestamp}.${fileExt}`;
-      const { driveUrl, s3Url } = await uploadToGoogleDrive(driveFileName, fileBuffer, "");
-      const fileUrl = driveUrl || s3Url;
-      const s3Key = driveFileName;
+      const { driveUrl, s3Url, s3Key } = await uploadToGoogleDrive(driveFileName, fileBuffer, "");
+      const fileUrl = driveUrl ?? s3Url;
 
       // Insert new active template
       const [ptReplaceRes] = await db.insert(partnerTemplates).values({
@@ -1515,9 +1515,11 @@ export const adminRouter = router({
         clientId: existing.clientId,
         partnerName: "",
         questionId: existing.questionId,
-        label: input.label,
+        title: input.label,
         fileName: input.fileName,
         fileUrl,
+        mimeType: input.mimeType,
+        fileSize: fileBuffer.length,
         active: true,
         uploadedBy: ctx.user.email || "unknown",
         createdAt: new Date(),
@@ -1565,9 +1567,8 @@ export const adminRouter = router({
       // Upload to Google Drive
       const timestamp = Date.now();
       const driveFileName = `specifications_${timestamp}_${input.fileName}`;
-      const { driveUrl, s3Url } = await uploadToGoogleDrive(driveFileName, fileBuffer, "");
-      const fileUrl = driveUrl || s3Url;
-      const s3Key = driveFileName;
+      const { driveUrl, s3Url, s3Key } = await uploadToGoogleDrive(driveFileName, fileBuffer, "");
+      const fileUrl = driveUrl ?? s3Url;
 
       const [specRes] = await db.insert(specifications).values({
         title: input.title,
@@ -1583,12 +1584,10 @@ export const adminRouter = router({
       dispatch.specification({
         mysqlId: (specRes as any).insertId || 0,
         title: input.title,
+        key: input.title.toLowerCase().replace(/\s+/g, "-"),
+        description: input.description || null,
         category: input.category || null,
-        fileName: input.fileName,
-        fileUrl,
-        version: "1.0",
         active: true,
-        uploadedBy: ctx.user.email || "unknown",
         createdAt: new Date(),
       });
 
@@ -2107,9 +2106,10 @@ export const adminRouter = router({
         clientId: input.clientId,
         partnerName: "",
         title: input.title,
+        taskId: `ptt-${input.clientId}-${Date.now()}`,
         section: input.section ?? null,
-        type: input.type,
-        sortOrder: input.sortOrder ?? 0,
+        description: input.description ?? null,
+        owner: ctx.user.email || "unknown",
         active: true,
         createdBy: ctx.user.email || "unknown",
         createdAt: new Date(),
@@ -2256,9 +2256,10 @@ export const adminRouter = router({
         clientId: org.clientId,
         partnerName: "",
         title: customTask.title,
+        taskId: `ptt-promoted-${customTask.id}`,
         section: customTask.section ?? null,
-        type: customTask.type,
-        sortOrder: maxSort + 10,
+        description: customTask.description ?? null,
+        owner: ctx.user.email || "unknown",
         active: true,
         createdBy: ctx.user.email || "unknown",
         createdAt: new Date(),

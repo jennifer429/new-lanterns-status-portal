@@ -54,7 +54,7 @@ async function findStaleTasks(): Promise<OutOfSyncRow[]> {
   if (staleTasks.length === 0) return [];
 
   // Get org slugs
-  const orgIds = [...new Set(staleTasks.map(t => t.organizationId))];
+  const orgIds = Array.from(new Set(staleTasks.map(t => t.organizationId)));
   const orgs = orgIds.length > 0
     ? await db.select({ id: organizations.id, slug: organizations.slug }).from(organizations).where(sql`${organizations.id} IN (${sql.join(orgIds.map(id => sql`${id}`), sql`, `)})`)
     : [];
@@ -96,7 +96,7 @@ async function findStaleValidationResults(): Promise<OutOfSyncRow[]> {
   if (staleResults.length === 0) return [];
 
   // Get org slugs
-  const orgIds = [...new Set(staleResults.map(r => r.organizationId))];
+  const orgIds = Array.from(new Set(staleResults.map(r => r.organizationId)));
   const orgs = orgIds.length > 0
     ? await db.select({ id: organizations.id, slug: organizations.slug }).from(organizations).where(sql`${organizations.id} IN (${sql.join(orgIds.map(id => sql`${id}`), sql`, `)})`)
     : [];
@@ -130,8 +130,8 @@ export async function runReconciliation(): Promise<{ checked: number; outOfSync:
     const stats = { checked: allIssues.length > 0 ? allIssues.length : 0, outOfSync: allIssues.length };
 
     // Persist to reconciliationLog
-    const db = await requireDb();
-    await db.insert(reconciliationLog).values({
+    const db2 = await requireDb();
+    await db2.insert(reconciliationLog).values({
       rowsChecked: stats.checked,
       outOfSync: allIssues.length,
       issues: allIssues.length > 0 ? JSON.stringify(allIssues) : null,
@@ -165,8 +165,8 @@ export async function runReconciliation(): Promise<{ checked: number; outOfSync:
   } catch (err: any) {
     const durationMs = Date.now() - startTime;
     // Persist error to log
-    const db = await requireDb();
-    await db.insert(reconciliationLog).values({
+    const db2 = await requireDb();
+    await db2.insert(reconciliationLog).values({
       rowsChecked: 0,
       outOfSync: 0,
       durationMs,

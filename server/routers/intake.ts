@@ -132,9 +132,9 @@ export const intakeRouter = router({
     }),
 
   /**
-   * Toggle completion status of an org custom task
+   * Save a single intake response (auto-save from questionnaire)
    */
-  saveResponse: publicProcedure
+  saveResponse: protectedProcedure
     .input(
       z.object({
         organizationSlug: z.string(),
@@ -413,9 +413,8 @@ export const intakeRouter = router({
         const fileName = `${sanitizedOrgName}_${sanitizedEmail}_${input.questionId}-${shortTitle}_${timestamp}.${fileExt}`;
         
         // Upload to Google Drive (per-customer folder)
-        const { driveUrl, s3Url, driveFileId: uploadedDriveFileId, s3Key } =
-          await uploadToGoogleDrive(fileName, fileBuffer, org.name, org.googleDriveFolderId);
-        const fileUrl = driveUrl || s3Url;
+        const { driveUrl, s3Url, driveFileId: uploadedDriveFileId, s3Key } = await uploadToGoogleDrive(fileName, fileBuffer, org.name, org.googleDriveFolderId);
+        const fileUrl = driveUrl ?? s3Url;
 
         // Store file info in database
         const [intakeFileRes] = await db.insert(intakeFileAttachments).values({
@@ -423,7 +422,7 @@ export const intakeRouter = router({
           questionId: input.questionId, // String question ID (e.g., "D.13")
           fileName: input.fileName,
           fileUrl,
-          driveFileId: uploadedDriveFileId || s3Key, // Drive file id (fallback to S3 key)
+          driveFileId: uploadedDriveFileId ?? s3Key, // Store Drive file ID or S3 key for reference
           fileSize: fileBuffer.length,
           mimeType: input.mimeType,
           uploadedBy: input.userEmail,
@@ -460,11 +459,6 @@ export const intakeRouter = router({
         return {
           success: true,
           fileUrl,
-          status: {
-            drive: !!driveUrl,
-            s3: !!s3Url,
-            notion: true,
-          },
           message: "File uploaded successfully",
         };
       } catch (error) {
@@ -685,13 +679,13 @@ export const intakeRouter = router({
     }),
 
   /**
-   * Delete an org custom task
+   * Submit onboarding feedback (rating + comments)
    */
-  submitFeedback: publicProcedure
+  submitFeedback: protectedProcedure
     .input(
       z.object({
         organizationSlug: z.string(),
-        rating: z.number(),
+        rating: z.number().min(1).max(5),
         comments: z.string().optional(),
       })
     )

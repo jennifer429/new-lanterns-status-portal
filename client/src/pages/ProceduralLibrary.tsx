@@ -115,22 +115,14 @@ export default function ProceduralLibrary() {
 
   // Mutations
   const uploadMutation = trpc.proceduralLibrary.uploadDocument.useMutation({
-    onSuccess: (data) => {
-      // Check the detailed status object returned by the new backend
-      const status = data.status;
+    onSuccess: () => {
       const partnerName = isPlatformAdmin && uploadClientId 
         ? allClients.find(c => c.id === parseInt(uploadClientId))?.name || "partner"
         : "your organization";
         
-      if (status && (!status.drive || !status.notion)) {
-        toast.error(`Document uploaded for ${partnerName} with warnings`, {
-          description: `Saved to backup storage. ${!status.drive ? 'Google Drive sync failed. ' : ''}${!status.notion ? 'Notion sync failed.' : ''}`
-        });
-      } else {
-        toast.success(`Document uploaded for ${partnerName}`, {
-          description: `Your document has been successfully uploaded to the ${partnerName} folder in Google Drive.`
-        });
-      }
+      toast.success(`Document uploaded for ${partnerName}`, {
+        description: `Your document has been successfully uploaded.`
+      });
       refetchDocs();
       setIsUploadOpen(false);
       resetUploadForm();

@@ -128,7 +128,7 @@ export function useHomeData(orgSlug: string) {
       const orgName = organization?.name || orgSlug;
       if (status && (!status.drive || !status.audit)) {
         toast.error(`File uploaded to ${orgName} with warnings`, {
-          description: `Saved to backup storage. ${!status.drive ? 'Google Drive sync failed. ' : ''}${!status.audit ? 'Audit logging failed.' : ''}`
+          description: `Saved to backup storage. ${!status.drive ? 'Google Drive sync failed. ' : ''}${!status.audit ? 'Audit log failed.' : ''}`
         });
       } else {
         toast.success(`File uploaded to ${orgName}`, {
