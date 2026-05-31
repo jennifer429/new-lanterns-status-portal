@@ -87,9 +87,9 @@ export function UsersTab({ isPlatformAdmin, orgs, clients, allUsers, refetchUser
   const createUserMutation = trpc.admin.createUser.useMutation({
     onSuccess: (data) => {
       toast.success(
-        data.inviteTriggered
-          ? "User created. Invite email sent."
-          : "User created. Invite will be sent on the next automation run."
+        data.emailSent
+          ? "User created. Invite email sent!"
+          : "User created. Email could not be sent — check email settings."
       );
       setIsCreateUserDialogOpen(false);
       setNewUserEmail(""); setNewUserName(""); setNewUserOrgId(undefined); setNewUserRole("user");
@@ -126,9 +126,9 @@ export function UsersTab({ isPlatformAdmin, orgs, clients, allUsers, refetchUser
   const resendInviteMutation = trpc.admin.resendInvite.useMutation({
     onSuccess: (data) => {
       toast.success(
-        data.inviteTriggered
-          ? `Invite email sent to ${data.email}.`
-          : `Invite queued for ${data.email}. It will be sent on the next automation run.`
+        data.emailSent
+          ? `Invite email sent to ${data.email}!`
+          : `User reset but email could not be sent to ${data.email} — check email settings.`
       );
     },
     onError: (error: any) => toast.error(error.message || "Failed to resend invite"),
