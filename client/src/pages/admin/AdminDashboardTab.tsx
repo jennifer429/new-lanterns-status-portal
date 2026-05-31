@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
@@ -9,16 +10,32 @@ import {
 } from "@/components/ui/select";
 import {
   ChevronDown, ClipboardList, TestTube2, ListChecks, Download, Search, Folder,
+  CalendarClock, Rocket, RotateCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/lib/trpc";
 import { transformSectionProgress } from "@/lib/adminUtils";
 import type { SharedAdminProps, Metric, Org } from "./types";
 
-type AdminDashboardTabProps = Pick<SharedAdminProps, "isPlatformAdmin" | "orgs" | "clients"> & {
+type AdminDashboardTabProps = Pick<SharedAdminProps, "isPlatformAdmin" | "orgs" | "clients" | "refetchOrgs"> & {
   metrics: Metric[] | undefined;
 };
 
 type StageFilter = "all" | "active" | "live";
+
+/** Today as YYYY-MM-DD (local), used to default the go-live date picker. */
+function todayStr(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** Format a YYYY-MM-DD string as e.g. "May 31, 2026". Returns "" for empty. */
+function formatDate(value: string | null | undefined): string {
+  if (!value) return "";
+  const d = new Date(`${value}T00:00:00`);
+  if (isNaN(d.getTime())) return value;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
 
 /** Order sites within a partner: active first, then everything else. */
 const STATUS_RANK: Record<string, number> = { active: 0, paused: 1, completed: 2, inactive: 3 };
@@ -68,23 +85,24 @@ function computeOrgStats(orgMetrics: Metric | undefined) {
   };
 }
 
-/** Compact labeled mini progress bar used in the scannable site row. */
-function MiniBar({ label, frac, value, barCls }: { label: string; frac: string; value: number; barCls: string }) {
-  return (
-    <div className="min-w-0">
-      <div className="flex items-baseline justify-between gap-1 mb-0.5">
-        <span className="text-[9px] font-mono uppercase tracking-wide text-muted-foreground/55 truncate">{label}</span>
-        <span className="text-[10px] font-medium text-muted-foreground tabular-nums shrink-0">{frac}</span>
-      </div>
-      <div className="h-1.5 rounded-full bg-muted/40 overflow-hidden">
-        <div className={cn("h-full rounded-full transition-all", barCls)} style={{ width: `${value}%` }} />
-      </div>
-    </div>
-  );
-}
-
-export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics }: AdminDashboardTabProps) {
+export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics, refetchOrgs }: AdminDashboardTabProps) {
   const [, setLocation] = useLocation();
+
+  // Go-live editing: which site's date picker is open, and its draft value.
+  const [goLiveDraft, setGoLiveDraft] = useState<{ id: number; date: string } | null>(null);
+
+  const markCompleteMutation = trpc.admin.markOrganizationComplete.useMutation({
+    onSuccess: () => { toast.success("Site marked live 🎉"); setGoLiveDraft(null); refetchOrgs(); },
+    onError: (e: any) => toast.error(e.message || "Failed to mark site live"),
+  });
+  const reopenMutation = trpc.admin.reopenOrganization.useMutation({
+    onSuccess: () => { toast.success("Site reopened"); refetchOrgs(); },
+    onError: (e: any) => toast.error(e.message || "Failed to reopen site"),
+  });
+  const updateOrgMutation = trpc.admin.updateOrganization.useMutation({
+    onSuccess: () => { toast.success("Target go-live date saved"); refetchOrgs(); },
+    onError: (e: any) => toast.error(e.message || "Failed to save target date"),
+  });
 
   const metricsMap = useMemo(() =>
     metrics?.reduce((acc, m) => { acc[m.organizationId] = m; return acc; }, {} as Record<number, Metric>) || {},
@@ -276,18 +294,32 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics }: A
                             <span className="font-semibold text-foreground truncate">{org.name}</span>
                           </div>
 
-                          {/* Overall % */}
-                          <div className="flex items-center gap-2 sm:w-14 shrink-0">
-                            <span className={cn("text-sm font-bold tabular-nums", org.status === "completed" ? "text-emerald-400" : "text-primary")}>
+                          {/* One big overall progress bar */}
+                          <div className="flex-1 flex items-center gap-3 min-w-0">
+                            <div className="flex-1 h-3 rounded-full bg-muted/50 overflow-hidden border border-border/50 min-w-0">
+                              <div
+                                className={cn("h-full rounded-full transition-all", org.status === "completed" ? "bg-emerald-500" : "bg-primary")}
+                                style={{ width: `${st.overallPct}%` }}
+                              />
+                            </div>
+                            <span className={cn("text-sm font-bold tabular-nums shrink-0 w-10 text-right", org.status === "completed" ? "text-emerald-400" : "text-primary")}>
                               {st.overallPct}%
                             </span>
                           </div>
 
-                          {/* Phase mini-bars */}
-                          <div className="flex-1 grid grid-cols-3 gap-3 min-w-0">
-                            <MiniBar label="Q" value={st.qPct} frac={`${st.sectionsComplete}/${st.totalSections}`} barCls="bg-primary" />
-                            <MiniBar label="Tests" value={st.vsPct} frac={`${st.vsPass}/${st.vs?.total ?? 28}`} barCls="bg-teal-400" />
-                            <MiniBar label="Tasks" value={st.tsPct} frac={`${st.tsDone}/${st.ts?.total ?? 0}`} barCls="bg-emerald-500" />
+                          {/* Go-live dates */}
+                          <div className="flex flex-col gap-0.5 text-[11px] sm:w-36 shrink-0">
+                            {org.status === "completed" && org.liveDate ? (
+                              <span className="flex items-center gap-1 text-emerald-400 font-medium">
+                                <Rocket className="w-3 h-3 shrink-0" /> Live {formatDate(org.liveDate)}
+                              </span>
+                            ) : org.targetGoLiveDate ? (
+                              <span className="flex items-center gap-1 text-muted-foreground">
+                                <CalendarClock className="w-3 h-3 shrink-0" /> Target {formatDate(org.targetGoLiveDate)}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground/40 italic">No go-live date</span>
+                            )}
                           </div>
 
                           {/* Stage + files + chevron */}
@@ -312,7 +344,83 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics }: A
                                 <span className="text-base font-bold text-primary">{st.overallPct}%</span>
                               </div>
                               <div className="w-full h-2.5 bg-muted rounded-full overflow-hidden border border-border/60">
-                                <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${st.overallPct}%` }} />
+                                <div className={cn("h-full rounded-full transition-all", org.status === "completed" ? "bg-emerald-500" : "bg-primary")} style={{ width: `${st.overallPct}%` }} />
+                              </div>
+                            </div>
+
+                            {/* Go-live management */}
+                            <div className="rounded-lg border border-border/60 bg-muted/20 p-4 flex flex-col sm:flex-row sm:items-end gap-4">
+                              {/* Target go-live date (editable) */}
+                              <div className="flex-1 min-w-0">
+                                <label className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                                  <CalendarClock className="w-3.5 h-3.5" /> Target Go-Live
+                                </label>
+                                <input
+                                  type="date"
+                                  defaultValue={org.targetGoLiveDate ?? ""}
+                                  onBlur={(e) => {
+                                    const v = e.target.value || null;
+                                    if (v !== (org.targetGoLiveDate ?? null)) {
+                                      updateOrgMutation.mutate({ id: org.id, targetGoLiveDate: v });
+                                    }
+                                  }}
+                                  className="h-9 w-full sm:w-44 px-2.5 rounded-lg bg-card border border-border/60 text-sm focus:outline-none focus:border-primary/50 transition-colors"
+                                />
+                              </div>
+
+                              {/* Live status / flip-to-done control */}
+                              <div className="flex-1 min-w-0">
+                                {org.status === "completed" ? (
+                                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                                    <div>
+                                      <p className="flex items-center gap-1.5 text-sm font-semibold text-emerald-400">
+                                        <Rocket className="w-4 h-4" /> Live
+                                      </p>
+                                      <p className="text-xs text-muted-foreground mt-0.5">
+                                        Went live {org.liveDate ? formatDate(org.liveDate) : "—"}
+                                      </p>
+                                    </div>
+                                    <button
+                                      onClick={() => reopenMutation.mutate({ organizationId: org.id })}
+                                      disabled={reopenMutation.isPending}
+                                      className="h-9 px-3 rounded-lg border border-border/60 bg-card text-xs font-medium text-muted-foreground hover:text-foreground hover:border-border/80 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                                    >
+                                      <RotateCcw className="w-3.5 h-3.5" /> Reopen
+                                    </button>
+                                  </div>
+                                ) : goLiveDraft?.id === org.id ? (
+                                  <div className="flex items-end gap-2 flex-wrap">
+                                    <div>
+                                      <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Go-Live Date</label>
+                                      <input
+                                        type="date"
+                                        value={goLiveDraft.date}
+                                        onChange={(e) => setGoLiveDraft({ id: org.id, date: e.target.value })}
+                                        className="h-9 w-44 px-2.5 rounded-lg bg-card border border-border/60 text-sm focus:outline-none focus:border-primary/50 transition-colors"
+                                      />
+                                    </div>
+                                    <button
+                                      onClick={() => markCompleteMutation.mutate({ organizationId: org.id, liveDate: goLiveDraft.date })}
+                                      disabled={markCompleteMutation.isPending || !goLiveDraft.date}
+                                      className="h-9 px-3 rounded-lg bg-emerald-500/90 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                                    >
+                                      <Rocket className="w-3.5 h-3.5" /> Confirm Live
+                                    </button>
+                                    <button
+                                      onClick={() => setGoLiveDraft(null)}
+                                      className="h-9 px-3 rounded-lg border border-border/60 bg-card text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => setGoLiveDraft({ id: org.id, date: org.targetGoLiveDate || todayStr() })}
+                                    className="h-9 px-4 rounded-lg bg-emerald-500/90 hover:bg-emerald-500 text-white text-sm font-semibold transition-colors flex items-center gap-1.5"
+                                  >
+                                    <Rocket className="w-4 h-4" /> Mark Live
+                                  </button>
+                                )}
                               </div>
                             </div>
 
