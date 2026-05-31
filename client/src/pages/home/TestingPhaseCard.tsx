@@ -59,12 +59,12 @@ export function TestingPhaseCard({
       >
         <div
           className={cn(
-            "absolute top-0 left-0 right-0 h-1 rounded-t-lg",
+            "absolute top-0 left-0 right-0 h-0.5",
             vIsDone
-              ? "bg-gradient-to-r from-emerald-500 to-emerald-400"
+              ? "bg-emerald-500"
               : activePhase === "testing"
-                ? "bg-gradient-to-r from-primary to-primary/60"
-                : "bg-gradient-to-r from-muted-foreground/20 to-muted-foreground/10"
+                ? "bg-primary"
+                : "bg-border"
           )}
         />
         <CardContent className="p-3 pt-3.5">
@@ -111,25 +111,20 @@ export function TestingPhaseCard({
             </div>
           </div>
 
-          {/* Status breakdown */}
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 mb-3">
-            {([
-              { label: "Pass",    count: valCompleted,       dotCls: "bg-emerald-500",         numCls: "text-emerald-500" },
-              { label: "Fail",    count: valFailedCount,     dotCls: "bg-red-500",             numCls: "text-red-500" },
-              { label: "In Prog", count: valInProgressCount, dotCls: "bg-blue-500",            numCls: "text-blue-500" },
-              { label: "Blocked", count: valBlockedCount,    dotCls: "bg-orange-500",          numCls: "text-orange-500" },
-              { label: "N/A",     count: valNaCount,         dotCls: "bg-amber-500",           numCls: "text-amber-500" },
-              { label: "Open",    count: valNotTestedCount,  dotCls: "bg-muted-foreground/40", numCls: "text-foreground" },
-            ] as const).map(({ label: statusLabel, count, dotCls, numCls }) => (
-              <div key={statusLabel} className="text-center">
-                <div className={`text-sm font-bold ${numCls}`}>{count}</div>
-                <div className="flex items-center justify-center gap-1">
-                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dotCls}`} />
-                  <span className="text-[10px] text-muted-foreground">{statusLabel}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+          {/* Exceptions only — non-zero states that need attention */}
+          {(valFailedCount > 0 || valBlockedCount > 0 || valInProgressCount > 0) && (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3 text-xs">
+              {valFailedCount > 0 && (
+                <span className="text-red-500 font-medium">{valFailedCount} fail</span>
+              )}
+              {valBlockedCount > 0 && (
+                <span className="text-orange-500 font-medium">{valBlockedCount} blocked</span>
+              )}
+              {valInProgressCount > 0 && (
+                <span className="text-blue-500 font-medium">{valInProgressCount} in progress</span>
+              )}
+            </div>
+          )}
 
           {/* Next Up */}
           {nextUpTestNames.length > 0 && (
