@@ -5,6 +5,7 @@
 import { z } from "zod";
 import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
+import { dispatch } from "../notionSyncDispatcher";
 import { requireDb } from "../db";
 import { users, organizations, clients } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -198,13 +199,24 @@ export const authRouter = router({
       const passwordHash = await bcrypt.hash(input.password, 10);
 
       // Create admin user
-      await db.insert(users).values({
+      const [authUserRes] = await db.insert(users).values({
         openId,
         email: input.email.toLowerCase(),
         name,
         passwordHash,
         role: 'admin',
         loginMethod: 'password',
+      });
+      dispatch.user({
+        mysqlId: (authUserRes as any).insertId || 0,
+        email: input.email.toLowerCase(),
+        name,
+        role: 'admin',
+        orgName: null,
+        partnerName: null,
+        active: true,
+        lastLogin: null,
+        createdAt: new Date(),
       });
 
       return {

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure, protectedProcedure } from "../_core/trpc";
 import { requireDb } from "../db";
+import { dispatch } from "../notionSyncDispatcher";
 import { intakeResponses, intakeFileAttachments, organizations, questions, onboardingFeedback, clients, partnerTemplates, partnerTaskTemplates, orgCustomTasks } from "../../drizzle/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { uploadToGoogleDrive } from "./files";
@@ -416,7 +417,7 @@ export const intakeRouter = router({
         const s3Key = fileName; // store filename as reference
 
         // Store file info in database
-        await db.insert(intakeFileAttachments).values({
+        const [intakeFileRes] = await db.insert(intakeFileAttachments).values({
           organizationId: org.id,
           questionId: input.questionId, // String question ID (e.g., "D.13")
           fileName: input.fileName,
@@ -425,6 +426,19 @@ export const intakeRouter = router({
           fileSize: fileBuffer.length,
           mimeType: input.mimeType,
           uploadedBy: input.userEmail,
+        });
+        dispatch.intakeFile({
+          mysqlId: (intakeFileRes as any).insertId || 0,
+          organizationId: org.id,
+          orgName: org.name,
+          questionId: input.questionId,
+          fileName: input.fileName,
+          fileUrl,
+          driveFileId: s3Key,
+          fileSize: fileBuffer.length,
+          mimeType: input.mimeType,
+          uploadedBy: input.userEmail,
+          createdAt: new Date(),
         });
 
         // Audit log
@@ -690,11 +704,20 @@ export const intakeRouter = router({
       }
 
       // Insert feedback
-      await db.insert(onboardingFeedback).values({
+      const [fbResult] = await db.insert(onboardingFeedback).values({
         organizationId: org.id,
         rating: input.rating,
         comments: input.comments || null,
         submittedBy: ctx.user?.email || null,
+      });
+      dispatch.onboardingFeedback({
+        mysqlId: (fbResult as any).insertId || 0,
+        organizationId: org.id,
+        orgName: org.name,
+        rating: input.rating,
+        comments: input.comments || null,
+        submittedBy: ctx.user?.email || null,
+        createdAt: new Date(),
       });
 
       return { success: true };
@@ -755,7 +778,7 @@ export const intakeRouter = router({
       const { driveUrl, s3Url, driveFileId, s3Key } = await uploadToGoogleDrive(storedName, fileBuffer, org.name, org.googleDriveFolderId);
       const finalUrl = driveUrl || s3Url;
 
-      await db.insert(intakeFileAttachments).values({
+      const [adhocFileRes] = await db.insert(intakeFileAttachments).values({
         organizationId: org.id,
         questionId: "ADHOC",
         fileName: input.fileName,
@@ -764,6 +787,19 @@ export const intakeRouter = router({
         fileSize: fileBuffer.length,
         mimeType: input.mimeType,
         uploadedBy: input.userEmail,
+      });
+      dispatch.intakeFile({
+        mysqlId: (adhocFileRes as any).insertId || 0,
+        organizationId: org.id,
+        orgName: org.name,
+        questionId: "ADHOC",
+        fileName: input.fileName,
+        fileUrl: finalUrl,
+        driveFileId: s3Key,
+        fileSize: fileBuffer.length,
+        mimeType: input.mimeType,
+        uploadedBy: input.userEmail,
+        createdAt: new Date(),
       });
 
       // Audit log
@@ -886,7 +922,7 @@ export const intakeRouter = router({
           await db.update(systemVendorOptions)
             .set({ isActive: 1 })
             .where(eq(systemVendorOptions.id, dup.id));
-          await db.insert(vendorAuditLog).values({
+          const [toggleAuditRes] = await db.insert(vendorAuditLog).values({
             action: 'toggle',
             systemType,
             vendorName: dup.vendorName,
@@ -894,24 +930,52 @@ export const intakeRouter = router({
             newValue: 'active',
             performedBy: ctx.user?.email || "intake-user",
           });
+          dispatch.vendorAudit({
+            mysqlId: (toggleAuditRes as any).insertId || 0,
+            vendorId: dup.id,
+            action: 'toggle',
+            field: systemType,
+            oldValue: 'inactive',
+            newValue: 'active',
+            performedBy: ctx.user?.email || "intake-user",
+            createdAt: new Date(),
+          });
         }
         return { success: true, vendorName: dup.vendorName, alreadyExisted: true };
       }
 
       const maxOrder = existing.length > 0 ? existing[0].displayOrder : 0;
-      await db.insert(systemVendorOptions).values({
+      const [newVendorRes] = await db.insert(systemVendorOptions).values({
         systemType,
         vendorName,
         displayOrder: maxOrder + 1,
         createdBy: ctx.user?.email || "intake-user",
       });
+      dispatch.systemVendor({
+        mysqlId: (newVendorRes as any).insertId || 0,
+        systemType,
+        vendorName,
+        productName: vendorName,
+        active: true,
+        createdAt: new Date(),
+      });
 
-      await db.insert(vendorAuditLog).values({
+      const [addAuditRes] = await db.insert(vendorAuditLog).values({
         action: 'add',
         systemType,
         vendorName,
         newValue: vendorName,
         performedBy: ctx.user?.email || "intake-user",
+      });
+      dispatch.vendorAudit({
+        mysqlId: (addAuditRes as any).insertId || 0,
+        vendorId: (newVendorRes as any).insertId || 0,
+        action: 'add',
+        field: systemType,
+        oldValue: null,
+        newValue: vendorName,
+        performedBy: ctx.user?.email || "intake-user",
+        createdAt: new Date(),
       });
 
       return { success: true, vendorName, alreadyExisted: false };
@@ -1115,6 +1179,19 @@ export const intakeRouter = router({
         type: input.type,
         createdBy: input.userEmail || null,
         isComplete: 0,
+      });
+      dispatch.orgCustomTask({
+        mysqlId: result.insertId || 0,
+        organizationId: org.id,
+        orgName: input.organizationSlug,
+        taskId: `custom-${result.insertId}`,
+        title: input.title.trim(),
+        section: input.section?.trim() || null,
+        description: input.description?.trim() || null,
+        owner: input.userEmail || null,
+        status: "pending",
+        createdBy: input.userEmail || null,
+        createdAt: new Date(),
       });
 
       const [created] = await db

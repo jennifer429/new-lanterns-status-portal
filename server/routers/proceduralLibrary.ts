@@ -9,6 +9,7 @@ import {
   clients,
 } from "../../drizzle/schema";
 import { eq, desc } from "drizzle-orm";
+import { dispatch } from "../notionSyncDispatcher";
 import { uploadToGoogleDrive } from "./files";
 import { storageGet } from "../storage";
 import { fileUploadInput } from "../_core/fileValidation";
@@ -137,14 +138,37 @@ export const proceduralLibraryRouter = router({
         uploadedById: ctx.user.id,
         uploadedByName: ctx.user.name || ctx.user.email || "Unknown",
       });
+      dispatch.partnerDocument({
+        mysqlId: inserted.insertId || 0,
+        clientId: targetClientId,
+        partnerName: "",
+        title: input.title,
+        category: null,
+        fileName: input.fileName,
+        fileUrl,
+        version: "1.0",
+        uploadedBy: ctx.user.name || ctx.user.email || "Unknown",
+        active: true,
+        createdAt: new Date(),
+      });
 
       // Log audit event
-      await db.insert(partnerDocAudit).values({
+      const [auditRes] = await db.insert(partnerDocAudit).values({
         documentId: inserted.insertId,
         userId: ctx.user.id,
         userName: ctx.user.name || ctx.user.email || "Unknown",
         userEmail: ctx.user.email || "unknown",
         action: "upload",
+      });
+      dispatch.partnerDocAudit({
+        mysqlId: (auditRes as any).insertId || 0,
+        documentId: inserted.insertId,
+        documentTitle: input.title,
+        action: "upload",
+        userId: ctx.user.id,
+        userName: ctx.user.name || ctx.user.email || "Unknown",
+        userEmail: ctx.user.email || "unknown",
+        createdAt: new Date(),
       });
 
       return { success: true, fileUrl };
@@ -184,12 +208,22 @@ export const proceduralLibraryRouter = router({
     .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
 
-      await db.insert(partnerDocAudit).values({
+      const [logAuditRes] = await db.insert(partnerDocAudit).values({
         documentId: input.documentId,
         userId: ctx.user.id,
         userName: ctx.user.name || ctx.user.email || "Unknown",
         userEmail: ctx.user.email || "unknown",
         action: input.action,
+      });
+      dispatch.partnerDocAudit({
+        mysqlId: (logAuditRes as any).insertId || 0,
+        documentId: input.documentId,
+        documentTitle: "",
+        action: input.action,
+        userId: ctx.user.id,
+        userName: ctx.user.name || ctx.user.email || "Unknown",
+        userEmail: ctx.user.email || "unknown",
+        createdAt: new Date(),
       });
 
       return { success: true };
