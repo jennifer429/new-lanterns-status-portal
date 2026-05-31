@@ -67,14 +67,18 @@ const ENV_OVERRIDES: Record<string, string> = {
 
 const e = envSchema.parse({ ...process.env, ...ENV_OVERRIDES });
 
-// Required in production. Refuse to boot if any of these are missing.
+// Required in production. Log warning if missing but don't crash — let the
+// health check endpoint surface the issue instead of instant-exiting before
+// the platform can capture any diagnostics.
 const PROD_REQUIRED: Array<keyof typeof e> = ["JWT_SECRET", "DATABASE_URL"];
 
 if (isProduction) {
+  const present = PROD_REQUIRED.filter(k => !!e[k]);
   const missing = PROD_REQUIRED.filter(k => !e[k]);
+  console.log(`[env] Production boot — present: [${present.join(", ")}], missing: [${missing.join(", ")}]`);
   if (missing.length > 0) {
-    console.error(`[env] Missing required environment variables in production: ${missing.join(", ")}`);
-    throw new Error("Environment validation failed; refusing to start.");
+    console.error(`[env] WARNING: Missing required environment variables: ${missing.join(", ")}`);
+    console.error(`[env] The app will start but database/auth features will be unavailable.`);
   }
 }
 
