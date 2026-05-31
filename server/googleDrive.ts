@@ -1,12 +1,15 @@
 import { ENV } from "./_core/env";
 import { Readable } from "stream";
 import { storagePut, storageGet } from "./storage";
+import { OAuth2Client } from "google-auth-library";
 
 /**
  * Google Drive helper module.
  * Handles per-customer folder creation and file uploads.
  * Uses the GOOGLE_DRIVE_TOKEN (OAuth) provided by the Manus connector.
  * Falls back to S3/Forge storage if Google credentials are not configured.
+ *
+ * Uses @googleapis/drive (lightweight, ~3MB) instead of googleapis (~196MB).
  */
 
 let driveClient: any = null;
@@ -22,12 +25,12 @@ async function getDrive() {
     return null;
   }
 
-  const { google } = await import("googleapis");
+  const { drive } = await import("@googleapis/drive");
   
-  const oauth2Client = new google.auth.OAuth2();
+  const oauth2Client = new OAuth2Client();
   oauth2Client.setCredentials({ access_token: token });
 
-  driveClient = google.drive({ version: "v3", auth: oauth2Client });
+  driveClient = drive({ version: "v3", auth: oauth2Client });
   return driveClient;
 }
 
