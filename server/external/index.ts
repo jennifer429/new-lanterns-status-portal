@@ -254,7 +254,11 @@ router.post("/set-password", async (req, res) => {
 
     // Check token expiry
     if (user.inviteTokenExpiresAt && user.inviteTokenExpiresAt < new Date()) {
-      return res.status(410).json({ error: "This invite link has expired. Please contact your administrator." });
+      return res.status(410).json({
+        error: "This invite link has expired. Please contact your administrator.",
+        userEmail: user.email,
+        expiredAt: user.inviteTokenExpiresAt.toISOString(),
+      });
     }
 
     // Hash the new password and clear the token

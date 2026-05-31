@@ -19,6 +19,7 @@ export default function SetPassword() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [expiredInfo, setExpiredInfo] = useState<{ userEmail?: string; expiredAt?: string } | null>(null);
 
   // Extract token from URL
   const params = new URLSearchParams(window.location.search);
@@ -55,6 +56,9 @@ export default function SetPassword() {
 
       if (!res.ok) {
         setError(data.error || "Something went wrong. Please try again.");
+        if (data.userEmail || data.expiredAt) {
+          setExpiredInfo({ userEmail: data.userEmail, expiredAt: data.expiredAt });
+        }
         return;
       }
 
@@ -143,13 +147,27 @@ export default function SetPassword() {
             {error && (
               <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-md p-3">
                 {error}
-                {error.toLowerCase().includes("expired") && (
-                  <p className="mt-2">
-                    <a href="mailto:implementation@newlantern.ai?subject=New%20invite%20link%20request" className="text-blue-400 underline">
-                      Request a new invite link
-                    </a>
-                  </p>
-                )}
+                {error.toLowerCase().includes("expired") && (() => {
+                  const body = [
+                    "Hi, my invite link has expired. Please send a new one.",
+                    "",
+                    "--- Verification Info ---",
+                    expiredInfo?.userEmail ? `Account email: ${expiredInfo.userEmail}` : "",
+                    expiredInfo?.expiredAt ? `Link expired: ${new Date(expiredInfo.expiredAt).toLocaleDateString()}` : "",
+                    `Token prefix: ${token?.substring(0, 8)}...`,
+                    `Requested: ${new Date().toISOString()}`,
+                  ].filter(Boolean).join("\n");
+                  const subject = expiredInfo?.userEmail
+                    ? `New invite link request — ${expiredInfo.userEmail}`
+                    : "New invite link request";
+                  return (
+                    <p className="mt-2">
+                      <a href={`mailto:implementation@newlantern.ai?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`} className="text-blue-400 underline">
+                        Request a new invite link
+                      </a>
+                    </p>
+                  );
+                })()}
               </div>
             )}
 
