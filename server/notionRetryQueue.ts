@@ -42,7 +42,8 @@ export interface RetryPayload {
     | "client"
     | "organization"
     | "implementationOrg"
-    | "partnerDocAudit";
+    | "partnerDocAudit"
+    | "fileAudit";
   data: Record<string, any>;
 }
 
@@ -215,6 +216,12 @@ export async function processRetryQueue(): Promise<{ processed: number; succeede
         case "partnerDocAudit": {
           const { syncPartnerDocAudit } = await import("./notionDualWrite");
           await syncPartnerDocAudit(data as any);
+          break;
+        }
+        case "fileAudit": {
+          // File audit retries re-invoke logFileActivity directly
+          const { logFileActivity } = await import("./fileAuditLog");
+          await logFileActivity(data as any);
           break;
         }
         default:

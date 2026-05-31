@@ -57,7 +57,8 @@ export const notesRouter = router({
         label: input.label,
         fileName: input.fileName,
         fileUrl: finalUrl,
-        driveFileId: s3Key,
+        driveFileId: newDriveFileId || null, // Only actual Google Drive file ID
+        s3Key, // S3 key for direct storage access
         fileSize: fileBuffer.length,
         mimeType: input.mimeType,
         uploadedBy: ctx.user.email || "unknown",
@@ -70,7 +71,7 @@ export const notesRouter = router({
         label: input.label,
         fileName: input.fileName,
         fileUrl: finalUrl,
-        driveFileId: s3Key,
+        driveFileId: newDriveFileId || null,
         fileSize: fileBuffer.length,
         mimeType: input.mimeType,
         uploadedBy: ctx.user.email || "unknown",
@@ -138,7 +139,8 @@ export const notesRouter = router({
         label: input.label,
         fileName: input.fileName,
         fileUrl: finalUrl,
-        driveFileId: s3Key,
+        driveFileId: newDriveFileId || null, // Only actual Google Drive file ID
+        s3Key, // S3 key for direct storage access
         fileSize: fileBuffer.length,
         mimeType: input.mimeType,
         uploadedBy: ctx.user.email || "unknown",
@@ -151,7 +153,7 @@ export const notesRouter = router({
         label: input.label,
         fileName: input.fileName,
         fileUrl: finalUrl,
-        driveFileId: s3Key,
+        driveFileId: newDriveFileId || null,
         fileSize: fileBuffer.length,
         mimeType: input.mimeType,
         uploadedBy: ctx.user.email || "unknown",

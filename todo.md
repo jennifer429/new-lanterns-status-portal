@@ -444,3 +444,12 @@
 - [ ] Rename payload interfaces in notionDualWrite.ts to use MySQL column names
 - [ ] Update all dispatch calls in routers to use new payload field names
 - [ ] Final tsc check and deploy
+
+## File Upload Audit & Storage Fixes (May 31, 2026)
+
+- [ ] Fix proceduralLibrary.getDownloadUrl S3 key reconstruction (broken — 404s on all library downloads)
+- [ ] Fix driveFileId column conflation — store s3Key separately, never conflate with Drive IDs
+- [ ] Wire NOTION_FILE_AUDIT_DATASOURCE_ID through env.ts and ensure logFileActivity writes to Notion
+- [ ] Add file audit calls to admin.uploadTemplate, replaceTemplate, uploadSpecification
+- [ ] Standardize S3 bucketing — use per-org prefixes instead of uploads/unknown/ for admin/library files
+- [ ] Add user-facing file activity audit view (users see only their own file activity from Notion)

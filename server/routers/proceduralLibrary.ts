@@ -13,6 +13,7 @@ import { dispatch } from "../notionSyncDispatcher";
 import { uploadToGoogleDrive } from "./files";
 import { storageGet } from "../storage";
 import { fileUploadInput } from "../_core/fileValidation";
+import { logFileActivity } from "../fileAuditLog";
 
 /**
  * Document Library router — partner-scoped document management.
@@ -122,17 +123,18 @@ export const proceduralLibraryRouter = router({
       const driveFileName = `procedural-library_${targetClientId}_${timestamp}.${fileExt}`;
 
       // Upload to Google Drive
-      const { driveUrl, s3Url, driveFileId: uploadedDriveFileId, s3Key } = await uploadToGoogleDrive(driveFileName, fileBuffer, "");
+      const { driveUrl, s3Url, driveFileId: uploadedDriveFileId, s3Key } = await uploadToGoogleDrive(driveFileName, fileBuffer, `client-${targetClientId}`);
       const fileUrl = driveUrl ?? s3Url;
 
-      // Insert metadata
+      // Insert metadata — store driveFileId and s3Key separately (never conflate)
       const [inserted] = await db.insert(partnerDocuments).values({
         clientId: targetClientId,
         categoryId: null,
         title: input.title,
         description: null,
         filename: input.fileName,
-        driveFileId: uploadedDriveFileId ?? s3Key,
+        driveFileId: uploadedDriveFileId || null, // Only actual Google Drive file ID
+        s3Key, // S3 key for direct storage access
         url: fileUrl,
         mimeType: input.mimeType,
         size: fileBuffer.length,
@@ -174,6 +176,17 @@ export const proceduralLibraryRouter = router({
         createdAt: new Date(),
       });
 
+      // Notion file activity audit — non-blocking
+      logFileActivity({
+        action: "upload",
+        userEmail: ctx.user.email || "unknown",
+        userRole: ctx.user.role,
+        organizationName: `Procedural Library (Client ${targetClientId})`,
+        fileName: input.fileName,
+        fileUrl,
+        notes: `Document: ${input.title}`,
+      });
+
       return { success: true, fileUrl };
     }),
 
@@ -194,6 +207,17 @@ export const proceduralLibraryRouter = router({
       // Delete audit entries first, then the document
       await db.delete(partnerDocAudit).where(eq(partnerDocAudit.documentId, input.id));
       await db.delete(partnerDocuments).where(eq(partnerDocuments.id, input.id));
+
+      // Notion file activity audit — non-blocking
+      logFileActivity({
+        action: "delete",
+        userEmail: ctx.user.email || "unknown",
+        userRole: ctx.user.role,
+        organizationName: `Procedural Library (Client ${doc.clientId})`,
+        fileName: doc.filename || "unknown",
+        fileUrl: doc.url || undefined,
+        notes: `Deleted document: ${doc.title}`,
+      });
 
       return { success: true };
     }),
@@ -227,6 +251,16 @@ export const proceduralLibraryRouter = router({
         userName: ctx.user.name || ctx.user.email || "Unknown",
         userEmail: ctx.user.email || "unknown",
         createdAt: new Date(),
+      });
+
+      // Notion file activity audit — non-blocking
+      logFileActivity({
+        action: input.action,
+        userEmail: ctx.user.email || "unknown",
+        userRole: ctx.user.role,
+        organizationName: "Procedural Library",
+        fileName: `Document #${input.documentId}`,
+        notes: `${input.action} event`,
       });
 
       return { success: true };
@@ -269,13 +303,12 @@ export const proceduralLibraryRouter = router({
         return { url: doc.url };
       }
 
-      // Forge/S3 storage — regenerate a fresh pre-signed URL from the stored key
-      const storageKey = doc.driveFileId
-        ? `uploads/unknown/${doc.driveFileId}`
-        : null;
+      // Forge/S3 storage — use the dedicated s3Key column (or fall back to driveFileId for legacy rows)
+      const storageKey = doc.s3Key || null;
 
       if (!storageKey) {
-        return { url: doc.url }; // fallback: return whatever we have
+        // Legacy row without s3Key — try the stored URL directly
+        return { url: doc.url };
       }
 
       try {

@@ -372,6 +372,13 @@
       "when": 1780256642088,
       "tag": "0052_ancient_onslaught",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "5",
+      "when": 1780258466722,
+      "tag": "0053_striped_power_man",
+      "breakpoints": true
     }
   ]
 }

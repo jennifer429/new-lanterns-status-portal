@@ -12,6 +12,7 @@ import { sendEmail } from "../email/send";
 import { inviteTemplate } from "../email/templates";
 import { ENV } from "../_core/env";
 import { fileUploadInput } from "../_core/fileValidation";
+import { logFileActivity } from "../fileAuditLog";
 
 /**
  * Admin router for managing questions, options, organizations, and users
@@ -1507,7 +1508,7 @@ export const adminRouter = router({
       const timestamp = Date.now();
       const fileExt = input.fileName.split('.').pop();
       const driveFileName = `partner-templates_${input.clientId}_${input.questionId}_${timestamp}.${fileExt}`;
-      const { driveUrl, s3Url, s3Key } = await uploadToGoogleDrive(driveFileName, fileBuffer, "");
+      const { driveUrl, s3Url, s3Key } = await uploadToGoogleDrive(driveFileName, fileBuffer, `client-${input.clientId}`);
       const fileUrl = driveUrl ?? s3Url;
 
       // Insert into database
@@ -1535,6 +1536,17 @@ export const adminRouter = router({
         active: true,
         uploadedBy: ctx.user.email || "unknown",
         createdAt: new Date(),
+      });
+
+      // Audit log — non-blocking
+      logFileActivity({
+        action: "upload",
+        userEmail: ctx.user.email || "unknown",
+        userRole: ctx.user.role,
+        organizationName: `Partner Template (Client ${input.clientId})`,
+        fileName: input.fileName,
+        fileUrl,
+        notes: `Template for question ${input.questionId}: ${input.label}`,
       });
 
       return { success: true, fileUrl };
@@ -1578,7 +1590,7 @@ export const adminRouter = router({
       const timestamp = Date.now();
       const fileExt = input.fileName.split('.').pop();
       const driveFileName = `partner-templates_${existing.clientId}_${existing.questionId}_${timestamp}.${fileExt}`;
-      const { driveUrl, s3Url, s3Key } = await uploadToGoogleDrive(driveFileName, fileBuffer, "");
+      const { driveUrl, s3Url, s3Key } = await uploadToGoogleDrive(driveFileName, fileBuffer, `client-${existing.clientId}`);
       const fileUrl = driveUrl ?? s3Url;
 
       // Insert new active template
@@ -1606,6 +1618,17 @@ export const adminRouter = router({
         active: true,
         uploadedBy: ctx.user.email || "unknown",
         createdAt: new Date(),
+      });
+
+      // Audit log — non-blocking
+      logFileActivity({
+        action: "upload",
+        userEmail: ctx.user.email || "unknown",
+        userRole: ctx.user.role,
+        organizationName: `Partner Template (Client ${existing.clientId})`,
+        fileName: input.fileName,
+        fileUrl,
+        notes: `Replaced template for question ${existing.questionId}: ${input.label}`,
       });
 
       return { success: true, fileUrl };
@@ -1650,7 +1673,7 @@ export const adminRouter = router({
       // Upload to Google Drive
       const timestamp = Date.now();
       const driveFileName = `specifications_${timestamp}_${input.fileName}`;
-      const { driveUrl, s3Url, s3Key } = await uploadToGoogleDrive(driveFileName, fileBuffer, "");
+      const { driveUrl, s3Url, s3Key } = await uploadToGoogleDrive(driveFileName, fileBuffer, "specifications");
       const fileUrl = driveUrl ?? s3Url;
 
       const [specRes] = await db.insert(specifications).values({
@@ -1672,6 +1695,17 @@ export const adminRouter = router({
         category: input.category || null,
         active: true,
         createdAt: new Date(),
+      });
+
+      // Audit log — non-blocking
+      logFileActivity({
+        action: "upload",
+        userEmail: ctx.user.email || "unknown",
+        userRole: ctx.user.role,
+        organizationName: "Platform Specification",
+        fileName: input.fileName,
+        fileUrl,
+        notes: `Specification: ${input.title}${input.category ? ` [${input.category}]` : ""}`,
       });
 
       return { success: true, fileUrl };

@@ -402,7 +402,8 @@ export const orgNotes = mysqlTable("orgNotes", {
   label: varchar("label", { length: 100 }).notNull().default("General"),
   fileName: varchar("fileName", { length: 255 }).notNull(),
   fileUrl: text("fileUrl").notNull(),
-  driveFileId: varchar("driveFileId", { length: 500 }),
+  driveFileId: varchar("driveFileId", { length: 500 }), // Google Drive file ID (actual Drive ID only)
+  s3Key: varchar("s3Key", { length: 500 }), // S3 storage key for direct access
   fileSize: int("fileSize"),
   mimeType: varchar("mimeType", { length: 100 }),
   uploadedBy: varchar("uploadedBy", { length: 255 }),
@@ -519,8 +520,9 @@ export const partnerDocuments = mysqlTable("partnerDocuments", {
   title: varchar("title", { length: 500 }).notNull(), // Document title
   description: text("description"), // Description of what the document is
   filename: varchar("filename", { length: 500 }).notNull(), // Original filename
-  driveFileId: varchar("driveFileId", { length: 255 }), // Google Drive file ID
-  url: varchar("url", { length: 2000 }).notNull(), // Google Drive shareable URL
+  driveFileId: varchar("driveFileId", { length: 255 }), // Google Drive file ID (actual Drive ID, NOT s3 key)
+  s3Key: varchar("s3Key", { length: 500 }), // S3 storage key for direct access (separate from driveFileId)
+  url: varchar("url", { length: 2000 }).notNull(), // Primary URL (Drive URL if available, else S3)
   mimeType: varchar("mimeType", { length: 255 }).notNull(),
   size: int("size").notNull(), // File size in bytes
   uploadedById: int("uploadedById").notNull(), // FK to users.id — who uploaded
