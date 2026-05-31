@@ -8,6 +8,9 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  /* Fonts — New Lantern: Figtree body, Roboto Mono labels/overlines */
+  --font-sans: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Roboto Mono', ui-monospace, 'SF Mono', Menlo, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -42,80 +45,86 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/*
+ * New Lantern design tokens.
+ * The app is dark-first (App.tsx defaultTheme="dark"), so .dark is the live
+ * palette and matches the mockup exactly. :root keeps a coherent light theme
+ * for completeness.
+ */
 :root {
-  --primary: oklch(0.45 0.12 200);
-  --primary-foreground: oklch(0.98 0.01 200);
-  --sidebar-primary: oklch(0.45 0.12 200);
-  --sidebar-primary-foreground: oklch(0.98 0.01 200);
-  --accent-amber: oklch(0.75 0.15 65);
-  --accent-amber-foreground: oklch(0.2 0.02 65);
-  --chart-1: oklch(0.65 0.12 200);
-  --chart-2: oklch(0.55 0.12 200);
-  --chart-3: oklch(0.45 0.12 200);
-  --chart-4: oklch(0.35 0.12 200);
-  --chart-5: oklch(0.25 0.12 200);
   --radius: 0.75rem;
-  --background: oklch(0.98 0.005 220);
-  --foreground: oklch(0.25 0.02 220);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.25 0.02 220);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.25 0.02 220);
-  --secondary: oklch(0.95 0.01 220);
-  --secondary-foreground: oklch(0.35 0.02 220);
-  --muted: oklch(0.96 0.005 220);
-  --muted-foreground: oklch(0.5 0.02 220);
-  --accent: oklch(0.96 0.01 220);
-  --accent-foreground: oklch(0.25 0.02 220);
-  --destructive: oklch(0.55 0.22 25);
-  --destructive-foreground: oklch(0.98 0.01 25);
-  --border: oklch(0.90 0.01 220);
-  --input: oklch(0.95 0.01 220);
-  --ring: oklch(0.45 0.12 200);
-  --sidebar: oklch(0.98 0.005 220);
-  --sidebar-foreground: oklch(0.25 0.02 220);
-  --sidebar-accent: oklch(0.96 0.01 220);
-  --sidebar-accent-foreground: oklch(0.25 0.02 220);
-  --sidebar-border: oklch(0.90 0.01 220);
-  --sidebar-ring: oklch(0.45 0.12 200);
+  --primary: #7C1EBD;
+  --primary-foreground: #FFFFFF;
+  --sidebar-primary: #7C1EBD;
+  --sidebar-primary-foreground: #FFFFFF;
+  --accent-amber: #D97706;
+  --accent-amber-foreground: #FFFFFF;
+  --chart-1: #A07DBA;
+  --chart-2: #8F4FBD;
+  --chart-3: #7C1EBD;
+  --chart-4: #5E2E8F;
+  --chart-5: #3F1F5E;
+  --background: #F5F5F5;
+  --foreground: #111111;
+  --card: #FFFFFF;
+  --card-foreground: #111111;
+  --popover: #FFFFFF;
+  --popover-foreground: #111111;
+  --secondary: #ECECEC;
+  --secondary-foreground: #333333;
+  --muted: #F0F0F0;
+  --muted-foreground: #555555;
+  --accent: #F0F0F0;
+  --accent-foreground: #111111;
+  --destructive: #E53E3E;
+  --destructive-foreground: #FFFFFF;
+  --border: #E5E5E5;
+  --input: #D3D3D3;
+  --ring: #7C1EBD;
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #111111;
+  --sidebar-accent: #F0F0F0;
+  --sidebar-accent-foreground: #111111;
+  --sidebar-border: #E5E5E5;
+  --sidebar-ring: #7C1EBD;
 }
 
 .dark {
-  --primary: oklch(0.65 0.25 290);
-  --primary-foreground: oklch(0.98 0.01 290);
-  --sidebar-primary: oklch(0.65 0.25 290);
-  --sidebar-primary-foreground: oklch(0.98 0.01 290);
-  --accent-purple: oklch(0.70 0.25 290);
-  --accent-purple-foreground: oklch(0.98 0.01 290);
-  /* Refined warm-tinted dark backgrounds */
-  --background: oklch(0.13 0.012 275);
-  --foreground: oklch(0.93 0.01 270);
-  --card: oklch(0.17 0.018 275);
-  --card-foreground: oklch(0.93 0.01 270);
-  --popover: oklch(0.17 0.018 275);
-  --popover-foreground: oklch(0.93 0.01 270);
-  --secondary: oklch(0.22 0.02 275);
-  --secondary-foreground: oklch(0.88 0.01 270);
-  --muted: oklch(0.21 0.016 275);
-  --muted-foreground: oklch(0.62 0.01 270);
-  --accent: oklch(0.22 0.02 275);
-  --accent-foreground: oklch(0.93 0.01 270);
-  --destructive: oklch(0.60 0.22 25);
-  --destructive-foreground: oklch(0.98 0.01 25);
-  --border: oklch(0.27 0.022 275);
-  --input: oklch(0.21 0.016 275);
-  --ring: oklch(0.65 0.25 290);
-  --chart-1: oklch(0.75 0.25 290);
-  --chart-2: oklch(0.65 0.25 290);
-  --chart-3: oklch(0.55 0.25 290);
-  --chart-4: oklch(0.45 0.25 290);
-  --chart-5: oklch(0.35 0.25 290);
-  --sidebar: oklch(0.17 0.018 275);
-  --sidebar-foreground: oklch(0.93 0.01 270);
-  --sidebar-accent: oklch(0.22 0.02 275);
-  --sidebar-accent-foreground: oklch(0.93 0.01 270);
-  --sidebar-border: oklch(0.27 0.022 275);
-  --sidebar-ring: oklch(0.65 0.25 290);
+  --primary: #7C1EBD;
+  --primary-foreground: #FFFFFF;
+  --sidebar-primary: #7C1EBD;
+  --sidebar-primary-foreground: #FFFFFF;
+  --accent-purple: #8F4FBD;
+  --accent-purple-foreground: #FFFFFF;
+  /* Pure-black canvas, near-black elevated surfaces, hairline borders */
+  --background: #000000;
+  --foreground: #FAFAFA;
+  --card: #0B0B0C;
+  --card-foreground: #FAFAFA;
+  --popover: #111113;
+  --popover-foreground: #FAFAFA;
+  --secondary: #111113;
+  --secondary-foreground: #EDEDED;
+  --muted: #111113;
+  --muted-foreground: #8A8A8F;
+  --accent: #17171A;
+  --accent-foreground: #FAFAFA;
+  --destructive: #E53E3E;
+  --destructive-foreground: #FFFFFF;
+  --border: rgba(255, 255, 255, 0.07);
+  --input: rgba(255, 255, 255, 0.10);
+  --ring: #7C1EBD;
+  --chart-1: #A07DBA;
+  --chart-2: #8F4FBD;
+  --chart-3: #7C1EBD;
+  --chart-4: #5E2E8F;
+  --chart-5: #3F1F5E;
+  --sidebar: #0B0B0C;
+  --sidebar-foreground: #FAFAFA;
+  --sidebar-accent: #17171A;
+  --sidebar-accent-foreground: #FAFAFA;
+  --sidebar-border: rgba(255, 255, 255, 0.07);
+  --sidebar-ring: #7C1EBD;
 }
 
 /* ─── Smooth scroll ─────────────────────────────────────────────────────── */
@@ -155,13 +164,14 @@ html {
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-weight: 500;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    letter-spacing: -0.01em;
+    font-family: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    letter-spacing: -0.02em;
   }
   h1 { @apply text-2xl sm:text-3xl font-bold; }
   h2 { @apply text-xl sm:text-2xl font-bold; }
@@ -178,10 +188,6 @@ html {
   input[type="radio"]:not(:disabled) {
     @apply cursor-pointer;
   }
-}
-
-html {
-  scroll-behavior: smooth;
 }
 
 /* Animated collapsible panels using grid-template-rows trick */
@@ -229,53 +235,30 @@ html {
     }
   }
 
-  /* ─── Professional card elevation ───────────────────────────────────── */
+  /* ─── Flat card (hairline border, no shadow, border-lighten on hover) ─── */
   .card-elevated {
-    @apply shadow-md border border-border/60;
-    box-shadow:
-      0 1px 3px 0 rgba(0, 0, 0, 0.15),
-      0 1px 2px -1px rgba(0, 0, 0, 0.15);
-    transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
-  }
-  .dark .card-elevated {
-    box-shadow:
-      0 1px 3px 0 rgba(0, 0, 0, 0.4),
-      0 1px 2px -1px rgba(0, 0, 0, 0.3),
-      0 0 0 1px rgba(139, 92, 246, 0.04);
+    @apply border border-border;
+    transition: border-color 0.2s ease;
   }
   .card-elevated:hover {
-    box-shadow:
-      0 4px 12px 0 rgba(0, 0, 0, 0.12),
-      0 2px 4px -1px rgba(0, 0, 0, 0.1);
-    border-color: var(--border);
-  }
-  .dark .card-elevated:hover {
-    box-shadow:
-      0 4px 12px 0 rgba(0, 0, 0, 0.5),
-      0 2px 4px -1px rgba(0, 0, 0, 0.3),
-      0 0 0 1px rgba(139, 92, 246, 0.1);
+    border-color: rgba(255, 255, 255, 0.14);
   }
 
-  /* ─── Clickable card (adds scale on hover) ──────────────────────────── */
+  /* ─── Clickable card — border-lighten only, no scale/tilt ───────────── */
   .card-clickable {
-    transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+    transition: border-color 0.2s ease;
   }
   .card-clickable:hover {
-    transform: translateY(-1px);
-  }
-  .card-clickable:active {
-    transform: translateY(0);
+    border-color: rgba(255, 255, 255, 0.14);
   }
 
-  /* ─── Professional table styling ────────────────────────────────────── */
+  /* ─── Flat table styling ────────────────────────────────────────────── */
   .table-pro {
-    @apply rounded-lg overflow-hidden border border-border/60;
-  }
-  .dark .table-pro {
-    box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.04);
+    @apply rounded-lg overflow-hidden border border-border;
   }
   .table-pro th {
     @apply text-xs uppercase tracking-wider font-semibold text-muted-foreground;
+    font-family: var(--font-mono);
     letter-spacing: 0.05em;
   }
   .table-pro td {
@@ -287,81 +270,53 @@ html {
   .table-pro tbody tr:hover {
     background-color: var(--accent);
   }
-  .dark .table-pro tbody tr:nth-child(even) {
-    background-color: rgba(139, 92, 246, 0.02);
-  }
 
-  /* ─── Glass header ──────────────────────────────────────────────────── */
+  /* ─── Glass header — blurred black, hairline bottom border ──────────── */
   .header-glass {
-    @apply backdrop-blur-md border-b;
-    background: rgba(var(--card), 0.8);
-    border-image: linear-gradient(
-      to right,
-      transparent,
-      oklch(0.65 0.25 290 / 0.3),
-      transparent
-    ) 1;
-  }
-  .dark .header-glass {
-    background: oklch(0.17 0.018 275 / 0.85);
+    @apply backdrop-blur-md border-b border-border;
+    background: rgba(0, 0, 0, 0.65);
   }
 
-  /* ─── Status pill badges ────────────────────────────────────────────── */
+  /* ─── Status pill badges (flat, no glow) ────────────────────────────── */
   .badge-status {
     @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold;
-    transition: all 0.15s ease;
+    transition: filter 0.15s ease;
   }
   .badge-status-start {
     @apply bg-primary text-primary-foreground;
-    box-shadow: 0 1px 4px rgba(139, 92, 246, 0.3);
   }
   .badge-status-start:hover {
-    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.45);
     filter: brightness(1.1);
   }
   .badge-status-continue {
     @apply bg-primary/90 text-primary-foreground;
-    box-shadow: 0 1px 4px rgba(139, 92, 246, 0.25);
   }
   .badge-status-continue:hover {
-    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
     filter: brightness(1.1);
   }
   .badge-status-view {
     @apply bg-emerald-600 text-white;
-    box-shadow: 0 1px 4px rgba(16, 185, 129, 0.25);
   }
   .badge-status-view:hover {
-    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
     filter: brightness(1.1);
   }
 
-  /* ─── Progress dots refined ─────────────────────────────────────────── */
+  /* ─── Progress dots (flat, no glow) ─────────────────────────────────── */
   .progress-dot {
     @apply w-2.5 h-2.5 rounded-full border transition-all duration-200;
   }
   .progress-dot-filled {
     @apply bg-primary border-primary;
-    box-shadow: 0 0 4px rgba(139, 92, 246, 0.35);
   }
   .progress-dot-empty {
     @apply bg-transparent border-muted-foreground/30;
   }
   .progress-dot-complete {
     @apply bg-emerald-500 border-emerald-500;
-    box-shadow: 0 0 4px rgba(16, 185, 129, 0.35);
   }
 
   /* ─── Section divider ───────────────────────────────────────────────── */
   .section-divider {
-    @apply border-t border-border/50 my-6;
-  }
-  .dark .section-divider {
-    border-image: linear-gradient(
-      to right,
-      transparent,
-      oklch(0.27 0.022 275),
-      transparent
-    ) 1;
+    @apply border-t border-border my-6;
   }
 }
