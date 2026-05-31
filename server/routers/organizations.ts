@@ -58,7 +58,7 @@ export const organizationsRouter = router({
         name: input.name,
         slug: input.slug,
         partnerName: "",
-        status: input.status || "active",
+        status: "active",
         contactName: input.contactName || null,
         contactEmail: input.contactEmail || null,
         createdAt: new Date(),

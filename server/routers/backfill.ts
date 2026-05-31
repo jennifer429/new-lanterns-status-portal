@@ -452,7 +452,7 @@ export const backfillRouter = router({
                   mysqlId: row.id,
                   clientId: row.clientId,
                   partnerName,
-                  title: row.title,
+                  title: row.label,
                   questionId: row.questionId || null,
                   fileName: row.fileName,
                   fileUrl: row.fileUrl || null,
