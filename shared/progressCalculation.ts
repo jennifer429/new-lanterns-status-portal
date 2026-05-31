@@ -41,7 +41,7 @@ export interface ProgressResult {
  *   1. It has no conditionalOn (always visible), OR
  *   2. The parent question's response matches the required value
  */
-function isQuestionVisible(
+export function isQuestionVisible(
   question: Question,
   responseMap: Map<string | number, Response>
 ): boolean {
@@ -51,6 +51,73 @@ function isQuestionVisible(
   if (!parentResponse || !parentResponse.response) return false;
 
   return parentResponse.response.trim() === question.conditionalOn.value;
+}
+
+/**
+ * Determine whether a question has been answered (ignoring N/A markers).
+ * Single source of truth for "is this question complete" — used by both the
+ * progress calculation and the go-live auto-N/A logic.
+ */
+export function isQuestionAnswered(
+  q: Question,
+  responseMap: Map<string | number, Response>,
+  fileMap: Map<string | number, boolean>
+): boolean {
+  if (q.isWorkflow) {
+    const resp = responseMap.get(q.id);
+    if (resp && resp.response && resp.response.trim() !== "") {
+      try {
+        const config = JSON.parse(resp.response);
+        return !!(config.paths && Object.values(config.paths).some((v: any) => v === true));
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  }
+  // Upload questions are only complete when a file exists
+  if (q.type === "upload" || q.type === "upload-download") {
+    return fileMap.has(q.id);
+  }
+  const resp = responseMap.get(q.id);
+  const hasResponse = !!(resp && resp.response && resp.response.trim() !== "");
+  return hasResponse || fileMap.has(q.id);
+}
+
+/** Build the N/A marker set, response map, and file map from raw rows. */
+function buildLookups(responses: Response[], files: FileAttachment[]) {
+  const naQuestionIds = new Set<string | number>();
+  responses.forEach(r => {
+    if (r.questionId && typeof r.questionId === "string" && r.questionId.startsWith("__question_na:")) {
+      naQuestionIds.add(r.questionId.replace("__question_na:", ""));
+    }
+  });
+  const responseMap = new Map(
+    responses.filter(r => r.questionId !== null).map(r => [r.questionId, r])
+  ) as Map<string | number, Response>;
+  const fileMap = new Map(
+    files.filter(f => f.questionId !== null).map(f => [f.questionId, true])
+  ) as Map<string | number, boolean>;
+  return { naQuestionIds, responseMap, fileMap };
+}
+
+/**
+ * IDs of questions that are visible, NOT already marked N/A, and NOT yet answered.
+ * Used when a site goes live to auto-mark every remaining open question as N/A.
+ */
+export function getIncompleteVisibleQuestionIds(
+  questions: Question[],
+  responses: Response[],
+  files: FileAttachment[]
+): (string | number)[] {
+  const { naQuestionIds, responseMap, fileMap } = buildLookups(responses, files);
+  const incomplete: (string | number)[] = [];
+  for (const q of questions) {
+    if (!isQuestionVisible(q, responseMap)) continue;
+    if (naQuestionIds.has(q.id) || naQuestionIds.has(String(q.id))) continue;
+    if (!isQuestionAnswered(q, responseMap, fileMap)) incomplete.push(q.id);
+  }
+  return incomplete;
 }
 
 /**
@@ -104,39 +171,9 @@ export function calculateProgress(
       sectionStats[q.sectionTitle].completed++;
       return;
     }
-    
-    // For workflow sections, check for _config response
-    if (q.isWorkflow) {
-      const resp = responseMap.get(q.id);
-      if (resp && resp.response && resp.response.trim() !== '') {
-        // Check if config has at least one path selected
-        try {
-          const config = JSON.parse(resp.response);
-          const hasPath = config.paths && Object.values(config.paths).some((v: any) => v === true);
-          if (hasPath) {
-            sectionStats[q.sectionTitle].completed++;
-          }
-        } catch (e) {
-          // Invalid JSON, don't count as complete
-        }
-      }
-    } else {
-      // For upload questions, ONLY count as complete if file exists
-      if (q.type === 'upload' || q.type === 'upload-download') {
-        const hasFile = fileMap.has(q.id);
-        if (hasFile) {
-          sectionStats[q.sectionTitle].completed++;
-        }
-      } else {
-        // For text/textarea/dropdown questions, check if question has a text response OR uploaded file
-        const resp = responseMap.get(q.id);
-        const hasResponse = resp && resp.response && resp.response.trim() !== '';
-        const hasFile = fileMap.has(q.id);
-        
-        if (hasResponse || hasFile) {
-          sectionStats[q.sectionTitle].completed++;
-        }
-      }
+
+    if (isQuestionAnswered(q, responseMap as Map<string | number, Response>, fileMap as Map<string | number, boolean>)) {
+      sectionStats[q.sectionTitle].completed++;
     }
   });
 

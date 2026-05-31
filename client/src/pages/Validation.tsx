@@ -48,6 +48,7 @@ import {
 import { Link } from "wouter";
 import { useOrgParams } from "@/hooks/useOrgParams";
 import { trpc } from "@/lib/trpc";
+import { VALIDATION_PHASE_TEST_COUNTS } from "@shared/validationDefs";
 import { cn } from "@/lib/utils";
 import { UserMenu } from "@/components/UserMenu";
 import { PageBreadcrumb } from "@/components/PageBreadcrumb";
@@ -321,6 +322,16 @@ const phases: Phase[] = [
     ],
   },
 ];
+
+// Drift guard: the server's go-live auto-N/A logic enumerates test keys from
+// VALIDATION_PHASE_TEST_COUNTS. Warn loudly in dev if these fall out of sync.
+if (import.meta.env.DEV) {
+  phases.forEach((ph, i) => {
+    if (ph.tests.length !== VALIDATION_PHASE_TEST_COUNTS[i]) {
+      console.warn(`[validation] phase ${i} has ${ph.tests.length} tests but shared VALIDATION_PHASE_TEST_COUNTS says ${VALIDATION_PHASE_TEST_COUNTS[i]}. Update shared/validationDefs.ts.`);
+    }
+  });
+}
 
 function testKey(pIdx: number, tIdx: number) {
   return `${pIdx}:${tIdx}`;

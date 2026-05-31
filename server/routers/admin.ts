@@ -3,7 +3,8 @@ import { TRPCError } from "@trpc/server";
 import { adminDbProcedure, protectedProcedure, router } from "../_core/trpc";
 import { questions, questionOptions, organizations, users, clients, intakeFileAttachments, partnerTemplates, specifications, intakeResponses, systemVendorOptions, vendorAuditLog, taskCompletion, validationResults, partnerTaskTemplates, orgCustomTasks } from "../../drizzle/schema";
 import { SECTION_DEFS as TASK_SECTION_DEFS } from "@shared/taskDefs";
-import { eq, and, or, desc, inArray, sql } from "drizzle-orm";
+import { eq, and, or, desc, inArray, sql, like } from "drizzle-orm";
+import { getAllTestKeys } from "@shared/validationDefs";
 import { uploadToGoogleDrive } from "./files";
 import { dispatch } from "../notionSyncDispatcher";
 import bcrypt from "bcrypt";
@@ -13,6 +14,62 @@ import { inviteTemplate } from "../email/templates";
 import { ENV } from "../_core/env";
 import { fileUploadInput } from "../_core/fileValidation";
 import { logFileActivity } from "../fileAuditLog";
+
+/**
+ * Flatten the questionnaire section definitions into the flat question list
+ * consumed by the shared progress calculation. Shared between the admin
+ * summary metrics and the go-live auto-N/A logic so the two never drift.
+ */
+function buildAllQuestions(questionnaireSections: any[]) {
+  return questionnaireSections.flatMap((section: any) => {
+    if (section.type === "connectivity-table" && section.questions) {
+      const stdQuestions = section.questions
+        .filter((q: any) => !q.inactive)
+        .map((q: any) => ({
+          id: q.id,
+          sectionTitle: section.title,
+          isWorkflow: false,
+          type: q.type,
+          conditionalOn: q.conditionalOn || null,
+        }));
+      stdQuestions.push({
+        id: "CONN.endpoints",
+        sectionTitle: section.title,
+        isWorkflow: false,
+        type: "textarea",
+        conditionalOn: null,
+      });
+      return stdQuestions;
+    } else if (section.type === "integration-workflows" && section.questions) {
+      return section.questions
+        .filter((q: any) => !q.inactive)
+        .map((q: any) => ({
+          id: q.id,
+          sectionTitle: section.title,
+          isWorkflow: false,
+          type: q.type,
+          conditionalOn: q.conditionalOn || null,
+        }));
+    } else if (section.questions) {
+      return section.questions
+        .filter((q: any) => !q.inactive)
+        .map((q: any) => ({
+          id: q.id,
+          sectionTitle: section.title,
+          isWorkflow: false,
+          type: q.type,
+          conditionalOn: q.conditionalOn || null,
+        }));
+    } else if (section.type === "workflow") {
+      return [{
+        id: `${section.id}_config`,
+        sectionTitle: section.title,
+        isWorkflow: true,
+      }];
+    }
+    return [];
+  });
+}
 
 /**
  * Admin router for managing questions, options, organizations, and users
@@ -815,58 +872,7 @@ export const adminRouter = router({
           .where(eq(intakeFileAttachments.organizationId, org.id));
 
         // Build question list (include workflow sections)
-        const allQuestions = questionnaireSections.flatMap(section => {
-          if (section.type === 'connectivity-table' && section.questions) {
-            // Connectivity table: include standard questions + a virtual CONN.endpoints question
-            const stdQuestions = section.questions
-              .filter(q => !q.inactive)
-              .map(q => ({
-                id: q.id,
-                sectionTitle: section.title,
-                isWorkflow: false,
-                type: q.type,
-                conditionalOn: q.conditionalOn || null,
-              }));
-            // Add virtual question for the endpoints table
-            stdQuestions.push({
-              id: 'CONN.endpoints',
-              sectionTitle: section.title,
-              isWorkflow: false,
-              type: 'textarea', // treated as text response (JSON)
-              conditionalOn: null,
-            });
-            return stdQuestions;
-          } else if (section.type === 'integration-workflows' && section.questions) {
-            // Integration workflows: include IW.* questions
-            return section.questions
-              .filter(q => !q.inactive)
-              .map(q => ({
-                id: q.id,
-                sectionTitle: section.title,
-                isWorkflow: false,
-                type: q.type,
-                conditionalOn: q.conditionalOn || null,
-              }));
-          } else if (section.questions) {
-            // Regular question sections — filter inactive questions and pass conditionalOn
-            return section.questions
-              .filter(q => !q.inactive)
-              .map(q => ({
-                id: q.id,
-                sectionTitle: section.title,
-                isWorkflow: false,
-                type: q.type,
-                conditionalOn: q.conditionalOn || null,
-              }));
-          } else if (section.type === 'workflow') {
-            return [{
-              id: `${section.id}_config`,
-              sectionTitle: section.title,
-              isWorkflow: true,
-            }];
-          }
-          return [];
-        });
+        const allQuestions = buildAllQuestions(questionnaireSections);
 
         // Calculate progress using shared utility
         const progress = calculateProgress(allQuestions, orgResponses, orgFiles);
@@ -1322,11 +1328,91 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Cannot mark other partner's organizations as complete" });
       }
 
-      // Update status to completed and record the go-live date
-      const liveDate = input.liveDate || new Date().toISOString().slice(0, 10);
+      // When a site goes live, every still-open item is marked N/A (dated
+      // today) so all three progress tracks read 100%. We snapshot the prior
+      // state of each item we touch so Reopen can revert exactly these changes.
+      const today = input.liveDate || new Date().toISOString().slice(0, 10);
+      const now = new Date();
+      const actor = ctx.user.email ?? "go-live";
+
+      const snapshot: {
+        tasks: { taskId: string; sectionName: string; prior: null | { completed: number; notApplicable: number; inProgress: number; blocked: number; completedAt: string | null; completedBy: string | null; targetDate: string | null } }[];
+        tests: { testKey: string; prior: null | { status: string; testedDate: string | null } }[];
+        questions: { qId: string; prior: string | null }[];
+      } = { tasks: [], tests: [], questions: [] };
+
+      // ── Tasks: any task that isn't done and isn't already N/A → N/A ──
+      const taskRows = await db.select().from(taskCompletion).where(eq(taskCompletion.organizationId, org.id));
+      const taskMap = new Map(taskRows.map(r => [r.taskId, r]));
+      const allTaskDefs = TASK_SECTION_DEFS.flatMap(s => s.tasks.map(t => ({ id: t.id, sectionName: s.title })));
+      for (const t of allTaskDefs) {
+        const row = taskMap.get(t.id);
+        const isDone = row?.completed === 1 && row?.notApplicable !== 1;
+        const isNA = row?.notApplicable === 1;
+        if (isDone || isNA) continue;
+        snapshot.tasks.push({
+          taskId: t.id,
+          sectionName: t.sectionName,
+          prior: row ? {
+            completed: row.completed, notApplicable: row.notApplicable, inProgress: row.inProgress, blocked: row.blocked,
+            completedAt: row.completedAt ? row.completedAt.toISOString() : null, completedBy: row.completedBy, targetDate: row.targetDate,
+          } : null,
+        });
+        if (row) {
+          await db.update(taskCompletion)
+            .set({ completed: 0, notApplicable: 1, inProgress: 0, blocked: 0, completedAt: now, completedBy: actor, targetDate: row.targetDate ?? today, notionLastEdited: null })
+            .where(eq(taskCompletion.id, row.id));
+        } else {
+          await db.insert(taskCompletion)
+            .values({ organizationId: org.id, taskId: t.id, sectionName: t.sectionName, completed: 0, notApplicable: 1, inProgress: 0, blocked: 0, completedAt: now, completedBy: actor, targetDate: today, notionLastEdited: null });
+        }
+      }
+
+      // ── Tests: any test that isn't Pass and isn't already N/A → N/A ──
+      const valRows = await db.select().from(validationResults).where(eq(validationResults.organizationId, org.id));
+      const valMap = new Map(valRows.map(r => [r.testKey, r]));
+      for (const testKey of getAllTestKeys()) {
+        const row = valMap.get(testKey);
+        if (row?.status === "Pass" || row?.status === "N/A") continue;
+        snapshot.tests.push({ testKey, prior: row ? { status: row.status, testedDate: row.testedDate } : null });
+        if (row) {
+          await db.update(validationResults)
+            .set({ status: "N/A", testedDate: today, notionLastEdited: null })
+            .where(eq(validationResults.id, row.id));
+        } else {
+          await db.insert(validationResults)
+            .values({ organizationId: org.id, testKey, status: "N/A", testedDate: today, notionLastEdited: null });
+        }
+      }
+
+      // ── Questionnaire: any visible, unanswered, not-already-N/A question → N/A ──
+      const { getIncompleteVisibleQuestionIds } = await import("../../shared/progressCalculation");
+      const { questionnaireSections } = await import("../../shared/questionnaireData");
+      const respRows = await db
+        .select({ questionId: intakeResponses.questionId, response: intakeResponses.response })
+        .from(intakeResponses).where(eq(intakeResponses.organizationId, org.id));
+      const fileRows = await db
+        .select({ questionId: intakeFileAttachments.questionId })
+        .from(intakeFileAttachments).where(eq(intakeFileAttachments.organizationId, org.id));
+      const incompleteIds = getIncompleteVisibleQuestionIds(buildAllQuestions(questionnaireSections), respRows as any, fileRows as any);
+      const markerRows = await db.select().from(intakeResponses)
+        .where(and(eq(intakeResponses.organizationId, org.id), like(intakeResponses.questionId, "__question_na:%")));
+      const markerMap = new Map(markerRows.map(r => [r.questionId, r]));
+      for (const qId of incompleteIds) {
+        const key = `__question_na:${qId}`;
+        const existing = markerMap.get(key);
+        snapshot.questions.push({ qId: String(qId), prior: existing ? (existing.response ?? null) : null });
+        if (existing) {
+          await db.update(intakeResponses).set({ response: "true", updatedBy: actor }).where(eq(intakeResponses.id, existing.id));
+        } else {
+          await db.insert(intakeResponses).values({ organizationId: org.id, questionId: key, section: "__na", response: "true", status: "complete", updatedBy: actor });
+        }
+      }
+
+      // Flip to completed, record go-live date, and store the revert snapshot.
       await db
         .update(organizations)
-        .set({ status: "completed", liveDate })
+        .set({ status: "completed", liveDate: today, goLiveAutoNa: JSON.stringify(snapshot) })
         .where(eq(organizations.id, input.organizationId));
 
       return { success: true };
@@ -1351,10 +1437,55 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Cannot reopen other partner's organizations" });
       }
 
-      // Update status to active and clear the recorded go-live date
+      // Revert exactly the items that go-live auto-marked N/A, restoring their
+      // prior state. Items the user touched manually after go-live aren't in
+      // the snapshot, so they're left alone.
+      let snapshot: any = null;
+      try { snapshot = org.goLiveAutoNa ? JSON.parse(org.goLiveAutoNa) : null; } catch { snapshot = null; }
+
+      if (snapshot) {
+        for (const t of snapshot.tasks ?? []) {
+          const [row] = await db.select().from(taskCompletion)
+            .where(and(eq(taskCompletion.organizationId, org.id), eq(taskCompletion.taskId, t.taskId)));
+          if (!row) continue;
+          if (t.prior === null) {
+            await db.delete(taskCompletion).where(eq(taskCompletion.id, row.id));
+          } else {
+            await db.update(taskCompletion).set({
+              completed: t.prior.completed, notApplicable: t.prior.notApplicable, inProgress: t.prior.inProgress, blocked: t.prior.blocked,
+              completedAt: t.prior.completedAt ? new Date(t.prior.completedAt) : null, completedBy: t.prior.completedBy, targetDate: t.prior.targetDate, notionLastEdited: null,
+            }).where(eq(taskCompletion.id, row.id));
+          }
+        }
+        for (const t of snapshot.tests ?? []) {
+          const [row] = await db.select().from(validationResults)
+            .where(and(eq(validationResults.organizationId, org.id), eq(validationResults.testKey, t.testKey)));
+          if (!row) continue;
+          if (t.prior === null) {
+            await db.delete(validationResults).where(eq(validationResults.id, row.id));
+          } else {
+            await db.update(validationResults)
+              .set({ status: t.prior.status as any, testedDate: t.prior.testedDate, notionLastEdited: null })
+              .where(eq(validationResults.id, row.id));
+          }
+        }
+        for (const q of snapshot.questions ?? []) {
+          const key = `__question_na:${q.qId}`;
+          const [row] = await db.select().from(intakeResponses)
+            .where(and(eq(intakeResponses.organizationId, org.id), eq(intakeResponses.questionId, key)));
+          if (!row) continue;
+          if (q.prior === null) {
+            await db.delete(intakeResponses).where(eq(intakeResponses.id, row.id));
+          } else {
+            await db.update(intakeResponses).set({ response: q.prior }).where(eq(intakeResponses.id, row.id));
+          }
+        }
+      }
+
+      // Update status to active, clear go-live date and the revert snapshot.
       await db
         .update(organizations)
-        .set({ status: "active", liveDate: null })
+        .set({ status: "active", liveDate: null, goLiveAutoNa: null })
         .where(eq(organizations.id, input.organizationId));
 
       return { success: true };
