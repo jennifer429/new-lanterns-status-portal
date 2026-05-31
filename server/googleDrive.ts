@@ -10,6 +10,7 @@ import { OAuth2Client } from "google-auth-library";
  * Falls back to S3/Forge storage if Google credentials are not configured.
  *
  * Uses @googleapis/drive (lightweight, ~3MB) instead of googleapis (~196MB).
+ * Migrated 2026-05-31 for faster deploys.
  */
 
 let driveClient: any = null;
