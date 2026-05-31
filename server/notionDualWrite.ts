@@ -38,6 +38,7 @@ const DB_IDS = {
   clients: "e9032704-9917-4040-94df-b4bf7e23e24f",
   organizations: "b4a271d0-9cb7-4132-a7dc-5754591cdac1",
   implementationOrgs: "494fc299-f747-4442-a551-867de65d080c",
+  emailLog: "", // TODO: Create Notion database and paste ID here
 };
 
 const DS_IDS = {
@@ -61,6 +62,7 @@ const DS_IDS = {
   clients: "f03477c2-bfd1-4266-b6b5-f5409760759b",
   organizations: "cbfdc89f-56b8-46d4-97ec-bb7f186baa85",
   implementationOrgs: "4faa1bc2-f55e-42b2-b85f-51bb0f29d437",
+  emailLog: "", // TODO: Create Notion data source and paste ID here
 };
 
 let notionClient: Client | null = null;
@@ -906,3 +908,41 @@ export async function syncPartnerDocAudit(payload: PartnerDocAuditPayload): Prom
  * Export all DB/DS IDs for use in sync-back modules.
  */
 export { DB_IDS, DS_IDS };
+
+// ─── Email Log ───────────────────────────────────────────────────────────────
+
+export interface EmailLogPayload {
+  mysqlId: number;
+  direction: string;
+  type: string;
+  toAddress: string;
+  fromAddress: string;
+  subject: string;
+  status: string;
+  errorMessage?: string | null;
+  organizationId?: number | null;
+  triggeredBy?: string | null;
+  createdAt: Date;
+}
+
+export async function syncEmailLog(payload: EmailLogPayload): Promise<boolean> {
+  return upsertPage({
+    dbId: DB_IDS.emailLog,
+    dsId: DS_IDS.emailLog,
+    mysqlId: payload.mysqlId,
+    title: `${payload.type} → ${payload.toAddress}`,
+    writeType: "emailLog",
+    properties: {
+      "Direction": select(payload.direction),
+      "Type": select(payload.type),
+      "To": richText(payload.toAddress),
+      "From": richText(payload.fromAddress),
+      "Subject": richText(payload.subject),
+      "Status": select(payload.status),
+      "Error": richText(payload.errorMessage ?? null),
+      "Organization ID": num(payload.organizationId ?? null),
+      "Triggered By": richText(payload.triggeredBy ?? null),
+      "Created At": dateProperty(payload.createdAt),
+    },
+  });
+}

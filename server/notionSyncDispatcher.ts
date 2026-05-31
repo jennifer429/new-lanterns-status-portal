@@ -36,6 +36,7 @@ import {
   syncClient,
   syncOrganization,
   syncImplementationOrg,
+  syncEmailLog,
   type AiChatLogPayload,
   type ActivityFeedPayload,
   type OrgNotePayload,
@@ -57,6 +58,7 @@ import {
   type ClientPayload,
   type OrganizationPayload,
   type ImplementationOrgPayload,
+  type EmailLogPayload,
 } from "./notionDualWrite";
 
 /**
@@ -168,5 +170,9 @@ export const dispatch = {
 
   user(payload: PortalUserPayload): void {
     fireAndForget(() => syncPortalUser(payload), "user");
+  },
+
+  emailLog(payload: EmailLogPayload): void {
+    fireAndForget(() => syncEmailLog(payload), "emailLog");
   },
 };
