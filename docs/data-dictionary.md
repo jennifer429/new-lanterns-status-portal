@@ -68,16 +68,19 @@ const fileUrl = driveUrl || s3Url;   // the canonical "one URL" for string colum
 ```
 Then store `fileUrl` (string), `s3Key`, and `driveFileId` in their respective columns.
 
-### Upload mutation return `status` shapes (client reads these)
+### Upload mutation return `status` (what the client actually reads on `main`)
 
-| Mutation | Returns `status` of shape | Client field to read |
-|----------|---------------------------|----------------------|
-| `intake.uploadFile`, `proceduralLibrary.uploadDocument` | `{ drive: boolean; s3: boolean; notion: boolean }` | `.drive`, `.notion` |
-| `intake.uploadAdhocFile` | `{ drive: boolean; s3: boolean; audit: boolean }` | `.drive`, `.audit` |
+Only the **adhoc** upload surfaces a status the client consumes:
 
-> ⚠️ The adhoc endpoint reports **`audit`**, not `notion`. `useHomeData` must read
-> `status.audit`; `useIntakeData` / `ProceduralLibrary` read `status.notion`.
-> Do not blindly copy `.notion` across all three.
+| Mutation | Returns | Consumed by |
+|----------|---------|-------------|
+| `intake.uploadAdhocFile` | `{ success, fileUrl, status: { drive: boolean; s3: boolean; audit: boolean } }` | `useHomeData` reads `status.drive` / `status.audit` |
+| `intake.uploadFile`, `proceduralLibrary.uploadDocument` | `{ success, fileUrl, ... }` — **no consumed `status` object** | client reads `success`/`fileUrl` only |
+
+> ⚠️ The adhoc status field is **`audit`**, never `notion`. There is **no
+> `.status.notion`** anywhere — those references were a bug and were removed. If
+> you add a status object to `uploadFile`/`uploadDocument`, you must add the
+> client consumer too, or `tsc` will flag the unread/!-matching shape.
 
 ---
 
@@ -109,10 +112,10 @@ tRPC infers client types from the server router end-to-end, so a mismatch is a
 - **The `.input(z.object({…}))` schema must match the client's `.mutate({…})`
   payload exactly.** Canonical inputs:
 
-  | Procedure | Input schema |
-  |-----------|--------------|
-  | `intake.saveResponse` | `{ organizationSlug, questionId, response, userEmail }` |
-  | `intake.submitFeedback` | `{ organizationSlug, rating: number, comments?: string }` |
+  | Procedure | Type | Input schema |
+  |-----------|------|--------------|
+  | `intake.saveResponse` | `protectedProcedure` | `{ organizationSlug, questionId, response, userEmail }` |
+  | `intake.submitFeedback` | `protectedProcedure` | `{ organizationSlug, rating: z.number().min(1).max(5), comments?: string }` |
 
 - **Never re-type a mutation's return on the client.** Read it off the inferred
   result; if you reference `data.foo`, the server must return `foo`.
@@ -195,13 +198,16 @@ never pass `row.<payloadFieldName>` — that column usually doesn't exist.
 
 ---
 
-## 7. Server port — bind exactly to `PORT` in production
+## 7. Server port — latent risk, not a confirmed bug
 
-`server/_core/index.ts` (bundled to `dist/index.js`) is the prod entry. In
-production it **must** listen on the injected `process.env.PORT` and must not
-fall back to a different port (the platform routes/health-checks that exact port;
-binding elsewhere = a *silent* unhealthy deploy). The `findAvailablePort()` helper
-is a **dev-only** convenience.
+`server/_core/index.ts` (bundled to `dist/index.js`) is the prod entry. It uses
+`findAvailablePort()`, which starts at `process.env.PORT` and walks to the next
+free port if the preferred one looks busy. **In practice this works in production
+today** (the live deploy binds `PORT` on the first try), so this is a *latent
+edge-case risk*, not a current failure. The risk: if the injected `PORT` ever
+probes as busy, the app would silently bind elsewhere and the platform's
+health-check on `PORT` would fail with no error. Hardening (optional): in
+production, bind exactly to `process.env.PORT` and skip the fallback.
 
 ---
 
