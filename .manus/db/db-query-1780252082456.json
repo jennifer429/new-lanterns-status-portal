@@ -1,0 +1,28 @@
+{
+  "query": "SELECT writeType, status, COUNT(*) as cnt, MAX(lastError) as sampleError FROM notionRetryQueue GROUP BY writeType, status ORDER BY cnt DESC LIMIT 20",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT writeType, status, COUNT(*) as cnt, MAX(lastError) as sampleError FROM notionRetryQueue GROUP BY writeType, status ORDER BY cnt DESC LIMIT 20",
+  "rows": [
+    {
+      "writeType": "validationResult",
+      "status": "succeeded",
+      "cnt": "405",
+      "sampleError": "Could not find database with ID: 17813c6e-932c-4b1f-9c60-c4645f9cfbbb. Make sure the relevant pages and databases are shared with your integration \"RadOne Client Integrations\"."
+    },
+    {
+      "writeType": "questionnaire",
+      "status": "succeeded",
+      "cnt": "52",
+      "sampleError": "Request to Notion API has timed out"
+    },
+    {
+      "writeType": "aiChatLog",
+      "status": "failed_permanent",
+      "cnt": "2",
+      "sampleError": "Cannot read properties of undefined (reading 'toISOString')"
+    }
+  ],
+  "messages": [],
+  "stdout": "writeType\tstatus\tcnt\tsampleError\nvalidationResult\tsucceeded\t405\tCould not find database with ID: 17813c6e-932c-4b1f-9c60-c4645f9cfbbb. Make sure the relevant pages and databases are shared with your integration \"RadOne Client Integrations\".\nquestionnaire\tsucceeded\t52\tRequest to Notion API has timed out\naiChatLog\tfailed_permanent\t2\tCannot read properties of undefined (reading 'toISOString')\n",
+  "stderr": "",
+  "execution_time_ms": 274
+}

@@ -116,7 +116,13 @@ export default function ProceduralLibrary() {
   // Mutations
   const uploadMutation = trpc.proceduralLibrary.uploadDocument.useMutation({
     onSuccess: () => {
-      toast.success("Document uploaded successfully");
+      const partnerName = isPlatformAdmin && uploadClientId 
+        ? allClients.find(c => c.id === parseInt(uploadClientId))?.name || "partner"
+        : "your organization";
+        
+      toast.success(`Document uploaded for ${partnerName}`, {
+        description: `Your document has been successfully uploaded.`
+      });
       refetchDocs();
       setIsUploadOpen(false);
       resetUploadForm();

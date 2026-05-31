@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import { requireDb } from "../db";
+import { dispatch } from "../notionSyncDispatcher";
 import { orgNotes, organizations } from "../../drizzle/schema";
 import { eq, and, desc, isNull } from "drizzle-orm";
 import { uploadToGoogleDrive } from "./files";
@@ -47,32 +48,60 @@ export const notesRouter = router({
       const sanitizedOrg = org.name.replace(/[^a-zA-Z0-9-]/g, "_");
       const driveFileId = `${sanitizedOrg}_${sanitizedLabel}_${timestamp}.${ext}`;
 
-      const fileUrl = await uploadToGoogleDrive(driveFileId, fileBuffer, org.name, org.googleDriveFolderId);
+      const { driveUrl, s3Url, driveFileId: newDriveFileId, s3Key } = await uploadToGoogleDrive(driveFileId, fileBuffer, org.name, org.googleDriveFolderId);
+      const finalUrl = driveUrl || s3Url;
 
-      await db.insert(orgNotes).values({
+      const [noteResult] = await db.insert(orgNotes).values({
         organizationId: org.id,
         clientId: org.clientId,
         label: input.label,
         fileName: input.fileName,
-        fileUrl,
-        driveFileId,
+        fileUrl: finalUrl,
+        driveFileId: s3Key,
         fileSize: fileBuffer.length,
         mimeType: input.mimeType,
         uploadedBy: ctx.user.email || "unknown",
       });
+      dispatch.orgNote({
+        mysqlId: (noteResult as any).insertId || 0,
+        organizationId: org.id,
+        orgName: org.name,
+        clientId: org.clientId,
+        label: input.label,
+        fileName: input.fileName,
+        fileUrl: finalUrl,
+        driveFileId: s3Key,
+        fileSize: fileBuffer.length,
+        mimeType: input.mimeType,
+        uploadedBy: ctx.user.email || "unknown",
+        createdAt: new Date(),
+      });
 
       // Audit log
-      logFileActivity({
-        action: "upload",
-        userEmail: ctx.user.email || "unknown",
-        userRole: ctx.user.role,
-        organizationName: org.name,
-        fileName: input.fileName,
-        fileUrl,
-        notes: `Note label: ${input.label}`,
-      }).catch(() => {});
+      let auditLogged = true;
+      try {
+        await logFileActivity({
+          action: "upload",
+          userEmail: ctx.user.email || "unknown",
+          userRole: ctx.user.role,
+          organizationName: org.name,
+          fileName: input.fileName,
+          fileUrl: finalUrl,
+          notes: `Note label: ${input.label} | Drive: ${driveUrl ? 'Yes' : 'No'} | S3: Yes`,
+        });
+      } catch (e) {
+        auditLogged = false;
+      }
 
-      return { success: true, fileUrl };
+      return { 
+        success: true, 
+        fileUrl: finalUrl,
+        status: {
+          drive: !!driveUrl,
+          s3: true,
+          audit: auditLogged
+        }
+      };
     }),
 
   /**
@@ -100,32 +129,60 @@ export const notesRouter = router({
       const sanitizedLabel = input.label.replace(/[^a-zA-Z0-9-]/g, "_");
       const driveFileId = `partner_${input.clientId}_${sanitizedLabel}_${timestamp}.${ext}`;
 
-      const fileUrl = await uploadToGoogleDrive(driveFileId, fileBuffer, `partner_${input.clientId}`);
+       const { driveUrl, s3Url, driveFileId: newDriveFileId, s3Key } = await uploadToGoogleDrive(driveFileId, fileBuffer, "Partner Upload", null);
+      const finalUrl = driveUrl || s3Url;
 
-      await db.insert(orgNotes).values({
+      const [partnerNoteResult] = await db.insert(orgNotes).values({
         organizationId: null,
-        clientId: input.clientId,
+        clientId: ctx.user.clientId,
         label: input.label,
         fileName: input.fileName,
-        fileUrl,
-        driveFileId,
+        fileUrl: finalUrl,
+        driveFileId: s3Key,
         fileSize: fileBuffer.length,
         mimeType: input.mimeType,
         uploadedBy: ctx.user.email || "unknown",
       });
+      dispatch.orgNote({
+        mysqlId: (partnerNoteResult as any).insertId || 0,
+        organizationId: 0,
+        orgName: "Partner Upload",
+        clientId: ctx.user.clientId ?? null,
+        label: input.label,
+        fileName: input.fileName,
+        fileUrl: finalUrl,
+        driveFileId: s3Key,
+        fileSize: fileBuffer.length,
+        mimeType: input.mimeType,
+        uploadedBy: ctx.user.email || "unknown",
+        createdAt: new Date(),
+      });
 
       // Audit log
-      logFileActivity({
-        action: "upload",
-        userEmail: ctx.user.email || "unknown",
-        userRole: ctx.user.role,
-        organizationName: `Partner ${input.clientId}`,
-        fileName: input.fileName,
-        fileUrl,
-        notes: `Partner note: ${input.label}`,
-      }).catch(() => {});
+      let auditLogged = true;
+      try {
+        await logFileActivity({
+          action: "upload",
+          userEmail: ctx.user.email || "unknown",
+          userRole: ctx.user.role,
+          organizationName: "Partner Upload",
+          fileName: input.fileName,
+          fileUrl: finalUrl,
+          notes: `Partner Note label: ${input.label} | Drive: ${driveUrl ? 'Yes' : 'No'} | S3: Yes`,
+        });
+      } catch (e) {
+        auditLogged = false;
+      }
 
-      return { success: true, fileUrl };
+      return { 
+        success: true, 
+        fileUrl: finalUrl,
+        status: {
+          drive: !!driveUrl,
+          s3: true,
+          audit: auditLogged
+        }
+      };
     }),
 
   /**

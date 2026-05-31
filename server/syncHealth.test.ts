@@ -114,7 +114,7 @@ describe("syncHealth router", () => {
       const caller = appRouter.createCaller(ctx);
 
       await expect(caller.syncHealth.triggerSync()).rejects.toThrow(
-        /admin/i
+        /permission/i
       );
     });
   });
@@ -137,7 +137,7 @@ describe("syncHealth router", () => {
       const caller = appRouter.createCaller(ctx);
 
       await expect(caller.syncHealth.triggerContactsSystemsSync()).rejects.toThrow(
-        /admin/i
+        /permission/i
       );
     });
   });
@@ -175,7 +175,7 @@ describe("syncHealth router", () => {
       const caller = appRouter.createCaller(ctx);
 
       await expect(caller.syncHealth.triggerFullSync()).rejects.toThrow(
-        /admin/i
+        /permission/i
       );
     });
   });

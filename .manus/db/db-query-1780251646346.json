@@ -1,0 +1,90 @@
+{
+  "query": "SELECT id, writeType, retryCount, LEFT(lastError, 300) as error_preview, status, createdAt FROM notionRetryQueue ORDER BY id DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, writeType, retryCount, LEFT(lastError, 300) as error_preview, status, createdAt FROM notionRetryQueue ORDER BY id DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "90002",
+      "writeType": "aiChatLog",
+      "retryCount": "3",
+      "error_preview": "Cannot read properties of undefined (reading 'toISOString')",
+      "status": "failed_permanent",
+      "createdAt": "2026-05-31 18:07:02"
+    },
+    {
+      "id": "90001",
+      "writeType": "aiChatLog",
+      "retryCount": "3",
+      "error_preview": "Cannot read properties of undefined (reading 'toISOString')",
+      "status": "failed_permanent",
+      "createdAt": "2026-05-31 18:07:01"
+    },
+    {
+      "id": "60003",
+      "writeType": "questionnaire",
+      "retryCount": "0",
+      "error_preview": "Request to Notion API has timed out",
+      "status": "succeeded",
+      "createdAt": "2026-05-27 16:36:52"
+    },
+    {
+      "id": "60002",
+      "writeType": "questionnaire",
+      "retryCount": "0",
+      "error_preview": "Request to Notion API has timed out",
+      "status": "succeeded",
+      "createdAt": "2026-05-27 16:36:52"
+    },
+    {
+      "id": "60001",
+      "writeType": "questionnaire",
+      "retryCount": "0",
+      "error_preview": "Request to Notion API has timed out",
+      "status": "succeeded",
+      "createdAt": "2026-05-27 16:36:52"
+    },
+    {
+      "id": "30007",
+      "writeType": "questionnaire",
+      "retryCount": "0",
+      "error_preview": "fetch failed",
+      "status": "succeeded",
+      "createdAt": "2026-05-26 23:12:32"
+    },
+    {
+      "id": "30006",
+      "writeType": "questionnaire",
+      "retryCount": "0",
+      "error_preview": "fetch failed",
+      "status": "succeeded",
+      "createdAt": "2026-05-26 23:12:32"
+    },
+    {
+      "id": "30005",
+      "writeType": "questionnaire",
+      "retryCount": "0",
+      "error_preview": "fetch failed",
+      "status": "succeeded",
+      "createdAt": "2026-05-26 23:12:29"
+    },
+    {
+      "id": "30004",
+      "writeType": "questionnaire",
+      "retryCount": "0",
+      "error_preview": "fetch failed",
+      "status": "succeeded",
+      "createdAt": "2026-05-26 23:12:28"
+    },
+    {
+      "id": "30003",
+      "writeType": "questionnaire",
+      "retryCount": "0",
+      "error_preview": "fetch failed",
+      "status": "succeeded",
+      "createdAt": "2026-05-26 23:12:27"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\twriteType\tretryCount\terror_preview\tstatus\tcreatedAt\n90002\taiChatLog\t3\tCannot read properties of undefined (reading 'toISOString')\tfailed_permanent\t2026-05-31 18:07:02\n90001\taiChatLog\t3\tCannot read properties of undefined (reading 'toISOString')\tfailed_permanent\t2026-05-31 18:07:01\n60003\tquestionnaire\t0\tRequest to Notion API has timed out\tsucceeded\t2026-05-27 16:36:52\n60002\tquestionnaire\t0\tRequest to Notion API has timed out\tsucceeded\t2026-05-27 16:36:52\n60001\tquestionnaire\t0\tRequest to Notion API has timed out\tsucceeded\t2026-05-27 16:36:52\n30007\tquestionnaire\t0\tfetch failed\tsucceeded\t2026-05-26 23:12:32\n30006\tquestionnaire\t0\tfetch failed\tsucceeded\t2026-05-26 23:12:32\n30005\tquestionnaire\t0\tfetch failed\tsucceeded\t2026-05-26 23:12:29\n30004\tquestionnaire\t0\tfetch failed\tsucceeded\t2026-05-26 23:12:28\n30003\tquestionnaire\t0\tfetch failed\tsucceeded\t2026-05-26 23:12:27\n",
+  "stderr": "",
+  "execution_time_ms": 263
+}

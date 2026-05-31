@@ -1,0 +1,28 @@
+{
+  "query": "SELECT o.slug, o.name, o.id,\n  (SELECT COUNT(*) FROM taskCompletion tc WHERE tc.organizationId = o.id) as tasks,\n  (SELECT COUNT(*) FROM validationResults vr WHERE vr.organizationId = o.id) as validations,\n  (SELECT COUNT(*) FROM orgNotes n WHERE n.organizationId = o.id) as files,\n  (SELECT COUNT(*) FROM intakeResponses ir WHERE ir.organizationId = o.id) as intakeAnswers\nFROM organizations o WHERE o.slug IN ('RMCA', 'RRAL');",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT o.slug, o.name, o.id,\n  (SELECT COUNT(*) FROM taskCompletion tc WHERE tc.organizationId = o.id) as tasks,\n  (SELECT COUNT(*) FROM validationResults vr WHERE vr.organizationId = o.id) as validations,\n  (SELECT COUNT(*) FROM orgNotes n WHERE n.organizationId = o.id) as files,\n  (SELECT COUNT(*) FROM intakeResponses ir WHERE ir.organizationId = o.id) as intakeAnswers\nFROM organizations o WHERE o.slug IN ('RMCA', 'RRAL');",
+  "rows": [
+    {
+      "slug": "RRAL",
+      "name": "RRAL",
+      "id": "240001",
+      "tasks": "39",
+      "validations": "28",
+      "files": "16",
+      "intakeAnswers": "65"
+    },
+    {
+      "slug": "RMCA",
+      "name": "RMC Anniston Radiology",
+      "id": "990001",
+      "tasks": "39",
+      "validations": "28",
+      "files": "29",
+      "intakeAnswers": "11"
+    }
+  ],
+  "messages": [],
+  "stdout": "slug\tname\tid\ttasks\tvalidations\tfiles\tintakeAnswers\nRRAL\tRRAL\t240001\t39\t28\t16\t65\nRMCA\tRMC Anniston Radiology\t990001\t39\t28\t29\t11\n",
+  "stderr": "",
+  "execution_time_ms": 271
+}

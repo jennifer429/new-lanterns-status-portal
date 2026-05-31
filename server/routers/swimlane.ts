@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { publicProcedure, router } from "../_core/trpc";
+import { dispatch } from "../notionSyncDispatcher";
 import { requireDb } from "../db";
 import {
   organizations,
@@ -110,6 +111,17 @@ export const swimlaneRouter = router({
         orgType: input.orgType,
         color: input.color ?? null,
         sortOrder,
+      });
+      dispatch.implementationOrg({
+        mysqlId: result.insertId || 0,
+        organizationId: orgId,
+        orgName: "",
+        name: input.name,
+        orgType: input.orgType,
+        color: input.color ?? null,
+        sortOrder: sortOrder!,
+        active: true,
+        createdAt: new Date(),
       });
 
       return { id: result.insertId };

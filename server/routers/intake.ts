@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { publicProcedure, router } from "../_core/trpc";
+import { router, publicProcedure, protectedProcedure } from "../_core/trpc";
 import { requireDb } from "../db";
+import { dispatch } from "../notionSyncDispatcher";
 import { intakeResponses, intakeFileAttachments, organizations, questions, onboardingFeedback, clients, partnerTemplates, partnerTaskTemplates, orgCustomTasks } from "../../drizzle/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { uploadToGoogleDrive } from "./files";
@@ -131,13 +132,13 @@ export const intakeRouter = router({
     }),
 
   /**
-   * Save or update an intake response
+   * Save a single intake response (auto-save from questionnaire)
    */
-  saveResponse: publicProcedure
+  saveResponse: protectedProcedure
     .input(
       z.object({
         organizationSlug: z.string(),
-        questionId: z.string(), // Question identifier (e.g., "H.1", "A.2")
+        questionId: z.string(),
         response: z.string(),
         userEmail: z.string(),
       })
@@ -191,7 +192,7 @@ export const intakeRouter = router({
   /**
    * Save multiple responses at once (batch save for auto-save)
    */
-  saveResponses: publicProcedure
+  saveResponses: protectedProcedure
     .input(
       z.object({
         organizationSlug: z.string(),
@@ -336,7 +337,7 @@ export const intakeRouter = router({
    * Upload file for intake question
    * Uploads to Google Drive for RadOne organizations
    */
-  uploadFile: publicProcedure
+  uploadFile: protectedProcedure
     .input(
       z.object({
         organizationSlug: z.string().max(100),
@@ -412,19 +413,32 @@ export const intakeRouter = router({
         const fileName = `${sanitizedOrgName}_${sanitizedEmail}_${input.questionId}-${shortTitle}_${timestamp}.${fileExt}`;
         
         // Upload to Google Drive (per-customer folder)
-        const fileUrl = await uploadToGoogleDrive(fileName, fileBuffer, org.name, org.googleDriveFolderId);
-        const s3Key = fileName; // store filename as reference
+        const { driveUrl, s3Url, driveFileId: uploadedDriveFileId, s3Key } = await uploadToGoogleDrive(fileName, fileBuffer, org.name, org.googleDriveFolderId);
+        const fileUrl = driveUrl ?? s3Url;
 
         // Store file info in database
-        await db.insert(intakeFileAttachments).values({
+        const [intakeFileRes] = await db.insert(intakeFileAttachments).values({
           organizationId: org.id,
           questionId: input.questionId, // String question ID (e.g., "D.13")
           fileName: input.fileName,
           fileUrl,
-          driveFileId: s3Key, // Store S3 key for reference
+          driveFileId: uploadedDriveFileId ?? s3Key, // Store Drive file ID or S3 key for reference
           fileSize: fileBuffer.length,
           mimeType: input.mimeType,
           uploadedBy: input.userEmail,
+        });
+        dispatch.intakeFile({
+          mysqlId: (intakeFileRes as any).insertId || 0,
+          organizationId: org.id,
+          orgName: org.name,
+          questionId: input.questionId,
+          fileName: input.fileName,
+          fileUrl,
+          driveFileId: s3Key,
+          fileSize: fileBuffer.length,
+          mimeType: input.mimeType,
+          uploadedBy: input.userEmail,
+          createdAt: new Date(),
         });
 
         // Audit log
@@ -665,9 +679,9 @@ export const intakeRouter = router({
     }),
 
   /**
-   * Submit onboarding feedback
+   * Submit onboarding feedback (rating + comments)
    */
-  submitFeedback: publicProcedure
+  submitFeedback: protectedProcedure
     .input(
       z.object({
         organizationSlug: z.string(),
@@ -690,11 +704,20 @@ export const intakeRouter = router({
       }
 
       // Insert feedback
-      await db.insert(onboardingFeedback).values({
+      const [fbResult] = await db.insert(onboardingFeedback).values({
         organizationId: org.id,
         rating: input.rating,
         comments: input.comments || null,
         submittedBy: ctx.user?.email || null,
+      });
+      dispatch.onboardingFeedback({
+        mysqlId: (fbResult as any).insertId || 0,
+        organizationId: org.id,
+        orgName: org.name,
+        rating: input.rating,
+        comments: input.comments || null,
+        submittedBy: ctx.user?.email || null,
+        createdAt: new Date(),
       });
 
       return { success: true };
@@ -723,7 +746,7 @@ export const intakeRouter = router({
   /**
    * Upload an adhoc file (meeting notes, transcripts, etc.) from the dashboard
    */
-  uploadAdhocFile: publicProcedure
+  uploadAdhocFile: protectedProcedure
     .input(
       z.object({
         organizationSlug: z.string().max(100),
@@ -752,31 +775,58 @@ export const intakeRouter = router({
       const sanitizedOrg = org.name.replace(/[^a-zA-Z0-9-]/g, "_");
       const storedName = `${sanitizedOrg}_${sanitizedEmail}_ADHOC_${timestamp}.${fileExt}`;
 
-      const fileUrl = await uploadToGoogleDrive(storedName, fileBuffer, org.name, org.googleDriveFolderId);
+      const { driveUrl, s3Url, driveFileId, s3Key } = await uploadToGoogleDrive(storedName, fileBuffer, org.name, org.googleDriveFolderId);
+      const finalUrl = driveUrl || s3Url;
 
-      await db.insert(intakeFileAttachments).values({
+      const [adhocFileRes] = await db.insert(intakeFileAttachments).values({
         organizationId: org.id,
         questionId: "ADHOC",
         fileName: input.fileName,
-        fileUrl,
-        driveFileId: storedName,
+        fileUrl: finalUrl,
+        driveFileId: s3Key,
         fileSize: fileBuffer.length,
         mimeType: input.mimeType,
         uploadedBy: input.userEmail,
       });
+      dispatch.intakeFile({
+        mysqlId: (adhocFileRes as any).insertId || 0,
+        organizationId: org.id,
+        orgName: org.name,
+        questionId: "ADHOC",
+        fileName: input.fileName,
+        fileUrl: finalUrl,
+        driveFileId: s3Key,
+        fileSize: fileBuffer.length,
+        mimeType: input.mimeType,
+        uploadedBy: input.userEmail,
+        createdAt: new Date(),
+      });
 
       // Audit log
-      logFileActivity({
-        action: "upload",
-        userEmail: input.userEmail,
-        userRole: ctx.user?.role || "user",
-        organizationName: org.name,
-        fileName: input.fileName,
-        fileUrl,
-        notes: "Adhoc file upload",
-      }).catch(() => {});
+      let auditLogged = true;
+      try {
+        await logFileActivity({
+          action: "upload",
+          userEmail: input.userEmail,
+          userRole: ctx.user?.role || "user",
+          organizationName: org.name,
+          fileName: input.fileName,
+          fileUrl: finalUrl,
+          notes: `Adhoc Upload | Drive: ${driveUrl ? 'Yes' : 'No'} | S3: Yes`,
+        });
+      } catch (e) {
+        auditLogged = false;
+      }
 
-      return { success: true, fileUrl };
+      return { 
+        success: true, 
+        fileUrl: finalUrl,
+        status: {
+          drive: !!driveUrl,
+          s3: true,
+          audit: auditLogged
+        }
+      };
     }),
 
   /**
@@ -872,7 +922,7 @@ export const intakeRouter = router({
           await db.update(systemVendorOptions)
             .set({ isActive: 1 })
             .where(eq(systemVendorOptions.id, dup.id));
-          await db.insert(vendorAuditLog).values({
+          const [toggleAuditRes] = await db.insert(vendorAuditLog).values({
             action: 'toggle',
             systemType,
             vendorName: dup.vendorName,
@@ -880,24 +930,52 @@ export const intakeRouter = router({
             newValue: 'active',
             performedBy: ctx.user?.email || "intake-user",
           });
+          dispatch.vendorAudit({
+            mysqlId: (toggleAuditRes as any).insertId || 0,
+            vendorId: dup.id,
+            action: 'toggle',
+            field: systemType,
+            oldValue: 'inactive',
+            newValue: 'active',
+            performedBy: ctx.user?.email || "intake-user",
+            createdAt: new Date(),
+          });
         }
         return { success: true, vendorName: dup.vendorName, alreadyExisted: true };
       }
 
       const maxOrder = existing.length > 0 ? existing[0].displayOrder : 0;
-      await db.insert(systemVendorOptions).values({
+      const [newVendorRes] = await db.insert(systemVendorOptions).values({
         systemType,
         vendorName,
         displayOrder: maxOrder + 1,
         createdBy: ctx.user?.email || "intake-user",
       });
+      dispatch.systemVendor({
+        mysqlId: (newVendorRes as any).insertId || 0,
+        systemType,
+        vendorName,
+        productName: vendorName,
+        active: true,
+        createdAt: new Date(),
+      });
 
-      await db.insert(vendorAuditLog).values({
+      const [addAuditRes] = await db.insert(vendorAuditLog).values({
         action: 'add',
         systemType,
         vendorName,
         newValue: vendorName,
         performedBy: ctx.user?.email || "intake-user",
+      });
+      dispatch.vendorAudit({
+        mysqlId: (addAuditRes as any).insertId || 0,
+        vendorId: (newVendorRes as any).insertId || 0,
+        action: 'add',
+        field: systemType,
+        oldValue: null,
+        newValue: vendorName,
+        performedBy: ctx.user?.email || "intake-user",
+        createdAt: new Date(),
       });
 
       return { success: true, vendorName, alreadyExisted: false };
@@ -1101,6 +1179,19 @@ export const intakeRouter = router({
         type: input.type,
         createdBy: input.userEmail || null,
         isComplete: 0,
+      });
+      dispatch.orgCustomTask({
+        mysqlId: result.insertId || 0,
+        organizationId: org.id,
+        orgName: input.organizationSlug,
+        taskId: `custom-${result.insertId}`,
+        title: input.title.trim(),
+        section: input.section?.trim() || null,
+        description: input.description?.trim() || null,
+        owner: input.userEmail || null,
+        status: "pending",
+        createdBy: input.userEmail || null,
+        createdAt: new Date(),
       });
 
       const [created] = await db

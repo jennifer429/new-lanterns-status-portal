@@ -1,0 +1,154 @@
+{
+  "query": "SELECT o.name, o.slug, \n  (SELECT COUNT(*) FROM intakeFileAttachments ifa WHERE ifa.organizationId = o.id) as intakeFiles,\n  (SELECT COUNT(*) FROM fileAttachments fa WHERE fa.organizationId = o.id) as taskFiles\nFROM organizations o \nORDER BY o.name;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT o.name, o.slug, \n  (SELECT COUNT(*) FROM intakeFileAttachments ifa WHERE ifa.organizationId = o.id) as intakeFiles,\n  (SELECT COUNT(*) FROM fileAttachments fa WHERE fa.organizationId = o.id) as taskFiles\nFROM organizations o \nORDER BY o.name;",
+  "rows": [
+    {
+      "name": " Lodi Memorial",
+      "slug": "Lodi Memorial",
+      "intakeFiles": "0",
+      "taskFiles": "0"
+    },
+    {
+      "name": "Banner Churchill",
+      "slug": "Banner Churchill",
+      "intakeFiles": "0",
+      "taskFiles": "0"
+    },
+    {
+      "name": "Baycare",
+      "slug": "baycare",
+      "intakeFiles": "1",
+      "taskFiles": "4"
+    },
+    {
+      "name": "BRI - BCO",
+      "slug": "Boulder",
+      "intakeFiles": "7",
+      "taskFiles": "1"
+    },
+    {
+      "name": "BRI - FRPI (Front Range Preventive Imaging)",
+      "slug": "FRPI",
+      "intakeFiles": "0",
+      "taskFiles": "0"
+    },
+    {
+      "name": "ERA/Intermountain Health",
+      "slug": "ERA/Intermountain Health",
+      "intakeFiles": "0",
+      "taskFiles": "0"
+    },
+    {
+      "name": "HCA - Florida West",
+      "slug": "hca-flwest",
+      "intakeFiles": "0",
+      "taskFiles": "2"
+    },
+    {
+      "name": "HonorHealth",
+      "slug": "Honor",
+      "intakeFiles": "0",
+      "taskFiles": "0"
+    },
+    {
+      "name": "JCRHC",
+      "slug": "jcrhc",
+      "intakeFiles": "1",
+      "taskFiles": "0"
+    },
+    {
+      "name": "Marshall Medical",
+      "slug": "marshallmedical",
+      "intakeFiles": "5",
+      "taskFiles": "0"
+    },
+    {
+      "name": "Munson Medical Center",
+      "slug": "munson",
+      "intakeFiles": "2",
+      "taskFiles": "0"
+    },
+    {
+      "name": "NewOrg2 - Corrected",
+      "slug": "new2",
+      "intakeFiles": "1",
+      "taskFiles": "0"
+    },
+    {
+      "name": "NMHS - Northern Mississippi Health Services",
+      "slug": "nmhs",
+      "intakeFiles": "0",
+      "taskFiles": "0"
+    },
+    {
+      "name": "RaDS Inc",
+      "slug": "radsinc",
+      "intakeFiles": "0",
+      "taskFiles": "0"
+    },
+    {
+      "name": "RaDS Inc- Pilot",
+      "slug": "RaDS Inc- Pilot",
+      "intakeFiles": "0",
+      "taskFiles": "0"
+    },
+    {
+      "name": "RAID - Bigfork Valley Hospital",
+      "slug": "RAID-Bigfork",
+      "intakeFiles": "0",
+      "taskFiles": "0"
+    },
+    {
+      "name": "RAID - Life Care Medical Center",
+      "slug": "RAID",
+      "intakeFiles": "0",
+      "taskFiles": "0"
+    },
+    {
+      "name": "RAID Altru - LifeCare Medical Center",
+      "slug": "LifeCare",
+      "intakeFiles": "0",
+      "taskFiles": "0"
+    },
+    {
+      "name": "RAYUS",
+      "slug": "RAYUS",
+      "intakeFiles": "1",
+      "taskFiles": "0"
+    },
+    {
+      "name": "Renown",
+      "slug": "Renown",
+      "intakeFiles": "0",
+      "taskFiles": "0"
+    },
+    {
+      "name": "RMC Anniston Radiology",
+      "slug": "RMCA",
+      "intakeFiles": "3",
+      "taskFiles": "0"
+    },
+    {
+      "name": "RRAL",
+      "slug": "RRAL",
+      "intakeFiles": "8",
+      "taskFiles": "0"
+    },
+    {
+      "name": "San Ramon Hospital",
+      "slug": "sanramon",
+      "intakeFiles": "4",
+      "taskFiles": "0"
+    },
+    {
+      "name": "SJMC St Joseph Medical Center",
+      "slug": "SJMC",
+      "intakeFiles": "0",
+      "taskFiles": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "name\tslug\tintakeFiles\ttaskFiles\n Lodi Memorial\tLodi Memorial\t0\t0\nBanner Churchill\tBanner Churchill\t0\t0\nBaycare\tbaycare\t1\t4\nBRI - BCO\tBoulder\t7\t1\nBRI - FRPI (Front Range Preventive Imaging)\tFRPI\t0\t0\nERA/Intermountain Health\tERA/Intermountain Health\t0\t0\nHCA - Florida West\thca-flwest\t0\t2\nHonorHealth\tHonor\t0\t0\nJCRHC\tjcrhc\t1\t0\nMarshall Medical\tmarshallmedical\t5\t0\nMunson Medical Center\tmunson\t2\t0\nNewOrg2 - Corrected\tnew2\t1\t0\nNMHS - Northern Mississippi Health Services\tnmhs\t0\t0\nRaDS Inc\tradsinc\t0\t0\nRaDS Inc- Pilot\tRaDS Inc- Pilot\t0\t0\nRAID - Bigfork Valley Hospital\tRAID-Bigfork\t0\t0\nRAID - Life Care Medical Center\tRAID\t0\t0\nRAID Altru - LifeCare Medical Center\tLifeCare\t0\t0\nRAYUS\tRAYUS\t1\t0\nRenown\tRenown\t0\t0\nRMC Anniston Radiology\tRMCA\t3\t0\nRRAL\tRRAL\t8\t0\nSan Ramon Hospital\tsanramon\t4\t0\nSJMC St Joseph Medical Center\tSJMC\t0\t0\n",
+  "stderr": "",
+  "execution_time_ms": 276
+}

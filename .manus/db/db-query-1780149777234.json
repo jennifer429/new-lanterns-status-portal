@@ -1,0 +1,16 @@
+{
+  "query": "SELECT CASE WHEN fileUrl LIKE '%drive.google%' THEN 'Google Drive' WHEN fileUrl LIKE '%cloudfront%' THEN 'CloudFront/S3' ELSE 'Other' END as storage_type, COUNT(*) as cnt, MIN(createdAt) as earliest, MAX(createdAt) as latest FROM orgNotes GROUP BY storage_type;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT CASE WHEN fileUrl LIKE '%drive.google%' THEN 'Google Drive' WHEN fileUrl LIKE '%cloudfront%' THEN 'CloudFront/S3' ELSE 'Other' END as storage_type, COUNT(*) as cnt, MIN(createdAt) as earliest, MAX(createdAt) as latest FROM orgNotes GROUP BY storage_type;",
+  "rows": [
+    {
+      "storage_type": "CloudFront/S3",
+      "cnt": "55",
+      "earliest": "2026-04-01 03:29:57",
+      "latest": "2026-05-21 14:44:41"
+    }
+  ],
+  "messages": [],
+  "stdout": "storage_type\tcnt\tearliest\tlatest\nCloudFront/S3\t55\t2026-04-01 03:29:57\t2026-05-21 14:44:41\n",
+  "stderr": "",
+  "execution_time_ms": 283
+}

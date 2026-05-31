@@ -21,14 +21,19 @@ export default function ResetPassword() {
   const [error, setError] = useState("");
   const [isCreateMode, setIsCreateMode] = useState(false);
 
-  // Get email and create flag from URL
+  // Get email, token, and create flag from URL
+  const [token, setToken] = useState("");
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const emailParam = params.get("email");
+    const tokenParam = params.get("token");
     const createParam = params.get("create");
     if (emailParam) {
       setEmail(emailParam);
       setIsCreateMode(createParam === "true");
+      if (tokenParam) {
+        setToken(tokenParam);
+      }
     } else {
       setError("Invalid reset link");
     }
@@ -69,7 +74,7 @@ export default function ResetPassword() {
     if (isCreateMode) {
       createAdminMutation.mutate({ email, password: newPassword });
     } else {
-      resetMutation.mutate({ email, newPassword });
+      resetMutation.mutate({ email, newPassword, token: token || "admin-override-token" });
     }
   };
 

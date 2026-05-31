@@ -1,0 +1,234 @@
+{
+  "query": "SELECT 'orgNotes' as tbl, id, fileName, createdAt, uploadedBy FROM orgNotes WHERE organizationId = 990001\nUNION ALL\nSELECT 'intakeFile' as tbl, id, fileName, createdAt, uploadedBy FROM intakeFileAttachments WHERE organizationId = 990001\nUNION ALL\nSELECT 'taskFile' as tbl, id, fileName, createdAt, uploadedBy FROM fileAttachments WHERE organizationId = 990001\nORDER BY createdAt DESC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT 'orgNotes' as tbl, id, fileName, createdAt, uploadedBy FROM orgNotes WHERE organizationId = 990001\nUNION ALL\nSELECT 'intakeFile' as tbl, id, fileName, createdAt, uploadedBy FROM intakeFileAttachments WHERE organizationId = 990001\nUNION ALL\nSELECT 'taskFile' as tbl, id, fileName, createdAt, uploadedBy FROM fileAttachments WHERE organizationId = 990001\nORDER BY createdAt DESC;",
+  "rows": [
+    {
+      "tbl": "intakeFile",
+      "id": "1560001",
+      "fileName": "Rosters.AlphaRoster (19).xlsx",
+      "createdAt": "2026-04-08 12:52:47",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "orgNotes",
+      "id": "180001",
+      "fileName": "ADT.txt",
+      "createdAt": "2026-04-07 18:03:32",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "intakeFile",
+      "id": "1530002",
+      "fileName": "ORM.txt",
+      "createdAt": "2026-04-07 18:01:02",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "intakeFile",
+      "id": "1530001",
+      "fileName": "ORU.txt",
+      "createdAt": "2026-04-07 18:00:25",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "orgNotes",
+      "id": "60016",
+      "fileName": "SRV-RMCA-VPN-Form-v4.docx",
+      "createdAt": "2026-04-02 15:08:04",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "orgNotes",
+      "id": "60015",
+      "fileName": "Upper Extremity Arterial Duplex.pdf",
+      "createdAt": "2026-04-02 15:05:36",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "orgNotes",
+      "id": "60014",
+      "fileName": "UEV or Venous Mapping.pdf",
+      "createdAt": "2026-04-02 15:05:35",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "orgNotes",
+      "id": "60013",
+      "fileName": "Thyroid Ultrasound Impression.pdf",
+      "createdAt": "2026-04-02 15:05:34",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "orgNotes",
+      "id": "60012",
+      "fileName": "Small Parts.pdf",
+      "createdAt": "2026-04-02 15:05:33",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "orgNotes",
+      "id": "60011",
+      "fileName": "Renal Artery.pdf",
+      "createdAt": "2026-04-02 15:05:33",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "orgNotes",
+      "id": "60010",
+      "fileName": "Pelvis.pdf",
+      "createdAt": "2026-04-02 15:05:32",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "orgNotes",
+      "id": "60009",
+      "fileName": "OB Ultrasound.pdf",
+      "createdAt": "2026-04-02 15:05:32",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "orgNotes",
+      "id": "60008",
+      "fileName": "Multiple Gestation.pdf",
+      "createdAt": "2026-04-02 15:05:31",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "orgNotes",
+      "id": "60007",
+      "fileName": "Lower Extremity Arterial Duplex.pdf",
+      "createdAt": "2026-04-02 15:05:31",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "orgNotes",
+      "id": "60006",
+      "fileName": "LEV Ultrasound.pdf",
+      "createdAt": "2026-04-02 15:05:31",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "orgNotes",
+      "id": "60004",
+      "fileName": "Carotid.pdf",
+      "createdAt": "2026-04-02 15:05:30",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "orgNotes",
+      "id": "60005",
+      "fileName": "Early Pregnancy.pdf",
+      "createdAt": "2026-04-02 15:05:30",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "orgNotes",
+      "id": "60003",
+      "fileName": "Breast Ultrasound.pdf",
+      "createdAt": "2026-04-02 15:05:29",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "orgNotes",
+      "id": "60002",
+      "fileName": "Aorta.pdf",
+      "createdAt": "2026-04-02 15:05:29",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "orgNotes",
+      "id": "60001",
+      "fileName": "Abdominal Ultrasound.pdf",
+      "createdAt": "2026-04-02 15:05:28",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "orgNotes",
+      "id": "30012",
+      "fileName": "THYROID TR-RADS GRADE.jpeg",
+      "createdAt": "2026-04-02 14:32:54",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "orgNotes",
+      "id": "30010",
+      "fileName": "NEONATAL BRAIN IMAGING.doc",
+      "createdAt": "2026-04-02 14:32:53",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "orgNotes",
+      "id": "30011",
+      "fileName": "Parathyroid.docx",
+      "createdAt": "2026-04-02 14:32:53",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "orgNotes",
+      "id": "30009",
+      "fileName": "Liver protocol.doc",
+      "createdAt": "2026-04-02 14:32:47",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "orgNotes",
+      "id": "30008",
+      "fileName": "FETAL MEASUREMENTS.doc",
+      "createdAt": "2026-04-02 14:32:44",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "orgNotes",
+      "id": "30007",
+      "fileName": "CT 3D Post Processing.doc",
+      "createdAt": "2026-04-02 14:32:43",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "orgNotes",
+      "id": "30006",
+      "fileName": "Cerebrovascular Ultrasound exam.doc",
+      "createdAt": "2026-04-02 14:32:43",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "orgNotes",
+      "id": "30005",
+      "fileName": "Breast ducts and septation measurements.doc",
+      "createdAt": "2026-04-02 14:32:39",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "orgNotes",
+      "id": "30004",
+      "fileName": "Adenomyomatosis.docx",
+      "createdAt": "2026-04-02 14:32:39",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "orgNotes",
+      "id": "30003",
+      "fileName": "RMCA_Kickoff_Action_Items.docx",
+      "createdAt": "2026-04-02 14:28:26",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "orgNotes",
+      "id": "30002",
+      "fileName": "RMC_Anniston_TRC_Silverback_Connectivity.docx",
+      "createdAt": "2026-04-02 14:21:02",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "tbl": "orgNotes",
+      "id": "30001",
+      "fileName": "RMC Anniston Radiology Technical Call Apr 1, 2026.docx",
+      "createdAt": "2026-04-02 14:17:17",
+      "uploadedBy": "rbennett@tuscrad.com"
+    }
+  ],
+  "messages": [],
+  "stdout": "tbl\tid\tfileName\tcreatedAt\tuploadedBy\nintakeFile\t1560001\tRosters.AlphaRoster (19).xlsx\t2026-04-08 12:52:47\trbennett@tuscrad.com\norgNotes\t180001\tADT.txt\t2026-04-07 18:03:32\trbennett@tuscrad.com\nintakeFile\t1530002\tORM.txt\t2026-04-07 18:01:02\trbennett@tuscrad.com\nintakeFile\t1530001\tORU.txt\t2026-04-07 18:00:25\trbennett@tuscrad.com\norgNotes\t60016\tSRV-RMCA-VPN-Form-v4.docx\t2026-04-02 15:08:04\trbennett@tuscrad.com\norgNotes\t60015\tUpper Extremity Arterial Duplex.pdf\t2026-04-02 15:05:36\trbennett@tuscrad.com\norgNotes\t60014\tUEV or Venous Mapping.pdf\t2026-04-02 15:05:35\trbennett@tuscrad.com\norgNotes\t60013\tThyroid Ultrasound Impression.pdf\t2026-04-02 15:05:34\trbennett@tuscrad.com\norgNotes\t60012\tSmall Parts.pdf\t2026-04-02 15:05:33\trbennett@tuscrad.com\norgNotes\t60011\tRenal Artery.pdf\t2026-04-02 15:05:33\trbennett@tuscrad.com\norgNotes\t60010\tPelvis.pdf\t2026-04-02 15:05:32\trbennett@tuscrad.com\norgNotes\t60009\tOB Ultrasound.pdf\t2026-04-02 15:05:32\trbennett@tuscrad.com\norgNotes\t60008\tMultiple Gestation.pdf\t2026-04-02 15:05:31\trbennett@tuscrad.com\norgNotes\t60007\tLower Extremity Arterial Duplex.pdf\t2026-04-02 15:05:31\trbennett@tuscrad.com\norgNotes\t60006\tLEV Ultrasound.pdf\t2026-04-02 15:05:31\trbennett@tuscrad.com\norgNotes\t60004\tCarotid.pdf\t2026-04-02 15:05:30\trbennett@tuscrad.com\norgNotes\t60005\tEarly Pregnancy.pdf\t2026-04-02 15:05:30\trbennett@tuscrad.com\norgNotes\t60003\tBreast Ultrasound.pdf\t2026-04-02 15:05:29\trbennett@tuscrad.com\norgNotes\t60002\tAorta.pdf\t2026-04-02 15:05:29\trbennett@tuscrad.com\norgNotes\t60001\tAbdominal Ultrasound.pdf\t2026-04-02 15:05:28\trbennett@tuscrad.com\norgNotes\t30012\tTHYROID TR-RADS GRADE.jpeg\t2026-04-02 14:32:54\trbennett@tuscrad.com\norgNotes\t30010\tNEONATAL BRAIN IMAGING.doc\t2026-04-02 14:32:53\trbennett@tuscrad.com\norgNotes\t30011\tParathyroid.docx\t2026-04-02 14:32:53\trbennett@tuscrad.com\norgNotes\t30009\tLiver protocol.doc\t2026-04-02 14:32:47\trbennett@tuscrad.com\norgNotes\t30008\tFETAL MEASUREMENTS.doc\t2026-04-02 14:32:44\trbennett@tuscrad.com\norgNotes\t30007\tCT 3D Post Processing.doc\t2026-04-02 14:32:43\trbennett@tuscrad.com\norgNotes\t30006\tCerebrovascular Ultrasound exam.doc\t2026-04-02 14:32:43\trbennett@tuscrad.com\norgNotes\t30005\tBreast ducts and septation measurements.doc\t2026-04-02 14:32:39\trbennett@tuscrad.com\norgNotes\t30004\tAdenomyomatosis.docx\t2026-04-02 14:32:39\trbennett@tuscrad.com\norgNotes\t30003\tRMCA_Kickoff_Action_Items.docx\t2026-04-02 14:28:26\trbennett@tuscrad.com\norgNotes\t30002\tRMC_Anniston_TRC_Silverback_Connectivity.docx\t2026-04-02 14:21:02\trbennett@tuscrad.com\norgNotes\t30001\tRMC Anniston Radiology Technical Call Apr 1, 2026.docx\t2026-04-02 14:17:17\trbennett@tuscrad.com\n",
+  "stderr": "",
+  "execution_time_ms": 264
+}

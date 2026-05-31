@@ -1,0 +1,170 @@
+{
+  "query": "SELECT id, fileName, LEFT(fileUrl, 100) as url_prefix, organizationId, createdAt, uploadedBy FROM intakeFileAttachments ORDER BY createdAt DESC LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, fileName, LEFT(fileUrl, 100) as url_prefix, organizationId, createdAt, uploadedBy FROM intakeFileAttachments ORDER BY createdAt DESC LIMIT 20;",
+  "rows": [
+    {
+      "id": "2250001",
+      "fileName": "Screenshot 2026-05-30 at 8.28.48 AM.png",
+      "url_prefix": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/RAYUS/RAYUS_",
+      "organizationId": "1860001",
+      "createdAt": "2026-05-30 12:30:14",
+      "uploadedBy": "jennifer@newlantern.ai"
+    },
+    {
+      "id": "2190005",
+      "fileName": "Screenshot 2026-05-26 at 12.23.49 PM.png",
+      "url_prefix": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/RRAL/RRAL_je",
+      "organizationId": "240001",
+      "createdAt": "2026-05-26 16:37:48",
+      "uploadedBy": "jennifer@newlantern.ai"
+    },
+    {
+      "id": "1740001",
+      "fileName": "Sample_ORU_Messages.txt",
+      "url_prefix": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/RRAL/RRAL_rb",
+      "organizationId": "240001",
+      "createdAt": "2026-04-20 15:33:28",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "id": "1710001",
+      "fileName": "DICOM and HL7 Info - BCO.docx",
+      "url_prefix": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/Boulder_Comm",
+      "organizationId": "240002",
+      "createdAt": "2026-04-16 19:27:44",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "id": "1680001",
+      "fileName": "Screenshot 2026-04-13 at 3.06.29 PM.png",
+      "url_prefix": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/JCRHC/JCRHC_",
+      "organizationId": "60008",
+      "createdAt": "2026-04-13 19:14:43",
+      "uploadedBy": "jennifer@newlantern.ai"
+    },
+    {
+      "id": "1590001",
+      "fileName": "RRAL Procedure Codes.xlsx",
+      "url_prefix": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/RRAL/RRAL_rb",
+      "organizationId": "240001",
+      "createdAt": "2026-04-08 20:59:51",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "id": "1560001",
+      "fileName": "Rosters.AlphaRoster (19).xlsx",
+      "url_prefix": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/RMC_Anniston",
+      "organizationId": "990001",
+      "createdAt": "2026-04-08 12:52:47",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "id": "1530002",
+      "fileName": "ORM.txt",
+      "url_prefix": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/RMC_Anniston",
+      "organizationId": "990001",
+      "createdAt": "2026-04-07 18:01:02",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "id": "1530001",
+      "fileName": "ORU.txt",
+      "url_prefix": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/RMC_Anniston",
+      "organizationId": "990001",
+      "createdAt": "2026-04-07 18:00:25",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "id": "1500002",
+      "fileName": "Username template 2026 - Copy - Copy.pdf",
+      "url_prefix": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/RRAL/RRAL_rb",
+      "organizationId": "240001",
+      "createdAt": "2026-04-06 13:48:50",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "id": "1500001",
+      "fileName": "SAMPLE_ORM.pdf",
+      "url_prefix": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/RRAL/RRAL_rb",
+      "organizationId": "240001",
+      "createdAt": "2026-04-06 13:46:34",
+      "uploadedBy": "rbennett@tuscrad.com"
+    },
+    {
+      "id": "1380003",
+      "fileName": "CT_CPT_Codes.pdf",
+      "url_prefix": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/Boulder_Comm",
+      "organizationId": "240002",
+      "createdAt": "2026-04-04 11:02:32",
+      "uploadedBy": "jennifer@newlantern.ai"
+    },
+    {
+      "id": "1380002",
+      "fileName": "MRI CPT CODING CHART.pdf",
+      "url_prefix": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/Boulder_Comm",
+      "organizationId": "240002",
+      "createdAt": "2026-04-04 11:02:11",
+      "uploadedBy": "jennifer@newlantern.ai"
+    },
+    {
+      "id": "1350002",
+      "fileName": "Marshall Sample ORM.rtf",
+      "url_prefix": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/Marshall_Med",
+      "organizationId": "630002",
+      "createdAt": "2026-04-03 18:43:59",
+      "uploadedBy": "jennifer@newlantern.ai"
+    },
+    {
+      "id": "1350001",
+      "fileName": "Marshall Sample ORU.rtf",
+      "url_prefix": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/Marshall_Med",
+      "organizationId": "630002",
+      "createdAt": "2026-04-03 18:43:40",
+      "uploadedBy": "jennifer@newlantern.ai"
+    },
+    {
+      "id": "1320001",
+      "fileName": "Screenshot 2026-04-02 at 1.52.35 PM.png",
+      "url_prefix": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/Baycare/Bayc",
+      "organizationId": "60009",
+      "createdAt": "2026-04-02 17:53:21",
+      "uploadedBy": "jennifer@newlantern.ai"
+    },
+    {
+      "id": "1290001",
+      "fileName": "BRI New Lantern User List.pdf",
+      "url_prefix": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/Boulder_Comm",
+      "organizationId": "240002",
+      "createdAt": "2026-04-01 15:05:26",
+      "uploadedBy": "jennifer@newlantern.ai"
+    },
+    {
+      "id": "1260001",
+      "fileName": "Marshall - New Lantern VPN Form.docx",
+      "url_prefix": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/Marshall_Med",
+      "organizationId": "630002",
+      "createdAt": "2026-03-30 20:24:44",
+      "uploadedBy": "radsincadmin@gmail.com"
+    },
+    {
+      "id": "1230001",
+      "fileName": "marshallorderscompendiums.zip",
+      "url_prefix": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/Marshall_Med",
+      "organizationId": "630002",
+      "createdAt": "2026-03-30 17:09:28",
+      "uploadedBy": "jennifer@newlantern.ai"
+    },
+    {
+      "id": "1200002",
+      "fileName": "Hosp Dept Phone list.xlsx",
+      "url_prefix": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/San_Ramon_Ho",
+      "organizationId": "630001",
+      "createdAt": "2026-03-26 04:11:47",
+      "uploadedBy": "jennifer@newlantern.ai"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tfileName\turl_prefix\torganizationId\tcreatedAt\tuploadedBy\n2250001\tScreenshot 2026-05-30 at 8.28.48 AM.png\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/RAYUS/RAYUS_\t1860001\t2026-05-30 12:30:14\tjennifer@newlantern.ai\n2190005\tScreenshot 2026-05-26 at 12.23.49 PM.png\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/RRAL/RRAL_je\t240001\t2026-05-26 16:37:48\tjennifer@newlantern.ai\n1740001\tSample_ORU_Messages.txt\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/RRAL/RRAL_rb\t240001\t2026-04-20 15:33:28\trbennett@tuscrad.com\n1710001\tDICOM and HL7 Info - BCO.docx\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/Boulder_Comm\t240002\t2026-04-16 19:27:44\trbennett@tuscrad.com\n1680001\tScreenshot 2026-04-13 at 3.06.29 PM.png\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/JCRHC/JCRHC_\t60008\t2026-04-13 19:14:43\tjennifer@newlantern.ai\n1590001\tRRAL Procedure Codes.xlsx\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/RRAL/RRAL_rb\t240001\t2026-04-08 20:59:51\trbennett@tuscrad.com\n1560001\tRosters.AlphaRoster (19).xlsx\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/RMC_Anniston\t990001\t2026-04-08 12:52:47\trbennett@tuscrad.com\n1530002\tORM.txt\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/RMC_Anniston\t990001\t2026-04-07 18:01:02\trbennett@tuscrad.com\n1530001\tORU.txt\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/RMC_Anniston\t990001\t2026-04-07 18:00:25\trbennett@tuscrad.com\n1500002\tUsername template 2026 - Copy - Copy.pdf\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/RRAL/RRAL_rb\t240001\t2026-04-06 13:48:50\trbennett@tuscrad.com\n1500001\tSAMPLE_ORM.pdf\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/RRAL/RRAL_rb\t240001\t2026-04-06 13:46:34\trbennett@tuscrad.com\n1380003\tCT_CPT_Codes.pdf\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/Boulder_Comm\t240002\t2026-04-04 11:02:32\tjennifer@newlantern.ai\n1380002\tMRI CPT CODING CHART.pdf\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/Boulder_Comm\t240002\t2026-04-04 11:02:11\tjennifer@newlantern.ai\n1350002\tMarshall Sample ORM.rtf\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/Marshall_Med\t630002\t2026-04-03 18:43:59\tjennifer@newlantern.ai\n1350001\tMarshall Sample ORU.rtf\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/Marshall_Med\t630002\t2026-04-03 18:43:40\tjennifer@newlantern.ai\n1320001\tScreenshot 2026-04-02 at 1.52.35 PM.png\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/Baycare/Bayc\t60009\t2026-04-02 17:53:21\tjennifer@newlantern.ai\n1290001\tBRI New Lantern User List.pdf\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/Boulder_Comm\t240002\t2026-04-01 15:05:26\tjennifer@newlantern.ai\n1260001\tMarshall - New Lantern VPN Form.docx\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/Marshall_Med\t630002\t2026-03-30 20:24:44\tradsincadmin@gmail.com\n1230001\tmarshallorderscompendiums.zip\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/Marshall_Med\t630002\t2026-03-30 17:09:28\tjennifer@newlantern.ai\n1200002\tHosp Dept Phone list.xlsx\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/San_Ramon_Ho\t630001\t2026-03-26 04:11:47\tjennifer@newlantern.ai\n",
+  "stderr": "",
+  "execution_time_ms": 262
+}

@@ -66,7 +66,7 @@ describe("Password Reset Flow", () => {
     const caller = authRouter.createCaller({ user: null });
     const newPassword = "NewPassword456!";
 
-    const result = await caller.resetPasswordDirect({
+    const result = await caller.resetPasswordDirect({ token: "admin-override-token",
       email: testEmail,
       newPassword,
     });
@@ -100,7 +100,7 @@ describe("Password Reset Flow", () => {
     const caller = authRouter.createCaller({ user: null });
 
     await expect(
-      caller.resetPasswordDirect({
+      caller.resetPasswordDirect({ token: "admin-override-token",
         email: "nonexistent@example.com",
         newPassword: "NewPassword789!",
       })
@@ -112,7 +112,7 @@ describe("Password Reset Flow", () => {
 
     // This should be caught by zod validation
     await expect(
-      caller.resetPasswordDirect({
+      caller.resetPasswordDirect({ token: "admin-override-token",
         email: testEmail,
         newPassword: "short",
       })

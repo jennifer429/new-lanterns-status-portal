@@ -1,0 +1,202 @@
+{
+  "query": "SELECT o.slug, o.name, \n  (SELECT COUNT(*) FROM taskCompletion tc WHERE tc.organizationId = o.id) as tasks,\n  (SELECT COUNT(*) FROM validationResults vr WHERE vr.organizationId = o.id) as validations,\n  (SELECT COUNT(*) FROM orgNotes n WHERE n.organizationId = o.id) as files,\n  (SELECT COUNT(*) FROM intakeResponses ir WHERE ir.organizationId = o.id) as intakeAnswers\nFROM organizations o ORDER BY o.slug;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT o.slug, o.name, \n  (SELECT COUNT(*) FROM taskCompletion tc WHERE tc.organizationId = o.id) as tasks,\n  (SELECT COUNT(*) FROM validationResults vr WHERE vr.organizationId = o.id) as validations,\n  (SELECT COUNT(*) FROM orgNotes n WHERE n.organizationId = o.id) as files,\n  (SELECT COUNT(*) FROM intakeResponses ir WHERE ir.organizationId = o.id) as intakeAnswers\nFROM organizations o ORDER BY o.slug;",
+  "rows": [
+    {
+      "slug": "Banner Churchill",
+      "name": "Banner Churchill",
+      "tasks": "0",
+      "validations": "0",
+      "files": "0",
+      "intakeAnswers": "0"
+    },
+    {
+      "slug": "baycare",
+      "name": "Baycare",
+      "tasks": "39",
+      "validations": "17",
+      "files": "0",
+      "intakeAnswers": "42"
+    },
+    {
+      "slug": "Boulder",
+      "name": "BRI - BCO",
+      "tasks": "39",
+      "validations": "25",
+      "files": "7",
+      "intakeAnswers": "78"
+    },
+    {
+      "slug": "ERA/Intermountain Health",
+      "name": "ERA/Intermountain Health",
+      "tasks": "0",
+      "validations": "0",
+      "files": "0",
+      "intakeAnswers": "0"
+    },
+    {
+      "slug": "FRPI",
+      "name": "BRI - FRPI (Front Range Preventive Imaging)",
+      "tasks": "19",
+      "validations": "0",
+      "files": "0",
+      "intakeAnswers": "10"
+    },
+    {
+      "slug": "hca-flwest",
+      "name": "HCA - Florida West",
+      "tasks": "0",
+      "validations": "0",
+      "files": "0",
+      "intakeAnswers": "11"
+    },
+    {
+      "slug": "Honor",
+      "name": "HonorHealth",
+      "tasks": "0",
+      "validations": "0",
+      "files": "0",
+      "intakeAnswers": "0"
+    },
+    {
+      "slug": "jcrhc",
+      "name": "JCRHC",
+      "tasks": "6",
+      "validations": "20",
+      "files": "0",
+      "intakeAnswers": "37"
+    },
+    {
+      "slug": "LifeCare",
+      "name": "RAID Altru - LifeCare Medical Center",
+      "tasks": "0",
+      "validations": "0",
+      "files": "0",
+      "intakeAnswers": "2"
+    },
+    {
+      "slug": "Lodi Memorial",
+      "name": " Lodi Memorial",
+      "tasks": "30",
+      "validations": "14",
+      "files": "0",
+      "intakeAnswers": "3"
+    },
+    {
+      "slug": "marshallmedical",
+      "name": "Marshall Medical",
+      "tasks": "39",
+      "validations": "28",
+      "files": "3",
+      "intakeAnswers": "52"
+    },
+    {
+      "slug": "munson",
+      "name": "Munson Medical Center",
+      "tasks": "0",
+      "validations": "0",
+      "files": "0",
+      "intakeAnswers": "42"
+    },
+    {
+      "slug": "new2",
+      "name": "NewOrg2 - Corrected",
+      "tasks": "0",
+      "validations": "0",
+      "files": "0",
+      "intakeAnswers": "46"
+    },
+    {
+      "slug": "nmhs",
+      "name": "NMHS - Northern Mississippi Health Services",
+      "tasks": "0",
+      "validations": "0",
+      "files": "0",
+      "intakeAnswers": "0"
+    },
+    {
+      "slug": "RaDS Inc- Pilot",
+      "name": "RaDS Inc- Pilot",
+      "tasks": "5",
+      "validations": "4",
+      "files": "0",
+      "intakeAnswers": "7"
+    },
+    {
+      "slug": "radsinc",
+      "name": "RaDS Inc",
+      "tasks": "0",
+      "validations": "0",
+      "files": "0",
+      "intakeAnswers": "0"
+    },
+    {
+      "slug": "RAID",
+      "name": "RAID - Life Care Medical Center",
+      "tasks": "0",
+      "validations": "0",
+      "files": "0",
+      "intakeAnswers": "31"
+    },
+    {
+      "slug": "RAID-Bigfork",
+      "name": "RAID - Bigfork Valley Hospital",
+      "tasks": "2",
+      "validations": "0",
+      "files": "0",
+      "intakeAnswers": "1"
+    },
+    {
+      "slug": "RAYUS",
+      "name": "RAYUS",
+      "tasks": "0",
+      "validations": "4",
+      "files": "0",
+      "intakeAnswers": "1"
+    },
+    {
+      "slug": "Renown",
+      "name": "Renown",
+      "tasks": "0",
+      "validations": "0",
+      "files": "0",
+      "intakeAnswers": "0"
+    },
+    {
+      "slug": "RMCA",
+      "name": "RMC Anniston Radiology",
+      "tasks": "39",
+      "validations": "28",
+      "files": "29",
+      "intakeAnswers": "11"
+    },
+    {
+      "slug": "RRAL",
+      "name": "RRAL",
+      "tasks": "39",
+      "validations": "28",
+      "files": "16",
+      "intakeAnswers": "65"
+    },
+    {
+      "slug": "sanramon",
+      "name": "San Ramon Hospital",
+      "tasks": "33",
+      "validations": "28",
+      "files": "0",
+      "intakeAnswers": "66"
+    },
+    {
+      "slug": "SJMC",
+      "name": "SJMC St Joseph Medical Center",
+      "tasks": "0",
+      "validations": "0",
+      "files": "0",
+      "intakeAnswers": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "slug\tname\ttasks\tvalidations\tfiles\tintakeAnswers\nBanner Churchill\tBanner Churchill\t0\t0\t0\t0\nbaycare\tBaycare\t39\t17\t0\t42\nBoulder\tBRI - BCO\t39\t25\t7\t78\nERA/Intermountain Health\tERA/Intermountain Health\t0\t0\t0\t0\nFRPI\tBRI - FRPI (Front Range Preventive Imaging)\t19\t0\t0\t10\nhca-flwest\tHCA - Florida West\t0\t0\t0\t11\nHonor\tHonorHealth\t0\t0\t0\t0\njcrhc\tJCRHC\t6\t20\t0\t37\nLifeCare\tRAID Altru - LifeCare Medical Center\t0\t0\t0\t2\nLodi Memorial\t Lodi Memorial\t30\t14\t0\t3\nmarshallmedical\tMarshall Medical\t39\t28\t3\t52\nmunson\tMunson Medical Center\t0\t0\t0\t42\nnew2\tNewOrg2 - Corrected\t0\t0\t0\t46\nnmhs\tNMHS - Northern Mississippi Health Services\t0\t0\t0\t0\nRaDS Inc- Pilot\tRaDS Inc- Pilot\t5\t4\t0\t7\nradsinc\tRaDS Inc\t0\t0\t0\t0\nRAID\tRAID - Life Care Medical Center\t0\t0\t0\t31\nRAID-Bigfork\tRAID - Bigfork Valley Hospital\t2\t0\t0\t1\nRAYUS\tRAYUS\t0\t4\t0\t1\nRenown\tRenown\t0\t0\t0\t0\nRMCA\tRMC Anniston Radiology\t39\t28\t29\t11\nRRAL\tRRAL\t39\t28\t16\t65\nsanramon\tSan Ramon Hospital\t33\t28\t0\t66\nSJMC\tSJMC St Joseph Medical Center\t0\t0\t0\t0\n",
+  "stderr": "",
+  "execution_time_ms": 277
+}

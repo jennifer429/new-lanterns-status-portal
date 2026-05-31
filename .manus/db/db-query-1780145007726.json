@@ -1,0 +1,22 @@
+{
+  "query": "SELECT 'intakeFileAttachments' as tbl, COUNT(*) as cnt FROM intakeFileAttachments WHERE organizationId = 990001\nUNION ALL SELECT 'fileAttachments', COUNT(*) FROM fileAttachments WHERE organizationId = 990001\nUNION ALL SELECT 'orgNotes', COUNT(*) FROM orgNotes WHERE organizationId = 990001;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT 'intakeFileAttachments' as tbl, COUNT(*) as cnt FROM intakeFileAttachments WHERE organizationId = 990001\nUNION ALL SELECT 'fileAttachments', COUNT(*) FROM fileAttachments WHERE organizationId = 990001\nUNION ALL SELECT 'orgNotes', COUNT(*) FROM orgNotes WHERE organizationId = 990001;",
+  "rows": [
+    {
+      "tbl": "intakeFileAttachments",
+      "cnt": "3"
+    },
+    {
+      "tbl": "fileAttachments",
+      "cnt": "0"
+    },
+    {
+      "tbl": "orgNotes",
+      "cnt": "29"
+    }
+  ],
+  "messages": [],
+  "stdout": "tbl\tcnt\nintakeFileAttachments\t3\nfileAttachments\t0\norgNotes\t29\n",
+  "stderr": "",
+  "execution_time_ms": 275
+}

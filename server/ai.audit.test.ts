@@ -71,7 +71,7 @@ describe("AI Audit Logging", () => {
           category: "all",
           status: "all",
         })
-      ).rejects.toThrow("Admin access required");
+      ).rejects.toThrow(/permission/i);
     });
 
     it("rejects unauthenticated users", async () => {
@@ -168,7 +168,7 @@ describe("AI Audit Logging", () => {
 
       await expect(
         caller.ai.getAuditLogDetail({ id: 1 })
-      ).rejects.toThrow("Admin access required");
+      ).rejects.toThrow(/permission/i);
     });
 
     it("returns null for non-existent log ID", async () => {
@@ -190,7 +190,7 @@ describe("AI Audit Logging", () => {
 
       await expect(
         caller.ai.getAuditStats()
-      ).rejects.toThrow("Admin access required");
+      ).rejects.toThrow(/permission/i);
     });
 
     it("returns stats structure for platform admin", async () => {

@@ -1,0 +1,22 @@
+{
+  "query": "SELECT 'intakeFile' as source, questionId as location, fileName, createdAt \nFROM intakeFileAttachments WHERE uploadedBy = 'rbennett@tuscrad.com' AND createdAt >= '2026-05-19'\nUNION ALL\nSELECT 'note' as source, label as location, fileName, createdAt \nFROM orgNotes WHERE uploadedBy = 'rbennett@tuscrad.com' AND createdAt >= '2026-05-19'\nORDER BY createdAt DESC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT 'intakeFile' as source, questionId as location, fileName, createdAt \nFROM intakeFileAttachments WHERE uploadedBy = 'rbennett@tuscrad.com' AND createdAt >= '2026-05-19'\nUNION ALL\nSELECT 'note' as source, label as location, fileName, createdAt \nFROM orgNotes WHERE uploadedBy = 'rbennett@tuscrad.com' AND createdAt >= '2026-05-19'\nORDER BY createdAt DESC;",
+  "rows": [
+    {
+      "source": "note",
+      "location": "Reference Doc",
+      "fileName": "Sample_BIRADS_ORU.txt",
+      "createdAt": "2026-05-21 14:44:41"
+    },
+    {
+      "source": "note",
+      "location": "Reference Doc",
+      "fileName": "Gen Xray Protocols.pdf",
+      "createdAt": "2026-05-21 12:48:52"
+    }
+  ],
+  "messages": [],
+  "stdout": "source\tlocation\tfileName\tcreatedAt\nnote\tReference Doc\tSample_BIRADS_ORU.txt\t2026-05-21 14:44:41\nnote\tReference Doc\tGen Xray Protocols.pdf\t2026-05-21 12:48:52\n",
+  "stderr": "",
+  "execution_time_ms": 336
+}

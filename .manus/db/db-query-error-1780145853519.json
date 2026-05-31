@@ -1,0 +1,8 @@
+{
+  "query": "SELECT n.id, n.title, n.fileName, n.fileUrl, n.createdAt \nFROM orgNotes n\nJOIN organizations o ON o.id = n.organizationId\nWHERE o.slug = 'RMCA'\nORDER BY n.createdAt DESC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT n.id, n.title, n.fileName, n.fileUrl, n.createdAt \nFROM orgNotes n\nJOIN organizations o ON o.id = n.organizationId\nWHERE o.slug = 'RMCA'\nORDER BY n.createdAt DESC;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'n.title' in 'field list'"
+  ]
+}

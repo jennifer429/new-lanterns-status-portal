@@ -1,0 +1,55 @@
+{
+  "query": "SELECT id, name, slug FROM organizations WHERE clientId = 2 ORDER BY name;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, name, slug FROM organizations WHERE clientId = 2 ORDER BY name;",
+  "rows": [
+    {
+      "id": "240002",
+      "name": "BRI - BCO",
+      "slug": "Boulder"
+    },
+    {
+      "id": "1380001",
+      "name": "BRI - FRPI (Front Range Preventive Imaging)",
+      "slug": "FRPI"
+    },
+    {
+      "id": "450001",
+      "name": "NewOrg2 - Corrected",
+      "slug": "new2"
+    },
+    {
+      "id": "960001",
+      "name": "NMHS - Northern Mississippi Health Services",
+      "slug": "nmhs"
+    },
+    {
+      "id": "1410001",
+      "name": "RAID - Bigfork Valley Hospital",
+      "slug": "RAID-Bigfork"
+    },
+    {
+      "id": "1350002",
+      "name": "RAID - Life Care Medical Center",
+      "slug": "RAID"
+    },
+    {
+      "id": "1350001",
+      "name": "RAID Altru - LifeCare Medical Center",
+      "slug": "LifeCare"
+    },
+    {
+      "id": "990001",
+      "name": "RMC Anniston Radiology",
+      "slug": "RMCA"
+    },
+    {
+      "id": "240001",
+      "name": "RRAL",
+      "slug": "RRAL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tslug\n240002\tBRI - BCO\tBoulder\n1380001\tBRI - FRPI (Front Range Preventive Imaging)\tFRPI\n450001\tNewOrg2 - Corrected\tnew2\n960001\tNMHS - Northern Mississippi Health Services\tnmhs\n1410001\tRAID - Bigfork Valley Hospital\tRAID-Bigfork\n1350002\tRAID - Life Care Medical Center\tRAID\n1350001\tRAID Altru - LifeCare Medical Center\tLifeCare\n990001\tRMC Anniston Radiology\tRMCA\n240001\tRRAL\tRRAL\n",
+  "stderr": "",
+  "execution_time_ms": 285
+}

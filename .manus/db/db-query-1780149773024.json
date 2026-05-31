@@ -1,0 +1,16 @@
+{
+  "query": "SELECT CASE WHEN fileUrl LIKE '%drive.google%' THEN 'Google Drive' WHEN fileUrl LIKE '%cloudfront%' THEN 'CloudFront/S3' WHEN fileUrl LIKE '%googleapis%' THEN 'Google API' ELSE 'Other' END as storage_type, COUNT(*) as cnt, MIN(createdAt) as earliest, MAX(createdAt) as latest FROM intakeFileAttachments GROUP BY storage_type;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT CASE WHEN fileUrl LIKE '%drive.google%' THEN 'Google Drive' WHEN fileUrl LIKE '%cloudfront%' THEN 'CloudFront/S3' WHEN fileUrl LIKE '%googleapis%' THEN 'Google API' ELSE 'Other' END as storage_type, COUNT(*) as cnt, MIN(createdAt) as earliest, MAX(createdAt) as latest FROM intakeFileAttachments GROUP BY storage_type;",
+  "rows": [
+    {
+      "storage_type": "CloudFront/S3",
+      "cnt": "33",
+      "earliest": "2026-02-12 01:32:17",
+      "latest": "2026-05-30 12:30:14"
+    }
+  ],
+  "messages": [],
+  "stdout": "storage_type\tcnt\tearliest\tlatest\nCloudFront/S3\t33\t2026-02-12 01:32:17\t2026-05-30 12:30:14\n",
+  "stderr": "",
+  "execution_time_ms": 274
+}

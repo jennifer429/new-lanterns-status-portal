@@ -1,0 +1,28 @@
+{
+  "query": "SELECT id, fileName, fileUrl, createdAt FROM orgNotes WHERE organizationId = 990001 ORDER BY createdAt DESC LIMIT 3;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, fileName, fileUrl, createdAt FROM orgNotes WHERE organizationId = 990001 ORDER BY createdAt DESC LIMIT 3;",
+  "rows": [
+    {
+      "id": "330001",
+      "fileName": "test-upload-verification.txt",
+      "fileUrl": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/RMC_Anniston_Radiology/RMC_Anniston_Radiology_Test_Upload_1780146259743.txt",
+      "createdAt": "2026-05-30 13:04:19"
+    },
+    {
+      "id": "180001",
+      "fileName": "ADT.txt",
+      "fileUrl": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/RMC_Anniston_Radiology/RMC_Anniston_Radiology_Template_1775585012105.txt",
+      "createdAt": "2026-04-07 18:03:32"
+    },
+    {
+      "id": "60016",
+      "fileName": "SRV-RMCA-VPN-Form-v4.docx",
+      "fileUrl": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/RMC_Anniston_Radiology/RMC_Anniston_Radiology_Reference_Doc_1775142484391.docx",
+      "createdAt": "2026-04-02 15:08:04"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tfileName\tfileUrl\tcreatedAt\n330001\ttest-upload-verification.txt\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/RMC_Anniston_Radiology/RMC_Anniston_Radiology_Test_Upload_1780146259743.txt\t2026-05-30 13:04:19\n180001\tADT.txt\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/RMC_Anniston_Radiology/RMC_Anniston_Radiology_Template_1775585012105.txt\t2026-04-07 18:03:32\n60016\tSRV-RMCA-VPN-Form-v4.docx\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/RMC_Anniston_Radiology/RMC_Anniston_Radiology_Reference_Doc_1775142484391.docx\t2026-04-02 15:08:04\n",
+  "stderr": "",
+  "execution_time_ms": 267
+}

@@ -1,0 +1,19 @@
+{
+  "query": "SELECT COUNT(*) as total FROM notionRetryQueue; SELECT MIN(createdAt) as earliest, MAX(createdAt) as latest FROM notionRetryQueue",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT COUNT(*) as total FROM notionRetryQueue; SELECT MIN(createdAt) as earliest, MAX(createdAt) as latest FROM notionRetryQueue",
+  "rows": [
+    {
+      "total": "459"
+    },
+    {
+      "total": "earliest\tlatest"
+    },
+    {
+      "total": "2026-05-26 15:40:04\t2026-05-31 18:07:02"
+    }
+  ],
+  "messages": [],
+  "stdout": "total\n459\nearliest\tlatest\n2026-05-26 15:40:04\t2026-05-31 18:07:02\n",
+  "stderr": "",
+  "execution_time_ms": 276
+}

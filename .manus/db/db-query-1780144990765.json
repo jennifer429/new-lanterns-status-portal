@@ -1,0 +1,74 @@
+{
+  "query": "SELECT id, name FROM implementationOrgs ORDER BY name;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, name FROM implementationOrgs ORDER BY name;",
+  "rows": [
+    {
+      "id": "2",
+      "name": "EHR Vendor"
+    },
+    {
+      "id": "30002",
+      "name": "EHR Vendor"
+    },
+    {
+      "id": "30001",
+      "name": "Hospital IT"
+    },
+    {
+      "id": "1",
+      "name": "Hospital IT"
+    },
+    {
+      "id": "30008",
+      "name": "New Lantern"
+    },
+    {
+      "id": "8",
+      "name": "New Lantern"
+    },
+    {
+      "id": "4",
+      "name": "PACS/VNA Vendor"
+    },
+    {
+      "id": "30004",
+      "name": "PACS/VNA Vendor"
+    },
+    {
+      "id": "5",
+      "name": "Rad Group"
+    },
+    {
+      "id": "30005",
+      "name": "Rad Group"
+    },
+    {
+      "id": "30003",
+      "name": "RIS Vendor"
+    },
+    {
+      "id": "3",
+      "name": "RIS Vendor"
+    },
+    {
+      "id": "7",
+      "name": "Scipio"
+    },
+    {
+      "id": "30007",
+      "name": "Scipio"
+    },
+    {
+      "id": "6",
+      "name": "Silverback (Data First)"
+    },
+    {
+      "id": "30006",
+      "name": "Silverback (Data First)"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\n2\tEHR Vendor\n30002\tEHR Vendor\n30001\tHospital IT\n1\tHospital IT\n30008\tNew Lantern\n8\tNew Lantern\n4\tPACS/VNA Vendor\n30004\tPACS/VNA Vendor\n5\tRad Group\n30005\tRad Group\n30003\tRIS Vendor\n3\tRIS Vendor\n7\tScipio\n30007\tScipio\n6\tSilverback (Data First)\n30006\tSilverback (Data First)\n",
+  "stderr": "",
+  "execution_time_ms": 265
+}

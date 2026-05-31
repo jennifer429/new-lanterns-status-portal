@@ -1,0 +1,16 @@
+{
+  "query": "SELECT o.name, o.slug, \n  (SELECT COUNT(*) FROM intakeFileAttachments ifa WHERE ifa.organizationId = o.id) as intakeFiles,\n  (SELECT COUNT(*) FROM fileAttachments fa WHERE fa.organizationId = o.id) as taskFiles\nFROM organizations o \nWHERE o.name LIKE '%RMCA%' OR o.name LIKE '%SRV%' OR o.slug LIKE '%RMCA%' OR o.slug LIKE '%rmca%'\nORDER BY o.name;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT o.name, o.slug, \n  (SELECT COUNT(*) FROM intakeFileAttachments ifa WHERE ifa.organizationId = o.id) as intakeFiles,\n  (SELECT COUNT(*) FROM fileAttachments fa WHERE fa.organizationId = o.id) as taskFiles\nFROM organizations o \nWHERE o.name LIKE '%RMCA%' OR o.name LIKE '%SRV%' OR o.slug LIKE '%RMCA%' OR o.slug LIKE '%rmca%'\nORDER BY o.name;",
+  "rows": [
+    {
+      "name": "RMC Anniston Radiology",
+      "slug": "RMCA",
+      "intakeFiles": "3",
+      "taskFiles": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "name\tslug\tintakeFiles\ttaskFiles\nRMC Anniston Radiology\tRMCA\t3\t0\n",
+  "stderr": "",
+  "execution_time_ms": 267
+}

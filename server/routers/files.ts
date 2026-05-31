@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
+import { dispatch } from "../notionSyncDispatcher";
 import { requireDb } from "../db";
 import { fileAttachments, organizations, users } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
-import { uploadFileToDrive } from "../googleDrive";
+import { uploadFileToDriveAndS3 } from "../googleDrive";
 import { logFileActivity } from "../fileAuditLog";
 import { fileUploadInput, makeSafeFileKey } from "../_core/fileValidation";
 
@@ -16,14 +17,13 @@ export async function uploadToGoogleDrive(
   fileBuffer: Buffer,
   organizationName: string,
   orgDriveFolderId?: string | null
-): Promise<string> {
-  const { fileUrl } = await uploadFileToDrive(
+): Promise<{ driveUrl: string | null; s3Url: string; driveFileId: string | null; s3Key: string }> {
+  return await uploadFileToDriveAndS3(
     fileName,
     fileBuffer,
     orgDriveFolderId,
     organizationName
   );
-  return fileUrl;
 }
 
 /**
@@ -104,40 +104,64 @@ export const filesRouter = router({
 
       // Upload to Google Drive (per-customer folder)
       const fileKey = makeSafeFileKey(input.fileName);
-      const { fileUrl, driveFileId } = await uploadFileToDrive(
+      const { driveUrl, s3Url, driveFileId, s3Key } = await uploadFileToDriveAndS3(
         fileKey,
         fileBuffer,
         org.googleDriveFolderId,
         org.name
       );
 
+      const finalUrl = driveUrl || s3Url;
+
       // Save metadata to database
       const [result] = await db.insert(fileAttachments).values({
         organizationId: input.organizationId,
         taskId: input.taskId,
         fileName: input.fileName,
-        fileUrl,
-        fileKey,
+        fileUrl: finalUrl,
+        fileKey: s3Key,
         fileSize,
         mimeType: input.mimeType,
         uploadedBy: ctx.user.email || "unknown",
       });
+      dispatch.taskFileAttachment({
+        mysqlId: result.insertId || 0,
+        organizationId: input.organizationId,
+        orgName: org.name,
+        taskId: input.taskId,
+        fileName: input.fileName,
+        fileUrl: finalUrl,
+        mimeType: input.mimeType,
+        fileSize,
+        uploadedBy: ctx.user.email || "unknown",
+        createdAt: new Date(),
+      });
 
       // Audit log
-      logFileActivity({
-        action: "upload",
-        userEmail: ctx.user.email || "unknown",
-        userRole: ctx.user.role,
-        organizationName: org.name,
-        fileName: input.fileName,
-        fileUrl,
-        notes: `Task: ${input.taskName}`,
-      }).catch(() => {}); // fire-and-forget
+      let auditLogged = true;
+      try {
+        await logFileActivity({
+          action: "upload",
+          userEmail: ctx.user.email || "unknown",
+          userRole: ctx.user.role,
+          organizationName: org.name,
+          fileName: input.fileName,
+          fileUrl: finalUrl,
+          notes: `Task: ${input.taskName} | Drive: ${driveUrl ? 'Yes' : 'No'} | S3: Yes`,
+        });
+      } catch (e) {
+        auditLogged = false;
+      }
 
       return {
         success: true,
         fileId: result.insertId,
-        fileUrl,
+        fileUrl: finalUrl,
+        status: {
+          drive: !!driveUrl,
+          s3: true,
+          audit: auditLogged
+        }
       };
     }),
 

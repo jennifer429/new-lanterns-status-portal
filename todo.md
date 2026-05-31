@@ -4,9 +4,11 @@
 
 ## Remaining Refactoring
 
-- [ ] Extract shared admin table components (`StatusBadge`, `ActionButton`, `AdminTable`) — reduces ~200 lines of copy-paste across admin tabs
+- [x] Extract shared `StatusBadge` component to `client/src/components/StatusBadge.tsx` — used by Implementation.tsx and Validation.tsx
+- [ ] Extract shared `ActionButton` and `AdminTable` components — reduces remaining copy-paste across admin tabs
 - [ ] Split `server/routers/admin.ts` (~2,000 lines) into sub-routers by domain (questions, orgs, users, vendors, templates, metrics)
-- [ ] Migrate manual admin role checks in `notes.ts`, `proceduralLibrary.ts`, `ai.ts` to `adminDbProcedure` where endpoints are admin-only
+- [x] Migrate manual admin role checks in `ai.ts` (4 endpoints), `proceduralLibrary.ts` (3 endpoints), `syncHealth.ts` (4 endpoints) to `adminDbProcedure`/`adminProcedure`
+- [ ] Migrate manual admin role checks in `notes.ts` to `adminDbProcedure` where endpoints are admin-only
 
 ## Swimlane Task Flow View
 
@@ -347,3 +349,98 @@
 - [x] Manually pushed 8 RRAL connectivity rows from intake data to Integration Connection Registry
 - [x] Wire intake CONN.endpoints save to also push rows to Integration Connection Registry (prevents future blank connectivity pages)
 - [x] Purge 361 duplicate retry queue entries (418 → 57 unique pending, will drain in ~15 min)
+
+## Fix #1: Google Drive Upload Pipeline (May 30, 2026)
+
+- [x] Rewrite googleDrive.ts to use OAuth token (GOOGLE_DRIVE_TOKEN) instead of service account
+- [x] Add supportsAllDrives: true for Shared Drive support
+- [x] Backfill 63 missing files from S3 to Google Drive
+- [x] Update frontend (useIntakeData, useHomeData, ProceduralLibrary) to show clear Drive/Notion success/failure notifications
+- [ ] Ensure per-org Drive folder IDs are created for all active orgs
+- [ ] Write vitest for the upload pipeline
+
+## Fix #2: Security Fixes (May 30, 2026)
+
+- [x] Secure resetPasswordDirect with token requirement
+- [x] Secure public write endpoints in intake and connectivity routers (changed to protectedProcedure)
+
+## Fix #3: Connectivity Caching & Toast Fixes (May 30, 2026)
+
+- [x] Implement MySQL caching for connectivity data (connectivityCache table)
+- [x] Fix upload success toasts to show org name instead of generic message
+- [x] Increase Vitest timeout for Notion integration tests
+
+## Full Notion Database Migration — All MySQL-Only### Batch 1: Operational Data
+- [x] Create Notion DB: AI Chat Log (org, user, prompt, response, tokens, cost, toolCalls, timestamp)
+- [x] Create Notion DB: Activity Feed (org, user, action, details, timestamp)
+- [x] Create Notion DB: Org Notes & Files (org, label, fileName, fileUrl, driveFileId, fileSize, mimeType, uploadedBy, timestamp)
+- [x] Create Notion DB: Partner Documents (client, fileName, fileUrl, driveFileId, category, mimeType, fileSize, uploadedBy, timestamp)
+- [x] Create Notion DB: Onboarding Feedback (org, rating, comments, submittedBy, timestamp)
+- [x] Create Notion DB: Org Custom Tasks (org, taskId, title, section, description### Batch 2: Config & Audit Data
+- [x] Create Notion DB: Section Progress (org, sectionName, completedCount, totalCount, percentage, timestamp)
+- [x] Create Notion DB: Vendor Audit Log (vendorId, action, field, oldValue, newValue, performedBy, timestamp)
+- [x] Create Notion DB: File Attachments (org, taskId, fileName, fileUrl, fileSize, mimeType, uploadedBy, timestamp)
+- [x] Create Notion DB: Intake File Attachments (org, questionId, fileName, fileUrl, fileSize, mimeType, uploadedBy, timestamp)
+- [x] Create Notion DB: Partner Templates (client, questionId, title, fileName, url, mimeType, active, timestamp)
+- [x] Create Notion DB: Partner Task Templates (client, taskId, title, description, section, active, timestamp)
+- [x] Create Notion DB: Specifications (key, title, description, category, active, timestamp)
+- [x] Create Notion DB: System Vendor Options (systemType, vendorName, productName, active, timestamp)
+### Batch 3: Core Entity Data
+- [x] Create Notion DB: Questions (key, text, section, type, required, active, sortOrder)
+- [x] Create Notion DB: Question Options (questionId, label, value, sortOrder)
+- [x] Create Notion DB: Users (email, name, role, clientId, orgId, active, lastLogin, timestamp)
+- [x] Create Notion DB: Clients (name, slug, contactName, contactEmail, active, timestamp)
+- [x] Create Notion DB: Organizations (name, slug, clientId, contactName, contactEmail, status, startDate, goalDate, timestamp)
+- [x] Create Notion DB: Implementation Orgs (orgId, phase, status, assignedTo, timestamp)
+
+### Dual-Write Wiring
+- [x] Wire dual-write: AI Audit Logs (on every AI chat action)
+- [x] Wire dual-write: Activity Feed (on every activity event)
+- [x] Wire dual-write: Org Notes (on upload/delete)
+- [x] Wire dual-write: Partner Documents (on upload/delete)
+- [x] Wire dual-write: Onboarding Feedback (on submit)
+- [x] Wire dual-write: Org Custom Tasks (on create/update/delete)
+- [x] Wire dual-write: Section Progress (on progress update)
+- [x] Wire dual-write: Vendor Audit Log (on vendor change)
+- [x] Wire dual-write: File Attachments (on upload/delete)
+- [x] Wire dual-write: Intake File Attachments (on upload/delete)
+- [x] Wire dual-write: Partner Templates (on create/update/delete)
+- [x] Wire dual-write: Partner Task Templates (on create/update/delete)
+- [x] Wire dual-write: Specifications (on create/update/delete)
+- [x] Wire dual-write: System Vendor Options (on create/update/toggle)
+- [x] Wire dual-write: Questions (on create/archive)
+- [x] Wire dual-write: Question Options (on create/update/delete)
+- [x] Wire dual-write: Users (on create/update/deactivate)
+- [x] Wire dual-write: Clients (on create/update)
+- [x] Wire dual-write: Organizations (on create/update)
+- [x] Wire dual-write: Implementation Orgs (on status change)
+
+### Sync-Back & Cron
+- [x] Verified: New databases are MySQL → Notion only (dual-write). No Notion → MySQL sync-back needed (MySQL is source of truth for these tables)
+- [x] Retry queue already handles failures for all new write types (extended processRetryQueue switch)
+- [x] DB/DS IDs hardcoded in notionDualWrite.ts (same pattern as existing Notion integrations)
+- [ ] Write vitest tests for new dual-write module
+- [x] Backfill existing MySQL data to new Notion databases (admin endpoint: trpc.backfill.run + trpc.backfill.preview)
+
+## Fix TSC Errors (51 type errors blocking deployment) — May 31, 2026
+
+- [x] Fix requireDb() return type (explicit non-null Promise<ReturnType<typeof drizzle>>)
+- [x] Fix uploadToGoogleDrive return type destructuring in admin.ts (3 spots)
+- [x] Fix uploadToGoogleDrive return type destructuring in intake.ts (1 spot)
+- [x] Fix uploadToGoogleDrive return type destructuring in proceduralLibrary.ts (1 spot)
+- [x] Fix mislabeled toggleOrgCustomTaskPublic → saveResponse (correct input schema)
+- [x] Fix mislabeled deleteOrgCustomTaskPublic → submitFeedback (correct input schema)
+- [x] Fix connectivity.ts importing { db } → use requireDb()
+- [x] Fix ValidationStatus type missing in Validation.tsx
+- [x] Fix useHomeData.ts referencing .status.notion (doesn't exist on return type)
+- [x] Fix useIntakeData.ts referencing .status.notion (doesn't exist on return type)
+- [x] Fix ProceduralLibrary.tsx referencing .status.notion (doesn't exist on return type)
+- [x] Fix ConnectivityDesktopTable.tsx Map.keys() iteration (Array.from)
+- [x] Add 'done' to STATUS_TO_DB Record in Validation.tsx
+
+## Notion Property Naming Cleanup — Eliminate Translations
+
+- [ ] Rename Notion database properties to match MySQL column names exactly
+- [ ] Rename payload interfaces in notionDualWrite.ts to use MySQL column names
+- [ ] Update all dispatch calls in routers to use new payload field names
+- [ ] Final tsc check and deploy

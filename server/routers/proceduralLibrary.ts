@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { protectedProcedure, router } from "../_core/trpc";
+import { protectedProcedure, adminDbProcedure, router } from "../_core/trpc";
 import { requireDb } from "../db";
 import {
   partnerDocuments,
@@ -9,6 +9,7 @@ import {
   clients,
 } from "../../drizzle/schema";
 import { eq, desc } from "drizzle-orm";
+import { dispatch } from "../notionSyncDispatcher";
 import { uploadToGoogleDrive } from "./files";
 import { storageGet } from "../storage";
 import { fileUploadInput } from "../_core/fileValidation";
@@ -101,21 +102,18 @@ export const proceduralLibraryRouter = router({
     }),
 
   /** Upload a document to Google Drive and save metadata */
-  uploadDocument: protectedProcedure
+  uploadDocument: adminDbProcedure
     .input(z.object({
       title: z.string().min(1).max(500),
       ...fileUploadInput,
       clientId: z.number().optional(), // required for platform admins
     }))
     .mutation(async ({ ctx, input }) => {
-      const db = await requireDb();
+      const db = ctx.db;
 
       const targetClientId = resolveClientId(ctx.user, input.clientId);
       if (!targetClientId) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "A partner must be selected" });
-      }
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Only admins can upload documents" });
       }
 
       const fileBuffer = Buffer.from(input.fileData, "base64");
@@ -124,7 +122,8 @@ export const proceduralLibraryRouter = router({
       const driveFileName = `procedural-library_${targetClientId}_${timestamp}.${fileExt}`;
 
       // Upload to Google Drive
-      const fileUrl = await uploadToGoogleDrive(driveFileName, fileBuffer, "");
+      const { driveUrl, s3Url, driveFileId: uploadedDriveFileId, s3Key } = await uploadToGoogleDrive(driveFileName, fileBuffer, "");
+      const fileUrl = driveUrl ?? s3Url;
 
       // Insert metadata
       const [inserted] = await db.insert(partnerDocuments).values({
@@ -133,31 +132,56 @@ export const proceduralLibraryRouter = router({
         title: input.title,
         description: null,
         filename: input.fileName,
-        driveFileId: driveFileName,
+        driveFileId: uploadedDriveFileId ?? s3Key,
         url: fileUrl,
         mimeType: input.mimeType,
         size: fileBuffer.length,
         uploadedById: ctx.user.id,
         uploadedByName: ctx.user.name || ctx.user.email || "Unknown",
       });
+      dispatch.partnerDocument({
+        mysqlId: inserted.insertId || 0,
+        clientId: targetClientId,
+        partnerName: "",
+        title: input.title,
+        category: null,
+        fileName: input.fileName,
+        fileUrl,
+        driveFileId: null,
+        mimeType: input.mimeType || null,
+        fileSize: fileBuffer.length,
+        uploadedBy: ctx.user.name || ctx.user.email || "Unknown",
+        active: true,
+        createdAt: new Date(),
+      });
 
       // Log audit event
-      await db.insert(partnerDocAudit).values({
+      const [auditRes] = await db.insert(partnerDocAudit).values({
         documentId: inserted.insertId,
         userId: ctx.user.id,
         userName: ctx.user.name || ctx.user.email || "Unknown",
         userEmail: ctx.user.email || "unknown",
         action: "upload",
       });
+      dispatch.partnerDocAudit({
+        mysqlId: (auditRes as any).insertId || 0,
+        documentId: inserted.insertId,
+        documentTitle: input.title,
+        action: "upload",
+        userId: ctx.user.id,
+        userName: ctx.user.name || ctx.user.email || "Unknown",
+        userEmail: ctx.user.email || "unknown",
+        createdAt: new Date(),
+      });
 
       return { success: true, fileUrl };
     }),
 
   /** Delete a document (admin only) */
-  deleteDocument: protectedProcedure
+  deleteDocument: adminDbProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      const db = await requireDb();
+      const db = ctx.db;
 
       const [doc] = await db.select().from(partnerDocuments).where(eq(partnerDocuments.id, input.id));
       if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Document not found" });
@@ -165,9 +189,6 @@ export const proceduralLibraryRouter = router({
       // Partner admin can only delete their own partner's documents
       if (ctx.user.clientId && doc.clientId !== ctx.user.clientId) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Not your document" });
-      }
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Only admins can delete documents" });
       }
 
       // Delete audit entries first, then the document
@@ -190,12 +211,22 @@ export const proceduralLibraryRouter = router({
     .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
 
-      await db.insert(partnerDocAudit).values({
+      const [logAuditRes] = await db.insert(partnerDocAudit).values({
         documentId: input.documentId,
         userId: ctx.user.id,
         userName: ctx.user.name || ctx.user.email || "Unknown",
         userEmail: ctx.user.email || "unknown",
         action: input.action,
+      });
+      dispatch.partnerDocAudit({
+        mysqlId: (logAuditRes as any).insertId || 0,
+        documentId: input.documentId,
+        documentTitle: "",
+        action: input.action,
+        userId: ctx.user.id,
+        userName: ctx.user.name || ctx.user.email || "Unknown",
+        userEmail: ctx.user.email || "unknown",
+        createdAt: new Date(),
       });
 
       return { success: true };
@@ -257,15 +288,10 @@ export const proceduralLibraryRouter = router({
     }),
 
   /** Get audit trail for a specific document (admin only) */
-  getAuditTrail: protectedProcedure
+  getAuditTrail: adminDbProcedure
     .input(z.object({ documentId: z.number() }))
     .query(async ({ ctx, input }) => {
-      const db = await requireDb();
-
-      // Only admins can view audit trails
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Only admins can view audit trails" });
-      }
+      const db = ctx.db;
 
       const [doc] = await db.select().from(partnerDocuments).where(eq(partnerDocuments.id, input.documentId));
       if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Document not found" });

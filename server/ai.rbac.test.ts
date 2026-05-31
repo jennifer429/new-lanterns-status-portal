@@ -66,7 +66,7 @@ describe("AI Chat RBAC", () => {
         caller.ai.chat({
           messages: [{ role: "user", content: "Hello" }],
         })
-      ).rejects.toThrow("Admin access required");
+      ).rejects.toThrow(/permission/i);
     });
 
     it("rejects unauthenticated users", async () => {

@@ -89,7 +89,7 @@ export function useIntakeData(slug: string, clientSlug: string) {
   });
 
   const uploadMutation = trpc.intake.uploadFile.useMutation({
-    onSuccess: (_, variables) => {
+    onSuccess: (data, variables) => {
       setUploadingFiles((prev) => {
         const next = new Set(prev);
         next.delete(variables.questionId);
@@ -105,6 +105,11 @@ export function useIntakeData(slug: string, clientSlug: string) {
       utils.intake.getFileCount.invalidate({
         organizationSlug: slug || "",
       });
+      
+      const orgName = org?.name || slug;
+      toast.success(`File uploaded to ${orgName}`, {
+        description: data.message || `Your file has been successfully uploaded.`
+      });
     },
     onError: (error, variables) => {
       setUploadingFiles((prev) => {
@@ -113,7 +118,7 @@ export function useIntakeData(slug: string, clientSlug: string) {
         return next;
       });
       console.error("File upload failed:", error);
-      alert(`File upload failed: ${error.message}. Please try again.`);
+      toast.error("Upload failed", { description: error.message });
     },
   });
 

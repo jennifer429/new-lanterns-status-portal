@@ -1,0 +1,8 @@
+{
+  "query": "SELECT 'aiAuditLogs' as tbl, MAX(createdAt) as latest FROM aiAuditLogs UNION ALL SELECT 'partnerDocAudit', MAX(createdAt) FROM partnerDocAudit UNION ALL SELECT 'vendorAuditLog', MAX(createdAt) FROM vendorAuditLog UNION ALL SELECT 'activityFeed', MAX(createdAt) FROM activityFeed;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT 'aiAuditLogs' as tbl, MAX(createdAt) as latest FROM aiAuditLogs UNION ALL SELECT 'partnerDocAudit', MAX(createdAt) FROM partnerDocAudit UNION ALL SELECT 'vendorAuditLog', MAX(createdAt) FROM vendorAuditLog UNION ALL SELECT 'activityFeed', MAX(createdAt) FROM activityFeed;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'createdat' in 'field list'"
+  ]
+}

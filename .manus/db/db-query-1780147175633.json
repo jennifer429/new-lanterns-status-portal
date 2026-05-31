@@ -1,0 +1,20 @@
+{
+  "query": "SELECT role, COUNT(*) as cnt, GROUP_CONCAT(email SEPARATOR ', ') as emails FROM users GROUP BY role;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT role, COUNT(*) as cnt, GROUP_CONCAT(email SEPARATOR ', ') as emails FROM users GROUP BY role;",
+  "rows": [
+    {
+      "role": "user",
+      "cnt": "33",
+      "emails": "dsuida@mhc.net, lgenwright@mhc.net, dharrison@mhc.net, kathy.rangel@mercyone.org, kolin.w.huth@mercyone.org, shonna.simpson@baycare.org, christopher.parisi@baycare.org, jessica.reilly@baycare.org, heather.morrison@baycare.org, carl.blackman@baycare.org, joyce.lachapelle@baycare.org, shanon.carter@baycare.org, test@email.com, fjafdj@boulder.com, new2@email.com, admin@email.com, rads-inc@testuser.com, melissa.jacobs@radiologyone.com, jreed@uspi.com, williaml@bouldercentre.com, nlevasseur@radbusiness.com, pyeturu@primehealthcare.com, tmcdonald3@primehealthcare.com, svota@marshallmedical.org, merwin@marshallmedical.org, TSchmiedl@RMCCares.org, pfurlow@rmccares.org, JTerrell@primehealthcare.com, jlanglois@primehealthcare.com, srvuser@gmail.com, jjordan@rmccares.org, jenniferstarling@outlook.com, test-reset@example.com"
+    },
+    {
+      "role": "admin",
+      "cnt": "32",
+      "emails": "ashley.morgan@radiologyone.com, kevin.kadakia@radiologyone.com, jstar@newlantern.ai, test@newlantern.ai, admin@newlantern.ai, admin@srv.com, admin@radone.com, lhobson@tuscrad.com, rbennett@tuscrad.com, dshulman@tuscrad.com, jennifer@newlantern.ai, ryan@newlantern.ai, samir@newlantern.ai, amanda@newlantern.ai, michael.kreger@radiologyone.com, radsincadmin@gmail.com, tim.alfano@newlantern.ai, RadsInc@gmail.com, ed@eds.life, lvillanueva@radsinc.com, seth@turningpointtechs.com, kevin.dietz@newlantern.ai, lblalock@tuscrad.com, megan@newlantern.ai, alec@newlantern.ai, cnail@scipiotech.com, jeremy.arthur@radiologyone.com, grant.mcclane@radiolgyone.com, yancee.carlobos@radiologyone.com, ian.stiefvater@radiologyone.com, alex@newlantern.ai, jconyers@tuscrad.com"
+    }
+  ],
+  "messages": [],
+  "stdout": "role\tcnt\temails\nuser\t33\tdsuida@mhc.net, lgenwright@mhc.net, dharrison@mhc.net, kathy.rangel@mercyone.org, kolin.w.huth@mercyone.org, shonna.simpson@baycare.org, christopher.parisi@baycare.org, jessica.reilly@baycare.org, heather.morrison@baycare.org, carl.blackman@baycare.org, joyce.lachapelle@baycare.org, shanon.carter@baycare.org, test@email.com, fjafdj@boulder.com, new2@email.com, admin@email.com, rads-inc@testuser.com, melissa.jacobs@radiologyone.com, jreed@uspi.com, williaml@bouldercentre.com, nlevasseur@radbusiness.com, pyeturu@primehealthcare.com, tmcdonald3@primehealthcare.com, svota@marshallmedical.org, merwin@marshallmedical.org, TSchmiedl@RMCCares.org, pfurlow@rmccares.org, JTerrell@primehealthcare.com, jlanglois@primehealthcare.com, srvuser@gmail.com, jjordan@rmccares.org, jenniferstarling@outlook.com, test-reset@example.com\nadmin\t32\tashley.morgan@radiologyone.com, kevin.kadakia@radiologyone.com, jstar@newlantern.ai, test@newlantern.ai, admin@newlantern.ai, admin@srv.com, admin@radone.com, lhobson@tuscrad.com, rbennett@tuscrad.com, dshulman@tuscrad.com, jennifer@newlantern.ai, ryan@newlantern.ai, samir@newlantern.ai, amanda@newlantern.ai, michael.kreger@radiologyone.com, radsincadmin@gmail.com, tim.alfano@newlantern.ai, RadsInc@gmail.com, ed@eds.life, lvillanueva@radsinc.com, seth@turningpointtechs.com, kevin.dietz@newlantern.ai, lblalock@tuscrad.com, megan@newlantern.ai, alec@newlantern.ai, cnail@scipiotech.com, jeremy.arthur@radiologyone.com, grant.mcclane@radiolgyone.com, yancee.carlobos@radiologyone.com, ian.stiefvater@radiologyone.com, alex@newlantern.ai, jconyers@tuscrad.com\n",
+  "stderr": "",
+  "execution_time_ms": 290
+}

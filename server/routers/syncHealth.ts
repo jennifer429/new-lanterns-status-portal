@@ -5,7 +5,7 @@
  * and power the Sync Dashboard page.
  */
 
-import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
+import { publicProcedure, adminProcedure, router } from "../_core/trpc";
 import { getSyncHealth, runNotionSyncBack } from "../notionSyncBack";
 import { runContactsSystemsSync } from "../notionSyncContacts";
 import { runTaskValidationSyncBack } from "../notionSyncBackTasks";
@@ -28,11 +28,7 @@ export const syncHealthRouter = router({
    * Full sync dashboard data — admin only.
    * Returns queue stats, reconciliation history, and per-DB health in one call.
    */
-  dashboard: protectedProcedure.query(async ({ ctx }) => {
-    if (ctx.user.role !== "admin") {
-      throw new Error("Only admins can view sync dashboard");
-    }
-
+  dashboard: adminProcedure.query(async ({ ctx }) => {
     const [health, lastSynced, queueStats, reconciliationHistory] = await Promise.all([
       getSyncHealth(),
       Promise.resolve(getLastSyncedTimestamps()),
@@ -51,10 +47,7 @@ export const syncHealthRouter = router({
   /**
    * Manually trigger a questionnaire sync run — admin only.
    */
-  triggerSync: protectedProcedure.mutation(async ({ ctx }) => {
-    if (ctx.user.role !== "admin") {
-      throw new Error("Only admins can trigger manual sync");
-    }
+  triggerSync: adminProcedure.mutation(async ({ ctx }) => {
     const result = await runNotionSyncBack();
     return result;
   }),
@@ -62,10 +55,7 @@ export const syncHealthRouter = router({
   /**
    * Manually trigger contacts & systems sync — admin only.
    */
-  triggerContactsSystemsSync: protectedProcedure.mutation(async ({ ctx }) => {
-    if (ctx.user.role !== "admin") {
-      throw new Error("Only admins can trigger manual sync");
-    }
+  triggerContactsSystemsSync: adminProcedure.mutation(async ({ ctx }) => {
     const result = await runContactsSystemsSync();
     return {
       contacts: result.contacts,
@@ -76,11 +66,7 @@ export const syncHealthRouter = router({
   /**
    * Trigger ALL syncs at once — admin "refresh everything" button.
    */
-  triggerFullSync: protectedProcedure.mutation(async ({ ctx }) => {
-    if (ctx.user.role !== "admin") {
-      throw new Error("Only admins can trigger manual sync");
-    }
-
+  triggerFullSync: adminProcedure.mutation(async ({ ctx }) => {
     const startTime = Date.now();
 
     // Run all syncs in parallel

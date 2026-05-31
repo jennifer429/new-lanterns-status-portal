@@ -20,10 +20,11 @@
 
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { protectedProcedure, router } from "../_core/trpc";
+import { protectedProcedure, adminDbProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
 import type { Message, Tool, ToolCall } from "../_core/llm";
 import { requireDb } from "../db";
+import { dispatch } from "../notionSyncDispatcher";
 import {
   organizations,
   users,
@@ -114,7 +115,7 @@ async function writeAuditLog(entry: {
     const truncate = (s: string | null | undefined, max: number) =>
       s && s.length > max ? s.slice(0, max) + "...[truncated]" : s ?? null;
 
-    await db.insert(aiAuditLogs).values({
+    const [inserted] = await db.insert(aiAuditLogs).values({
       action: entry.action,
       category: entry.category,
       actorId: entry.actorId ?? null,
@@ -133,6 +134,20 @@ async function writeAuditLog(entry: {
       errorMessage: truncate(entry.errorMessage, 2000),
       ipAddress: truncate(entry.ipAddress, 45),
       durationMs: entry.durationMs ?? null,
+    });
+    // Dual-write to Notion
+    dispatch.aiChatLog({
+      mysqlId: (inserted as any).insertId || 0,
+      organizationId: entry.organizationId ?? null,
+      orgName: entry.organizationSlug ?? null,
+      userEmail: entry.actorEmail || "unknown",
+      userRole: entry.actorRole || "unknown",
+      prompt: truncate(entry.userPrompt, 2000) || "",
+      response: truncate(entry.aiResponse, 2000) || "",
+      model: "claude-sonnet",
+      tokensUsed: null,
+      toolCalls: entry.toolArgs || null,
+      createdAt: new Date(),
     });
   } catch (err) {
     console.error("[AI Audit] Failed to write audit log:", err);
@@ -656,13 +671,23 @@ async function executeTool(
         };
       }
 
-      await db.insert(organizations).values({
+      const [aiOrgRes] = await db.insert(organizations).values({
         name,
         slug,
         clientId,
         contactName: (args.contact_name as string) ?? undefined,
         contactEmail: (args.contact_email as string) ?? undefined,
         status: "active",
+      });
+      dispatch.organization({
+        mysqlId: (aiOrgRes as any).insertId || 0,
+        name,
+        slug,
+        partnerName: "",
+        status: "active",
+        contactName: (args.contact_name as string) ?? null,
+        contactEmail: (args.contact_email as string) ?? null,
+        createdAt: new Date(),
       });
 
       return {
@@ -736,7 +761,7 @@ async function executeTool(
       const hash = await bcrypt.hash(password, 10);
       const openId = `chat-created-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-      await db.insert(users).values({
+      const [aiUserRes] = await db.insert(users).values({
         openId,
         email,
         name,
@@ -745,6 +770,17 @@ async function executeTool(
         organizationId: orgId ?? null,
         clientId: clientId ?? null,
         isActive: 1,
+      });
+      dispatch.user({
+        mysqlId: (aiUserRes as any).insertId || 0,
+        email,
+        name,
+        role,
+        orgName: orgSlug || null,
+        partnerName: null,
+        active: true,
+        lastLogin: null,
+        createdAt: new Date(),
       });
 
       return {
@@ -1192,7 +1228,7 @@ export const aiRouter = router({
   /**
    * Main chat endpoint with full audit logging.
    */
-  chat: protectedProcedure
+  chat: adminDbProcedure
     .input(
       z.object({
         messages: z.array(
@@ -1210,11 +1246,7 @@ export const aiRouter = router({
     .mutation(async ({ input, ctx }) => {
       const chatStartTime = Date.now();
 
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const db = ctx.db;
       const isPlatformAdmin = !ctx.user.clientId;
 
       // Get IP address for audit
@@ -1495,7 +1527,7 @@ Be specific and cite actual data from the tool results in your answers.`;
   /**
    * Query audit logs. Platform admins see all; partner admins see only their own.
    */
-  getAuditLogs: protectedProcedure
+  getAuditLogs: adminDbProcedure
     .input(
       z.object({
         page: z.number().min(1).default(1),
@@ -1509,11 +1541,7 @@ Be specific and cite actual data from the tool results in your answers.`;
       })
     )
     .query(async ({ input, ctx }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const db = ctx.db;
 
       // Build WHERE conditions
       const conditions: any[] = [];
@@ -1577,14 +1605,10 @@ Be specific and cite actual data from the tool results in your answers.`;
   /**
    * Get a single audit log entry by ID.
    */
-  getAuditLogDetail: protectedProcedure
+  getAuditLogDetail: adminDbProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input, ctx }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
-
-      const db = await requireDb();
+      const db = ctx.db;
 
       const [log] = await db
         .select()
@@ -1605,12 +1629,8 @@ Be specific and cite actual data from the tool results in your answers.`;
   /**
    * Get audit log summary statistics for the dashboard.
    */
-  getAuditStats: protectedProcedure.query(async ({ ctx }) => {
-    if (ctx.user.role !== "admin") {
-      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-    }
-
-    const db = await requireDb();
+  getAuditStats: adminDbProcedure.query(async ({ ctx }) => {
+    const db = ctx.db;
 
     const clientCondition = ctx.user.clientId
       ? eq(aiAuditLogs.clientId, ctx.user.clientId)

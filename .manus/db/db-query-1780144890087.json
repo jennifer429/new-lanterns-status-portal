@@ -1,0 +1,22 @@
+{
+  "query": "SELECT 'activityFeed' as tbl, MAX(createdAt) as latest FROM activityFeed UNION ALL SELECT 'partnerDocAudit', MAX(createdAt) FROM partnerDocAudit UNION ALL SELECT 'vendorAuditLog', MAX(performedAt) FROM vendorAuditLog;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT 'activityFeed' as tbl, MAX(createdAt) as latest FROM activityFeed UNION ALL SELECT 'partnerDocAudit', MAX(createdAt) FROM partnerDocAudit UNION ALL SELECT 'vendorAuditLog', MAX(performedAt) FROM vendorAuditLog;",
+  "rows": [
+    {
+      "tbl": "partnerDocAudit",
+      "latest": "2026-05-22 14:51:51"
+    },
+    {
+      "tbl": "activityFeed",
+      "latest": "2026-02-01 17:53:25"
+    },
+    {
+      "tbl": "vendorAuditLog",
+      "latest": "2026-05-26 17:06:40"
+    }
+  ],
+  "messages": [],
+  "stdout": "tbl\tlatest\npartnerDocAudit\t2026-05-22 14:51:51\nactivityFeed\t2026-02-01 17:53:25\nvendorAuditLog\t2026-05-26 17:06:40\n",
+  "stderr": "",
+  "execution_time_ms": 272
+}

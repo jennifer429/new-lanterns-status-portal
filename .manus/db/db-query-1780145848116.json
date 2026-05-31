@@ -1,0 +1,34 @@
+{
+  "query": "SELECT 'intakeFile' as source, ifa.questionId as location, ifa.fileName, ifa.fileUrl, ifa.uploadedBy, ifa.createdAt\nFROM intakeFileAttachments ifa \nJOIN organizations o ON o.id = ifa.organizationId \nWHERE o.slug = 'RMCA'\nUNION ALL\nSELECT 'taskFile' as source, CONCAT('task:', fa.taskId) as location, fa.fileName, fa.fileUrl, fa.uploadedBy, fa.createdAt\nFROM fileAttachments fa\nJOIN organizations o ON o.id = fa.organizationId\nWHERE o.slug = 'RMCA'\nORDER BY createdAt DESC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT 'intakeFile' as source, ifa.questionId as location, ifa.fileName, ifa.fileUrl, ifa.uploadedBy, ifa.createdAt\nFROM intakeFileAttachments ifa \nJOIN organizations o ON o.id = ifa.organizationId \nWHERE o.slug = 'RMCA'\nUNION ALL\nSELECT 'taskFile' as source, CONCAT('task:', fa.taskId) as location, fa.fileName, fa.fileUrl, fa.uploadedBy, fa.createdAt\nFROM fileAttachments fa\nJOIN organizations o ON o.id = fa.organizationId\nWHERE o.slug = 'RMCA'\nORDER BY createdAt DESC;",
+  "rows": [
+    {
+      "source": "intakeFile",
+      "location": "CF.6",
+      "fileName": "Rosters.AlphaRoster (19).xlsx",
+      "fileUrl": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/RMC_Anniston_Radiology/RMC_Anniston_Radiology_rbennett-at-tuscrad.com_CF.6-provider_directory_please_upload_1775652767370.xlsx",
+      "uploadedBy": "rbennett@tuscrad.com",
+      "createdAt": "2026-04-08 12:52:47"
+    },
+    {
+      "source": "intakeFile",
+      "location": "CF.5",
+      "fileName": "ORM.txt",
+      "fileUrl": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/RMC_Anniston_Radiology/RMC_Anniston_Radiology_rbennett-at-tuscrad.com_CF.5-sample_orm_report_please_1775584862167.txt",
+      "uploadedBy": "rbennett@tuscrad.com",
+      "createdAt": "2026-04-07 18:01:02"
+    },
+    {
+      "source": "intakeFile",
+      "location": "CF.3",
+      "fileName": "ORU.txt",
+      "fileUrl": "https://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/RMC_Anniston_Radiology/RMC_Anniston_Radiology_rbennett-at-tuscrad.com_CF.3-sample_oru_report_please_1775584825343.txt",
+      "uploadedBy": "rbennett@tuscrad.com",
+      "createdAt": "2026-04-07 18:00:25"
+    }
+  ],
+  "messages": [],
+  "stdout": "source\tlocation\tfileName\tfileUrl\tuploadedBy\tcreatedAt\nintakeFile\tCF.6\tRosters.AlphaRoster (19).xlsx\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/RMC_Anniston_Radiology/RMC_Anniston_Radiology_rbennett-at-tuscrad.com_CF.6-provider_directory_please_upload_1775652767370.xlsx\trbennett@tuscrad.com\t2026-04-08 12:52:47\nintakeFile\tCF.5\tORM.txt\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/RMC_Anniston_Radiology/RMC_Anniston_Radiology_rbennett-at-tuscrad.com_CF.5-sample_orm_report_please_1775584862167.txt\trbennett@tuscrad.com\t2026-04-07 18:01:02\nintakeFile\tCF.3\tORU.txt\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663326227304/hgGEXRHUCG7apwzJRKH7LF/uploads/RMC_Anniston_Radiology/RMC_Anniston_Radiology_rbennett-at-tuscrad.com_CF.3-sample_oru_report_please_1775584825343.txt\trbennett@tuscrad.com\t2026-04-07 18:00:25\n",
+  "stderr": "",
+  "execution_time_ms": 259
+}

@@ -719,3 +719,16 @@ export const emailLog = mysqlTable("emailLog", {
 });
 export type EmailLog = typeof emailLog.$inferSelect;
 export type InsertEmailLog = typeof emailLog.$inferInsert;
+
+/**
+ * Cache for connectivity data fetched from Notion.
+ * Used as a fallback when Notion API is unavailable or slow.
+ */
+export const connectivityCache = mysqlTable("connectivityCache", {
+  id: int("id").autoincrement().primaryKey(),
+  organizationSlug: varchar("organizationSlug", { length: 100 }).notNull().unique(),
+  data: text("data").notNull(), // JSON stringified array of connectivity rows
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type ConnectivityCache = typeof connectivityCache.$inferSelect;
+export type InsertConnectivityCache = typeof connectivityCache.$inferInsert;

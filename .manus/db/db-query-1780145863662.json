@@ -1,0 +1,15 @@
+{
+  "query": "SELECT \n  (SELECT COUNT(*) FROM orgNotes WHERE organizationId = 990001) as notes_files,\n  (SELECT COUNT(*) FROM intakeFileAttachments WHERE organizationId = 990001) as intake_files,\n  (SELECT COUNT(*) FROM fileAttachments WHERE organizationId = 990001) as task_files;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT \n  (SELECT COUNT(*) FROM orgNotes WHERE organizationId = 990001) as notes_files,\n  (SELECT COUNT(*) FROM intakeFileAttachments WHERE organizationId = 990001) as intake_files,\n  (SELECT COUNT(*) FROM fileAttachments WHERE organizationId = 990001) as task_files;",
+  "rows": [
+    {
+      "notes_files": "29",
+      "intake_files": "3",
+      "task_files": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "notes_files\tintake_files\ttask_files\n29\t3\t0\n",
+  "stderr": "",
+  "execution_time_ms": 264
+}
