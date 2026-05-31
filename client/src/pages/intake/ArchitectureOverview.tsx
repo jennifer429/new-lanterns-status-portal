@@ -1,7 +1,6 @@
 import { useState, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import {
   CloudUpload,
@@ -14,7 +13,6 @@ import {
   Pencil,
   Trash2,
   X,
-  Check,
 } from "lucide-react";
 import {
   VENDOR_OPTIONS,
@@ -58,10 +56,6 @@ export function ArchitectureOverview({
       ? dynamicVendors
       : VENDOR_OPTIONS;
 
-  // Inline "Add new vendor" state — keyed by systemType so each row is independent.
-  const [addingForType, setAddingForType] = useState<string | null>(null);
-  const [newVendorName, setNewVendorName] = useState("");
-
   const addVendorMutation = trpc.intake.addVendorOption.useMutation();
 
   const submitNewVendor = async (
@@ -94,16 +88,9 @@ export function ArchitectureOverview({
           setDefaultRowVendor(systemType, canonical);
         }
       }
-      setAddingForType(null);
-      setNewVendorName("");
     } catch (e: any) {
       toast.error(e?.message || "Failed to add vendor");
     }
-  };
-
-  const cancelAddVendor = () => {
-    setAddingForType(null);
-    setNewVendorName("");
   };
 
   // Parse systems from JSON
@@ -485,61 +472,27 @@ export function ArchitectureOverview({
                     )}
                   </div>
                   <div className="flex flex-wrap gap-2 items-center">
-                    {vendors
-                      .filter((v) => v !== "Other")
-                      .map((vendor) => (
-                        <button
-                          key={vendor}
-                          onClick={() => toggleAIVendor(vendor)}
-                          className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
-                            selectedAI.includes(vendor)
-                              ? "bg-indigo-500/30 border-indigo-500/50 text-indigo-200"
-                              : "bg-background/30 border-border/50 text-muted-foreground hover:border-indigo-500/30 hover:text-indigo-300"
-                          }`}
-                        >
-                          {vendor}
-                        </button>
-                      ))}
-                    {addingForType === row.type ? (
-                      <div className="flex items-center gap-1">
-                        <Input
-                          autoFocus
-                          value={newVendorName}
-                          onChange={(e) => setNewVendorName(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") { e.preventDefault(); submitNewVendor(row.type, newVendorName, { selectAfter: true, multi: true }); }
-                            if (e.key === "Escape") cancelAddVendor();
-                          }}
-                          placeholder={`New ${row.label} vendor`}
-                          className="h-7 text-xs w-44"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => submitNewVendor(row.type, newVendorName, { selectAfter: true, multi: true })}
-                          disabled={!newVendorName.trim() || addVendorMutation.isPending}
-                          className="p-1 rounded hover:bg-indigo-500/20 text-indigo-300 disabled:opacity-40"
-                          title="Add"
-                        >
-                          <Check className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={cancelAddVendor}
-                          className="p-1 rounded hover:bg-muted/50 text-muted-foreground"
-                          title="Cancel"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ) : (
+                    {selectedAI.map((vendor) => (
                       <button
-                        onClick={() => { setAddingForType(row.type); setNewVendorName(""); }}
-                        className="px-3 py-1.5 text-xs rounded-md border border-dashed border-border/60 text-muted-foreground hover:border-indigo-500/40 hover:text-indigo-300 transition-colors flex items-center gap-1"
-                        title="Add a new vendor to this list"
+                        key={vendor}
+                        onClick={() => toggleAIVendor(vendor)}
+                        className="group px-2.5 py-1 text-xs rounded-md border bg-indigo-500/30 border-indigo-500/50 text-indigo-200 hover:bg-indigo-500/40 transition-colors flex items-center gap-1"
+                        title="Remove"
                       >
-                        <Plus className="w-3 h-3" /> Add new
+                        {vendor}
+                        <X className="w-3 h-3 opacity-60 group-hover:opacity-100" />
                       </button>
-                    )}
+                    ))}
+                    <VendorCombobox
+                      multiple
+                      selected={selectedAI}
+                      options={vendors.filter((v) => v !== "Other")}
+                      placeholder={selectedAI.length > 0 ? "Add another…" : `Select ${row.label}…`}
+                      disabled={addVendorMutation.isPending}
+                      onSelect={toggleAIVendor}
+                      onAddNew={(name) => submitNewVendor(row.type, name, { selectAfter: true, multi: true })}
+                      className="w-48"
+                    />
                   </div>
                 </div>
               );

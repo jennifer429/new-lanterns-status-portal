@@ -8,38 +8,47 @@ import { cn } from "@/lib/utils";
  * Type-ahead vendor picker. Filters the picklist case-insensitively as you
  * type, and offers to add a brand-new vendor when nothing matches.
  *
- * - `onSelect` fires when an existing option is chosen.
- * - `onAddNew` fires when the user adds a value not already in the list; the
- *   parent is responsible for persisting it to the vendor picklist.
+ * Single-select (default): `value` is the current selection; `onSelect`
+ * replaces it and closes the popover.
+ *
+ * Multi-select (`multiple`): `selected` is the list of chosen vendors;
+ * `onSelect` toggles one and the popover stays open so several can be picked.
+ *
+ * In both modes `onAddNew` fires when the user adds a value not already in the
+ * list; the parent persists it to the vendor picklist.
  */
 export function VendorCombobox({
   value,
+  selected,
+  multiple,
   options,
   placeholder,
   onSelect,
   onAddNew,
   disabled,
+  className,
 }: {
-  value: string;
+  value?: string;
+  selected?: string[];
+  multiple?: boolean;
   options: string[];
   placeholder: string;
   onSelect: (v: string) => void;
   onAddNew: (name: string) => void;
   disabled?: boolean;
+  className?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+
+  const isSelected = (opt: string) =>
+    multiple ? (selected ?? []).includes(opt) : value === opt;
 
   const trimmed = search.trim();
   // Case-insensitive substring match — autopopulates the list as you type.
   const filtered = options.filter((o) => o.toLowerCase().includes(trimmed.toLowerCase()));
   const exactExists = options.some((o) => o.toLowerCase() === trimmed.toLowerCase());
   const showAdd = trimmed.length > 0 && !exactExists;
-
-  const close = () => {
-    setOpen(false);
-    setSearch("");
-  };
 
   return (
     <Popover
@@ -54,12 +63,13 @@ export function VendorCombobox({
           type="button"
           disabled={disabled}
           className={cn(
-            "flex flex-1 h-8 items-center justify-between text-sm text-left rounded-md border border-input bg-background/50 px-2 text-foreground",
+            "flex h-8 items-center justify-between text-sm text-left rounded-md border border-input bg-background/50 px-2 text-foreground",
             "hover:bg-background/70 focus:outline-none focus:ring-1 focus:ring-ring transition-colors disabled:opacity-50",
-            !value && "text-muted-foreground"
+            !value && "text-muted-foreground",
+            className ?? "flex-1"
           )}
         >
-          <span className="truncate">{value || placeholder}</span>
+          <span className="truncate">{(!multiple && value) || placeholder}</span>
           <ChevronsUpDown className="ml-1 h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
         </button>
       </PopoverTrigger>
@@ -86,10 +96,29 @@ export function VendorCombobox({
                     value={opt}
                     onSelect={() => {
                       onSelect(opt);
-                      close();
+                      // Multi-select: keep picking; single-select: close.
+                      if (multiple) {
+                        setSearch("");
+                      } else {
+                        setOpen(false);
+                        setSearch("");
+                      }
                     }}
                   >
-                    <Check className={cn("mr-2 h-3.5 w-3.5", value === opt ? "opacity-100" : "opacity-0")} />
+                    {multiple ? (
+                      <span
+                        className={cn(
+                          "mr-2 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors",
+                          isSelected(opt)
+                            ? "bg-primary border-primary text-primary-foreground"
+                            : "border-input"
+                        )}
+                      >
+                        {isSelected(opt) && <Check className="h-3 w-3" />}
+                      </span>
+                    ) : (
+                      <Check className={cn("mr-2 h-3.5 w-3.5", isSelected(opt) ? "opacity-100" : "opacity-0")} />
+                    )}
                     <span className="text-sm">{opt}</span>
                   </CommandItem>
                 ))}
@@ -101,7 +130,8 @@ export function VendorCombobox({
                   value={`__add__${trimmed}`}
                   onSelect={() => {
                     onAddNew(trimmed);
-                    close();
+                    setOpen(false);
+                    setSearch("");
                   }}
                 >
                   <PlusCircle className="mr-2 h-3.5 w-3.5 text-primary" />
