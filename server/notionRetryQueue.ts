@@ -6,7 +6,7 @@
  * After 3 consecutive failures for a single item, the owner is notified.
  */
 
-import { getDb } from "./db";
+import { requireDb } from "./db";
 import { notionRetryQueue } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { notifyOwner } from "./_core/notification";
@@ -27,7 +27,7 @@ export interface RetryPayload {
  */
 export async function enqueueFailedWrite(payload: RetryPayload, error: string): Promise<void> {
   try {
-    const db = await getDb();
+    const db = await requireDb();
     await db.insert(notionRetryQueue).values({
       writeType: payload.writeType,
       payload: JSON.stringify(payload.data),
@@ -49,7 +49,7 @@ export async function enqueueFailedWrite(payload: RetryPayload, error: string): 
 export async function processRetryQueue(): Promise<{ processed: number; succeeded: number; failed: number; notified: number }> {
   const stats = { processed: 0, succeeded: 0, failed: 0, notified: 0 };
 
-  const db = await getDb();
+  const db = await requireDb();
   const pendingItems = await db
     .select()
     .from(notionRetryQueue)
@@ -160,7 +160,7 @@ export async function getQueueStats(): Promise<{
     updatedAt: Date;
   }>;
 }> {
-  const db = await getDb();
+  const db = await requireDb();
   const allItems = await db
     .select()
     .from(notionRetryQueue)

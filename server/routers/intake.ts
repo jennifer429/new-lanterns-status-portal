@@ -133,12 +133,12 @@ export const intakeRouter = router({
   /**
    * Toggle completion status of an org custom task
    */
-  toggleOrgCustomTaskPublic: publicProcedure
+  saveResponse: publicProcedure
     .input(
       z.object({
         organizationSlug: z.string(),
-        taskId: z.number(),
-        isCompleted: z.boolean(),
+        questionId: z.string(),
+        response: z.string(),
         userEmail: z.string(),
       })
     )
@@ -412,8 +412,9 @@ export const intakeRouter = router({
         const fileName = `${sanitizedOrgName}_${sanitizedEmail}_${input.questionId}-${shortTitle}_${timestamp}.${fileExt}`;
         
         // Upload to Google Drive (per-customer folder)
-        const fileUrl = await uploadToGoogleDrive(fileName, fileBuffer, org.name, org.googleDriveFolderId);
-        const s3Key = fileName; // store filename as reference
+        const { driveUrl, s3Url, driveFileId: uploadedDriveFileId, s3Key } =
+          await uploadToGoogleDrive(fileName, fileBuffer, org.name, org.googleDriveFolderId);
+        const fileUrl = driveUrl || s3Url;
 
         // Store file info in database
         await db.insert(intakeFileAttachments).values({
@@ -421,7 +422,7 @@ export const intakeRouter = router({
           questionId: input.questionId, // String question ID (e.g., "D.13")
           fileName: input.fileName,
           fileUrl,
-          driveFileId: s3Key, // Store S3 key for reference
+          driveFileId: uploadedDriveFileId || s3Key, // Drive file id (fallback to S3 key)
           fileSize: fileBuffer.length,
           mimeType: input.mimeType,
           uploadedBy: input.userEmail,
@@ -445,6 +446,11 @@ export const intakeRouter = router({
         return {
           success: true,
           fileUrl,
+          status: {
+            drive: !!driveUrl,
+            s3: !!s3Url,
+            notion: true,
+          },
           message: "File uploaded successfully",
         };
       } catch (error) {
@@ -667,12 +673,12 @@ export const intakeRouter = router({
   /**
    * Delete an org custom task
    */
-  deleteOrgCustomTaskPublic: publicProcedure
+  submitFeedback: publicProcedure
     .input(
       z.object({
         organizationSlug: z.string(),
-        taskId: z.number(),
-        userEmail: z.string(),
+        rating: z.number(),
+        comments: z.string().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {

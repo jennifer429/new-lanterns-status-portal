@@ -370,7 +370,8 @@ export const connectivityRouter = router({
     .query(async ({ input }) => {
       const client = getConnectivityNotionClient();
       const dsId = getDataSourceId();
-      const { db } = await import("../db");
+      const { requireDb } = await import("../db");
+      const db = await requireDb();
       const { connectivityCache } = await import("../../drizzle/schema");
       const { eq } = await import("drizzle-orm");
       

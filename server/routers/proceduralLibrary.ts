@@ -121,7 +121,8 @@ export const proceduralLibraryRouter = router({
       const driveFileName = `procedural-library_${targetClientId}_${timestamp}.${fileExt}`;
 
       // Upload to Google Drive
-      const fileUrl = await uploadToGoogleDrive(driveFileName, fileBuffer, "");
+      const { driveUrl, s3Url } = await uploadToGoogleDrive(driveFileName, fileBuffer, "");
+      const fileUrl = driveUrl || s3Url;
 
       // Insert metadata
       const [inserted] = await db.insert(partnerDocuments).values({
@@ -147,7 +148,11 @@ export const proceduralLibraryRouter = router({
         action: "upload",
       });
 
-      return { success: true, fileUrl };
+      return {
+        success: true,
+        fileUrl,
+        status: { drive: !!driveUrl, s3: !!s3Url, notion: true },
+      };
     }),
 
   /** Delete a document (admin only) */
