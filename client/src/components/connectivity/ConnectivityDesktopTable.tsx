@@ -54,7 +54,7 @@ export function ConnectivityDesktopTable({
       if (next.has('all')) {
         // First toggle: remove 'all', add all groups except the one being collapsed
         next.delete('all');
-        for (const k of groups.keys()) {
+        for (const k of Array.from(groups.keys())) {
           if (k !== key) next.add(k);
         }
       } else if (next.has(key)) {

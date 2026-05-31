@@ -379,8 +379,10 @@ function InlineEdit({
     </span>
   );
 }
+// ValidationStatus is the subset of StatusType used in the validation grid
+type ValidationStatus = StatusType;
 // Cycle order when clicking the badge: Open → Pass → Fail → In Progress → Blocked → N/A → Open
-const STATUS_CYCLE: StatusType[] = ["open", "pass", "fail", "in_progress", "blocked", "na"];
+const STATUS_CYCLE: ValidationStatus[] = ["open", "pass", "fail", "in_progress", "blocked", "na"];
 // ── Related question answer display ─────────────────────────────────────────
 
 function RelatedAnswers({
@@ -578,6 +580,7 @@ export default function Validation() {
     in_progress: "In Progress",
     blocked: "Blocked",
     open: "Not Tested",
+    done: "Pass",
   };
 
   function cycleStatus(pIdx: number, tIdx: number) {

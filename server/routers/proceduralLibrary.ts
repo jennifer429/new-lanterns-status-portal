@@ -122,7 +122,8 @@ export const proceduralLibraryRouter = router({
       const driveFileName = `procedural-library_${targetClientId}_${timestamp}.${fileExt}`;
 
       // Upload to Google Drive
-      const fileUrl = await uploadToGoogleDrive(driveFileName, fileBuffer, "");
+      const { driveUrl, s3Url, driveFileId: uploadedDriveFileId, s3Key } = await uploadToGoogleDrive(driveFileName, fileBuffer, "");
+      const fileUrl = driveUrl ?? s3Url;
 
       // Insert metadata
       const [inserted] = await db.insert(partnerDocuments).values({
@@ -131,7 +132,7 @@ export const proceduralLibraryRouter = router({
         title: input.title,
         description: null,
         filename: input.fileName,
-        driveFileId: driveFileName,
+        driveFileId: uploadedDriveFileId ?? s3Key,
         url: fileUrl,
         mimeType: input.mimeType,
         size: fileBuffer.length,

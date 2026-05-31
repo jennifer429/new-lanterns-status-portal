@@ -1424,8 +1424,8 @@ export const adminRouter = router({
       const timestamp = Date.now();
       const fileExt = input.fileName.split('.').pop();
       const driveFileName = `partner-templates_${input.clientId}_${input.questionId}_${timestamp}.${fileExt}`;
-      const fileUrl = await uploadToGoogleDrive(driveFileName, fileBuffer, "");
-      const s3Key = driveFileName;
+      const { driveUrl, s3Url, s3Key } = await uploadToGoogleDrive(driveFileName, fileBuffer, "");
+      const fileUrl = driveUrl ?? s3Url;
 
       // Insert into database
       const [ptRes] = await db.insert(partnerTemplates).values({
@@ -1495,8 +1495,8 @@ export const adminRouter = router({
       const timestamp = Date.now();
       const fileExt = input.fileName.split('.').pop();
       const driveFileName = `partner-templates_${existing.clientId}_${existing.questionId}_${timestamp}.${fileExt}`;
-      const fileUrl = await uploadToGoogleDrive(driveFileName, fileBuffer, "");
-      const s3Key = driveFileName;
+      const { driveUrl, s3Url, s3Key } = await uploadToGoogleDrive(driveFileName, fileBuffer, "");
+      const fileUrl = driveUrl ?? s3Url;
 
       // Insert new active template
       const [ptReplaceRes] = await db.insert(partnerTemplates).values({
@@ -1567,8 +1567,8 @@ export const adminRouter = router({
       // Upload to Google Drive
       const timestamp = Date.now();
       const driveFileName = `specifications_${timestamp}_${input.fileName}`;
-      const fileUrl = await uploadToGoogleDrive(driveFileName, fileBuffer, "");
-      const s3Key = driveFileName;
+      const { driveUrl, s3Url, s3Key } = await uploadToGoogleDrive(driveFileName, fileBuffer, "");
+      const fileUrl = driveUrl ?? s3Url;
 
       const [specRes] = await db.insert(specifications).values({
         title: input.title,

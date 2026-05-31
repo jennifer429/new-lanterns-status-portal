@@ -11,7 +11,7 @@
  * Runs hourly via cron. Does NOT auto-fix — just reports discrepancies.
  */
 
-import { getDb } from "./db";
+import { requireDb } from "./db";
 import { taskCompletion, validationResults, organizations, reconciliationLog } from "../drizzle/schema";
 import { eq, desc, sql, isNull, and, lt } from "drizzle-orm";
 import { notifyOwner } from "./_core/notification";
@@ -31,7 +31,7 @@ interface OutOfSyncRow {
  * These are rows the portal wrote but sync-back hasn't confirmed yet.
  */
 async function findStaleTasks(): Promise<OutOfSyncRow[]> {
-  const db = await getDb();
+  const db = await requireDb();
   const cutoff = new Date(Date.now() - STALE_THRESHOLD_MS);
 
   const staleTasks = await db
@@ -54,7 +54,7 @@ async function findStaleTasks(): Promise<OutOfSyncRow[]> {
   if (staleTasks.length === 0) return [];
 
   // Get org slugs
-  const orgIds = [...new Set(staleTasks.map(t => t.organizationId))];
+  const orgIds = Array.from(new Set(staleTasks.map(t => t.organizationId)));
   const orgs = orgIds.length > 0
     ? await db.select({ id: organizations.id, slug: organizations.slug }).from(organizations).where(sql`${organizations.id} IN (${sql.join(orgIds.map(id => sql`${id}`), sql`, `)})`)
     : [];
@@ -73,7 +73,7 @@ async function findStaleTasks(): Promise<OutOfSyncRow[]> {
  * Find validation results where notionLastEdited is null and updatedAt is stale (>10 min).
  */
 async function findStaleValidationResults(): Promise<OutOfSyncRow[]> {
-  const db = await getDb();
+  const db = await requireDb();
   const cutoff = new Date(Date.now() - STALE_THRESHOLD_MS);
 
   const staleResults = await db
@@ -96,7 +96,7 @@ async function findStaleValidationResults(): Promise<OutOfSyncRow[]> {
   if (staleResults.length === 0) return [];
 
   // Get org slugs
-  const orgIds = [...new Set(staleResults.map(r => r.organizationId))];
+  const orgIds = Array.from(new Set(staleResults.map(r => r.organizationId)));
   const orgs = orgIds.length > 0
     ? await db.select({ id: organizations.id, slug: organizations.slug }).from(organizations).where(sql`${organizations.id} IN (${sql.join(orgIds.map(id => sql`${id}`), sql`, `)})`)
     : [];
@@ -130,8 +130,8 @@ export async function runReconciliation(): Promise<{ checked: number; outOfSync:
     const stats = { checked: allIssues.length > 0 ? allIssues.length : 0, outOfSync: allIssues.length };
 
     // Persist to reconciliationLog
-    const db = await getDb();
-    await db.insert(reconciliationLog).values({
+    const db2 = await requireDb();
+    await db2.insert(reconciliationLog).values({
       rowsChecked: stats.checked,
       outOfSync: allIssues.length,
       issues: allIssues.length > 0 ? JSON.stringify(allIssues) : null,
@@ -165,8 +165,8 @@ export async function runReconciliation(): Promise<{ checked: number; outOfSync:
   } catch (err: any) {
     const durationMs = Date.now() - startTime;
     // Persist error to log
-    const db = await getDb();
-    await db.insert(reconciliationLog).values({
+    const db2 = await requireDb();
+    await db2.insert(reconciliationLog).values({
       rowsChecked: 0,
       outOfSync: 0,
       durationMs,
@@ -192,7 +192,7 @@ export async function getReconciliationHistory(limit = 24): Promise<Array<{
   errorMessage: string | null;
   createdAt: Date;
 }>> {
-  const db = await getDb();
+  const db = await requireDb();
   return db
     .select()
     .from(reconciliationLog)

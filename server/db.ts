@@ -98,7 +98,7 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-export async function requireDb() {
+export async function requireDb(): Promise<ReturnType<typeof drizzle>> {
   const db = await getDb();
   if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
   return db;
