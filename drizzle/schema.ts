@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, tinyint, varchar } from "drizzle-orm/mysql-core";
+import { int, json, mysqlEnum, mysqlTable, text, timestamp, tinyint, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -701,6 +701,24 @@ export const syncCheckpoints = mysqlTable("syncCheckpoints", {
 });
 export type SyncCheckpoint = typeof syncCheckpoints.$inferSelect;
 export type InsertSyncCheckpoint = typeof syncCheckpoints.$inferInsert;
+
+export const emailLog = mysqlTable("emailLog", {
+  id: int("id").primaryKey().autoincrement(),
+  direction: varchar("direction", { length: 10 }).notNull(),
+  type: varchar("type", { length: 30 }).notNull(),
+  toAddress: varchar("toAddress", { length: 255 }).notNull(),
+  fromAddress: varchar("fromAddress", { length: 255 }).notNull(),
+  subject: varchar("subject", { length: 500 }).notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("sent"),
+  errorMessage: text("errorMessage"),
+  organizationId: int("organizationId"),
+  triggeredBy: varchar("triggeredBy", { length: 255 }),
+  messageId: varchar("messageId", { length: 255 }),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type EmailLog = typeof emailLog.$inferSelect;
+export type InsertEmailLog = typeof emailLog.$inferInsert;
 
 /**
  * Cache for connectivity data fetched from Notion.

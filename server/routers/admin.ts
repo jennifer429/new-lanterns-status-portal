@@ -7,7 +7,10 @@ import { eq, and, or, desc, inArray, sql } from "drizzle-orm";
 import { uploadToGoogleDrive } from "./files";
 import { dispatch } from "../notionSyncDispatcher";
 import bcrypt from "bcrypt";
-import { triggerInviteSend } from "../_core/inviteTrigger";
+import { randomBytes } from "crypto";
+import { sendEmail } from "../email/send";
+import { inviteTemplate } from "../email/templates";
+import { ENV } from "../_core/env";
 import { fileUploadInput } from "../_core/fileValidation";
 
 /**
@@ -1096,13 +1099,56 @@ export const adminRouter = router({
           .filter((e): e is string => !!e && e !== input.email);
       }
 
-      const inviteTriggered = await triggerInviteSend({
-        email: input.email,
-        reason: "created",
-        ccEmails,
+      // Generate invite token and send email directly
+      const inviteToken = randomBytes(32).toString("hex");
+      const inviteTokenExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      await db.update(users)
+        .set({ inviteToken, inviteTokenExpiresAt })
+        .where(eq(users.id, newUser.insertId));
+
+      // Build URLs
+      const setPasswordUrl = `${ENV.siteBaseUrl}/set-password?token=${inviteToken}`;
+      let dashboardUrl = `${ENV.siteBaseUrl}/login`;
+      let orgName: string | null = null;
+      if (input.organizationId) {
+        const [org] = await db.select({ slug: organizations.slug, name: organizations.name })
+          .from(organizations).where(eq(organizations.id, input.organizationId)).limit(1);
+        if (org) {
+          dashboardUrl = `${ENV.siteBaseUrl}/org/${org.slug}`;
+          orgName = org.name;
+        }
+      } else if (input.clientId) {
+        const [client] = await db.select({ slug: clients.slug, name: clients.name })
+          .from(clients).where(eq(clients.id, input.clientId)).limit(1);
+        if (client) {
+          dashboardUrl = `${ENV.siteBaseUrl}/org/${client.slug}/admin`;
+          orgName = client.name;
+        }
+      }
+
+      const { subject, html, text } = inviteTemplate({
+        displayName: input.name || input.email,
+        orgName,
+        setPasswordUrl,
+        dashboardUrl,
       });
 
-      return { success: true, tempPassword, inviteTriggered };
+      const emailSent = await sendEmail({
+        to: input.email,
+        cc: ccEmails,
+        subject, html, text,
+        type: "invite",
+        organizationId: input.organizationId ?? null,
+        triggeredBy: ctx.user?.email ?? undefined,
+      });
+
+      if (emailSent) {
+        await db.update(users)
+          .set({ invitedAt: new Date() })
+          .where(eq(users.id, newUser.insertId));
+      }
+
+      return { success: true, tempPassword, emailSent };
     }),
 
   /**
@@ -1138,23 +1184,60 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Cannot resend invite for users from other partners" });
       }
 
-      // Reset invitedAt to null and clear old token so the user appears in pending invites again
-      await db
-        .update(users)
-        .set({
-          invitedAt: null,
-          inviteToken: null,
-          inviteTokenExpiresAt: null,
-        })
+      // Generate fresh invite token
+      const inviteToken = randomBytes(32).toString("hex");
+      const inviteTokenExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      await db.update(users)
+        .set({ invitedAt: null, inviteToken, inviteTokenExpiresAt })
         .where(eq(users.id, input.userId));
 
+      // Look up org/client for email template
+      const setPasswordUrl = `${ENV.siteBaseUrl}/set-password?token=${inviteToken}`;
+      let dashboardUrl = `${ENV.siteBaseUrl}/login`;
+      let orgName: string | null = null;
 
-      const inviteTriggered = await triggerInviteSend({
-        email: targetUser.email,
-        reason: "resent",
+      // Re-fetch full user to get organizationId
+      const [fullUser] = await db.select({ organizationId: users.organizationId, clientId: users.clientId })
+        .from(users).where(eq(users.id, input.userId)).limit(1);
+
+      if (fullUser?.organizationId) {
+        const [org] = await db.select({ slug: organizations.slug, name: organizations.name })
+          .from(organizations).where(eq(organizations.id, fullUser.organizationId)).limit(1);
+        if (org) {
+          dashboardUrl = `${ENV.siteBaseUrl}/org/${org.slug}`;
+          orgName = org.name;
+        }
+      } else if (targetUser.clientId) {
+        const [client] = await db.select({ slug: clients.slug, name: clients.name })
+          .from(clients).where(eq(clients.id, targetUser.clientId)).limit(1);
+        if (client) {
+          dashboardUrl = `${ENV.siteBaseUrl}/org/${client.slug}/admin`;
+          orgName = client.name;
+        }
+      }
+
+      const { subject, html, text } = inviteTemplate({
+        displayName: targetUser.name || targetUser.email,
+        orgName,
+        setPasswordUrl,
+        dashboardUrl,
       });
 
-      return { success: true, email: targetUser.email, inviteTriggered };
+      const emailSent = await sendEmail({
+        to: targetUser.email,
+        subject, html, text,
+        type: "invite",
+        organizationId: fullUser?.organizationId ?? null,
+        triggeredBy: ctx.user?.email ?? undefined,
+      });
+
+      if (emailSent) {
+        await db.update(users)
+          .set({ invitedAt: new Date() })
+          .where(eq(users.id, input.userId));
+      }
+
+      return { success: true, email: targetUser.email, emailSent };
     }),
 
   /**

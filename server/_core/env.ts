@@ -36,6 +36,10 @@ const envSchema = z.object({
   INVITE_WEBHOOK_URL: z.string().default(""),
   INVITE_WEBHOOK_SECRET: z.string().default(""),
   INVITE_WEBHOOK_ENABLED: z.string().default(""),
+  SYSTEM_EMAIL_ADDRESS: z.string().default(""),
+  SYSTEM_EMAIL_APP_PASSWORD: z.string().default(""),
+  SYSTEM_EMAIL_DISPLAY_NAME: z.string().default("New Lantern Portal"),
+  SYSTEM_EMAIL_REPLY_TO: z.string().default(""),
 });
 
 // Corrective overrides: webdev_request_secrets cannot overwrite existing env vars in the
@@ -116,7 +120,9 @@ export const ENV = {
   externalApiKey: e.EXTERNAL_API_KEY,
   inviteWebhookUrl: e.INVITE_WEBHOOK_URL,
   inviteWebhookSecret: e.INVITE_WEBHOOK_SECRET,
-  // Kill switch: emails do not go out unless this is explicitly "true".
-  // Leave unset (or "false") during testing so no real invites are sent.
   inviteWebhookEnabled: e.INVITE_WEBHOOK_ENABLED === "true",
+  systemEmailAddress: e.SYSTEM_EMAIL_ADDRESS,
+  systemEmailAppPassword: e.SYSTEM_EMAIL_APP_PASSWORD,
+  systemEmailDisplayName: e.SYSTEM_EMAIL_DISPLAY_NAME,
+  systemEmailReplyTo: e.SYSTEM_EMAIL_REPLY_TO || e.SYSTEM_EMAIL_ADDRESS,
 };
