@@ -42,8 +42,8 @@ export function ProgressHero({
 
   return (
     <Card className="card-elevated overflow-hidden">
-      {/* Top accent gradient */}
-      <div className="h-1 bg-gradient-to-r from-primary via-primary/60 to-emerald-500/40" />
+      {/* Top accent */}
+      <div className="h-0.5 bg-primary" />
       <CardContent className="p-3">
         <div className="flex flex-col md:flex-row items-center gap-3">
           {/* Progress Ring */}

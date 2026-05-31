@@ -16,6 +16,7 @@ import {
   Upload,
 } from "lucide-react";
 import { type Question } from "@shared/questionnaireData";
+import { cn } from "@/lib/utils";
 import { UploadedFilesList } from "@/components/UploadedFileRow";
 import { LocalInput } from "./LocalFormControls";
 import { LocalTextarea } from "./LocalFormControls";
@@ -260,13 +261,15 @@ export function QuestionRenderer({
     }
 
     case "contacts-table": {
+      // `key` is the persisted JSON key (unchanged so existing data round-trips);
+      // id/role/hint drive the display.
       const CONTACT_ROWS = [
-        { key: "admin", label: "Administrative (A.1)" },
-        { key: "it", label: "IT — Connectivity & Systems (A.2)" },
-        { key: "it_post_prod", label: "IT — Post-Production Support" },
-        { key: "clinical", label: "Clinical / Technologist (A.3)" },
-        { key: "radiologist", label: "Radiologist Champion (A.4)" },
-        { key: "pm", label: "Project Manager (A.5)" },
+        { key: "admin", id: "A.1", role: "Administrative", hint: "Primary admin / billing owner" },
+        { key: "it", id: "A.2", role: "IT Connectivity", hint: "Network, VPN, firewall" },
+        { key: "it_post_prod", id: "A.itpp", role: "IT Post-Production Support", hint: "Ongoing support after go-live" },
+        { key: "clinical", id: "A.3", role: "Clinical", hint: "Workflow / department lead" },
+        { key: "radiologist", id: "A.4", role: "Radiologist Champion", hint: "Reading physician sponsor" },
+        { key: "pm", id: "A.5", role: "Project Manager", hint: "Implementation coordination" },
       ] as const;
 
       type ContactKey = (typeof CONTACT_ROWS)[number]["key"];
@@ -284,6 +287,12 @@ export function QuestionRenderer({
       } catch {
         parsed = {} as ContactsData;
       }
+
+      const isFilled = (r: ContactRow) =>
+        (r.name || r.email || r.phone || "").trim() !== "";
+      const filledCount = CONTACT_ROWS.filter(({ key }) =>
+        isFilled({ ...empty, ...(parsed[key as ContactKey] || {}) })
+      ).length;
 
       const updateContact = (
         rowKey: ContactKey,
@@ -318,57 +327,88 @@ export function QuestionRenderer({
         });
       };
 
+      const cellInputClass =
+        "h-8 text-sm bg-transparent border-0 shadow-none rounded focus-visible:ring-1 focus-visible:ring-primary/40 focus-visible:bg-primary/5";
+
       return (
-        <div className="overflow-x-auto rounded-lg border border-border col-span-2">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/30">
-              <tr>
-                <th className="text-left px-3 py-2 font-medium text-muted-foreground w-56">
-                  Contact
-                </th>
-                <th className="text-left px-3 py-2 font-medium text-muted-foreground">
-                  Name
-                </th>
-                <th className="text-left px-3 py-2 font-medium text-muted-foreground">
-                  Phone
-                </th>
-                <th className="text-left px-3 py-2 font-medium text-muted-foreground">
-                  Email
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {CONTACT_ROWS.map(({ key, label }, idx) => {
-                const row: ContactRow = {
-                  ...empty,
-                  ...(parsed[key as ContactKey] || {}),
-                };
-                return (
-                  <tr key={key} className={idx % 2 === 1 ? "bg-muted/10" : ""}>
-                    <td className="px-3 py-1.5 text-xs text-muted-foreground font-medium align-middle">
-                      {label}
-                    </td>
-                    {(["name", "phone", "email"] as (keyof ContactRow)[]).map(
-                      (field) => (
-                        <td key={field} className="px-2 py-1">
-                          <LocalInput
-                            value={row[field]}
-                            onCommit={(val) =>
-                              updateContact(key as ContactKey, field, val)
-                            }
-                            placeholder={
-                              field.charAt(0).toUpperCase() + field.slice(1)
-                            }
-                            className="h-8 text-sm !bg-white !text-black border-0 shadow-none focus-visible:ring-1 focus-visible:ring-primary/50"
+        <div className="col-span-2 rounded-lg border border-border overflow-hidden">
+          {/* Status bar */}
+          <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-muted/20">
+            <span className="text-[10px] font-mono uppercase tracking-[0.08em] text-muted-foreground">
+              {filledCount} of {CONTACT_ROWS.length} roles filled · syncs to Notion
+            </span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/30">
+                <tr>
+                  <th className="text-left px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground w-64">
+                    Role
+                  </th>
+                  <th className="text-left px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Name
+                  </th>
+                  <th className="text-left px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Email
+                  </th>
+                  <th className="text-left px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Phone
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {CONTACT_ROWS.map(({ key, id, role, hint }, idx) => {
+                  const row: ContactRow = {
+                    ...empty,
+                    ...(parsed[key as ContactKey] || {}),
+                  };
+                  const filled = isFilled(row);
+                  return (
+                    <tr key={key} className={idx % 2 === 1 ? "bg-muted/10" : ""}>
+                      <td className="px-3 py-1.5 align-middle">
+                        <div className="flex items-center gap-2.5">
+                          <span
+                            className={cn(
+                              "w-2 h-2 rounded-full shrink-0 transition-colors",
+                              filled ? "bg-emerald-500" : "bg-muted-foreground/30"
+                            )}
                           />
-                        </td>
-                      )
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium text-foreground truncate">{role}</div>
+                            <div className="text-[11px] text-muted-foreground truncate">{id} · {hint}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-2 py-1">
+                        <LocalInput
+                          value={row.name}
+                          onCommit={(val) => updateContact(key as ContactKey, "name", val)}
+                          placeholder="Full name"
+                          className={cellInputClass}
+                        />
+                      </td>
+                      <td className="px-2 py-1">
+                        <LocalInput
+                          value={row.email}
+                          onCommit={(val) => updateContact(key as ContactKey, "email", val)}
+                          placeholder="email@org.com"
+                          className={cn(cellInputClass, "font-mono")}
+                        />
+                      </td>
+                      <td className="px-2 py-1">
+                        <LocalInput
+                          value={row.phone}
+                          onCommit={(val) => updateContact(key as ContactKey, "phone", val)}
+                          placeholder="(000) 000-0000"
+                          className={cn(cellInputClass, "font-mono")}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       );
     }

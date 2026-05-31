@@ -12,8 +12,7 @@ import {
   exportJSON,
 } from './connectivity/connectivityUtils';
 import { ConnectivityImportDialog } from './connectivity/ConnectivityImportDialog';
-import { ConnectivityDesktopTable } from './connectivity/ConnectivityDesktopTable';
-import { ConnectivityMobileCards } from './connectivity/ConnectivityMobileCards';
+import { ConnectivityEndpointList } from './connectivity/ConnectivityEndpointList';
 
 export type { ConnectivityRow };
 
@@ -44,7 +43,9 @@ export function ConnectivityTable({ rows: rawRows, onChange, systems = [] }: Con
     return [...DEFAULT_TRAFFIC_TYPES, ...custom];
   }, [rows]);
 
-  const addRow    = useCallback(() => onChange([...rows, emptyRow()]), [rows, onChange]);
+  const addRow      = useCallback(() => onChange([...rows, emptyRow()]), [rows, onChange]);
+  const addRowOfType = useCallback((trafficType: string) =>
+    onChange([...rows, { ...emptyRow(), trafficType }]), [rows, onChange]);
   const dupRow    = useCallback((i: number) => {
     const n = [...rows]; n.splice(i + 1, 0, { ...rows[i], id: makeId() }); onChange(n);
   }, [rows, onChange]);
@@ -63,6 +64,7 @@ export function ConnectivityTable({ rows: rawRows, onChange, systems = [] }: Con
     trafficTypes,
     systemNames,
     onAddRow: addRow,
+    onAddRowOfType: addRowOfType,
     onDupRow: dupRow,
     onRemoveRow: removeRow,
     onSetField: setField,
@@ -98,9 +100,7 @@ export function ConnectivityTable({ rows: rawRows, onChange, systems = [] }: Con
 
       <ConnectivityImportDialog open={importOpen} onOpenChange={setImportOpen} onImport={handleImport} />
 
-      <ConnectivityDesktopTable {...sharedProps} />
-
-      <ConnectivityMobileCards {...sharedProps} />
+      <ConnectivityEndpointList {...sharedProps} />
 
     </div>
   );
