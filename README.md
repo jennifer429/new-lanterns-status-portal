@@ -190,6 +190,10 @@ To deploy:
 1. Save a checkpoint: `webdev_save_checkpoint`
 2. Click "Publish" in the Management UI
 
+### Running on Render (dual-platform)
+
+To run the same codebase on Render alongside Manus, see [`docs/render-migration-plan.md`](docs/render-migration-plan.md). The plan covers the `DEPLOY_TARGET` / `ENABLE_CRON` env switch, the shared-MySQL migration steps, and the per-platform environment-variable checklist.
+
 ## Security Considerations
 
 ### Partner Isolation

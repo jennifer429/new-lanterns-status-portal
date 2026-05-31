@@ -656,6 +656,8 @@ export const adminRouter = router({
         contactPhone: z.string().optional(),
         status: z.enum(["active", "completed", "paused"]).optional(),
         clientId: z.number().optional(),
+        targetGoLiveDate: z.string().nullable().optional(),
+        liveDate: z.string().nullable().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -1301,7 +1303,11 @@ export const adminRouter = router({
    * Mark an organization as complete
    */
   markOrganizationComplete: adminDbProcedure
-    .input(z.object({ organizationId: z.number() }))
+    .input(z.object({
+      organizationId: z.number(),
+      // Actual go-live date (YYYY-MM-DD). Defaults to today when omitted.
+      liveDate: z.string().optional(),
+    }))
     .mutation(async ({ ctx, input }) => {
       const { db } = ctx;
 
@@ -1316,10 +1322,11 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Cannot mark other partner's organizations as complete" });
       }
 
-      // Update status to completed
+      // Update status to completed and record the go-live date
+      const liveDate = input.liveDate || new Date().toISOString().slice(0, 10);
       await db
         .update(organizations)
-        .set({ status: "completed" })
+        .set({ status: "completed", liveDate })
         .where(eq(organizations.id, input.organizationId));
 
       return { success: true };
@@ -1344,10 +1351,10 @@ export const adminRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Cannot reopen other partner's organizations" });
       }
 
-      // Update status to active
+      // Update status to active and clear the recorded go-live date
       await db
         .update(organizations)
-        .set({ status: "active" })
+        .set({ status: "active", liveDate: null })
         .where(eq(organizations.id, input.organizationId));
 
       return { success: true };
