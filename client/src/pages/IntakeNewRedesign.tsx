@@ -47,6 +47,7 @@ export default function IntakeNewRedesign() {
     existingResponses,
     responses,
     setResponses,
+    saveStatus,
     setSaveStatus,
     fileCount,
     allUploadedFiles,
@@ -221,12 +222,7 @@ export default function IntakeNewRedesign() {
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
-    <div
-      className="min-h-screen flex"
-      style={{
-        background: "linear-gradient(135deg, #1a0b2e 0%, #2d1b4e 50%, #1a0b2e 100%)",
-      }}
-    >
+    <div className="min-h-screen flex bg-background">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
@@ -260,11 +256,12 @@ export default function IntakeNewRedesign() {
           onOpenImport={() => setImportDialogOpen(true)}
           calculateSectionProgress={calculateSectionProgress}
           fileCount={fileCount}
+          saveStatus={saveStatus}
         />
 
         {/* Section Content */}
         <div className="flex-1 overflow-y-auto p-3 pb-20 sm:pb-8 md:p-8">
-          <Card className="max-w-6xl mx-auto bg-black/40 backdrop-blur-sm border-purple-500/20">
+          <Card className="max-w-6xl mx-auto bg-card border-border">
             <div className="p-4 md:p-8">
               {/* Integration Workflows section — renders its own header */}
               {currentSectionData?.type === "integration-workflows" ? (

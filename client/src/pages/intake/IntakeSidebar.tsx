@@ -37,7 +37,7 @@ export function IntakeSidebar({
   return (
     <div
       className={`
-        fixed inset-y-0 left-0 z-50 w-80 bg-black border-r border-purple-500/20 flex flex-col
+        fixed inset-y-0 left-0 z-50 w-80 bg-card border-r border-border flex flex-col
         transition-transform duration-200
         ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
         md:static md:translate-x-0 md:shrink-0
@@ -61,8 +61,8 @@ export function IntakeSidebar({
       </div>
 
       {/* Progress Overview Card */}
-      <div className="p-4 border-b border-purple-500/20">
-        <div className="bg-gradient-to-br from-purple-900/40 to-purple-800/40 rounded-lg p-4 border border-purple-500/30">
+      <div className="p-4 border-b border-border">
+        <div className="bg-muted/30 rounded-lg p-4 border border-border">
           {/* Section completion count */}
           <div className="mb-3">
             <div className="text-xs text-muted-foreground mb-1">Overall Progress</div>
@@ -95,7 +95,7 @@ export function IntakeSidebar({
           </div>
 
           {/* Files Count */}
-          <div className="pt-3 border-t border-purple-500/20">
+          <div className="pt-3 border-t border-border">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Files Uploaded</span>
               <span className="font-bold text-white">{fileCount} files</span>
@@ -121,12 +121,12 @@ export function IntakeSidebar({
               }}
               className={`w-full text-left p-3 rounded-lg transition-colors flex items-center gap-3 ${
                 isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "hover:bg-muted"
+                  ? "bg-primary/15 text-primary font-medium"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
               }`}
             >
               {isComplete ? (
-                <CheckCircle2 className="w-5 h-5 text-purple-400 flex-shrink-0" />
+                <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
               ) : (
                 <Icon className="w-5 h-5 flex-shrink-0" />
               )}

@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Download, Menu, Upload } from "lucide-react";
+import { Download, Menu, Upload, Loader2 } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 import { PageBreadcrumb } from "@/components/PageBreadcrumb";
 import { questionnaireSections } from "@shared/questionnaireData";
@@ -15,6 +15,7 @@ interface IntakeHeaderProps {
   onOpenImport: () => void;
   calculateSectionProgress: (section: Section) => number;
   fileCount: number;
+  saveStatus?: "idle" | "saving" | "saved";
 }
 
 export function IntakeHeader({
@@ -27,11 +28,12 @@ export function IntakeHeader({
   onOpenImport,
   calculateSectionProgress,
   fileCount,
+  saveStatus = "idle",
 }: IntakeHeaderProps) {
   return (
     <>
       {/* Sticky top header */}
-      <header className="border-b border-purple-500/20 bg-black/40 backdrop-blur-md sticky top-0 z-30">
+      <header className="border-b border-border bg-background/65 backdrop-blur-md sticky top-0 z-30">
         <div className="px-4 md:px-8 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <button
@@ -66,6 +68,21 @@ export function IntakeHeader({
             )}
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
+            {saveStatus !== "idle" && (
+              <span className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] text-muted-foreground whitespace-nowrap">
+                {saveStatus === "saving" ? (
+                  <>
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  <>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    Saved · Synced to Notion
+                  </>
+                )}
+              </span>
+            )}
             <Link
               href={clientSlug ? `/org/${clientSlug}/${slug}` : `/org/${slug}`}
               className="text-sm text-foreground hover:text-primary transition-colors font-medium whitespace-nowrap"
@@ -94,7 +111,7 @@ export function IntakeHeader({
       <PageBreadcrumb orgSlug={slug} items={[{ label: "Questionnaire" }]} />
 
       {/* Overall Stats Banner */}
-      <div className="bg-gradient-to-r from-purple-900/20 to-purple-800/20 border-b border-purple-500/20 px-4 md:px-8 py-3 md:py-4">
+      <div className="bg-card border-b border-border px-4 md:px-8 py-3 md:py-4">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-8">
             <div>
