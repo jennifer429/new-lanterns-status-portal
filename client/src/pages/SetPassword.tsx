@@ -76,7 +76,10 @@ export default function SetPassword() {
             <AlertTriangle className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
             <h2 className="text-lg font-semibold mb-2">Invalid Link</h2>
             <p className="text-muted-foreground text-sm">
-              This invite link is missing or malformed. Please check the link in your email or contact your administrator.
+              This invite link is missing or malformed. Please check the link in your email or{" "}
+              <a href="mailto:implementation@newlantern.ai?subject=New%20invite%20link%20request" className="text-blue-400 underline">
+                request a new invite link
+              </a>.
             </p>
           </CardContent>
         </Card>
@@ -140,6 +143,13 @@ export default function SetPassword() {
             {error && (
               <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-md p-3">
                 {error}
+                {error.toLowerCase().includes("expired") && (
+                  <p className="mt-2">
+                    <a href="mailto:implementation@newlantern.ai?subject=New%20invite%20link%20request" className="text-blue-400 underline">
+                      Request a new invite link
+                    </a>
+                  </p>
+                )}
               </div>
             )}
 
