@@ -65,6 +65,8 @@ export const organizations = mysqlTable("organizations", {
   contactPhone: varchar("contactPhone", { length: 50 }),
   startDate: varchar("startDate", { length: 50 }),
   goalDate: varchar("goalDate", { length: 50 }),
+  targetGoLiveDate: varchar("targetGoLiveDate", { length: 50 }), // planned go-live (YYYY-MM-DD)
+  liveDate: varchar("liveDate", { length: 50 }), // actual go-live, set when flipped to completed (YYYY-MM-DD)
   status: mysqlEnum("status", ["active", "completed", "paused", "inactive"]).default("active").notNull(),
   googleDriveFolderId: varchar("googleDriveFolderId", { length: 100 }), // Google Drive folder ID for files
   createdAt: timestamp("createdAt").defaultNow().notNull(),
