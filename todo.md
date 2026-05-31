@@ -420,4 +420,4 @@
 - [x] Retry queue already handles failures for all new write types (extended processRetryQueue switch)
 - [x] DB/DS IDs hardcoded in notionDualWrite.ts (same pattern as existing Notion integrations)
 - [ ] Write vitest tests for new dual-write module
-- [ ] Backfill existing MySQL data to new Notion databases (one-time script)
+- [x] Backfill existing MySQL data to new Notion databases (admin endpoint: trpc.backfill.run + trpc.backfill.preview)
