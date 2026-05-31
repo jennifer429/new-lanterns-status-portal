@@ -379,13 +379,13 @@ export const backfillRouter = router({
               async (row) =>
                 syncVendorAudit({
                   mysqlId: row.id,
-                  vendorId: row.vendorId ?? 0,
+                  vendorId: 0,
                   action: row.action,
-                  field: row.field || null,
-                  oldValue: row.oldValue || null,
+                  field: row.systemType || null,
+                  oldValue: row.previousValue || null,
                   newValue: row.newValue || null,
                   performedBy: row.performedBy || null,
-                  createdAt: row.createdAt,
+                  createdAt: row.performedAt,
                 }),
               "vendorAuditLog"
             );
