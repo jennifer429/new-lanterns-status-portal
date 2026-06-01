@@ -92,14 +92,19 @@ export async function uploadFileToDriveAndS3(
   fileName: string,
   fileBuffer: Buffer,
   orgDriveFolderId?: string | null,
-  fallbackOrgName?: string
+  fallbackOrgName?: string,
+  contentType?: string | null
 ): Promise<UploadResult> {
   const drive = await getDrive();
-  
+
+  // Use the real MIME type so the stored object (and its download URL) renders
+  // inline in the browser / <img> tags instead of forcing a download.
+  const mimeType = contentType || "application/octet-stream";
+
   // 1. Always upload to S3 as the durable backup
   const sanitizedOrg = (fallbackOrgName || "unknown").replace(/[^a-zA-Z0-9-_]/g, "_");
   const s3Key = `uploads/${sanitizedOrg}/${fileName}`;
-  await storagePut(s3Key, fileBuffer);
+  await storagePut(s3Key, fileBuffer, mimeType);
   const { url: s3Url } = await storageGet(s3Key);
   
   let driveUrl: string | null = null;
@@ -118,7 +123,7 @@ export async function uploadFileToDriveAndS3(
             parents: [parentFolder],
           },
           media: {
-            mimeType: "application/octet-stream",
+            mimeType,
             body: Readable.from(fileBuffer),
           },
           fields: "id,webViewLink",
@@ -135,7 +140,7 @@ export async function uploadFileToDriveAndS3(
               parents: [parentFolder],
             },
             media: {
-              mimeType: "application/octet-stream",
+              mimeType,
               body: Readable.from(fileBuffer),
             },
             fields: "id,webViewLink",
@@ -172,6 +177,49 @@ export async function uploadFileToDriveAndS3(
   }
 
   return { driveUrl, driveFileId, s3Url, s3Key };
+}
+
+/**
+ * Resolve a stored file attachment to a URL that renders directly in the browser
+ * (usable in <img> tags and openable as the raw file).
+ *
+ * Handles three cases:
+ *  1. Rows whose `driveFileId` holds the S3 object key (`uploads/...`) — regenerate
+ *     a fresh download URL from storage (also avoids stale/expired presigned URLs).
+ *  2. Legacy rows whose `fileUrl` is a Google Drive *preview* page
+ *     (`drive.google.com/file/d/<id>/view`) — convert to Drive's direct content
+ *     endpoint so images render instead of returning Drive's HTML viewer.
+ *  3. Anything else — return the stored URL unchanged.
+ */
+export async function resolveFileUrl(
+  storedUrl: string,
+  driveFileId?: string | null
+): Promise<string> {
+  // Case 1: driveFileId is an S3 key (no scheme, path-like) → fresh storage URL.
+  if (driveFileId && !/^https?:\/\//.test(driveFileId) && driveFileId.includes("/")) {
+    try {
+      const { url } = await storageGet(driveFileId);
+      return url;
+    } catch {
+      // fall through to other strategies
+    }
+  }
+
+  // Case 2: a Google Drive preview link → direct render URL.
+  const previewMatch = /drive\.google\.com\/file\/d\/([^/]+)/.exec(storedUrl || "");
+  const driveId =
+    previewMatch?.[1] ||
+    (driveFileId && !driveFileId.includes("/") && /^[A-Za-z0-9_-]{20,}$/.test(driveFileId)
+      ? driveFileId
+      : null);
+  if (driveId) {
+    // `thumbnail` returns actual image bytes (full-size up to sz) for images, PDFs
+    // and docs, and renders in <img> without the Drive auth/CORS issues that block
+    // webViewLink / uc?export=view.
+    return `https://drive.google.com/thumbnail?id=${driveId}&sz=w2000`;
+  }
+
+  return storedUrl;
 }
 
 /**
