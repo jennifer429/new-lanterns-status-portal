@@ -1,0 +1,98 @@
+{
+  "query": "SELECT id, name, role, email, phone, organizationId FROM contacts WHERE organizationId = 990001 ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, name, role, email, phone, organizationId FROM contacts WHERE organizationId = 990001 ORDER BY id;",
+  "rows": [
+    {
+      "id": "17",
+      "name": "Pete Furlow",
+      "role": "Admin",
+      "email": "pfurlow@rmccares.org",
+      "phone": "205-235-5862",
+      "organizationId": "990001"
+    },
+    {
+      "id": "18",
+      "name": "Tracie Schmiedl",
+      "role": "Admin",
+      "email": "tschmiedl@rmccares.org",
+      "phone": "256-235-5177",
+      "organizationId": "990001"
+    },
+    {
+      "id": "19",
+      "name": "John Jordan",
+      "role": "IT",
+      "email": "jjordan@rmccares.org",
+      "phone": "256-235-5976",
+      "organizationId": "990001"
+    },
+    {
+      "id": "30001",
+      "name": "Melissa Desimone",
+      "role": "Admin",
+      "email": "ldesimone@rmccares.org",
+      "phone": "NULL",
+      "organizationId": "990001"
+    },
+    {
+      "id": "30002",
+      "name": "John Jordan",
+      "role": "IT",
+      "email": "jjordan@rmccares.org",
+      "phone": "NULL",
+      "organizationId": "990001"
+    },
+    {
+      "id": "30003",
+      "name": "Greg Poe",
+      "role": "IT",
+      "email": "gpoe@rmccares.org",
+      "phone": "NULL",
+      "organizationId": "990001"
+    },
+    {
+      "id": "30004",
+      "name": "Marci Messer",
+      "role": "Admin",
+      "email": "mmesser@rmccares.org",
+      "phone": "NULL",
+      "organizationId": "990001"
+    },
+    {
+      "id": "30005",
+      "name": "Randy Wilson",
+      "role": "IT",
+      "email": "randy.wilson@rmccares.org",
+      "phone": "NULL",
+      "organizationId": "990001"
+    },
+    {
+      "id": "30006",
+      "name": "Scott Cooper",
+      "role": "IT",
+      "email": "scooper@rmccares.org",
+      "phone": "NULL",
+      "organizationId": "990001"
+    },
+    {
+      "id": "30007",
+      "name": "Tripp Johnson",
+      "role": "IT",
+      "email": "tjohnson@rmccares.org",
+      "phone": "NULL",
+      "organizationId": "990001"
+    },
+    {
+      "id": "30008",
+      "name": "Waylon Hyde",
+      "role": "IT",
+      "email": "whyde@rmccares.org",
+      "phone": "NULL",
+      "organizationId": "990001"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\trole\temail\tphone\torganizationId\n17\tPete Furlow\tAdmin\tpfurlow@rmccares.org\t205-235-5862\t990001\n18\tTracie Schmiedl\tAdmin\ttschmiedl@rmccares.org\t256-235-5177\t990001\n19\tJohn Jordan\tIT\tjjordan@rmccares.org\t256-235-5976\t990001\n30001\tMelissa Desimone\tAdmin\tldesimone@rmccares.org\tNULL\t990001\n30002\tJohn Jordan\tIT\tjjordan@rmccares.org\tNULL\t990001\n30003\tGreg Poe\tIT\tgpoe@rmccares.org\tNULL\t990001\n30004\tMarci Messer\tAdmin\tmmesser@rmccares.org\tNULL\t990001\n30005\tRandy Wilson\tIT\trandy.wilson@rmccares.org\tNULL\t990001\n30006\tScott Cooper\tIT\tscooper@rmccares.org\tNULL\t990001\n30007\tTripp Johnson\tIT\ttjohnson@rmccares.org\tNULL\t990001\n30008\tWaylon Hyde\tIT\twhyde@rmccares.org\tNULL\t990001\n",
+  "stderr": "",
+  "execution_time_ms": 271
+}

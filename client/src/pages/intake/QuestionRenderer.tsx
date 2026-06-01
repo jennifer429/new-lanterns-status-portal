@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { ContactsTable } from "./ContactsTable";
 import {
   Select,
   SelectContent,
@@ -261,156 +262,9 @@ export function QuestionRenderer({
     }
 
     case "contacts-table": {
-      // `key` is the persisted JSON key (unchanged so existing data round-trips);
-      // id/role/hint drive the display.
-      const CONTACT_ROWS = [
-        { key: "admin", id: "A.1", role: "Administrative", hint: "Primary admin / billing owner" },
-        { key: "it", id: "A.2", role: "IT Connectivity", hint: "Network, VPN, firewall" },
-        { key: "it_post_prod", id: "A.itpp", role: "IT Post-Production Support", hint: "Ongoing support after go-live" },
-        { key: "clinical", id: "A.3", role: "Clinical", hint: "Workflow / department lead" },
-        { key: "radiologist", id: "A.4", role: "Radiologist Champion", hint: "Reading physician sponsor" },
-        { key: "pm", id: "A.5", role: "Project Manager", hint: "Implementation coordination" },
-      ] as const;
-
-      type ContactKey = (typeof CONTACT_ROWS)[number]["key"];
-      type ContactRow = { name: string; phone: string; email: string };
-      type ContactsData = Record<ContactKey, ContactRow>;
-
-      const empty: ContactRow = { name: "", phone: "", email: "" };
-      let parsed: ContactsData;
-      try {
-        parsed = value
-          ? typeof value === "string"
-            ? JSON.parse(value)
-            : value
-          : ({} as ContactsData);
-      } catch {
-        parsed = {} as ContactsData;
-      }
-
-      const isFilled = (r: ContactRow) =>
-        (r.name || r.email || r.phone || "").trim() !== "";
-      const filledCount = CONTACT_ROWS.filter(({ key }) =>
-        isFilled({ ...empty, ...(parsed[key as ContactKey] || {}) })
-      ).length;
-
-      const updateContact = (
-        rowKey: ContactKey,
-        field: keyof ContactRow,
-        val: string
-      ) => {
-        setResponses((prev) => {
-          // Always read from latest state to avoid stale closure overwriting parallel edits
-          const current = prev[question.id];
-          let prevParsed: ContactsData;
-          try {
-            prevParsed = current
-              ? typeof current === "string"
-                ? JSON.parse(current)
-                : current
-              : ({} as ContactsData);
-          } catch {
-            prevParsed = {} as ContactsData;
-          }
-
-          const next: ContactsData = {
-            ...prevParsed,
-            [rowKey]: { ...empty, ...(prevParsed[rowKey] || {}), [field]: val },
-          } as ContactsData;
-          const hasContent = Object.values(next).some((r) =>
-            Object.values(r as ContactRow).some(
-              (v) => (v as string).trim() !== ""
-            )
-          );
-          // Store as object — auto-save will JSON.stringify it
-          return { ...prev, [question.id]: hasContent ? next : "" };
-        });
-      };
-
-      const cellInputClass =
-        "h-8 text-sm bg-transparent border-0 shadow-none rounded focus-visible:ring-1 focus-visible:ring-primary/40 focus-visible:bg-primary/5";
-
-      return (
-        <div className="col-span-2 rounded-lg border border-border overflow-hidden">
-          {/* Status bar */}
-          <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-muted/20">
-            <span className="text-[10px] font-mono uppercase tracking-[0.08em] text-muted-foreground">
-              {filledCount} of {CONTACT_ROWS.length} roles filled · syncs to Notion
-            </span>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/30">
-                <tr>
-                  <th className="text-left px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground w-64">
-                    Role
-                  </th>
-                  <th className="text-left px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                    Name
-                  </th>
-                  <th className="text-left px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                    Email
-                  </th>
-                  <th className="text-left px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                    Phone
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {CONTACT_ROWS.map(({ key, id, role, hint }, idx) => {
-                  const row: ContactRow = {
-                    ...empty,
-                    ...(parsed[key as ContactKey] || {}),
-                  };
-                  const filled = isFilled(row);
-                  return (
-                    <tr key={key} className={idx % 2 === 1 ? "bg-muted/10" : ""}>
-                      <td className="px-3 py-1.5 align-middle">
-                        <div className="flex items-center gap-2.5">
-                          <span
-                            className={cn(
-                              "w-2 h-2 rounded-full shrink-0 transition-colors",
-                              filled ? "bg-emerald-500" : "bg-muted-foreground/30"
-                            )}
-                          />
-                          <div className="min-w-0">
-                            <div className="text-sm font-medium text-foreground truncate">{role}</div>
-                            <div className="text-[11px] text-muted-foreground truncate">{id} · {hint}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-2 py-1">
-                        <LocalInput
-                          value={row.name}
-                          onCommit={(val) => updateContact(key as ContactKey, "name", val)}
-                          placeholder="Full name"
-                          className={cellInputClass}
-                        />
-                      </td>
-                      <td className="px-2 py-1">
-                        <LocalInput
-                          value={row.email}
-                          onCommit={(val) => updateContact(key as ContactKey, "email", val)}
-                          placeholder="email@org.com"
-                          className={cn(cellInputClass, "font-mono")}
-                        />
-                      </td>
-                      <td className="px-2 py-1">
-                        <LocalInput
-                          value={row.phone}
-                          onCommit={(val) => updateContact(key as ContactKey, "phone", val)}
-                          placeholder="(000) 000-0000"
-                          className={cn(cellInputClass, "font-mono")}
-                        />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      );
+      // Dynamic contacts from Notion Contacts v2 database (via MySQL cache).
+      // No hardcoded slots — displays whatever roles exist for this org.
+      return <ContactsTable slug={slug} />;
     }
 
     default:

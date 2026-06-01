@@ -1,0 +1,65 @@
+{
+  "query": "SELECT id, name, isArchived FROM contacts WHERE organizationId = 990001;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, name, isArchived FROM contacts WHERE organizationId = 990001;",
+  "rows": [
+    {
+      "id": "17",
+      "name": "Pete Furlow",
+      "isArchived": "0"
+    },
+    {
+      "id": "18",
+      "name": "Tracie Schmiedl",
+      "isArchived": "0"
+    },
+    {
+      "id": "19",
+      "name": "John Jordan",
+      "isArchived": "0"
+    },
+    {
+      "id": "30001",
+      "name": "Melissa Desimone",
+      "isArchived": "0"
+    },
+    {
+      "id": "30002",
+      "name": "John Jordan",
+      "isArchived": "0"
+    },
+    {
+      "id": "30003",
+      "name": "Greg Poe",
+      "isArchived": "0"
+    },
+    {
+      "id": "30004",
+      "name": "Marci Messer",
+      "isArchived": "0"
+    },
+    {
+      "id": "30005",
+      "name": "Randy Wilson",
+      "isArchived": "0"
+    },
+    {
+      "id": "30006",
+      "name": "Scott Cooper",
+      "isArchived": "0"
+    },
+    {
+      "id": "30007",
+      "name": "Tripp Johnson",
+      "isArchived": "0"
+    },
+    {
+      "id": "30008",
+      "name": "Waylon Hyde",
+      "isArchived": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tisArchived\n17\tPete Furlow\t0\n18\tTracie Schmiedl\t0\n19\tJohn Jordan\t0\n30001\tMelissa Desimone\t0\n30002\tJohn Jordan\t0\n30003\tGreg Poe\t0\n30004\tMarci Messer\t0\n30005\tRandy Wilson\t0\n30006\tScott Cooper\t0\n30007\tTripp Johnson\t0\n30008\tWaylon Hyde\t0\n",
+  "stderr": "",
+  "execution_time_ms": 260
+}

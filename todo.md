@@ -186,7 +186,7 @@
 - [x] Add contacts/systems Notion → MySQL sync-back to cron (every 5 min, offset +2)
 - [x] Add admin "Refresh Sync" button (triggerFullSync: questionnaire + contacts + systems)
 - [x] Write vitest for syncHealth router (7 tests passing)
-- [ ] Update frontend contacts-table to use Notion-backed CRUD
+- [x] Update frontend contacts-table to use Notion-backed CRUD (dynamic ContactsTable component reading from trpc.contacts.getForOrg)
 - [ ] Update frontend systems-list to use Notion-backed CRUD
 - [ ] Test end-to-end: add/edit/delete from portal, verify in Notion
 
@@ -474,3 +474,9 @@
 - [x] Fix stale RRAL/hl7:adt row with notionLastEdited=NULL (manually confirmed since Notion write had already succeeded)
 - [x] Apply same notionLastEdited confirmation fix to syncValidationResultToNotion
 - [x] Fix connectivity filter to match RMCA rows when Institution Group is empty (fallback to Flow Name prefix matching)
+
+## Contacts: Single Source of Truth from Notion (Jun 1)
+- [ ] Replace hardcoded 6-slot contacts-table in intake questionnaire with dynamic display from contacts MySQL table (synced from Notion Contacts v2)
+- [ ] Remove A.contacts intakeResponses dependency — contacts come from Notion Contacts v2 only
+- [ ] Display all contacts dynamically with whatever roles exist (no fixed slot limit)
+- [ ] Write instructions for Claude/people on managing contacts in Notion

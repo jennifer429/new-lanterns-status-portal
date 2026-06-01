@@ -1,0 +1,14 @@
+{
+  "query": "SELECT organizationId, COUNT(*) as cnt FROM intakeResponses WHERE organizationId = 990001 GROUP BY organizationId;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT organizationId, COUNT(*) as cnt FROM intakeResponses WHERE organizationId = 990001 GROUP BY organizationId;",
+  "rows": [
+    {
+      "organizationId": "990001",
+      "cnt": "18"
+    }
+  ],
+  "messages": [],
+  "stdout": "organizationId\tcnt\n990001\t18\n",
+  "stderr": "",
+  "execution_time_ms": 270
+}

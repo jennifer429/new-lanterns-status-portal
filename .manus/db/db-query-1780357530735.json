@@ -1,0 +1,98 @@
+{
+  "query": "SELECT id, name, role, email, phone, notes FROM contacts WHERE organizationId = 990001 ORDER BY role;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, name, role, email, phone, notes FROM contacts WHERE organizationId = 990001 ORDER BY role;",
+  "rows": [
+    {
+      "id": "17",
+      "name": "Pete Furlow",
+      "role": "Admin",
+      "email": "pfurlow@rmccares.org",
+      "phone": "205-235-5862",
+      "notes": "Main contact for New Lantern portal, document uploads, and HL7 / interface coordination. Pete is RMCA's project/interface lead, not a reading radiologist (reading rads are TRC; Dr. Shulman attends weeklies)."
+    },
+    {
+      "id": "18",
+      "name": "Tracie Schmiedl",
+      "role": "Admin",
+      "email": "tschmiedl@rmccares.org",
+      "phone": "256-235-5177",
+      "notes": "Primary contact for user lists, procedure codes, credentialing, training coordination, and chargemaster spreadsheets. Owes (per 4/23): AE titles for DICOM testing, example ORU messages for CT lung/Dynacad breast MRI/mammogram, and full patient registration test packs with images."
+    },
+    {
+      "id": "30001",
+      "name": "Melissa Desimone",
+      "role": "Admin",
+      "email": "ldesimone@rmccares.org",
+      "phone": "NULL",
+      "notes": "Licensing — nuclear medicine provider licensing questions coordinated with Leigh Ann Hobson and Rhonda Bennett."
+    },
+    {
+      "id": "30004",
+      "name": "Marci Messer",
+      "role": "Admin",
+      "email": "mmesser@rmccares.org",
+      "phone": "NULL",
+      "notes": "RMCA COO (joined ~May 2026)."
+    },
+    {
+      "id": "19",
+      "name": "John Jordan",
+      "role": "IT",
+      "email": "jjordan@rmccares.org",
+      "phone": "256-235-5976",
+      "notes": "IT / networking; works with Waylon Hyde on VPN setup"
+    },
+    {
+      "id": "30002",
+      "name": "John Jordan",
+      "role": "IT",
+      "email": "jjordan@rmccares.org",
+      "phone": "NULL",
+      "notes": "RMC IT — VPN tunnel / network setup with Scipiotech (Waylon Hyde) and firewall/port coordination."
+    },
+    {
+      "id": "30003",
+      "name": "Greg Poe",
+      "role": "IT",
+      "email": "gpoe@rmccares.org",
+      "phone": "NULL",
+      "notes": "RMC IT. Coordinates with Randy Wilson and Paragon on ORU profile/field validation for report filing."
+    },
+    {
+      "id": "30005",
+      "name": "Randy Wilson",
+      "role": "IT",
+      "email": "randy.wilson@rmccares.org",
+      "phone": "NULL",
+      "notes": "RMC IT integration lead. Owns Paragon-side HL7 work — investigating ORM/ORU filing errors (invalid patient account/visit numbers, accession/session mapping), coordinating with Greg Poe and Paragon resources, resending modified ORM test cases."
+    },
+    {
+      "id": "30006",
+      "name": "Scott Cooper",
+      "role": "IT",
+      "email": "scooper@rmccares.org",
+      "phone": "NULL",
+      "notes": "RMC IT — project/technical participant on RMCA weeklies."
+    },
+    {
+      "id": "30007",
+      "name": "Tripp Johnson",
+      "role": "IT",
+      "email": "tjohnson@rmccares.org",
+      "phone": "NULL",
+      "notes": "RMC IT — project/technical participant on RMCA weeklies."
+    },
+    {
+      "id": "30008",
+      "name": "Waylon Hyde",
+      "role": "IT",
+      "email": "whyde@rmccares.org",
+      "phone": "NULL",
+      "notes": "RMC IT / CPIO — VPN connectivity and network access for Silverback/New Lantern."
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\trole\temail\tphone\tnotes\n17\tPete Furlow\tAdmin\tpfurlow@rmccares.org\t205-235-5862\tMain contact for New Lantern portal, document uploads, and HL7 / interface coordination. Pete is RMCA's project/interface lead, not a reading radiologist (reading rads are TRC; Dr. Shulman attends weeklies).\n18\tTracie Schmiedl\tAdmin\ttschmiedl@rmccares.org\t256-235-5177\tPrimary contact for user lists, procedure codes, credentialing, training coordination, and chargemaster spreadsheets. Owes (per 4/23): AE titles for DICOM testing, example ORU messages for CT lung/Dynacad breast MRI/mammogram, and full patient registration test packs with images.\n30001\tMelissa Desimone\tAdmin\tldesimone@rmccares.org\tNULL\tLicensing — nuclear medicine provider licensing questions coordinated with Leigh Ann Hobson and Rhonda Bennett.\n30004\tMarci Messer\tAdmin\tmmesser@rmccares.org\tNULL\tRMCA COO (joined ~May 2026).\n19\tJohn Jordan\tIT\tjjordan@rmccares.org\t256-235-5976\tIT / networking; works with Waylon Hyde on VPN setup\n30002\tJohn Jordan\tIT\tjjordan@rmccares.org\tNULL\tRMC IT — VPN tunnel / network setup with Scipiotech (Waylon Hyde) and firewall/port coordination.\n30003\tGreg Poe\tIT\tgpoe@rmccares.org\tNULL\tRMC IT. Coordinates with Randy Wilson and Paragon on ORU profile/field validation for report filing.\n30005\tRandy Wilson\tIT\trandy.wilson@rmccares.org\tNULL\tRMC IT integration lead. Owns Paragon-side HL7 work — investigating ORM/ORU filing errors (invalid patient account/visit numbers, accession/session mapping), coordinating with Greg Poe and Paragon resources, resending modified ORM test cases.\n30006\tScott Cooper\tIT\tscooper@rmccares.org\tNULL\tRMC IT — project/technical participant on RMCA weeklies.\n30007\tTripp Johnson\tIT\ttjohnson@rmccares.org\tNULL\tRMC IT — project/technical participant on RMCA weeklies.\n30008\tWaylon Hyde\tIT\twhyde@rmccares.org\tNULL\tRMC IT / CPIO — VPN connectivity and network access for Silverback/New Lantern.\n",
+  "stderr": "",
+  "execution_time_ms": 263
+}
