@@ -1,0 +1,91 @@
+{
+  "query": "SELECT id, questionId, LEFT(response, 100) as responsePreview, updatedAt FROM intakeResponses WHERE organizationId = 990001 ORDER BY updatedAt DESC LIMIT 15",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, questionId, LEFT(response, 100) as responsePreview, updatedAt FROM intakeResponses WHERE organizationId = 990001 ORDER BY updatedAt DESC LIMIT 15",
+  "rows": [
+    {
+      "id": "2610002",
+      "questionId": "A.6",
+      "responsePreview": "No",
+      "updatedAt": "2026-06-01 23:00:21"
+    },
+    {
+      "id": "1920003",
+      "questionId": "A.contacts",
+      "responsePreview": "{\"it\":{\"name\":\"John Jordan\",\"phone\":\"256-235-5976\",\"email\":\"jjordan@rmccares.org\",\"notes\":\"IT / netw",
+      "updatedAt": "2026-06-01 23:00:20"
+    },
+    {
+      "id": "1920005",
+      "questionId": "ARCH.systems",
+      "responsePreview": "[{\"id\":\"3ac90d6e-b2ab-47ad-9b4a-3326826e2193\",\"name\":\"Infinitt\",\"type\":\"PACS\",\"description\":\"\"}]",
+      "updatedAt": "2026-06-01 23:00:17"
+    },
+    {
+      "id": "1920001",
+      "questionId": "H.1",
+      "responsePreview": "1 connection point with 2 route-based VPN tunnels (primary and secondary) for redundancy and failove",
+      "updatedAt": "2026-06-01 23:00:15"
+    },
+    {
+      "id": "2610001",
+      "questionId": "H.3",
+      "responsePreview": "None noted",
+      "updatedAt": "2026-06-01 23:00:12"
+    },
+    {
+      "id": "2610004",
+      "questionId": "L.2",
+      "responsePreview": "",
+      "updatedAt": "2026-06-01 23:00:08"
+    },
+    {
+      "id": "2610003",
+      "questionId": "L.3",
+      "responsePreview": "",
+      "updatedAt": "2026-06-01 23:00:06"
+    },
+    {
+      "id": "4800034",
+      "questionId": "E.1",
+      "responsePreview": "",
+      "updatedAt": "2026-06-01 23:00:05"
+    },
+    {
+      "id": "4800033",
+      "questionId": "CF.1",
+      "responsePreview": "Procedure codes received from RMC (Tracie Schmiedl, 4/17) including Oxford Mediplex PO codes; AI-map",
+      "updatedAt": "2026-06-01 23:00:04"
+    },
+    {
+      "id": "4740018",
+      "questionId": "__question_na:L.8",
+      "responsePreview": "true",
+      "updatedAt": "2026-06-01 17:03:08"
+    },
+    {
+      "id": "4740017",
+      "questionId": "__question_na:L.9",
+      "responsePreview": "true",
+      "updatedAt": "2026-06-01 17:03:07"
+    },
+    {
+      "id": "4740016",
+      "questionId": "__question_na:L.10",
+      "responsePreview": "true",
+      "updatedAt": "2026-06-01 17:03:07"
+    }
+  ],
+  "messages": [
+    "1920002\tH.2\tRegional Medical Center of Anniston (RMCA) — rmccares.org",
+    "Sites/locations under RMCA umbrella:",
+    "- RM\t2026-06-01 23:00:13",
+    "2280001\tL.11\tCurrent RMCA downtime workflow:",
+    "- During HL7 downtime, radiologists read without HL7. Orders are cre\t2026-06-01 23:00:11",
+    "1920004\tL.4\tTentative Go-Live: June 24, 2026",
+    "Key milestones:",
+    "- HL7 test environment target completion: April 17\t2026-06-01 23:00:09"
+  ],
+  "stdout": "id\tquestionId\tresponsePreview\tupdatedAt\n2610002\tA.6\tNo\t2026-06-01 23:00:21\n1920003\tA.contacts\t{\"it\":{\"name\":\"John Jordan\",\"phone\":\"256-235-5976\",\"email\":\"jjordan@rmccares.org\",\"notes\":\"IT / netw\t2026-06-01 23:00:20\n1920005\tARCH.systems\t[{\"id\":\"3ac90d6e-b2ab-47ad-9b4a-3326826e2193\",\"name\":\"Infinitt\",\"type\":\"PACS\",\"description\":\"\"}]\t2026-06-01 23:00:17\n1920001\tH.1\t1 connection point with 2 route-based VPN tunnels (primary and secondary) for redundancy and failove\t2026-06-01 23:00:15\n1920002\tH.2\tRegional Medical Center of Anniston (RMCA) — rmccares.org\n\nSites/locations under RMCA umbrella:\n- RM\t2026-06-01 23:00:13\n2610001\tH.3\tNone noted\t2026-06-01 23:00:12\n2280001\tL.11\tCurrent RMCA downtime workflow:\n- During HL7 downtime, radiologists read without HL7. Orders are cre\t2026-06-01 23:00:11\n1920004\tL.4\tTentative Go-Live: June 24, 2026\n\nKey milestones:\n- HL7 test environment target completion: April 17\t2026-06-01 23:00:09\n2610004\tL.2\t\t2026-06-01 23:00:08\n2610003\tL.3\t\t2026-06-01 23:00:06\n4800034\tE.1\t\t2026-06-01 23:00:05\n4800033\tCF.1\tProcedure codes received from RMC (Tracie Schmiedl, 4/17) including Oxford Mediplex PO codes; AI-map\t2026-06-01 23:00:04\n4740018\t__question_na:L.8\ttrue\t2026-06-01 17:03:08\n4740017\t__question_na:L.9\ttrue\t2026-06-01 17:03:07\n4740016\t__question_na:L.10\ttrue\t2026-06-01 17:03:07\n",
+  "stderr": "",
+  "execution_time_ms": 265
+}

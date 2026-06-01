@@ -53,12 +53,20 @@ function institutionGroupMatchesOrg(
   groups: string[],
   slugNorm: string,
   nameNorm: string | null,
+  flowName?: string,
 ): boolean {
-  if (groups.length === 0) return false;
+  // Primary: check Institution Group multi-select
   for (const g of groups) {
     const gNorm = normalise(g);
     if (gNorm === slugNorm) return true;
     if (nameNorm && gNorm === nameNorm) return true;
+  }
+  // Fallback: if Institution Group is empty, match on Flow Name prefix
+  // (handles rows where the user didn't set Institution Group but named the flow "RMCA ORM — ...")
+  if (groups.length === 0 && flowName) {
+    const flowNorm = normalise(flowName);
+    if (flowNorm.startsWith(slugNorm)) return true;
+    if (nameNorm && flowNorm.startsWith(nameNorm)) return true;
   }
   return false;
 }
@@ -312,7 +320,8 @@ export async function syncConnectivityToNotion(
       if ((page as any).object !== "page" || (page as any).archived) continue;
       const p = (page as any).properties as Record<string, any>;
       const groups = getMultiSelect(pick(p, "Institution Group"));
-      if (!institutionGroupMatchesOrg(groups, slugNorm, nameNorm)) continue;
+      const flowNameText = getStr(pick(p, "Flow Name"));
+      if (!institutionGroupMatchesOrg(groups, slugNorm, nameNorm, flowNameText)) continue;
 
       const k = rowKey(
         getStr(pick(p, "Protocol / Message Type", "Traffic Type")),
@@ -442,7 +451,7 @@ export const connectivityRouter = router({
               connectionDetails: "", // Legacy field — no longer used
             };
           })
-          .filter((row: any) => institutionGroupMatchesOrg(row.institutionGroups, slugNorm, nameNorm));
+          .filter((row: any) => institutionGroupMatchesOrg(row.institutionGroups, slugNorm, nameNorm, row.flowName));
 
         // Remove the internal institutionGroups field before returning
         const cleanRows = rows.map(({ institutionGroups, ...rest }) => rest);

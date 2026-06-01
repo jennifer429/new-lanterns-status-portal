@@ -1,0 +1,76 @@
+{
+  "query": "SELECT id, name, role, email FROM contacts WHERE organizationId = 990001 ORDER BY id DESC LIMIT 15",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, name, role, email FROM contacts WHERE organizationId = 990001 ORDER BY id DESC LIMIT 15",
+  "rows": [
+    {
+      "id": "30008",
+      "name": "Waylon Hyde",
+      "role": "IT",
+      "email": "whyde@rmccares.org"
+    },
+    {
+      "id": "30007",
+      "name": "Tripp Johnson",
+      "role": "IT",
+      "email": "tjohnson@rmccares.org"
+    },
+    {
+      "id": "30006",
+      "name": "Scott Cooper",
+      "role": "IT",
+      "email": "scooper@rmccares.org"
+    },
+    {
+      "id": "30005",
+      "name": "Randy Wilson",
+      "role": "IT",
+      "email": "randy.wilson@rmccares.org"
+    },
+    {
+      "id": "30004",
+      "name": "Marci Messer",
+      "role": "Admin",
+      "email": "mmesser@rmccares.org"
+    },
+    {
+      "id": "30003",
+      "name": "Greg Poe",
+      "role": "IT",
+      "email": "gpoe@rmccares.org"
+    },
+    {
+      "id": "30002",
+      "name": "John Jordan",
+      "role": "IT",
+      "email": "jjordan@rmccares.org"
+    },
+    {
+      "id": "30001",
+      "name": "Melissa Desimone",
+      "role": "Admin",
+      "email": "ldesimone@rmccares.org"
+    },
+    {
+      "id": "19",
+      "name": "John Jordan",
+      "role": "IT",
+      "email": "jjordan@rmccares.org"
+    },
+    {
+      "id": "18",
+      "name": "Tracie Schmiedl",
+      "role": "Admin",
+      "email": "tschmiedl@rmccares.org"
+    },
+    {
+      "id": "17",
+      "name": "Pete Furlow",
+      "role": "Admin",
+      "email": "pfurlow@rmccares.org"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\trole\temail\n30008\tWaylon Hyde\tIT\twhyde@rmccares.org\n30007\tTripp Johnson\tIT\ttjohnson@rmccares.org\n30006\tScott Cooper\tIT\tscooper@rmccares.org\n30005\tRandy Wilson\tIT\trandy.wilson@rmccares.org\n30004\tMarci Messer\tAdmin\tmmesser@rmccares.org\n30003\tGreg Poe\tIT\tgpoe@rmccares.org\n30002\tJohn Jordan\tIT\tjjordan@rmccares.org\n30001\tMelissa Desimone\tAdmin\tldesimone@rmccares.org\n19\tJohn Jordan\tIT\tjjordan@rmccares.org\n18\tTracie Schmiedl\tAdmin\ttschmiedl@rmccares.org\n17\tPete Furlow\tAdmin\tpfurlow@rmccares.org\n",
+  "stderr": "",
+  "execution_time_ms": 284
+}

@@ -1,0 +1,24 @@
+{
+  "query": "SELECT * FROM syncCheckpoints ORDER BY pipeline",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT * FROM syncCheckpoints ORDER BY pipeline",
+  "rows": [
+    {
+      "id": "1",
+      "pipeline": "task-completions",
+      "lastSuccessfulSync": "2026-06-01 04:53:50",
+      "consecutiveFailures": "0",
+      "updatedAt": "2026-06-01 22:58:03"
+    },
+    {
+      "id": "2",
+      "pipeline": "validation-results",
+      "lastSuccessfulSync": "2026-06-01 14:48:05",
+      "consecutiveFailures": "0",
+      "updatedAt": "2026-06-01 22:58:04"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tpipeline\tlastSuccessfulSync\tconsecutiveFailures\tupdatedAt\n1\ttask-completions\t2026-06-01 04:53:50\t0\t2026-06-01 22:58:03\n2\tvalidation-results\t2026-06-01 14:48:05\t0\t2026-06-01 22:58:04\n",
+  "stderr": "",
+  "execution_time_ms": 261
+}

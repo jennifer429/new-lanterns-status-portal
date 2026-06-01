@@ -1,0 +1,31 @@
+{
+  "query": "SELECT id, email, name, organizationId, role FROM users WHERE organizationId = 990001 LIMIT 5",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, email, name, organizationId, role FROM users WHERE organizationId = 990001 LIMIT 5",
+  "rows": [
+    {
+      "id": "16140418",
+      "email": "TSchmiedl@RMCCares.org",
+      "name": "Tracie Schmiedl",
+      "organizationId": "990001",
+      "role": "user"
+    },
+    {
+      "id": "16140421",
+      "email": "pfurlow@rmccares.org",
+      "name": "Pete Furlow",
+      "organizationId": "990001",
+      "role": "user"
+    },
+    {
+      "id": "19410052",
+      "email": "jjordan@rmccares.org",
+      "name": "John Jordan",
+      "organizationId": "990001",
+      "role": "user"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\temail\tname\torganizationId\trole\n16140418\tTSchmiedl@RMCCares.org\tTracie Schmiedl\t990001\tuser\n16140421\tpfurlow@rmccares.org\tPete Furlow\t990001\tuser\n19410052\tjjordan@rmccares.org\tJohn Jordan\t990001\tuser\n",
+  "stderr": "",
+  "execution_time_ms": 278
+}

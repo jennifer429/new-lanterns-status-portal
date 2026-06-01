@@ -473,3 +473,4 @@
 - [x] Add console.log to task-val-sync job for visibility (was silently producing no output when 0 changes found)
 - [x] Fix stale RRAL/hl7:adt row with notionLastEdited=NULL (manually confirmed since Notion write had already succeeded)
 - [x] Apply same notionLastEdited confirmation fix to syncValidationResultToNotion
+- [x] Fix connectivity filter to match RMCA rows when Institution Group is empty (fallback to Flow Name prefix matching)

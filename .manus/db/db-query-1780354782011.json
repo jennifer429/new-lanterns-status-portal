@@ -1,0 +1,88 @@
+{
+  "query": "SELECT id, systemName, systemType, vendor FROM systems WHERE organizationId = 990001 ORDER BY id DESC",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, systemName, systemType, vendor FROM systems WHERE organizationId = 990001 ORDER BY id DESC",
+  "rows": [
+    {
+      "id": "30005",
+      "systemName": "Altera Paragon (EMR)",
+      "systemType": "EHR",
+      "vendor": "NULL"
+    },
+    {
+      "id": "30004",
+      "systemName": "Corepoint",
+      "systemType": "Integration Engine",
+      "vendor": "NULL"
+    },
+    {
+      "id": "30003",
+      "systemName": "Scipiotech VPN",
+      "systemType": "Other",
+      "vendor": "NULL"
+    },
+    {
+      "id": "30002",
+      "systemName": "Change Healthcare PACS",
+      "systemType": "PACS (current)",
+      "vendor": "NULL"
+    },
+    {
+      "id": "30001",
+      "systemName": "Silverback (DataFirst)",
+      "systemType": "Router",
+      "vendor": "NULL"
+    },
+    {
+      "id": "27",
+      "systemName": "Change Healthcare",
+      "systemType": "PACS",
+      "vendor": "NULL"
+    },
+    {
+      "id": "26",
+      "systemName": "Paragon",
+      "systemType": "Other",
+      "vendor": "NULL"
+    },
+    {
+      "id": "25",
+      "systemName": "Corepoint",
+      "systemType": "Integration Engine",
+      "vendor": "NULL"
+    },
+    {
+      "id": "24",
+      "systemName": "Hologic with Genius AI",
+      "systemType": "Other",
+      "vendor": "NULL"
+    },
+    {
+      "id": "23",
+      "systemName": "Profuse",
+      "systemType": "Other",
+      "vendor": "NULL"
+    },
+    {
+      "id": "22",
+      "systemName": "Dynacad",
+      "systemType": "Other",
+      "vendor": "NULL"
+    },
+    {
+      "id": "21",
+      "systemName": "Breast Marauder",
+      "systemType": "Other",
+      "vendor": "NULL"
+    },
+    {
+      "id": "20",
+      "systemName": "Lung CT CAD (vendor TBD)",
+      "systemType": "Other",
+      "vendor": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tsystemName\tsystemType\tvendor\n30005\tAltera Paragon (EMR)\tEHR\tNULL\n30004\tCorepoint\tIntegration Engine\tNULL\n30003\tScipiotech VPN\tOther\tNULL\n30002\tChange Healthcare PACS\tPACS (current)\tNULL\n30001\tSilverback (DataFirst)\tRouter\tNULL\n27\tChange Healthcare\tPACS\tNULL\n26\tParagon\tOther\tNULL\n25\tCorepoint\tIntegration Engine\tNULL\n24\tHologic with Genius AI\tOther\tNULL\n23\tProfuse\tOther\tNULL\n22\tDynacad\tOther\tNULL\n21\tBreast Marauder\tOther\tNULL\n20\tLung CT CAD (vendor TBD)\tOther\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 263
+}
