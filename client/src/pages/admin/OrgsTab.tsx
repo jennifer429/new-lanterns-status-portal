@@ -19,9 +19,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Edit, RotateCcw } from "lucide-react";
+import { Plus, Edit, RotateCcw, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { AdminDataTable, type Column } from "@/components/AdminDataTable";
+import { StatusEmailDialog } from "./StatusEmailDialog";
 import type { SharedAdminProps, Metric } from "./types";
 
 type OrgsTabProps = Pick<SharedAdminProps, "isPlatformAdmin" | "orgs" | "clients" | "refetchOrgs"> & {
@@ -52,6 +53,9 @@ export function OrgsTab({ isPlatformAdmin, orgs, clients, refetchOrgs, metrics }
   const [newOrgName, setNewOrgName] = useState("");
   const [newOrgSlug, setNewOrgSlug] = useState("");
   const [newOrgClientId, setNewOrgClientId] = useState<number | undefined>();
+
+  // ── Status update email state ───────────────────────────────────────────────
+  const [emailOrg, setEmailOrg] = useState<{ slug: string; name: string } | null>(null);
 
   // ── Edit org state ─────────────────────────────────────────────────────────
   const [isEditOrgDialogOpen, setIsEditOrgDialogOpen] = useState(false);
@@ -324,6 +328,10 @@ export function OrgsTab({ isPlatformAdmin, orgs, clients, refetchOrgs, metrics }
           emptyMessage="No active organizations"
           renderActions={(org) => (
             <div className="flex items-center gap-1">
+              <button onClick={() => setEmailOrg({ slug: org.slug, name: org.name })}
+                className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-primary/40 text-primary hover:bg-primary/10 transition-colors">
+                <Mail className="w-2.5 h-2.5" /> Send update
+              </button>
               <button onClick={() => handleEditOrg(org)}
                 className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-border/40 hover:bg-muted/50 transition-colors">
                 <Edit className="w-2.5 h-2.5" /> Edit
@@ -351,6 +359,10 @@ export function OrgsTab({ isPlatformAdmin, orgs, clients, refetchOrgs, metrics }
             emptyMessage="No completed organizations"
             renderActions={(org) => (
               <div className="flex items-center gap-1">
+                <button onClick={() => setEmailOrg({ slug: org.slug, name: org.name })}
+                  className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-primary/40 text-primary hover:bg-primary/10 transition-colors">
+                  <Mail className="w-2.5 h-2.5" /> Send update
+                </button>
                 <button onClick={() => handleEditOrg(org)}
                   className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] border border-border/40 hover:bg-muted/50 transition-colors">
                   <Edit className="w-2.5 h-2.5" /> Edit
@@ -390,6 +402,12 @@ export function OrgsTab({ isPlatformAdmin, orgs, clients, refetchOrgs, metrics }
           )}
         />
       )}
+
+      <StatusEmailDialog
+        org={emailOrg}
+        open={!!emailOrg}
+        onOpenChange={(o) => { if (!o) setEmailOrg(null); }}
+      />
     </>
   );
 }
