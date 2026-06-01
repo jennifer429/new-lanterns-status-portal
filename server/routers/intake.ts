@@ -6,11 +6,32 @@ import { dispatch } from "../notionSyncDispatcher";
 import { intakeResponses, intakeFileAttachments, organizations, questions, onboardingFeedback, clients, partnerTemplates, partnerTaskTemplates, orgCustomTasks } from "../../drizzle/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { uploadToGoogleDrive } from "./files";
+import { resolveFileUrl } from "../googleDrive";
 import { logFileActivity } from "../fileAuditLog";
 import { resolveOrgByIdentifier } from "../_core/orgLookup";
 import { fileUploadInput } from "../_core/fileValidation";
 import { syncAnswerToNotion, syncFileToNotion, removeFileFromNotion } from "../notion";
 import { syncConnectivityToNotion } from "./connectivity";
+
+/**
+ * Replace each attachment's stored `fileUrl` with a freshly-resolved, directly
+ * renderable URL (see resolveFileUrl). Runs in parallel and never throws — a
+ * single failed lookup falls back to the stored URL for that row.
+ */
+async function resolveFileUrls<T extends { fileUrl: string; driveFileId?: string | null }>(
+  files: T[]
+): Promise<T[]> {
+  return Promise.all(
+    files.map(async (file) => {
+      try {
+        const fileUrl = await resolveFileUrl(file.fileUrl, file.driveFileId);
+        return { ...file, fileUrl };
+      } catch {
+        return file;
+      }
+    })
+  );
+}
 
 export const intakeRouter = router({
   /**
@@ -413,8 +434,11 @@ export const intakeRouter = router({
         const fileName = `${sanitizedOrgName}_${sanitizedEmail}_${input.questionId}-${shortTitle}_${timestamp}.${fileExt}`;
         
         // Upload to Google Drive (per-customer folder)
-        const { driveUrl, s3Url, driveFileId: uploadedDriveFileId, s3Key } = await uploadToGoogleDrive(fileName, fileBuffer, org.name, org.googleDriveFolderId);
-        const fileUrl = driveUrl ?? s3Url;
+        const { driveUrl, s3Url, driveFileId: uploadedDriveFileId, s3Key } = await uploadToGoogleDrive(fileName, fileBuffer, org.name, org.googleDriveFolderId, input.mimeType);
+        // Use the S3 URL as the canonical link: it serves the raw bytes (with the
+        // correct content-type) so it renders in <img> and opens as the file,
+        // unlike the Drive webViewLink which is an HTML preview page.
+        const fileUrl = s3Url;
 
         // Store file info in database
         const [intakeFileRes] = await db.insert(intakeFileAttachments).values({
@@ -422,7 +446,7 @@ export const intakeRouter = router({
           questionId: input.questionId, // String question ID (e.g., "D.13")
           fileName: input.fileName,
           fileUrl,
-          driveFileId: uploadedDriveFileId ?? s3Key, // Store Drive file ID or S3 key for reference
+          driveFileId: s3Key, // S3 object key — used to regenerate a fresh download URL on read
           fileSize: fileBuffer.length,
           mimeType: input.mimeType,
           uploadedBy: input.userEmail,
@@ -518,7 +542,7 @@ export const intakeRouter = router({
         )
         .orderBy(sql`${intakeFileAttachments.createdAt} DESC`);
 
-      return files;
+      return resolveFileUrls(files);
     }),
 
   /**
@@ -562,7 +586,7 @@ export const intakeRouter = router({
         .where(eq(intakeFileAttachments.organizationId, org.id))
         .orderBy(sql`${intakeFileAttachments.createdAt} DESC`);
 
-      return files;
+      return resolveFileUrls(files);
     }),
 
   /**
@@ -775,8 +799,9 @@ export const intakeRouter = router({
       const sanitizedOrg = org.name.replace(/[^a-zA-Z0-9-]/g, "_");
       const storedName = `${sanitizedOrg}_${sanitizedEmail}_ADHOC_${timestamp}.${fileExt}`;
 
-      const { driveUrl, s3Url, driveFileId, s3Key } = await uploadToGoogleDrive(storedName, fileBuffer, org.name, org.googleDriveFolderId);
-      const finalUrl = driveUrl || s3Url;
+      const { driveUrl, s3Url, driveFileId, s3Key } = await uploadToGoogleDrive(storedName, fileBuffer, org.name, org.googleDriveFolderId, input.mimeType);
+      // S3 URL is the canonical link (raw bytes, correct content-type, renders inline).
+      const finalUrl = s3Url;
 
       const [adhocFileRes] = await db.insert(intakeFileAttachments).values({
         organizationId: org.id,
@@ -848,7 +873,7 @@ export const intakeRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
       }
 
-      return await db
+      const adhocFiles = await db
         .select()
         .from(intakeFileAttachments)
         .where(
@@ -858,6 +883,8 @@ export const intakeRouter = router({
           )
         )
         .orderBy(sql`${intakeFileAttachments.createdAt} DESC`);
+
+      return resolveFileUrls(adhocFiles);
     }),
 
   /**

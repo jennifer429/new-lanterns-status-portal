@@ -16,13 +16,15 @@ export async function uploadToGoogleDrive(
   fileName: string,
   fileBuffer: Buffer,
   organizationName: string,
-  orgDriveFolderId?: string | null
+  orgDriveFolderId?: string | null,
+  contentType?: string | null
 ): Promise<{ driveUrl: string | null; s3Url: string; driveFileId: string | null; s3Key: string }> {
   return await uploadFileToDriveAndS3(
     fileName,
     fileBuffer,
     orgDriveFolderId,
-    organizationName
+    organizationName,
+    contentType
   );
 }
 
