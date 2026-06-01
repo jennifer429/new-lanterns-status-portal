@@ -67,6 +67,7 @@ export const organizations = mysqlTable("organizations", {
   goalDate: varchar("goalDate", { length: 50 }),
   targetGoLiveDate: varchar("targetGoLiveDate", { length: 50 }), // planned go-live (YYYY-MM-DD)
   liveDate: varchar("liveDate", { length: 50 }), // actual go-live, set when flipped to completed (YYYY-MM-DD)
+  goLiveAutoNa: text("goLiveAutoNa"), // JSON snapshot of items auto-marked N/A at go-live, used to revert on reopen
   status: mysqlEnum("status", ["active", "completed", "paused", "inactive"]).default("active").notNull(),
   googleDriveFolderId: varchar("googleDriveFolderId", { length: 100 }), // Google Drive folder ID for files
   createdAt: timestamp("createdAt").defaultNow().notNull(),
