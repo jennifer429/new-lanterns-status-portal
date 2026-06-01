@@ -1,0 +1,17 @@
+{
+  "query": "SELECT id, organizationId, taskId, notionLastEdited, updatedAt FROM taskCompletion WHERE organizationId = 240001 AND taskId = 'hl7:adt'",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, organizationId, taskId, notionLastEdited, updatedAt FROM taskCompletion WHERE organizationId = 240001 AND taskId = 'hl7:adt'",
+  "rows": [
+    {
+      "id": "630016",
+      "organizationId": "240001",
+      "taskId": "hl7:adt",
+      "notionLastEdited": "2026-06-01 04:43:00",
+      "updatedAt": "2026-06-01 22:42:24"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\torganizationId\ttaskId\tnotionLastEdited\tupdatedAt\n630016\t240001\thl7:adt\t2026-06-01 04:43:00\t2026-06-01 22:42:24\n",
+  "stderr": "",
+  "execution_time_ms": 274
+}

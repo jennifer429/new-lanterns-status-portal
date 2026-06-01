@@ -283,6 +283,8 @@ describe("notionLastEdited version check — sync-back", () => {
 
     mockLimit.mockResolvedValueOnce([{ pipeline: "task-completions", lastSuccessfulSync: new Date("2026-05-20T00:00:00Z"), consecutiveFailures: 0 }]);
     mockLimit.mockResolvedValueOnce([{ pipeline: "validation-results", lastSuccessfulSync: new Date("2026-05-20T00:00:00Z"), consecutiveFailures: 0 }]);
+    // resetFailures reads checkpoint for task-completions (0 task results triggers reset path)
+    mockLimit.mockResolvedValueOnce([{ pipeline: "task-completions", consecutiveFailures: 0 }]);
 
     const { fetchChangedValidationResults } = await import("./notionTaskValidation");
     (fetchChangedValidationResults as any).mockResolvedValueOnce([
@@ -329,6 +331,8 @@ describe("notionLastEdited version check — sync-back", () => {
 
     mockLimit.mockResolvedValueOnce([{ pipeline: "task-completions", lastSuccessfulSync: new Date("2026-05-20T00:00:00Z"), consecutiveFailures: 0 }]);
     mockLimit.mockResolvedValueOnce([{ pipeline: "validation-results", lastSuccessfulSync: new Date("2026-05-20T00:00:00Z"), consecutiveFailures: 0 }]);
+    // resetFailures reads checkpoint for task-completions (0 task results triggers reset path)
+    mockLimit.mockResolvedValueOnce([{ pipeline: "task-completions", consecutiveFailures: 0 }]);
 
     const { fetchChangedValidationResults } = await import("./notionTaskValidation");
     (fetchChangedValidationResults as any).mockResolvedValueOnce([

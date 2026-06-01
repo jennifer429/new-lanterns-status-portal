@@ -1,0 +1,19 @@
+{
+  "query": "SELECT tc.id, tc.organizationId, tc.taskId, tc.sectionName, tc.completed, tc.notionLastEdited, tc.updatedAt FROM taskCompletion tc WHERE tc.notionLastEdited IS NULL ORDER BY tc.updatedAt DESC LIMIT 5",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT tc.id, tc.organizationId, tc.taskId, tc.sectionName, tc.completed, tc.notionLastEdited, tc.updatedAt FROM taskCompletion tc WHERE tc.notionLastEdited IS NULL ORDER BY tc.updatedAt DESC LIMIT 5",
+  "rows": [
+    {
+      "id": "630016",
+      "organizationId": "240001",
+      "taskId": "hl7:adt",
+      "sectionName": "HL7 Interface Build",
+      "completed": "0",
+      "notionLastEdited": "NULL",
+      "updatedAt": "2026-06-01 04:43:27"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\torganizationId\ttaskId\tsectionName\tcompleted\tnotionLastEdited\tupdatedAt\n630016\t240001\thl7:adt\tHL7 Interface Build\t0\tNULL\t2026-06-01 04:43:27\n",
+  "stderr": "",
+  "execution_time_ms": 282
+}

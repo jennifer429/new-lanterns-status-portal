@@ -465,3 +465,11 @@
 - [x] Purge 5 permanently failed entries (null createdAt, unrecoverable)
 - [x] Verify retry queue processing: 4,953 entries succeeded after schema fix
 - [x] Create docs/notion-schema-mapping.md — complete property reference for all 21 sync functions
+
+## Cron Job Sync Fixes (Jun 1)
+
+- [x] Fix task-val-sync consecutiveFailures counter never resetting on successful runs (added resetFailures function)
+- [x] Fix portal dual-write not confirming notionLastEdited after successful Notion write (causes perpetual reconciliation alerts)
+- [x] Add console.log to task-val-sync job for visibility (was silently producing no output when 0 changes found)
+- [x] Fix stale RRAL/hl7:adt row with notionLastEdited=NULL (manually confirmed since Notion write had already succeeded)
+- [x] Apply same notionLastEdited confirmation fix to syncValidationResultToNotion

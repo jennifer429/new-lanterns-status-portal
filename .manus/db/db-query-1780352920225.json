@@ -1,0 +1,30 @@
+{
+  "query": "SELECT writeType, status, COUNT(*) as cnt FROM notionRetryQueue GROUP BY writeType, status ORDER BY cnt DESC LIMIT 20",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT writeType, status, COUNT(*) as cnt FROM notionRetryQueue GROUP BY writeType, status ORDER BY cnt DESC LIMIT 20",
+  "rows": [
+    {
+      "writeType": "implementationOrg",
+      "status": "succeeded",
+      "cnt": "4421"
+    },
+    {
+      "writeType": "validationResult",
+      "status": "succeeded",
+      "cnt": "405"
+    },
+    {
+      "writeType": "specification",
+      "status": "succeeded",
+      "cnt": "75"
+    },
+    {
+      "writeType": "questionnaire",
+      "status": "succeeded",
+      "cnt": "52"
+    }
+  ],
+  "messages": [],
+  "stdout": "writeType\tstatus\tcnt\nimplementationOrg\tsucceeded\t4421\nvalidationResult\tsucceeded\t405\nspecification\tsucceeded\t75\nquestionnaire\tsucceeded\t52\n",
+  "stderr": "",
+  "execution_time_ms": 274
+}

@@ -11,6 +11,9 @@
 import { Client } from "@notionhq/client";
 import { ENV } from "./_core/env";
 import { enqueueFailedWrite } from "./notionRetryQueue";
+import { requireDb } from "./db";
+import { taskCompletion, validationResults } from "../drizzle/schema";
+import { eq, and } from "drizzle-orm";
 
 const TASK_COMPLETION_DS_ID = ENV.notionTaskCompletionDataSourceId;
 const VALIDATION_RESULTS_DS_ID = ENV.notionValidationResultsDataSourceId;
@@ -157,6 +160,24 @@ export async function syncTaskCompletionToNotion(payload: TaskCompletionPayload)
       });
     }
 
+    // Confirm the write by setting notionLastEdited to NOW in MySQL.
+    // This prevents the reconciliation from flagging this row as stale.
+    try {
+      const db = await requireDb();
+      await db
+        .update(taskCompletion)
+        .set({ notionLastEdited: new Date() })
+        .where(
+          and(
+            eq(taskCompletion.organizationId, payload.organizationId),
+            eq(taskCompletion.taskId, payload.taskId)
+          )
+        );
+    } catch (confirmErr: any) {
+      // Non-fatal: reconciliation will eventually catch it
+      console.warn(`[notion-task] Failed to confirm notionLastEdited for ${payload.orgSlug}/${payload.taskId}:`, confirmErr.message);
+    }
+
     return true;
   } catch (error: any) {
     console.error(`[notion-task] Sync failed for ${payload.orgSlug}/${payload.taskId}:`, error);
@@ -218,6 +239,24 @@ export async function syncValidationResultToNotion(payload: ValidationResultPayl
           ...properties,
         },
       });
+    }
+
+    // Confirm the write by setting notionLastEdited to NOW in MySQL.
+    // This prevents the reconciliation from flagging this row as stale.
+    try {
+      const db = await requireDb();
+      await db
+        .update(validationResults)
+        .set({ notionLastEdited: new Date() })
+        .where(
+          and(
+            eq(validationResults.organizationId, payload.organizationId),
+            eq(validationResults.testKey, payload.testKey)
+          )
+        );
+    } catch (confirmErr: any) {
+      // Non-fatal: reconciliation will eventually catch it
+      console.warn(`[notion-validation] Failed to confirm notionLastEdited for ${payload.orgSlug}/${payload.testKey}:`, confirmErr.message);
     }
 
     return true;

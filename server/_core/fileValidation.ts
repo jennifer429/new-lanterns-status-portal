@@ -4,7 +4,7 @@ import { z } from "zod";
 export const MAX_FILE_BASE64_BYTES = 50 * 1024 * 1024;
 
 const ALLOWED_MIME =
-  /^(image\/(png|jpe?g|gif|webp|svg\+xml)|application\/(pdf|msword|vnd\.openxmlformats-officedocument\.[a-z.]+|vnd\.ms-excel|vnd\.ms-powerpoint|json|zip|x-zip-compressed|octet-stream)|text\/(plain|csv|html|markdown))$/i;
+  /^(image\/(png|jpe?g|gif|webp|svg\+xml)|application\/(pdf|msword|vnd\.openxmlformats-officedocument\.[a-z.]+|vnd\.ms-excel|vnd\.ms-powerpoint|vnd\.apple\.pages|x-iwork-pages-sff|json|zip|x-zip-compressed|octet-stream)|text\/(plain|csv|html|markdown))$/i;
 
 export const fileNameSchema = z
   .string()

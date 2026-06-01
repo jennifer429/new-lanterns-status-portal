@@ -105,6 +105,28 @@ async function writeSyncCheckpoint(pipeline: string, timestamp: string): Promise
 }
 
 /**
+ * Reset the consecutive failures counter to 0 (called on successful fetch, even with 0 results).
+ */
+async function resetFailures(pipeline: string): Promise<void> {
+  try {
+    const db = await requireDb();
+    const [row] = await db
+      .select()
+      .from(syncCheckpoints)
+      .where(eq(syncCheckpoints.pipeline, pipeline))
+      .limit(1);
+    if (row && row.consecutiveFailures > 0) {
+      await db
+        .update(syncCheckpoints)
+        .set({ consecutiveFailures: 0 })
+        .where(eq(syncCheckpoints.pipeline, pipeline));
+    }
+  } catch (err: any) {
+    console.warn(`[task-val-sync] Failed to reset failures for ${pipeline}:`, err.message);
+  }
+}
+
+/**
  * Increment the consecutive failures counter in MySQL.
  */
 async function incrementFailures(pipeline: string): Promise<void> {
@@ -316,6 +338,9 @@ export async function runTaskValidationSyncBack(): Promise<TaskValidationSyncRes
       await writeSyncCheckpoint(TASK_PIPELINE, new Date().toISOString());
     } else if (result.tasks.failed > 0) {
       await incrementFailures(TASK_PIPELINE);
+    } else {
+      // Fetch succeeded with 0 results — reset failure counter if it was elevated
+      await resetFailures(TASK_PIPELINE);
     }
   } catch (err: any) {
     result.tasks.errors.push(`Fetch error: ${err.message?.substring(0, 100)}`);
@@ -352,6 +377,9 @@ export async function runTaskValidationSyncBack(): Promise<TaskValidationSyncRes
       await writeSyncCheckpoint(VALIDATION_PIPELINE, new Date().toISOString());
     } else if (result.validation.failed > 0) {
       await incrementFailures(VALIDATION_PIPELINE);
+    } else {
+      // Fetch succeeded with 0 results — reset failure counter if it was elevated
+      await resetFailures(VALIDATION_PIPELINE);
     }
   } catch (err: any) {
     result.validation.errors.push(`Fetch error: ${err.message?.substring(0, 100)}`);
@@ -370,6 +398,8 @@ export async function runTaskValidationSyncBack(): Promise<TaskValidationSyncRes
       `validation: ${result.validation.upserted} written/${result.validation.skipped} skipped/${result.validation.fetched} fetched, ` +
       `${totalFailed} failed (${result.durationMs}ms)`
     );
+  } else {
+    console.log(`[cron] Task/Validation sync-back — 0 changes found (${result.durationMs}ms)`);
   }
 
   return result;
