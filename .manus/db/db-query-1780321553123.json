@@ -1,0 +1,90 @@
+{
+  "query": "SELECT id, writeType, LEFT(payload, 200) as payload_preview, lastError, retryCount, status FROM notionRetryQueue WHERE status = 'pending' ORDER BY id DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, writeType, LEFT(payload, 200) as payload_preview, lastError, retryCount, status FROM notionRetryQueue WHERE status = 'pending' ORDER BY id DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "3510220",
+      "writeType": "implementationOrg",
+      "payload_preview": "{\"dbId\":\"494fc299-f747-4442-a551-867de65d080c\",\"dsId\":\"4faa1bc2-f55e-42b2-b85f-51bb0f29d437\",\"mysqlId\":4,\"writeType\":\"implementationOrg\"}",
+      "lastError": "Cannot read properties of undefined (reading 'substring')",
+      "retryCount": "0",
+      "status": "pending"
+    },
+    {
+      "id": "3510219",
+      "writeType": "implementationOrg",
+      "payload_preview": "{\"dbId\":\"494fc299-f747-4442-a551-867de65d080c\",\"dsId\":\"4faa1bc2-f55e-42b2-b85f-51bb0f29d437\",\"mysqlId\":30006,\"writeType\":\"implementationOrg\"}",
+      "lastError": "Cannot read properties of undefined (reading 'substring')",
+      "retryCount": "0",
+      "status": "pending"
+    },
+    {
+      "id": "3510218",
+      "writeType": "implementationOrg",
+      "payload_preview": "{\"dbId\":\"494fc299-f747-4442-a551-867de65d080c\",\"dsId\":\"4faa1bc2-f55e-42b2-b85f-51bb0f29d437\",\"mysqlId\":5,\"writeType\":\"implementationOrg\"}",
+      "lastError": "Cannot read properties of undefined (reading 'substring')",
+      "retryCount": "0",
+      "status": "pending"
+    },
+    {
+      "id": "3510217",
+      "writeType": "implementationOrg",
+      "payload_preview": "{\"dbId\":\"494fc299-f747-4442-a551-867de65d080c\",\"dsId\":\"4faa1bc2-f55e-42b2-b85f-51bb0f29d437\",\"mysqlId\":30004,\"writeType\":\"implementationOrg\"}",
+      "lastError": "Cannot read properties of undefined (reading 'substring')",
+      "retryCount": "0",
+      "status": "pending"
+    },
+    {
+      "id": "3510216",
+      "writeType": "implementationOrg",
+      "payload_preview": "{\"dbId\":\"494fc299-f747-4442-a551-867de65d080c\",\"dsId\":\"4faa1bc2-f55e-42b2-b85f-51bb0f29d437\",\"mysqlId\":30003,\"writeType\":\"implementationOrg\"}",
+      "lastError": "Cannot read properties of undefined (reading 'substring')",
+      "retryCount": "0",
+      "status": "pending"
+    },
+    {
+      "id": "3510215",
+      "writeType": "implementationOrg",
+      "payload_preview": "{\"dbId\":\"494fc299-f747-4442-a551-867de65d080c\",\"dsId\":\"4faa1bc2-f55e-42b2-b85f-51bb0f29d437\",\"mysqlId\":30003,\"writeType\":\"implementationOrg\"}",
+      "lastError": "Cannot read properties of undefined (reading 'substring')",
+      "retryCount": "0",
+      "status": "pending"
+    },
+    {
+      "id": "3510214",
+      "writeType": "implementationOrg",
+      "payload_preview": "{\"dbId\":\"494fc299-f747-4442-a551-867de65d080c\",\"dsId\":\"4faa1bc2-f55e-42b2-b85f-51bb0f29d437\",\"mysqlId\":4,\"writeType\":\"implementationOrg\"}",
+      "lastError": "Cannot read properties of undefined (reading 'substring')",
+      "retryCount": "0",
+      "status": "pending"
+    },
+    {
+      "id": "3510213",
+      "writeType": "implementationOrg",
+      "payload_preview": "{\"dbId\":\"494fc299-f747-4442-a551-867de65d080c\",\"dsId\":\"4faa1bc2-f55e-42b2-b85f-51bb0f29d437\",\"mysqlId\":30006,\"writeType\":\"implementationOrg\"}",
+      "lastError": "Cannot read properties of undefined (reading 'substring')",
+      "retryCount": "0",
+      "status": "pending"
+    },
+    {
+      "id": "3510212",
+      "writeType": "implementationOrg",
+      "payload_preview": "{\"dbId\":\"494fc299-f747-4442-a551-867de65d080c\",\"dsId\":\"4faa1bc2-f55e-42b2-b85f-51bb0f29d437\",\"mysqlId\":30005,\"writeType\":\"implementationOrg\"}",
+      "lastError": "Cannot read properties of undefined (reading 'substring')",
+      "retryCount": "0",
+      "status": "pending"
+    },
+    {
+      "id": "3510211",
+      "writeType": "implementationOrg",
+      "payload_preview": "{\"dbId\":\"494fc299-f747-4442-a551-867de65d080c\",\"dsId\":\"4faa1bc2-f55e-42b2-b85f-51bb0f29d437\",\"mysqlId\":5,\"writeType\":\"implementationOrg\"}",
+      "lastError": "Cannot read properties of undefined (reading 'substring')",
+      "retryCount": "0",
+      "status": "pending"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\twriteType\tpayload_preview\tlastError\tretryCount\tstatus\n3510220\timplementationOrg\t{\"dbId\":\"494fc299-f747-4442-a551-867de65d080c\",\"dsId\":\"4faa1bc2-f55e-42b2-b85f-51bb0f29d437\",\"mysqlId\":4,\"writeType\":\"implementationOrg\"}\tCannot read properties of undefined (reading 'substring')\t0\tpending\n3510219\timplementationOrg\t{\"dbId\":\"494fc299-f747-4442-a551-867de65d080c\",\"dsId\":\"4faa1bc2-f55e-42b2-b85f-51bb0f29d437\",\"mysqlId\":30006,\"writeType\":\"implementationOrg\"}\tCannot read properties of undefined (reading 'substring')\t0\tpending\n3510218\timplementationOrg\t{\"dbId\":\"494fc299-f747-4442-a551-867de65d080c\",\"dsId\":\"4faa1bc2-f55e-42b2-b85f-51bb0f29d437\",\"mysqlId\":5,\"writeType\":\"implementationOrg\"}\tCannot read properties of undefined (reading 'substring')\t0\tpending\n3510217\timplementationOrg\t{\"dbId\":\"494fc299-f747-4442-a551-867de65d080c\",\"dsId\":\"4faa1bc2-f55e-42b2-b85f-51bb0f29d437\",\"mysqlId\":30004,\"writeType\":\"implementationOrg\"}\tCannot read properties of undefined (reading 'substring')\t0\tpending\n3510216\timplementationOrg\t{\"dbId\":\"494fc299-f747-4442-a551-867de65d080c\",\"dsId\":\"4faa1bc2-f55e-42b2-b85f-51bb0f29d437\",\"mysqlId\":30003,\"writeType\":\"implementationOrg\"}\tCannot read properties of undefined (reading 'substring')\t0\tpending\n3510215\timplementationOrg\t{\"dbId\":\"494fc299-f747-4442-a551-867de65d080c\",\"dsId\":\"4faa1bc2-f55e-42b2-b85f-51bb0f29d437\",\"mysqlId\":30003,\"writeType\":\"implementationOrg\"}\tCannot read properties of undefined (reading 'substring')\t0\tpending\n3510214\timplementationOrg\t{\"dbId\":\"494fc299-f747-4442-a551-867de65d080c\",\"dsId\":\"4faa1bc2-f55e-42b2-b85f-51bb0f29d437\",\"mysqlId\":4,\"writeType\":\"implementationOrg\"}\tCannot read properties of undefined (reading 'substring')\t0\tpending\n3510213\timplementationOrg\t{\"dbId\":\"494fc299-f747-4442-a551-867de65d080c\",\"dsId\":\"4faa1bc2-f55e-42b2-b85f-51bb0f29d437\",\"mysqlId\":30006,\"writeType\":\"implementationOrg\"}\tCannot read properties of undefined (reading 'substring')\t0\tpending\n3510212\timplementationOrg\t{\"dbId\":\"494fc299-f747-4442-a551-867de65d080c\",\"dsId\":\"4faa1bc2-f55e-42b2-b85f-51bb0f29d437\",\"mysqlId\":30005,\"writeType\":\"implementationOrg\"}\tCannot read properties of undefined (reading 'substring')\t0\tpending\n3510211\timplementationOrg\t{\"dbId\":\"494fc299-f747-4442-a551-867de65d080c\",\"dsId\":\"4faa1bc2-f55e-42b2-b85f-51bb0f29d437\",\"mysqlId\":5,\"writeType\":\"implementationOrg\"}\tCannot read properties of undefined (reading 'substring')\t0\tpending\n",
+  "stderr": "",
+  "execution_time_ms": 262
+}

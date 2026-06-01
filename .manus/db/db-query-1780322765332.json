@@ -1,0 +1,45 @@
+{
+  "query": "SELECT id, writeType, lastError, retryCount, createdAt FROM notionRetryQueue WHERE status = 'failed_permanent' ORDER BY createdAt DESC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, writeType, lastError, retryCount, createdAt FROM notionRetryQueue WHERE status = 'failed_permanent' ORDER BY createdAt DESC;",
+  "rows": [
+    {
+      "id": "120052",
+      "writeType": "activityFeed",
+      "lastError": "Cannot read properties of undefined (reading 'toISOString')",
+      "retryCount": "3",
+      "createdAt": "2026-05-31 18:59:14"
+    },
+    {
+      "id": "120051",
+      "writeType": "activityFeed",
+      "lastError": "Cannot read properties of undefined (reading 'toISOString')",
+      "retryCount": "3",
+      "createdAt": "2026-05-31 18:59:13"
+    },
+    {
+      "id": "120050",
+      "writeType": "activityFeed",
+      "lastError": "Cannot read properties of undefined (reading 'toISOString')",
+      "retryCount": "3",
+      "createdAt": "2026-05-31 18:59:09"
+    },
+    {
+      "id": "90002",
+      "writeType": "aiChatLog",
+      "lastError": "Cannot read properties of undefined (reading 'toISOString')",
+      "retryCount": "3",
+      "createdAt": "2026-05-31 18:07:02"
+    },
+    {
+      "id": "90001",
+      "writeType": "aiChatLog",
+      "lastError": "Cannot read properties of undefined (reading 'toISOString')",
+      "retryCount": "3",
+      "createdAt": "2026-05-31 18:07:01"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\twriteType\tlastError\tretryCount\tcreatedAt\n120052\tactivityFeed\tCannot read properties of undefined (reading 'toISOString')\t3\t2026-05-31 18:59:14\n120051\tactivityFeed\tCannot read properties of undefined (reading 'toISOString')\t3\t2026-05-31 18:59:13\n120050\tactivityFeed\tCannot read properties of undefined (reading 'toISOString')\t3\t2026-05-31 18:59:09\n90002\taiChatLog\tCannot read properties of undefined (reading 'toISOString')\t3\t2026-05-31 18:07:02\n90001\taiChatLog\tCannot read properties of undefined (reading 'toISOString')\t3\t2026-05-31 18:07:01\n",
+  "stderr": "",
+  "execution_time_ms": 279
+}

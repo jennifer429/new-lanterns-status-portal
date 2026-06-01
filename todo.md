@@ -447,9 +447,21 @@
 
 ## File Upload Audit & Storage Fixes (May 31, 2026)
 
-- [ ] Fix proceduralLibrary.getDownloadUrl S3 key reconstruction (broken — 404s on all library downloads)
-- [ ] Fix driveFileId column conflation — store s3Key separately, never conflate with Drive IDs
-- [ ] Wire NOTION_FILE_AUDIT_DATASOURCE_ID through env.ts and ensure logFileActivity writes to Notion
-- [ ] Add file audit calls to admin.uploadTemplate, replaceTemplate, uploadSpecification
-- [ ] Standardize S3 bucketing — use per-org prefixes instead of uploads/unknown/ for admin/library files
-- [ ] Add user-facing file activity audit view (users see only their own file activity from Notion)
+- [x] Fix proceduralLibrary.getDownloadUrl S3 key reconstruction (broken — 404s on all library downloads)
+- [x] Fix driveFileId column conflation — store s3Key separately, never conflate with Drive IDs
+- [x] Wire NOTION_FILE_AUDIT_DATASOURCE_ID through env.ts and ensure logFileActivity writes to Notion
+- [x] Add file audit calls to admin.uploadTemplate, replaceTemplate, uploadSpecification
+- [x] Standardize S3 bucketing — use per-org prefixes instead of uploads/unknown/ for admin/library files
+- [x] Add user-facing file activity audit view (users see only their own file activity from Notion)
+
+## Cron Job / Notion Sync Fixes (June 1, 2026)
+
+- [x] Fix syncImplementationOrg writing non-existent Notion properties (Org Type, Color, Sort Order, Active)
+- [x] Add all 155 missing columns to 20 Notion databases via MCP
+- [x] Fix upsertPage title null safety (defensive guard against undefined .substring())
+- [x] Fix toISOString null safety in title construction
+- [x] Add originalPayload preservation to retry queue for accurate replay
+- [x] Purge 2,299 broken retry entries (no payload data, unrecoverable)
+- [x] Purge 5 permanently failed entries (null createdAt, unrecoverable)
+- [x] Verify retry queue processing: 4,953 entries succeeded after schema fix
+- [x] Create docs/notion-schema-mapping.md — complete property reference for all 21 sync functions
