@@ -1,0 +1,15 @@
+{
+  "query": "SELECT id, name, slug FROM organizations WHERE name LIKE '%RRAL%' OR slug LIKE '%rral%' LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, name, slug FROM organizations WHERE name LIKE '%RRAL%' OR slug LIKE '%rral%' LIMIT 5;",
+  "rows": [
+    {
+      "id": "240001",
+      "name": "RRAL",
+      "slug": "RRAL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tslug\n240001\tRRAL\tRRAL\n",
+  "stderr": "",
+  "execution_time_ms": 276
+}

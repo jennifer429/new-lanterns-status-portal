@@ -1,0 +1,210 @@
+{
+  "query": "SELECT id, clientId, title, filename, driveFileId, s3Key, url, mimeType FROM partnerDocuments LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, clientId, title, filename, driveFileId, s3Key, url, mimeType FROM partnerDocuments LIMIT 20;",
+  "rows": [
+    {
+      "id": "60001",
+      "clientId": "2",
+      "title": "Gen Xray Protocols",
+      "filename": "Gen Xray Protocols.pdf",
+      "driveFileId": "1jPo_4EEdh91dnEWL9rqBlgoXd96RH1b_",
+      "s3Key": "NULL",
+      "url": "https://drive.google.com/file/d/1jPo_4EEdh91dnEWL9rqBlgoXd96RH1b_/view?usp=drivesdk",
+      "mimeType": "application/pdf"
+    },
+    {
+      "id": "60002",
+      "clientId": "2",
+      "title": "Small Parts US_Blank",
+      "filename": "Small Parts US_Blank.pdf",
+      "driveFileId": "1rumYuawjNncKzDB7BJDrS_LqHMpeEyv0",
+      "s3Key": "NULL",
+      "url": "https://drive.google.com/file/d/1rumYuawjNncKzDB7BJDrS_LqHMpeEyv0/view?usp=drivesdk",
+      "mimeType": "application/pdf"
+    },
+    {
+      "id": "60003",
+      "clientId": "2",
+      "title": "Patient History Form",
+      "filename": "Patient History Form_Blank.pdf",
+      "driveFileId": "1hRVKAxVgdqc6CntykjF3TZfdrFzfUUGy",
+      "s3Key": "NULL",
+      "url": "https://drive.google.com/file/d/1hRVKAxVgdqc6CntykjF3TZfdrFzfUUGy/view?usp=drivesdk",
+      "mimeType": "application/pdf"
+    },
+    {
+      "id": "60004",
+      "clientId": "2",
+      "title": "Nuclear Medicine Questionnaire",
+      "filename": "Nuclear Medicine Questionnaire_Blank.pdf",
+      "driveFileId": "1D0VyoDzD9NG-vITVDpACJeOdIdo3tn1J",
+      "s3Key": "NULL",
+      "url": "https://drive.google.com/file/d/1D0VyoDzD9NG-vITVDpACJeOdIdo3tn1J/view?usp=drivesdk",
+      "mimeType": "application/pdf"
+    },
+    {
+      "id": "60005",
+      "clientId": "2",
+      "title": "MRI Screening and Consent Form",
+      "filename": "MRI Screening and Consent Form_Blank.pdf",
+      "driveFileId": "1UCVuilDwTg56Z6r7Pe6cGiee0MqlRGqB",
+      "s3Key": "NULL",
+      "url": "https://drive.google.com/file/d/1UCVuilDwTg56Z6r7Pe6cGiee0MqlRGqB/view?usp=drivesdk",
+      "mimeType": "application/pdf"
+    },
+    {
+      "id": "60006",
+      "clientId": "2",
+      "title": "Male Breast History",
+      "filename": "Male Breast History_Blank.pdf",
+      "driveFileId": "1BFRXGYfSgQBRaTz0P2ZpN_fUtQXIVH3k",
+      "s3Key": "NULL",
+      "url": "https://drive.google.com/file/d/1BFRXGYfSgQBRaTz0P2ZpN_fUtQXIVH3k/view?usp=drivesdk",
+      "mimeType": "application/pdf"
+    },
+    {
+      "id": "60007",
+      "clientId": "2",
+      "title": "DEXA",
+      "filename": "DEXA Form - Blank.pdf",
+      "driveFileId": "1clgmA-YON4RKXOHKLrh_GW5YsVyoS3AG",
+      "s3Key": "NULL",
+      "url": "https://drive.google.com/file/d/1clgmA-YON4RKXOHKLrh_GW5YsVyoS3AG/view?usp=drivesdk",
+      "mimeType": "application/pdf"
+    },
+    {
+      "id": "60008",
+      "clientId": "2",
+      "title": "CT Scan Interview Sheet",
+      "filename": "CT Scan Interview Sheet_Blank.pdf",
+      "driveFileId": "1rCB1DYANluRETYp2q1qB0r_rlJJa48xn",
+      "s3Key": "NULL",
+      "url": "https://drive.google.com/file/d/1rCB1DYANluRETYp2q1qB0r_rlJJa48xn/view?usp=drivesdk",
+      "mimeType": "application/pdf"
+    },
+    {
+      "id": "60009",
+      "clientId": "2",
+      "title": "CT Lung Screening Order Form",
+      "filename": "CT Lung Screening Order Form_Blank.pdf",
+      "driveFileId": "1twIUqUGtj6nWncQmSpw0IyX4nykcpOkx",
+      "s3Key": "NULL",
+      "url": "https://drive.google.com/file/d/1twIUqUGtj6nWncQmSpw0IyX4nykcpOkx/view?usp=drivesdk",
+      "mimeType": "application/pdf"
+    },
+    {
+      "id": "90001",
+      "clientId": "2",
+      "title": "Lower Extremity Venous US",
+      "filename": "650US - Lower Extremity Venous Ultrasound.pdf",
+      "driveFileId": "1DTFSJCfXHB-gVMYag0R3mj4API3akMUH",
+      "s3Key": "NULL",
+      "url": "https://drive.google.com/file/d/1DTFSJCfXHB-gVMYag0R3mj4API3akMUH/view?usp=drivesdk",
+      "mimeType": "application/pdf"
+    },
+    {
+      "id": "90002",
+      "clientId": "2",
+      "title": "Upper Extremity Venous US",
+      "filename": "655US - Upper Extremity Venous Ultrasound.pdf",
+      "driveFileId": "1R_pg1kxiDhvyAoJT-j1PHc72dVuLPnjC",
+      "s3Key": "NULL",
+      "url": "https://drive.google.com/file/d/1R_pg1kxiDhvyAoJT-j1PHc72dVuLPnjC/view?usp=drivesdk",
+      "mimeType": "application/pdf"
+    },
+    {
+      "id": "90003",
+      "clientId": "2",
+      "title": "Thyroid US Impression Form",
+      "filename": "660US - Thyroid Ultrasound Impression Form.pdf",
+      "driveFileId": "1GDvfux63Pb1Ym5nGI-DjCFB9j8D1o1EN",
+      "s3Key": "NULL",
+      "url": "https://drive.google.com/file/d/1GDvfux63Pb1Ym5nGI-DjCFB9j8D1o1EN/view?usp=drivesdk",
+      "mimeType": "application/pdf"
+    },
+    {
+      "id": "90004",
+      "clientId": "2",
+      "title": "Misc. US Impression Form",
+      "filename": "665US - Miscellaneous Ultrasound Impression Form.pdf",
+      "driveFileId": "1AMSRXxCxtA5eiwxPnMHwDcN_TMDKpx9r",
+      "s3Key": "NULL",
+      "url": "https://drive.google.com/file/d/1AMSRXxCxtA5eiwxPnMHwDcN_TMDKpx9r/view?usp=drivesdk",
+      "mimeType": "application/pdf"
+    },
+    {
+      "id": "90005",
+      "clientId": "2",
+      "title": "Breast US",
+      "filename": "605US - Breast Ultrasound.pdf",
+      "driveFileId": "1bNyYJNLEst7muMjth5S-zowd6w_AeSrh",
+      "s3Key": "NULL",
+      "url": "https://drive.google.com/file/d/1bNyYJNLEst7muMjth5S-zowd6w_AeSrh/view?usp=drivesdk",
+      "mimeType": "application/pdf"
+    },
+    {
+      "id": "90006",
+      "clientId": "2",
+      "title": "Carotid US",
+      "filename": "610US - Carotid Ultrasound.pdf",
+      "driveFileId": "1ozQdkBNXLbkKnH4aDY8uSvBRE9JPbp8S",
+      "s3Key": "NULL",
+      "url": "https://drive.google.com/file/d/1ozQdkBNXLbkKnH4aDY8uSvBRE9JPbp8S/view?usp=drivesdk",
+      "mimeType": "application/pdf"
+    },
+    {
+      "id": "90007",
+      "clientId": "2",
+      "title": "Pelvis Impression Form",
+      "filename": "615US - Pelvis Impression Form.pdf",
+      "driveFileId": "12qgAQ9PbpGVAty0YUtVQ84Kmg27PQDJa",
+      "s3Key": "NULL",
+      "url": "https://drive.google.com/file/d/12qgAQ9PbpGVAty0YUtVQ84Kmg27PQDJa/view?usp=drivesdk",
+      "mimeType": "application/pdf"
+    },
+    {
+      "id": "90008",
+      "clientId": "2",
+      "title": "Abdominal US",
+      "filename": "620US - Abdominal Ultrasound.pdf",
+      "driveFileId": "1WgAoiWqN_Uac6mNlkrqiTvRnERx5zeKs",
+      "s3Key": "NULL",
+      "url": "https://drive.google.com/file/d/1WgAoiWqN_Uac6mNlkrqiTvRnERx5zeKs/view?usp=drivesdk",
+      "mimeType": "application/pdf"
+    },
+    {
+      "id": "90009",
+      "clientId": "2",
+      "title": "US Early Pregnancy",
+      "filename": "625US - Early Pregnancy.pdf",
+      "driveFileId": "1tOs2cEjMPba_Frabmbur6mMZpWWDWS-e",
+      "s3Key": "NULL",
+      "url": "https://drive.google.com/file/d/1tOs2cEjMPba_Frabmbur6mMZpWWDWS-e/view?usp=drivesdk",
+      "mimeType": "application/pdf"
+    },
+    {
+      "id": "90010",
+      "clientId": "2",
+      "title": "Renal Transplant",
+      "filename": "630US - Renal Transplant.pdf",
+      "driveFileId": "1Vsqra2wwtKoj59TcBSuwR3eHBVLoTbCU",
+      "s3Key": "NULL",
+      "url": "https://drive.google.com/file/d/1Vsqra2wwtKoj59TcBSuwR3eHBVLoTbCU/view?usp=drivesdk",
+      "mimeType": "application/pdf"
+    },
+    {
+      "id": "90011",
+      "clientId": "2",
+      "title": "Renal Artery US",
+      "filename": "635US - Renal Artery Ultrasound.pdf",
+      "driveFileId": "1lcplKvH_-NONo6Wi33ZNeXkmgEeyOoQK",
+      "s3Key": "NULL",
+      "url": "https://drive.google.com/file/d/1lcplKvH_-NONo6Wi33ZNeXkmgEeyOoQK/view?usp=drivesdk",
+      "mimeType": "application/pdf"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tclientId\ttitle\tfilename\tdriveFileId\ts3Key\turl\tmimeType\n60001\t2\tGen Xray Protocols\tGen Xray Protocols.pdf\t1jPo_4EEdh91dnEWL9rqBlgoXd96RH1b_\tNULL\thttps://drive.google.com/file/d/1jPo_4EEdh91dnEWL9rqBlgoXd96RH1b_/view?usp=drivesdk\tapplication/pdf\n60002\t2\tSmall Parts US_Blank\tSmall Parts US_Blank.pdf\t1rumYuawjNncKzDB7BJDrS_LqHMpeEyv0\tNULL\thttps://drive.google.com/file/d/1rumYuawjNncKzDB7BJDrS_LqHMpeEyv0/view?usp=drivesdk\tapplication/pdf\n60003\t2\tPatient History Form\tPatient History Form_Blank.pdf\t1hRVKAxVgdqc6CntykjF3TZfdrFzfUUGy\tNULL\thttps://drive.google.com/file/d/1hRVKAxVgdqc6CntykjF3TZfdrFzfUUGy/view?usp=drivesdk\tapplication/pdf\n60004\t2\tNuclear Medicine Questionnaire\tNuclear Medicine Questionnaire_Blank.pdf\t1D0VyoDzD9NG-vITVDpACJeOdIdo3tn1J\tNULL\thttps://drive.google.com/file/d/1D0VyoDzD9NG-vITVDpACJeOdIdo3tn1J/view?usp=drivesdk\tapplication/pdf\n60005\t2\tMRI Screening and Consent Form\tMRI Screening and Consent Form_Blank.pdf\t1UCVuilDwTg56Z6r7Pe6cGiee0MqlRGqB\tNULL\thttps://drive.google.com/file/d/1UCVuilDwTg56Z6r7Pe6cGiee0MqlRGqB/view?usp=drivesdk\tapplication/pdf\n60006\t2\tMale Breast History\tMale Breast History_Blank.pdf\t1BFRXGYfSgQBRaTz0P2ZpN_fUtQXIVH3k\tNULL\thttps://drive.google.com/file/d/1BFRXGYfSgQBRaTz0P2ZpN_fUtQXIVH3k/view?usp=drivesdk\tapplication/pdf\n60007\t2\tDEXA\tDEXA Form - Blank.pdf\t1clgmA-YON4RKXOHKLrh_GW5YsVyoS3AG\tNULL\thttps://drive.google.com/file/d/1clgmA-YON4RKXOHKLrh_GW5YsVyoS3AG/view?usp=drivesdk\tapplication/pdf\n60008\t2\tCT Scan Interview Sheet\tCT Scan Interview Sheet_Blank.pdf\t1rCB1DYANluRETYp2q1qB0r_rlJJa48xn\tNULL\thttps://drive.google.com/file/d/1rCB1DYANluRETYp2q1qB0r_rlJJa48xn/view?usp=drivesdk\tapplication/pdf\n60009\t2\tCT Lung Screening Order Form\tCT Lung Screening Order Form_Blank.pdf\t1twIUqUGtj6nWncQmSpw0IyX4nykcpOkx\tNULL\thttps://drive.google.com/file/d/1twIUqUGtj6nWncQmSpw0IyX4nykcpOkx/view?usp=drivesdk\tapplication/pdf\n90001\t2\tLower Extremity Venous US\t650US - Lower Extremity Venous Ultrasound.pdf\t1DTFSJCfXHB-gVMYag0R3mj4API3akMUH\tNULL\thttps://drive.google.com/file/d/1DTFSJCfXHB-gVMYag0R3mj4API3akMUH/view?usp=drivesdk\tapplication/pdf\n90002\t2\tUpper Extremity Venous US\t655US - Upper Extremity Venous Ultrasound.pdf\t1R_pg1kxiDhvyAoJT-j1PHc72dVuLPnjC\tNULL\thttps://drive.google.com/file/d/1R_pg1kxiDhvyAoJT-j1PHc72dVuLPnjC/view?usp=drivesdk\tapplication/pdf\n90003\t2\tThyroid US Impression Form\t660US - Thyroid Ultrasound Impression Form.pdf\t1GDvfux63Pb1Ym5nGI-DjCFB9j8D1o1EN\tNULL\thttps://drive.google.com/file/d/1GDvfux63Pb1Ym5nGI-DjCFB9j8D1o1EN/view?usp=drivesdk\tapplication/pdf\n90004\t2\tMisc. US Impression Form\t665US - Miscellaneous Ultrasound Impression Form.pdf\t1AMSRXxCxtA5eiwxPnMHwDcN_TMDKpx9r\tNULL\thttps://drive.google.com/file/d/1AMSRXxCxtA5eiwxPnMHwDcN_TMDKpx9r/view?usp=drivesdk\tapplication/pdf\n90005\t2\tBreast US\t605US - Breast Ultrasound.pdf\t1bNyYJNLEst7muMjth5S-zowd6w_AeSrh\tNULL\thttps://drive.google.com/file/d/1bNyYJNLEst7muMjth5S-zowd6w_AeSrh/view?usp=drivesdk\tapplication/pdf\n90006\t2\tCarotid US\t610US - Carotid Ultrasound.pdf\t1ozQdkBNXLbkKnH4aDY8uSvBRE9JPbp8S\tNULL\thttps://drive.google.com/file/d/1ozQdkBNXLbkKnH4aDY8uSvBRE9JPbp8S/view?usp=drivesdk\tapplication/pdf\n90007\t2\tPelvis Impression Form\t615US - Pelvis Impression Form.pdf\t12qgAQ9PbpGVAty0YUtVQ84Kmg27PQDJa\tNULL\thttps://drive.google.com/file/d/12qgAQ9PbpGVAty0YUtVQ84Kmg27PQDJa/view?usp=drivesdk\tapplication/pdf\n90008\t2\tAbdominal US\t620US - Abdominal Ultrasound.pdf\t1WgAoiWqN_Uac6mNlkrqiTvRnERx5zeKs\tNULL\thttps://drive.google.com/file/d/1WgAoiWqN_Uac6mNlkrqiTvRnERx5zeKs/view?usp=drivesdk\tapplication/pdf\n90009\t2\tUS Early Pregnancy\t625US - Early Pregnancy.pdf\t1tOs2cEjMPba_Frabmbur6mMZpWWDWS-e\tNULL\thttps://drive.google.com/file/d/1tOs2cEjMPba_Frabmbur6mMZpWWDWS-e/view?usp=drivesdk\tapplication/pdf\n90010\t2\tRenal Transplant\t630US - Renal Transplant.pdf\t1Vsqra2wwtKoj59TcBSuwR3eHBVLoTbCU\tNULL\thttps://drive.google.com/file/d/1Vsqra2wwtKoj59TcBSuwR3eHBVLoTbCU/view?usp=drivesdk\tapplication/pdf\n90011\t2\tRenal Artery US\t635US - Renal Artery Ultrasound.pdf\t1lcplKvH_-NONo6Wi33ZNeXkmgEeyOoQK\tNULL\thttps://drive.google.com/file/d/1lcplKvH_-NONo6Wi33ZNeXkmgEeyOoQK/view?usp=drivesdk\tapplication/pdf\n",
+  "stderr": "",
+  "execution_time_ms": 262
+}
