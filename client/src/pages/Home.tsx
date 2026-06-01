@@ -7,7 +7,7 @@
 
 import { useRoute, useLocation, Link } from "wouter";
 import { useState, useEffect } from "react";
-import { LayoutDashboard, ClipboardList, FlaskConical, ListChecks, BookOpen, RefreshCw } from "lucide-react";
+import { LayoutDashboard, ClipboardList, FlaskConical, ListChecks, FolderOpen, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { PhiDisclaimer } from "@/components/PhiDisclaimer";
@@ -69,7 +69,7 @@ export default function Home() {
     { label: "Questionnaire", href: `${orgBase}/intake`, icon: ClipboardList, active: false },
     { label: "Testing", href: `${orgBase}/validation`, icon: FlaskConical, active: false },
     { label: "Tasks", href: `${orgBase}/implement`, icon: ListChecks, active: false },
-    { label: "Knowledge", href: `${orgBase}/library`, icon: BookOpen, active: false },
+    { label: "Documents", href: `${orgBase}/library`, icon: FolderOpen, active: false },
   ];
 
   // Redirect legacy /org/:slug URLs to canonical /org/:clientSlug/:slug
