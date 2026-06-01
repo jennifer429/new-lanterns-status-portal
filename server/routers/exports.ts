@@ -970,7 +970,8 @@ export const exportsRouter = router({
         )
         .map((it) => ({ ...it, owner: it.owner || "IT Connectivity" }));
 
-      // Pre-selected tasks/assignments (open work + outstanding tests).
+      // Pre-selected "next ups" — every open / in-progress task + every
+      // outstanding test (not just a sample). Admin trims what they don't want.
       const blockerIds = new Set(blockers.map((b) => b.id));
       const tasks = catalog
         .filter(
@@ -982,8 +983,7 @@ export const exportsRouter = router({
         .map((it) => ({
           ...it,
           owner: it.owner || (it.kind === "task" ? "Project Manager" : "Radiologist Champion"),
-        }))
-        .slice(0, 10);
+        }));
 
       const overall = stage === "live" ? 100 : data.overallPct;
       const note =
