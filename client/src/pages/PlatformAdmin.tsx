@@ -33,8 +33,8 @@ import { VendorPicklistsTab } from "./admin/VendorPicklistsTab";
 import ProceduralLibrary from "./ProceduralLibrary";
 
 /** Thin wrapper that renders ProceduralLibrary inline within the admin layout */
-function ProceduralLibraryEmbed() {
-  return <ProceduralLibrary />;
+function ProceduralLibraryEmbed({ effectiveClientId }: { effectiveClientId: number | null }) {
+  return <ProceduralLibrary effectiveClientId={effectiveClientId} />;
 }
 
 type Tab = "prod-dashboard" | "impl-dashboard" | "orgs" | "users" | "templates" | "task-templates" | "partners" | "specs" | "vendor-picklists" | "audit-log" | "library";
@@ -432,7 +432,7 @@ export default function PlatformAdmin() {
         {activeTab === "specs" && isPlatformAdmin && <SpecsTab />}
         {activeTab === "vendor-picklists" && <VendorPicklistsTab />}
         {activeTab === "audit-log" && <AiAuditLog />}
-        {activeTab === "library" && <ProceduralLibraryEmbed />}
+        {activeTab === "library" && <ProceduralLibraryEmbed effectiveClientId={effectiveClientId} />}
       </div>
 
       <AdminChatWidget isPlatformAdmin={isPlatformAdmin} />

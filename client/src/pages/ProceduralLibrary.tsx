@@ -91,10 +91,19 @@ function formatDateTime(date: string | Date | null): string {
   });
 }
 
-export default function ProceduralLibrary() {
+import type { RouteComponentProps } from "wouter";
+
+interface ProceduralLibraryProps extends Partial<RouteComponentProps> {
+  effectiveClientId?: number | null;
+}
+
+export default function ProceduralLibrary({ effectiveClientId, ...routeProps }: ProceduralLibraryProps = {}) {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const isPlatformAdmin = isAdmin && !user?.clientId;
+  
+  // If effectiveClientId is provided (from PlatformAdmin preview), use it; otherwise derive from user
+  const scopedClientId = effectiveClientId !== undefined ? effectiveClientId : (isPlatformAdmin ? null : user?.clientId ?? null);
 
   // Detect route context for back navigation
   const [, orgParams] = useRoute("/org/:clientSlug/:slug/library");
@@ -107,10 +116,14 @@ export default function ProceduralLibrary() {
 
   // Data queries
   const { data: documents = [], refetch: refetchDocs } =
-    trpc.proceduralLibrary.listDocuments.useQuery();
+    trpc.proceduralLibrary.listDocuments.useQuery(
+      scopedClientId !== null ? { clientId: scopedClientId } : undefined
+    );
+  // When previewing a partner, show only that partner in the upload dropdown
+  const showPartnerSelector = isPlatformAdmin && effectiveClientId === undefined;
   const { data: allClients = [] } = trpc.admin.getAllClients.useQuery(
     undefined,
-    { enabled: isPlatformAdmin }
+    { enabled: showPartnerSelector }
   );
 
   // Mutations
@@ -150,9 +163,11 @@ export default function ProceduralLibrary() {
   // Upload dialog state
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [uploadTitle, setUploadTitle] = useState("");
-  const [uploadClientId, setUploadClientId] = useState<string>(
-    user?.clientId ? String(user.clientId) : ""
-  );
+  const [uploadClientId, setUploadClientId] = useState<string>(() => {
+    // If previewing a partner, default to that partner; otherwise use user's clientId
+    if (scopedClientId !== null) return String(scopedClientId);
+    return user?.clientId ? String(user.clientId) : "";
+  });
   const [uploadFile, setUploadFile] = useState<globalThis.File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -171,7 +186,7 @@ export default function ProceduralLibrary() {
 
   const resetUploadForm = () => {
     setUploadTitle("");
-    setUploadClientId(user?.clientId ? String(user.clientId) : "");
+    setUploadClientId(scopedClientId !== null ? String(scopedClientId) : (user?.clientId ? String(user.clientId) : ""));
     setUploadFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -212,7 +227,10 @@ export default function ProceduralLibrary() {
     }
 
     // Partner filter (platform admins only)
-    if (partnerFilter !== "all") {
+    // If scoped to a partner, don't allow changing the filter
+    if (scopedClientId !== null) {
+      result = result.filter((doc) => doc.clientId === scopedClientId);
+    } else if (partnerFilter !== "all") {
       const cId = parseInt(partnerFilter);
       result = result.filter((doc) => doc.clientId === cId);
     }
@@ -247,6 +265,7 @@ export default function ProceduralLibrary() {
   }, [documents, searchQuery, partnerFilter, sortField, sortDir]);
 
   // Unique partners from documents (for the filter dropdown)
+  // When previewing a partner, don't show the partner filter dropdown
   const partnerOptions = useMemo(() => {
     const map = new Map<number, string>();
     documents.forEach((doc) => {

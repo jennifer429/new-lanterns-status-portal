@@ -485,3 +485,7 @@
 - [x] Fix email composer: only pre-select blockers + dashboard next-ups (3 tasks, 3 tests)
 - [x] Fix email composer: always include jennifer@newlantern.ai as default recipient
 - [x] Fix email composer: mobile responsive layout (full-screen on phone, stacked fields)
+
+## Documents Library Filtering by Partner
+
+- [x] Platform admin "view as partner" should filter documents library — pass effectiveClientId to ProceduralLibrary component and query with clientId parameter
