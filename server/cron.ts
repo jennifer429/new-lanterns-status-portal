@@ -18,6 +18,7 @@ import { runContactsSystemsSync } from "./notionSyncContacts";
 import { runTaskValidationSyncBack } from "./notionSyncBackTasks";
 import { processRetryQueue } from "./notionRetryQueue";
 import { runReconciliation } from "./notionReconciliation";
+import { runStartupRecovery } from "./startupRecovery";
 import { notifyOwner } from "./_core/notification";
 import { ENV } from "./_core/env";
 
@@ -342,18 +343,32 @@ async function purgeSyncLogEntries(): Promise<void> {
 }
 // ── Cron registration ─────────────────────────────────────────────────────────
 
-let cronStarted = false;
+let cronJobsRegistered = false;
 
 /**
  * Start all cron jobs. Call this once from the server entry point.
  * Guarded against double-registration (e.g. during tsx watch hot-reload).
  */
 export function startCronJobs(): void {
-  if (cronStarted) {
+  if (cronJobsRegistered) {
     console.warn("[cron] startCronJobs called again — skipping (already registered)");
     return;
   }
-  cronStarted = true;
+  cronJobsRegistered = true;
+
+  // Run startup recovery first: catch up on any unconfirmed rows before cron jobs begin
+  runStartupRecovery()
+    .then((stats) => {
+      if (stats.tasksRecovered > 0 || stats.validationRecovered > 0) {
+        console.log(
+          `[cron] Startup recovery complete: ${stats.tasksRecovered} tasks + ` +
+          `${stats.validationRecovered} validation results recovered`
+        );
+      }
+    })
+    .catch((err) => {
+      console.error("[cron] Startup recovery failed:", err);
+    });
 
   // Questionnaire Notion → MySQL sync: every 5 minutes
   cron.schedule("*/5 * * * *", async () => {

@@ -1,0 +1,18 @@
+{
+  "query": "SELECT 'taskCompletion' as tbl, COUNT(*) as cnt FROM taskCompletion WHERE notionLastEdited IS NULL UNION ALL SELECT 'validationResults' as tbl, COUNT(*) as cnt FROM validationResults WHERE notionLastEdited IS NULL;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT 'taskCompletion' as tbl, COUNT(*) as cnt FROM taskCompletion WHERE notionLastEdited IS NULL UNION ALL SELECT 'validationResults' as tbl, COUNT(*) as cnt FROM validationResults WHERE notionLastEdited IS NULL;",
+  "rows": [
+    {
+      "tbl": "taskCompletion",
+      "cnt": "49"
+    },
+    {
+      "tbl": "validationResults",
+      "cnt": "37"
+    }
+  ],
+  "messages": [],
+  "stdout": "tbl\tcnt\ntaskCompletion\t49\nvalidationResults\t37\n",
+  "stderr": "",
+  "execution_time_ms": 273
+}

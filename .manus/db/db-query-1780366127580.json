@@ -1,0 +1,19 @@
+{
+  "query": "SELECT id, type, toAddress, status, errorMessage, messageId, createdAt FROM emailLog WHERE type = 'task_status' ORDER BY createdAt DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, type, toAddress, status, errorMessage, messageId, createdAt FROM emailLog WHERE type = 'task_status' ORDER BY createdAt DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "30001",
+      "type": "task_status",
+      "toAddress": "Jennifer@newlantern.ai",
+      "status": "sent",
+      "errorMessage": "NULL",
+      "messageId": "<aa2b88c3-af74-8b7b-b555-cb3075e36c07@newlantern.ai>",
+      "createdAt": "2026-06-02 02:04:28"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttype\ttoAddress\tstatus\terrorMessage\tmessageId\tcreatedAt\n30001\ttask_status\tJennifer@newlantern.ai\tsent\tNULL\t<aa2b88c3-af74-8b7b-b555-cb3075e36c07@newlantern.ai>\t2026-06-02 02:04:28\n",
+  "stderr": "",
+  "execution_time_ms": 262
+}

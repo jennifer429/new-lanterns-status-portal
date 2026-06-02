@@ -1,0 +1,8 @@
+{
+  "query": "SELECT id, type, to_address, status, error_message, message_id, created_at FROM email_log WHERE type = 'task_status' ORDER BY created_at DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, type, to_address, status, error_message, message_id, created_at FROM email_log WHERE type = 'task_status' ORDER BY created_at DESC LIMIT 5;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1146 (42S02) at line 1: Table 'hggexrhucg7apwzjrkh7lf.email_log' doesn't exist"
+  ]
+}
