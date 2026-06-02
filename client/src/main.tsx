@@ -6,6 +6,7 @@ import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
 import { getLoginUrl } from "./const";
+import { saveReturnTo } from "./lib/returnTo";
 import "./index.css";
 
 const queryClient = new QueryClient();
@@ -18,6 +19,8 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
 
   if (!isUnauthorized) return;
 
+  // Remember where the user was headed so we can return them post-login.
+  saveReturnTo(window.location.pathname + window.location.search + window.location.hash);
   window.location.href = getLoginUrl();
 };
 

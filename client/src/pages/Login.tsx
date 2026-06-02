@@ -13,6 +13,7 @@ import { useState } from "react";
 import { useLocation, Link } from "wouter";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Lock } from "lucide-react";
+import { takeReturnTo } from "@/lib/returnTo";
 
 const SANS = "'Figtree', 'Manrope', system-ui, sans-serif";
 const MONO = "'Roboto Mono', ui-monospace, monospace";
@@ -45,6 +46,13 @@ export default function Login() {
       }
 
       const data = await response.json();
+
+      // If the user arrived via a deep link, return them to it after login.
+      const returnTo = takeReturnTo();
+      if (returnTo) {
+        window.location.href = returnTo;
+        return;
+      }
 
       if (data.clientSlug && data.orgSlug) {
         window.location.href = `/org/${data.clientSlug}/${data.orgSlug}`;

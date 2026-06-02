@@ -30,7 +30,7 @@ import {
   syncValidationResultToNotion,
 } from "../notionTaskValidation";
 import { questionnaireSections } from "@shared/questionnaireData";
-import { calculateProgress } from "@shared/progressCalculation";
+import { calculateProgress, getIncompleteVisibleQuestionIds } from "@shared/progressCalculation";
 import { SECTION_DEFS as TASK_SECTION_DEFS } from "@shared/taskDefs";
 
 // ---------------------------------------------------------------------------
@@ -98,6 +98,7 @@ interface OrgExportData {
   org: {
     name: string;
     slug: string;
+    clientSlug: string;
     contactName: string | null;
     contactEmail: string | null;
     startDate: string | null;
@@ -110,6 +111,12 @@ interface OrgExportData {
     totalSections: number;
     pct: number;
     sectionProgress: Record<string, { completed: number; total: number }>;
+    openQuestions: Array<{
+      id: string;
+      section: string;
+      sectionCode: string;
+      text: string;
+    }>;
   };
   implementation: {
     total: number;
@@ -166,13 +173,17 @@ async function gatherOrgData(orgSlug: string): Promise<OrgExportData> {
 
   // Partner
   let partnerName = "";
+  let clientSlug = "";
   if (org.clientId) {
     const [client] = await db
       .select()
       .from(clients)
       .where(eq(clients.id, org.clientId))
       .limit(1);
-    if (client) partnerName = client.name;
+    if (client) {
+      partnerName = client.name;
+      clientSlug = client.slug;
+    }
   }
 
   // Questionnaire progress
@@ -204,6 +215,29 @@ async function gatherOrgData(orgSlug: string): Promise<OrgExportData> {
   });
 
   const progress = calculateProgress(allQuestions, responses as any, files as any);
+
+  // Open (incomplete, visible) questionnaire items, with section code + label
+  // so the status email can deep-link straight to the question in intake.
+  const qMeta = new Map<string, { section: string; sectionCode: string; text: string }>();
+  for (const section of questionnaireSections) {
+    if (section.type === "workflow") {
+      qMeta.set(section.id + "_config", {
+        section: section.title,
+        sectionCode: section.id,
+        text: `${section.title} workflow`,
+      });
+    }
+    for (const q of section.questions || []) {
+      if (q.inactive) continue;
+      qMeta.set(q.id, { section: section.title, sectionCode: section.id, text: q.text });
+    }
+  }
+  const openQuestions = getIncompleteVisibleQuestionIds(allQuestions, responses as any, files as any)
+    .map((id) => {
+      const m = qMeta.get(String(id));
+      return m ? { id: String(id), ...m } : null;
+    })
+    .filter((x): x is { id: string; section: string; sectionCode: string; text: string } => x !== null);
   const totalSections = Object.keys(progress.sectionProgress).length;
   const completedSections = Object.values(progress.sectionProgress).filter(
     (s) => s.completed === s.total
@@ -331,6 +365,7 @@ async function gatherOrgData(orgSlug: string): Promise<OrgExportData> {
     org: {
       name: org.name,
       slug: org.slug,
+      clientSlug,
       contactName: org.contactName,
       contactEmail: org.contactEmail,
       startDate: org.startDate,
@@ -343,6 +378,7 @@ async function gatherOrgData(orgSlug: string): Promise<OrgExportData> {
       totalSections,
       pct: qPct,
       sectionProgress: progress.sectionProgress,
+      openQuestions,
     },
     implementation: {
       total: implTotal,
@@ -703,8 +739,8 @@ export interface StatusUpdatePayload {
     tDone: number;
     tTotal: number;
   };
-  blockers: Array<{ text: string; owner: string }>;
-  tasks: Array<{ text: string; owner: string; due?: string }>;
+  blockers: Array<{ text: string; owner: string; link?: string }>;
+  tasks: Array<{ text: string; owner: string; due?: string; link?: string }>;
 }
 
 /**
@@ -721,14 +757,20 @@ export function buildStatusUpdateEmailHtml(p: StatusUpdatePayload): string {
   const esc = (s: string) =>
     String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-  const item = (text: string, owner: string, dotColor: string) => `
+  const item = (text: string, owner: string, dotColor: string, link?: string) => {
+    const label = esc(text) || "—";
+    const cell = link
+      ? `<a href="${esc(link)}" style="color:#ECECEE;text-decoration:none;border-bottom:1px solid rgba(124,30,189,0.55);">${label}</a>`
+      : label;
+    return `
     <tr>
       <td style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.08);vertical-align:middle;width:14px;">
         <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${dotColor};"></span>
       </td>
-      <td style="padding:7px 8px;border-bottom:1px solid rgba(255,255,255,0.08);font:500 13px/1.4 'Figtree',Arial,sans-serif;color:#ECECEE;">${esc(text) || "—"}</td>
+      <td style="padding:7px 8px;border-bottom:1px solid rgba(255,255,255,0.08);font:500 13px/1.4 'Figtree',Arial,sans-serif;color:#ECECEE;">${cell}</td>
       <td class="nl-owner" style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.08);text-align:right;white-space:nowrap;font:600 10.5px/1 'Roboto Mono',monospace;color:#9A9AA0;">${esc(owner)}</td>
     </tr>`;
+  };
 
   const section = (title: string, color: string, rows: string) => `
     <div style="margin-bottom:18px;">
@@ -741,7 +783,7 @@ export function buildStatusUpdateEmailHtml(p: StatusUpdatePayload): string {
       ? section(
           "Blockers",
           RED,
-          p.blockers.map((b) => item(b.text, b.owner, RED)).join("")
+          p.blockers.map((b) => item(b.text, b.owner, RED, b.link)).join("")
         )
       : "";
 
@@ -751,7 +793,7 @@ export function buildStatusUpdateEmailHtml(p: StatusUpdatePayload): string {
           "Tasks &amp; assignments",
           "#9A9AA0",
           p.tasks
-            .map((t) => item(t.text, `${esc(t.owner)}${t.due ? ` · ${esc(t.due)}` : ""}`, ACCENT))
+            .map((t) => item(t.text, `${esc(t.owner)}${t.due ? ` · ${esc(t.due)}` : ""}`, ACCENT, t.link))
             .join("")
         )
       : "";
@@ -955,7 +997,30 @@ export const exportsRouter = router({
       ];
       const assignees = [...assigneeSet.keys(), ...CONTACT_ROLES.filter((r) => !assigneeSet.has(r))];
 
-      // ── Browseable catalog: every task + test, linked to its source ─────────
+      // ── Deep links: each item points at its exact spot in the portal. A
+      // logged-out click is bounced through login and returned here (the
+      // intake/validation/implement pages scroll + highlight the item). ──────
+      const base = ENV.siteBaseUrl
+        ? `${ENV.siteBaseUrl.replace(/\/$/, "")}/org/${data.org.clientSlug}/${data.org.slug}`
+        : "";
+      const enc = encodeURIComponent;
+      const taskLink = (id: string) => (base ? `${base}/implement?task=${enc(id)}` : "");
+      const testLink = (key: string) => (base ? `${base}/validation?t=${enc(key)}` : "");
+      const questionLink = (sectionCode: string, id: string) =>
+        base ? `${base}/intake?section=${enc(sectionCode)}&q=${enc(id)}` : "";
+
+      // ── Browseable catalog: every open question + task + test, linked to its source ─
+      const mkQuestion = (q: OrgExportData["questionnaire"]["openQuestions"][number]) => ({
+        id: `question:${q.id}`,
+        kind: "question" as const,
+        sourceId: q.id,
+        group: q.section,
+        text: q.text,
+        owner: "",
+        due: "",
+        status: "Open",
+        link: questionLink(q.sectionCode, q.id),
+      });
       const mkTask = (t: OrgExportData["implementation"]["tasks"][number]) => ({
         id: `task:${t.id}`,
         kind: "task" as const,
@@ -965,6 +1030,7 @@ export const exportsRouter = router({
         owner: t.owner || "",
         due: t.targetDate || "",
         status: t.status,
+        link: taskLink(t.id),
       });
       const mkTest = (t: OrgExportData["validation"]["tests"][number]) => ({
         id: `test:${t.key}`,
@@ -975,8 +1041,10 @@ export const exportsRouter = router({
         owner: t.owner || "",
         due: "",
         status: t.status,
+        link: testLink(t.key),
       });
       const catalog = [
+        ...data.questionnaire.openQuestions.map(mkQuestion),
         ...data.implementation.tasks.map(mkTask),
         ...data.validation.tests.map(mkTest),
       ];
@@ -1079,9 +1147,10 @@ export const exportsRouter = router({
           z.object({
             text: z.string(),
             owner: z.string(),
-            kind: z.enum(["task", "test"]).optional(),
+            kind: z.enum(["task", "test", "question"]).optional(),
             sourceId: z.string().optional(),
             group: z.string().optional(),
+            link: z.string().optional(),
           })
         ),
         tasks: z.array(
@@ -1089,9 +1158,10 @@ export const exportsRouter = router({
             text: z.string(),
             owner: z.string(),
             due: z.string().optional(),
-            kind: z.enum(["task", "test"]).optional(),
+            kind: z.enum(["task", "test", "question"]).optional(),
             sourceId: z.string().optional(),
             group: z.string().optional(),
+            link: z.string().optional(),
           })
         ),
         writeBack: z.boolean().default(true),
@@ -1226,7 +1296,7 @@ export const exportsRouter = router({
                 notes: null,
               }).catch((err) => console.error("[notion-task] write-back error:", err));
               writtenBack++;
-            } else {
+            } else if (it.kind === "test") {
               const status: "Blocked" | "In Progress" =
                 it.bucket === "blocker" ? "Blocked" : "In Progress";
               const [existing] = await db

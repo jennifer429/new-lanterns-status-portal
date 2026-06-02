@@ -23,6 +23,7 @@ import Connectivity from "./pages/Connectivity";
 import ProceduralLibrary from "./pages/ProceduralLibrary";
 import { trpc } from "@/lib/trpc";
 import { useEffect } from "react";
+import { takeReturnTo } from "@/lib/returnTo";
 
 /**
  * Redirect legacy 2-segment sub-page URLs to canonical 3-segment URLs.
@@ -115,7 +116,13 @@ function Router() {
       <Route path="/org/:clientSlug/:slug" component={Home} />
       {/* Legacy route — redirects to canonical /org/:clientSlug/:slug via Home's useEffect */}
       <Route path="/org/:slug" component={Home} />
-      <Route path="/">{() => { window.location.href = '/login'; return null; }}</Route>
+      <Route path="/">{() => {
+        // Post-login landing: if a deep link was saved (e.g. an emailed status
+        // link opened while logged out), return there; otherwise go to login.
+        const returnTo = takeReturnTo();
+        window.location.href = returnTo || '/login';
+        return null;
+      }}</Route>
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

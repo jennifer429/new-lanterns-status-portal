@@ -45,6 +45,7 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { useOrgParams } from "@/hooks/useOrgParams";
+import { useFocusFromQuery } from "@/hooks/useFocusFromQuery";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { UserMenu } from "@/components/UserMenu";
@@ -117,6 +118,7 @@ function InlineEdit({
 
 export default function Implementation() {
   const { clientSlug, slug, orgPath } = useOrgParams("implement");
+  useFocusFromQuery("task", "task"); // deep-link from status-update emails
   const { user } = useAuth();
 
   const { data: organization } = trpc.organizations.getBySlug.useQuery(
@@ -898,6 +900,7 @@ export default function Implementation() {
                           return (
                             <div
                               key={task.id}
+                              id={`task-${task.id}`}
                               className={cn(
                                 tIdx < section.tasks.length - 1 ? "border-b border-border/20" : "",
                                 isSelected && "bg-primary/5",

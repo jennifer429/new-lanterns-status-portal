@@ -31,25 +31,28 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 
+type Kind = "task" | "test" | "question";
 type CatalogItem = {
   id: string;
-  kind: "task" | "test";
+  kind: Kind;
   sourceId: string;
   group: string;
   text: string;
   owner: string;
   due: string;
   status: string;
+  link: string;
 };
 type Item = {
   id: string;
   text: string;
   owner: string;
   due: string;
-  kind?: "task" | "test";
+  kind?: Kind;
   sourceId?: string;
   group?: string;
   status?: string;
+  link?: string;
 };
 type Recipient = { label: string; email: string };
 
@@ -111,12 +114,32 @@ function CatalogPicker({
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open]);
 
+  const [tab, setTab] = useState<"all" | Kind>("all");
+  const TABS: ReadonlyArray<readonly ["all" | Kind, string]> = [
+    ["all", "All"],
+    ["question", "Questionnaire"],
+    ["task", "Tasks"],
+    ["test", "Tests"],
+  ];
+  const KIND_LABEL: Record<Kind, string> = { question: "q", task: "task", test: "test" };
+
   const available = catalog.filter(
     (c) =>
       !existingIds.has(c.id) &&
+      (tab === "all" || c.kind === tab) &&
       (q.trim() === "" ||
         `${c.text} ${c.group} ${c.owner}`.toLowerCase().includes(q.trim().toLowerCase()))
   );
+  // Group by section/phase, preserving first-seen order, for quiet subheaders.
+  const order: string[] = [];
+  const byGroup = new Map<string, CatalogItem[]>();
+  for (const c of available) {
+    if (!byGroup.has(c.group)) {
+      byGroup.set(c.group, []);
+      order.push(c.group);
+    }
+    byGroup.get(c.group)!.push(c);
+  }
 
   return (
     <div className="se-picker" ref={ref}>
@@ -134,34 +157,49 @@ function CatalogPicker({
             <Search size={13} className="se-muted" />
             <input
               autoFocus
-              placeholder="Search tasks & tests…"
+              placeholder="Search tasks, tests & questions…"
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
           </div>
+          <div className="se-picker-tabs">
+            {TABS.map(([k, label]) => (
+              <button
+                key={k}
+                className={"se-ptab" + (tab === k ? " on" : "")}
+                onClick={() => setTab(k)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <div className="se-picker-list">
             {available.length === 0 && <div className="se-picker-empty">Nothing left to add</div>}
-            {available.map((c) => (
-              <button
-                key={c.id}
-                className="se-picker-item"
-                onClick={() => {
-                  onPick(c);
-                  setOpen(false);
-                  setQ("");
-                }}
-              >
-                <span className={"se-picker-kind " + c.kind}>{c.kind}</span>
-                <span className="se-picker-text">
-                  <span className="se-picker-title">{c.text}</span>
-                  <span className="se-picker-sub">
-                    {c.group}
-                    {c.status ? ` · ${c.status}` : ""}
-                    {c.owner ? ` · ${c.owner}` : ""}
-                  </span>
-                </span>
-                <Plus size={13} className="se-muted" />
-              </button>
+            {order.map((g) => (
+              <div key={g}>
+                <div className="se-pgroup">{g}</div>
+                {byGroup.get(g)!.map((c) => (
+                  <button
+                    key={c.id}
+                    className="se-picker-item"
+                    onClick={() => {
+                      onPick(c);
+                      setOpen(false);
+                      setQ("");
+                    }}
+                  >
+                    <span className={"se-picker-kind " + c.kind}>{KIND_LABEL[c.kind]}</span>
+                    <span className="se-picker-text">
+                      <span className="se-picker-title">{c.text}</span>
+                      <span className="se-picker-sub">
+                        {c.status || ""}
+                        {c.owner ? ` · ${c.owner}` : ""}
+                      </span>
+                    </span>
+                    <Plus size={13} className="se-muted" />
+                  </button>
+                ))}
+              </div>
             ))}
           </div>
         </div>
@@ -260,6 +298,7 @@ export function StatusEmailDialog({ org, open, onOpenChange }: StatusEmailDialog
           sourceId: c.sourceId,
           group: c.group,
           status: c.status,
+          link: c.link,
         },
       ]);
   const addCustom = (setter: React.Dispatch<React.SetStateAction<Item[]>>, owner: string) =>
@@ -274,6 +313,7 @@ export function StatusEmailDialog({ org, open, onOpenChange }: StatusEmailDialog
       kind: it.kind,
       sourceId: it.sourceId,
       group: it.group,
+      link: it.link,
     });
     sendMutation.mutate(
       {
@@ -739,6 +779,12 @@ const STYLES = `
 .se-picker-kind { flex: none; font: 600 9px/1 'Roboto Mono',monospace; text-transform: uppercase; letter-spacing: 0.05em; padding: 3px 6px; border-radius: 5px; }
 .se-picker-kind.task { background: var(--se-accent-soft); color: var(--se-accent); }
 .se-picker-kind.test { background: rgba(121,209,217,0.16); color: #79D1D9; }
+.se-picker-kind.question { background: rgba(217,119,6,0.18); color: #E0A347; }
+.se-picker-tabs { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--se-line); }
+.se-ptab { font: 600 11px/1 'Figtree',sans-serif; color: var(--se-muted); border: 1px solid var(--se-line2); border-radius: 999px; padding: 5px 10px; background: transparent; cursor: pointer; }
+.se-ptab:hover { color: var(--se-fg); }
+.se-ptab.on { background: var(--se-accent-soft); border-color: rgba(124,30,189,0.5); color: #B07CE0; }
+.se-pgroup { font: 600 10px/1 'Roboto Mono',monospace; text-transform: uppercase; letter-spacing: 0.05em; color: var(--se-faint); padding: 9px 8px 4px; }
 .se-picker-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .se-picker-title { font: 600 12.5px/1.2 'Figtree',sans-serif; color: var(--se-fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .se-picker-sub { font: 500 10.5px/1.2 'Roboto Mono',monospace; color: var(--se-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
