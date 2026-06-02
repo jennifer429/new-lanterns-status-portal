@@ -17,7 +17,8 @@ interface ProgressHeroProps {
   implCompleted: number;
   implApplicable: number;
   iPct: number;
-  allFilesCount: number;
+  questionnaireFilesCount: number;
+  siteFilesCount: number;
   diagramFilesCount: number;
 }
 
@@ -34,7 +35,8 @@ export function ProgressHero({
   implCompleted,
   implApplicable,
   iPct,
-  allFilesCount,
+  questionnaireFilesCount,
+  siteFilesCount,
   diagramFilesCount,
 }: ProgressHeroProps) {
   const vDone = vPct >= 100;
@@ -97,8 +99,13 @@ export function ProgressHero({
           <div className="flex flex-col gap-2 min-w-[130px]">
             <div className="flex items-center gap-2 text-xs">
               <FileText className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="text-muted-foreground">Files:</span>
-              <span className="font-semibold">{allFilesCount}</span>
+              <span className="text-muted-foreground">Questionnaire:</span>
+              <span className="font-semibold">{questionnaireFilesCount}</span>
+            </div>
+            <div className="flex items-center gap-2 text-xs">
+              <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-muted-foreground">Site:</span>
+              <span className="font-semibold">{siteFilesCount}</span>
             </div>
             <div className="flex items-center gap-2 text-xs">
               <Activity className="w-3.5 h-3.5 text-muted-foreground" />

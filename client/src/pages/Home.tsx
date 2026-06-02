@@ -231,7 +231,8 @@ export default function Home() {
           implCompleted={data.implCompleted}
           implApplicable={data.implApplicable}
           iPct={data.iPct}
-          allFilesCount={data.allFiles.length}
+          questionnaireFilesCount={data.allFiles.length}
+          siteFilesCount={data.adhocFilesList.length}
           diagramFilesCount={data.diagramFiles.length}
         />
 

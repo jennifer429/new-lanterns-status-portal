@@ -10,12 +10,17 @@ import {
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  ChevronDown, ClipboardList, TestTube2, ListChecks, Download, Search, Folder,
-  CalendarClock, Rocket, RotateCcw,
+  ChevronDown, ClipboardList, Download, Search, Folder,
+  CalendarClock, Rocket, RotateCcw, Check, Users, FolderOpen,
+  ArrowUpRight, Mail, CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { transformSectionProgress } from "@/lib/adminUtils";
+import { VAL_PHASES } from "@/hooks/useHomeData";
+import { QuestionnairePhaseCard } from "@/pages/home/QuestionnairePhaseCard";
+import { TestingPhaseCard } from "@/pages/home/TestingPhaseCard";
+import { TaskListPhaseCard } from "@/pages/home/TaskListPhaseCard";
 import type { SharedAdminProps, Metric, Org } from "./types";
 
 type AdminDashboardTabProps = Pick<SharedAdminProps, "isPlatformAdmin" | "orgs" | "clients" | "refetchOrgs"> & {
@@ -76,15 +81,92 @@ function computeOrgStats(orgMetrics: Metric | undefined) {
 
   const overallPct = Math.round(qPct * 0.4 + vsPct * 0.3 + tsPct * 0.3);
 
+  // Per-section in-progress / not-started counts (same basis as the site card).
+  const spVals = Object.values((orgMetrics as any)?.sectionProgress ?? {}) as Array<{ completed: number; total: number }>;
+  const qInProgressSections = spVals.filter(s => s.completed > 0 && s.completed < s.total).length;
+  const qNotStartedSections = spVals.filter(s => s.completed === 0).length;
+
+  // Task list — weighted % to match the site's TaskListPhaseCard headline.
+  const tsInProg = ts?.inProgress ?? 0;
+  const tsBlocked = ts?.blocked ?? 0;
+  const tsNa = ts?.notApplicable ?? 0;
+  const tsTotalAll = ts?.total ?? 0;
+  const implApplicable = Math.max(0, tsTotalAll - tsNa);
+  const tsWeighted = implApplicable > 0
+    ? Math.round(((tsDone + tsInProg * 0.5 + tsBlocked * 0.25) / implApplicable) * 100)
+    : (tsTotalAll > 0 ? 100 : 0);
+  const implOpenCount = Math.max(0, tsTotalAll - tsDone - tsInProg - tsBlocked - tsNa);
+
+  const valTotal = vs?.total ?? 28;
+  const qDone = totalSections > 0 && sectionsComplete === totalSections;
+  const vDone = valTotal > 0 && vsPass === valTotal;
+  const activePhase: "questionnaire" | "testing" | "implementation" =
+    !qDone ? "questionnaire" : !vDone ? "testing" : "implementation";
+
   return {
     sectionsComplete, totalSections, qPct,
     ts, tsDone, tsPct,
-    vs, vsPass, vsInProg, vsFail, vsBlocked, vsPct,
+    vs, vsPass, vsInProg, vsFail, vsBlocked, vsPct, valTotal,
     overallPct,
     filesCount: orgMetrics?.files.length ?? 0,
+    qFiles: (orgMetrics as any)?.questionnaireFileCount ?? orgMetrics?.files.length ?? 0,
+    siteFiles: (orgMetrics as any)?.siteFileCount ?? 0,
     userCount: orgMetrics?.userCount ?? 0,
     naQCount: (orgMetrics as any)?.naQuestionCount ?? 0,
+    // Phase-card inputs (shared with the site dashboard).
+    qInProgressSections, qNotStartedSections,
+    implApplicable, tsWeighted, tsInProg, tsBlocked, tsNa, implOpenCount,
+    valNotTested: vs?.notTested ?? 0, valNa: vs?.na ?? 0,
+    activePhase,
+    nextUpSections: ((orgMetrics as any)?.nextUpSections ?? []) as string[],
+    nextUpTests: ((orgMetrics as any)?.nextUpTests ?? []) as string[],
+    nextUpTasks: ((orgMetrics as any)?.nextUpTasks ?? []) as Array<{ id: string; title: string }>,
   };
+}
+
+/**
+ * Completion donut shown beside each site name (from the Platform Admin mockup).
+ * 42px ring: purple accent while implementing, green with a check once live/100%.
+ */
+function CompletionDonut({ value, live }: { value: number; live: boolean }) {
+  const size = 42, stroke = 4;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const done = live || value >= 100;
+  const shown = live ? 100 : value;
+  const off = c * (1 - shown / 100);
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.09)" strokeWidth={stroke} />
+        <circle
+          cx={size / 2} cy={size / 2} r={r} fill="none"
+          stroke={done ? "rgb(52 211 153)" : "var(--primary)"}
+          strokeWidth={stroke} strokeLinecap="round"
+          strokeDasharray={c} strokeDashoffset={off}
+          style={{ transition: "stroke-dashoffset 0.5s ease" }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        {live ? (
+          <Check className="w-[15px] h-[15px] text-emerald-400" />
+        ) : (
+          <span className="font-bold tabular-nums leading-none" style={{ fontSize: 11, letterSpacing: "-0.03em" }}>
+            {value}<span style={{ fontSize: 8 }}>%</span>
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Compact icon + number stat used for the per-site users / file counts. */
+function CountStat({ icon: I, value, title }: { icon: typeof Users; value: number; title: string }) {
+  return (
+    <span className="flex items-center gap-1 text-xs text-muted-foreground tabular-nums" title={title}>
+      <I className="w-3.5 h-3.5 shrink-0" />{value}
+    </span>
+  );
 }
 
 /**
@@ -373,37 +455,28 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics, ref
                     const st = statsByOrg[org.id] ?? computeOrgStats(undefined);
                     const stage = stageOf(org.status);
                     const isExpanded = expandedSiteIds.has(org.id);
-                    const intakeBase = org.clientId && clientSlugMap[org.clientId]
-                      ? `/org/${clientSlugMap[org.clientId]}/${org.slug}`
-                      : `/org/${org.slug}`;
 
                     return (
                       <div key={org.id}>
                         {/* Compact scannable row */}
                         <div className="px-3 py-2.5 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-4 hover:bg-muted/20 transition-colors">
-                          {/* Scannable toggle area (name + big bar) */}
+                          {/* Scannable toggle area (donut + name + counts) */}
                           <button
                             onClick={() => toggleSite(org.id)}
-                            className="flex-1 min-w-0 text-left flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-4"
+                            className="flex-1 min-w-0 text-left flex items-center gap-3 sm:gap-4"
                           >
-                            {/* Name + status dot */}
-                            <div className="flex items-center gap-2.5 min-w-0 sm:w-52 shrink-0">
-                              <span className={cn("w-2 h-2 rounded-full shrink-0", stage.dot)} />
+                            {/* Completion donut + name */}
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                              <CompletionDonut value={st.overallPct} live={org.status === "completed"} />
                               <span className="font-semibold text-foreground truncate">{org.name}</span>
                             </div>
 
-                            {/* One big overall progress bar */}
-                            <div className="flex-1 flex items-center gap-3 min-w-0">
-                              <div className="flex-1 h-3 rounded-full bg-muted/50 overflow-hidden border border-border/50 min-w-0">
-                                <div
-                                  className={cn("h-full rounded-full transition-all", org.status === "completed" ? "bg-emerald-500" : "bg-primary")}
-                                  style={{ width: `${st.overallPct}%` }}
-                                />
-                              </div>
-                              <span className={cn("text-sm font-bold tabular-nums shrink-0 w-10 text-right", org.status === "completed" ? "text-emerald-400" : "text-primary")}>
-                                {st.overallPct}%
-                              </span>
-                            </div>
+                            {/* Per-site counts — hidden on phone, shown in the expanded footer instead */}
+                            <span className="hidden md:flex items-center gap-4 shrink-0 pr-1">
+                              <CountStat icon={Users} value={st.userCount} title={`${st.userCount} users`} />
+                              <CountStat icon={ClipboardList} value={st.qFiles} title={`${st.qFiles} questionnaire files`} />
+                              <CountStat icon={FolderOpen} value={st.siteFiles} title={`${st.siteFiles} site files`} />
+                            </span>
                           </button>
 
                           {/* Go-live control — always visible, no need to expand */}
@@ -415,13 +488,10 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics, ref
                             updateTarget={(date) => updateOrgMutation.mutate({ id: org.id, targetGoLiveDate: date })}
                           />
 
-                          {/* Stage + files + chevron toggle */}
+                          {/* Stage + chevron toggle */}
                           <div className="flex items-center gap-2 shrink-0 sm:justify-end">
                             <span className={cn("px-2 py-0.5 rounded-full border text-[11px] font-medium whitespace-nowrap", stage.pill)}>
                               {stage.label}
-                            </span>
-                            <span className="flex items-center gap-1 text-xs text-muted-foreground tabular-nums w-9 justify-end">
-                              <Download className="w-3 h-3" />{st.filesCount}
                             </span>
                             <button onClick={() => toggleSite(org.id)} className="p-0.5 rounded hover:bg-muted/40 transition-colors" aria-label="Toggle details">
                               <ChevronDown className={cn("w-4 h-4 text-muted-foreground/60 transition-transform", isExpanded && "rotate-180")} />
@@ -432,100 +502,46 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics, ref
                         {/* Expanded mini dashboard */}
                         {isExpanded && (
                           <div className="border-t border-border/40 px-3 sm:px-5 py-4 space-y-4 bg-background/40">
-                            {/* Overall progress bar */}
-                            <div>
-                              <div className="flex items-center justify-between mb-1.5">
-                                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Implementation Progress</span>
-                                <span className="text-base font-bold text-primary">{st.overallPct}%</span>
-                              </div>
-                              <div className="w-full h-2.5 bg-muted rounded-full overflow-hidden border border-border/60">
-                                <div className={cn("h-full rounded-full transition-all", org.status === "completed" ? "bg-emerald-500" : "bg-primary")} style={{ width: `${st.overallPct}%` }} />
-                              </div>
-                            </div>
-
-                            {/* Three mini stat columns */}
+                            {/* Three phase cards — the SAME components the site dashboard uses */}
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                              {/* Questionnaire */}
-                              <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="flex items-center gap-2">
-                                    <ClipboardList className="w-4 h-4 text-primary" />
-                                    <span className="text-sm font-bold">Questionnaire</span>
-                                  </div>
-                                  <span className="text-lg font-bold text-primary">{st.qPct}%</span>
-                                </div>
-                                <p className="text-sm text-muted-foreground mb-1">{st.sectionsComplete}/{st.totalSections} sections complete</p>
-                                {st.naQCount > 0 && (
-                                  <p className="text-xs text-amber-400 mb-2 flex items-center gap-1">
-                                    <span className="inline-block w-2 h-2 rounded-full bg-amber-500" />
-                                    {st.naQCount} question{st.naQCount !== 1 ? "s" : ""} marked N/A
-                                  </p>
-                                )}
-                                <div className="w-full h-1.5 bg-muted rounded-full mb-3 border border-border/40">
-                                  <div className="h-full bg-primary rounded-full" style={{ width: `${st.qPct}%` }} />
-                                </div>
-                                <button
-                                  onClick={() => setLocation(`${intakeBase}/intake`)}
-                                  className="w-full text-xs py-1.5 px-3 rounded border border-primary/40 text-primary hover:bg-primary/10 transition-colors text-center font-medium"
-                                >
-                                  {st.qPct === 100 ? "View" : st.qPct === 0 ? "Start" : "Continue"}
-                                </button>
-                              </div>
-
-                              {/* Testing */}
-                              <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="flex items-center gap-2">
-                                    <TestTube2 className="w-4 h-4 text-primary" />
-                                    <span className="text-sm font-bold">Testing</span>
-                                  </div>
-                                  <span className="text-lg font-bold text-primary">{st.vsPct}%</span>
-                                </div>
-                                <p className="text-sm text-muted-foreground mb-3">{st.vsPass}/{st.vs?.total ?? 28} tests passed</p>
-                                <div className="w-full h-1.5 bg-muted rounded-full mb-2 border border-border/40">
-                                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${st.vsPct}%` }} />
-                                </div>
-                                <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs mb-3">
-                                  <span className="text-emerald-400 font-semibold">{st.vsPass} Pass</span>
-                                  {st.vsFail > 0 && <span className="text-red-400 font-semibold">{st.vsFail} Fail</span>}
-                                  {st.vsInProg > 0 && <span className="text-blue-400 font-semibold">{st.vsInProg} In Prog</span>}
-                                  {st.vsBlocked > 0 && <span className="text-orange-400 font-semibold">{st.vsBlocked} Blocked</span>}
-                                  <span className="text-muted-foreground">{st.vs?.notTested ?? (st.vs?.total ?? 28)} Open</span>
-                                </div>
-                                <button
-                                  onClick={() => setLocation(`${intakeBase}/validation`)}
-                                  className="w-full text-xs py-1.5 px-3 rounded border border-primary/40 text-primary hover:bg-primary/10 transition-colors text-center font-medium"
-                                >
-                                  {st.vsPct === 100 ? "View" : st.vsPass === 0 ? "Start" : "Continue"}
-                                </button>
-                              </div>
-
-                              {/* Task List */}
-                              <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="flex items-center gap-2">
-                                    <ListChecks className="w-4 h-4 text-primary" />
-                                    <span className="text-sm font-bold whitespace-nowrap">Task List</span>
-                                  </div>
-                                  <span className="text-lg font-bold text-primary">{st.tsPct}%</span>
-                                </div>
-                                <p className="text-sm text-muted-foreground mb-3">{st.tsDone}/{st.ts?.total ?? 0} tasks done</p>
-                                <div className="w-full h-1.5 bg-muted rounded-full mb-2 border border-border/40">
-                                  <div className="h-full bg-primary rounded-full" style={{ width: `${st.tsPct}%` }} />
-                                </div>
-                                <div className="flex flex-wrap gap-2 text-xs mb-3">
-                                  <span className="text-emerald-400 font-semibold">{st.ts?.completed ?? 0} Done</span>
-                                  <span className="text-blue-400 font-semibold">{st.ts?.inProgress ?? 0} In Prog</span>
-                                  <span className="text-red-400 font-semibold">{st.ts?.blocked ?? 0} Blocked</span>
-                                  <span className="text-muted-foreground">{st.ts ? (st.ts.total - st.tsDone - (st.ts.inProgress ?? 0) - (st.ts.blocked ?? 0) - (st.ts.notApplicable ?? 0)) : 0} Open</span>
-                                </div>
-                                <button
-                                  onClick={() => setLocation(`${intakeBase}/implement`)}
-                                  className="w-full text-xs py-1.5 px-3 rounded border border-primary/40 text-primary hover:bg-primary/10 transition-colors text-center font-medium"
-                                >
-                                  {st.tsPct === 100 ? "View" : st.tsDone === 0 ? "Start" : "Continue"}
-                                </button>
-                              </div>
+                              <QuestionnairePhaseCard
+                                clientSlug={org.clientId ? (clientSlugMap[org.clientId] ?? "") : ""}
+                                orgSlug={org.slug}
+                                completedSections={st.sectionsComplete}
+                                totalSections={st.totalSections}
+                                qInProgressSections={st.qInProgressSections}
+                                qNotStartedSections={st.qNotStartedSections}
+                                naQuestions={st.naQCount}
+                                nextUpSections={st.nextUpSections}
+                                activePhase={st.activePhase}
+                              />
+                              <TestingPhaseCard
+                                clientSlug={org.clientId ? (clientSlugMap[org.clientId] ?? "") : ""}
+                                orgSlug={org.slug}
+                                valTotal={st.valTotal}
+                                valCompleted={st.vsPass}
+                                valNaCount={st.valNa}
+                                valFailedCount={st.vsFail}
+                                valInProgressCount={st.vsInProg}
+                                valBlockedCount={st.vsBlocked}
+                                valNotTestedCount={st.valNotTested}
+                                nextUpTests={st.nextUpTests}
+                                activePhase={st.activePhase}
+                                VAL_PHASES={VAL_PHASES}
+                              />
+                              <TaskListPhaseCard
+                                clientSlug={org.clientId ? (clientSlugMap[org.clientId] ?? "") : ""}
+                                orgSlug={org.slug}
+                                iPct={st.tsWeighted}
+                                implCompleted={st.tsDone}
+                                implApplicable={st.implApplicable}
+                                implInProgressCount={st.tsInProg}
+                                implBlockedCount={st.tsBlocked}
+                                implNaCount={st.tsNa}
+                                implOpenCount={st.implOpenCount}
+                                nextUpTasks={st.nextUpTasks}
+                                activePhase={st.activePhase}
+                              />
                             </div>
 
                             {/* Files */}
@@ -548,6 +564,47 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics, ref
                                 </div>
                               </div>
                             )}
+
+                            {/* Footer: per-site counts + actions */}
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-border/40">
+                              <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> {st.userCount} user{st.userCount !== 1 ? "s" : ""}</span>
+                                <span className="flex items-center gap-1.5"><ClipboardList className="w-3.5 h-3.5" /> {st.qFiles} questionnaire file{st.qFiles !== 1 ? "s" : ""}</span>
+                                <span className="flex items-center gap-1.5"><FolderOpen className="w-3.5 h-3.5" /> {st.siteFiles} site file{st.siteFiles !== 1 ? "s" : ""}</span>
+                              </div>
+
+                              <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                                <button
+                                  onClick={() => setLocation(org.clientId && clientSlugMap[org.clientId] ? `/org/${clientSlugMap[org.clientId]}/${org.slug}` : `/org/${org.slug}`)}
+                                  className="h-8 px-3 rounded-lg border border-border/60 bg-card text-xs font-medium text-muted-foreground hover:text-foreground hover:border-border/80 transition-colors flex items-center gap-1.5"
+                                >
+                                  <ArrowUpRight className="w-3.5 h-3.5" /> Open site
+                                </button>
+                                <button
+                                  onClick={() => toast.info("Status update emails aren't wired up yet.")}
+                                  className="h-8 px-3 rounded-lg border border-border/60 bg-card text-xs font-medium text-muted-foreground hover:text-foreground hover:border-border/80 transition-colors flex items-center gap-1.5"
+                                >
+                                  <Mail className="w-3.5 h-3.5" /> Send update
+                                </button>
+                                {org.status === "completed" ? (
+                                  <button
+                                    onClick={() => reopenMutation.mutate({ organizationId: org.id })}
+                                    disabled={reopenMutation.isPending}
+                                    className="h-8 px-3 rounded-lg border border-border/60 bg-card text-xs font-medium text-muted-foreground hover:text-foreground hover:border-border/80 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                                  >
+                                    <RotateCcw className="w-3.5 h-3.5" /> Reopen
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => markCompleteMutation.mutate({ organizationId: org.id, liveDate: org.targetGoLiveDate || todayStr() })}
+                                    disabled={markCompleteMutation.isPending}
+                                    className="h-8 px-3 rounded-lg bg-emerald-500/90 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                                  >
+                                    <CheckCircle2 className="w-3.5 h-3.5" /> Mark go-live complete
+                                  </button>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>
