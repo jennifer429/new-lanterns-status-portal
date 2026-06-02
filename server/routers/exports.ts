@@ -727,7 +727,7 @@ export function buildStatusUpdateEmailHtml(p: StatusUpdatePayload): string {
         <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${dotColor};"></span>
       </td>
       <td style="padding:7px 8px;border-bottom:1px solid rgba(255,255,255,0.08);font:500 13px/1.4 'Figtree',Arial,sans-serif;color:#ECECEE;">${esc(text) || "—"}</td>
-      <td style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.08);text-align:right;white-space:nowrap;font:600 10.5px/1 'Roboto Mono',monospace;color:#9A9AA0;">${esc(owner)}</td>
+      <td class="nl-owner" style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.08);text-align:right;white-space:nowrap;font:600 10.5px/1 'Roboto Mono',monospace;color:#9A9AA0;">${esc(owner)}</td>
     </tr>`;
 
   const section = (title: string, color: string, rows: string) => `
@@ -788,7 +788,7 @@ export function buildStatusUpdateEmailHtml(p: StatusUpdatePayload): string {
     : "";
 
   const ctaHtml = p.dashboardUrl
-    ? `<a href="${esc(p.dashboardUrl)}" style="display:inline-block;margin-top:4px;background:${ACCENT};color:#ffffff;font:600 12.5px/1 'Figtree',Arial,sans-serif;padding:11px 15px;border-radius:8px;text-decoration:none;">View your site dashboard →</a>`
+    ? `<a href="${esc(p.dashboardUrl)}" class="nl-cta" style="display:inline-block;margin-top:4px;background:${ACCENT};color:#ffffff;font:600 12.5px/1 'Figtree',Arial,sans-serif;padding:11px 15px;border-radius:8px;text-decoration:none;">View your site dashboard →</a>`
     : "";
 
   const signHtml = p.senderName
@@ -797,17 +797,37 @@ export function buildStatusUpdateEmailHtml(p: StatusUpdatePayload): string {
 
   return `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>${esc(p.subject)}</title></head>
-<body style="margin:0;padding:0;background:#000000;">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta name="color-scheme" content="dark light">
+  <meta name="format-detection" content="telephone=no">
+  <title>${esc(p.subject)}</title>
+  <style>
+    /* Phone-first: the card fills the screen, padding tightens, the CTA
+       becomes a full-width tap target. Clients that ignore <style> still get
+       the inline fallbacks (width:100% + max-width:560px) below. */
+    @media only screen and (max-width:600px) {
+      .nl-card { width:100% !important; border-radius:0 !important; border-left:0 !important; border-right:0 !important; }
+      .nl-pad { padding:16px 14px 18px !important; }
+      .nl-subject { font-size:17px !important; }
+      .nl-cta { display:block !important; text-align:center !important; padding:14px 16px !important; }
+      .nl-owner { font-size:11px !important; }
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background:#000000;-webkit-text-size-adjust:100%;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#000000;padding:24px 0;">
-    <tr><td align="center">
-      <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:560px;max-width:92%;background:#0A0A0A;border:1px solid rgba(255,255,255,0.10);border-radius:12px;overflow:hidden;">
-        <tr><td style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid rgba(255,255,255,0.10);">
-          <span style="font:800 15px/1 'Figtree',Arial,sans-serif;color:#FFFFFF;letter-spacing:-0.02em;">New Lantern</span>
-          <span style="font:600 9px/1 'Roboto Mono',monospace;text-transform:uppercase;letter-spacing:0.06em;color:#9A9AA0;">Implementation Update</span>
+    <tr><td align="center" style="padding:0 8px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" class="nl-card" width="560" style="width:100%;max-width:560px;background:#0A0A0A;border:1px solid rgba(255,255,255,0.10);border-radius:12px;overflow:hidden;">
+        <tr><td style="padding:13px 16px;border-bottom:1px solid rgba(255,255,255,0.10);">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td style="font:800 15px/1 'Figtree',Arial,sans-serif;color:#FFFFFF;letter-spacing:-0.02em;">New Lantern</td>
+            <td align="right" style="font:600 9px/1 'Roboto Mono',monospace;text-transform:uppercase;letter-spacing:0.06em;color:#9A9AA0;">Implementation Update</td>
+          </tr></table>
         </td></tr>
-        <tr><td style="padding:18px 18px 20px;">
-          <div style="font:700 16px/1.3 'Figtree',Arial,sans-serif;letter-spacing:-0.02em;color:#FFFFFF;margin-bottom:10px;">${esc(p.subject)}</div>
+        <tr><td class="nl-pad" style="padding:18px 18px 20px;">
+          <div class="nl-subject" style="font:700 16px/1.3 'Figtree',Arial,sans-serif;letter-spacing:-0.02em;color:#FFFFFF;margin-bottom:10px;">${esc(p.subject)}</div>
           <p style="font:500 12.5px/1.55 'Figtree',Arial,sans-serif;color:#C9C9CE;margin:0 0 16px;white-space:pre-line;">${esc(p.note)}</p>
           ${progressHtml}
           ${blockersHtml}
