@@ -428,32 +428,23 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics, ref
                       <div key={org.id}>
                         {/* Compact scannable row */}
                         <div className="px-3 py-2.5 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-4 hover:bg-muted/20 transition-colors">
-                          {/* Scannable toggle area (name + big bar) */}
+                          {/* Scannable toggle area (donut + name + counts) */}
                           <button
                             onClick={() => toggleSite(org.id)}
-                            className="flex-1 min-w-0 text-left flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-4"
+                            className="flex-1 min-w-0 text-left flex items-center gap-3 sm:gap-4"
                           >
                             {/* Completion donut + name */}
-                            <div className="flex items-center gap-2.5 min-w-0 sm:w-56 shrink-0">
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
                               <CompletionDonut value={st.overallPct} live={org.status === "completed"} />
                               <span className="font-semibold text-foreground truncate">{org.name}</span>
                             </div>
 
-                            {/* One big overall progress bar */}
-                            <div className="flex-1 flex items-center gap-3 min-w-0">
-                              <div className="flex-1 h-3 rounded-full bg-muted/50 overflow-hidden border border-border/50 min-w-0">
-                                <div
-                                  className={cn("h-full rounded-full transition-all", org.status === "completed" ? "bg-emerald-500" : "bg-primary")}
-                                  style={{ width: `${st.overallPct}%` }}
-                                />
-                              </div>
-                              {/* Per-site counts — hidden on phone, shown in the expanded footer instead */}
-                              <span className="hidden md:flex items-center gap-3 shrink-0 pr-1">
-                                <CountStat icon={Users} value={st.userCount} title={`${st.userCount} users`} />
-                                <CountStat icon={ClipboardList} value={st.qFiles} title={`${st.qFiles} questionnaire files`} />
-                                <CountStat icon={FolderOpen} value={st.siteFiles} title={`${st.siteFiles} site files`} />
-                              </span>
-                            </div>
+                            {/* Per-site counts — hidden on phone, shown in the expanded footer instead */}
+                            <span className="hidden md:flex items-center gap-4 shrink-0 pr-1">
+                              <CountStat icon={Users} value={st.userCount} title={`${st.userCount} users`} />
+                              <CountStat icon={ClipboardList} value={st.qFiles} title={`${st.qFiles} questionnaire files`} />
+                              <CountStat icon={FolderOpen} value={st.siteFiles} title={`${st.siteFiles} site files`} />
+                            </span>
                           </button>
 
                           {/* Go-live control — always visible, no need to expand */}
@@ -479,17 +470,6 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics, ref
                         {/* Expanded mini dashboard */}
                         {isExpanded && (
                           <div className="border-t border-border/40 px-3 sm:px-5 py-4 space-y-4 bg-background/40">
-                            {/* Overall progress bar */}
-                            <div>
-                              <div className="flex items-center justify-between mb-1.5">
-                                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Implementation Progress</span>
-                                <span className="text-base font-bold text-primary">{st.overallPct}%</span>
-                              </div>
-                              <div className="w-full h-2.5 bg-muted rounded-full overflow-hidden border border-border/60">
-                                <div className={cn("h-full rounded-full transition-all", org.status === "completed" ? "bg-emerald-500" : "bg-primary")} style={{ width: `${st.overallPct}%` }} />
-                              </div>
-                            </div>
-
                             {/* Three mini stat columns */}
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                               {/* Questionnaire */}
