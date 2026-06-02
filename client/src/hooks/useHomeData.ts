@@ -5,8 +5,9 @@ import { type ConnectivityRow } from "@/components/ConnectivityTable";
 import { questionnaireSections } from "@shared/questionnaireData";
 import { calculateProgress } from "@shared/progressCalculation";
 import { SECTION_DEFS as TASK_SECTION_DEFS } from "@shared/taskDefs";
+import { computeNextUpSections, computeNextUpTests, computeNextUpTasks } from "@shared/nextUp";
 
-const VAL_PHASES = [
+export const VAL_PHASES = [
   { title: "Connectivity Validation", count: 4 },
   { title: "HL7 Message Validation", count: 5 },
   { title: "Image Routing Validation", count: 4 },
@@ -262,10 +263,7 @@ export function useHomeData(orgSlug: string) {
     const r = (implResults as any)[t.id];
     return !r?.completed && !r?.notApplicable && !r?.blocked && !r?.inProgress;
   }).length;
-  const nextUpTasks = allTaskDefs.filter(t => {
-    const r = (implResults as any)[t.id];
-    return !r?.completed && !r?.notApplicable && !r?.blocked && !r?.inProgress;
-  }).slice(0, 3);
+  const nextUpTasks = computeNextUpTasks(allTaskDefs, implResults as any);
 
   // ── Questionnaire section stats ──────────────────────────────────────────
   const qSectionEntries = Object.entries(progress.sectionProgress);
@@ -275,26 +273,10 @@ export function useHomeData(orgSlug: string) {
   const qNotStartedSections = qSectionEntries.filter(
     ([, s]: [string, any]) => s.completed === 0
   ).length;
-  const nextUpSections = qSectionEntries
-    .filter(([, s]: [string, any]) => s.completed < s.total)
-    .slice(0, 3)
-    .map(([title]) => title);
+  const nextUpSections = computeNextUpSections(progress.sectionProgress as any);
 
   // ── Validation "next up" tests ───────────────────────────────────────────
-  const allValKeys: string[] = [];
-  let offset = 0;
-  for (const phase of VAL_PHASES) {
-    for (let t = 0; t < phase.count; t++) {
-      allValKeys.push(`${offset}:${t}`);
-    }
-    offset++;
-  }
-  const nextUpTests = allValKeys
-    .filter(k => {
-      const v = (valResults as any)[k];
-      return !v || (v.status !== "Pass" && v.status !== "N/A");
-    })
-    .slice(0, 3);
+  const nextUpTests = computeNextUpTests(valResults as any);
 
   // ── Weighted progress ────────────────────────────────────────────────────
   const implApplicable = implTotal - implNaCount;

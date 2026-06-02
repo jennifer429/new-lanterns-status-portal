@@ -5,6 +5,7 @@ import { questions, questionOptions, organizations, users, clients, intakeFileAt
 import { SECTION_DEFS as TASK_SECTION_DEFS } from "@shared/taskDefs";
 import { eq, and, or, desc, inArray, sql, like } from "drizzle-orm";
 import { getAllTestKeys } from "@shared/validationDefs";
+import { computeNextUpSections, computeNextUpTests, computeNextUpTasks } from "@shared/nextUp";
 import { uploadToGoogleDrive } from "./files";
 import { dispatch } from "../notionSyncDispatcher";
 import bcrypt from "bcrypt";
@@ -954,6 +955,14 @@ export const adminRouter = router({
           blocked: valBlocked,
         };
 
+        // ── "Next up" lists — shared with the site dashboard via
+        // shared/nextUp.ts so admin and site can never drift. ──
+        const valByKey: Record<string, { status: string }> = {};
+        for (const row of valRows) { valByKey[row.testKey] = { status: row.status }; }
+        const nextUpSections = computeNextUpSections(progress.sectionProgress);
+        const nextUpTests = computeNextUpTests(valByKey);
+        const nextUpTasks = computeNextUpTasks(allTaskDefs, taskMap);
+
         return {
           organizationId: org.id,
           organizationName: org.name,
@@ -970,6 +979,10 @@ export const adminRouter = router({
           questionnaireFileCount: files.length,
           // Site files (labeled documents & notes, not tied to the questionnaire).
           siteFileCount,
+          // "Next up" lists shared with the site dashboard phase cards.
+          nextUpSections,
+          nextUpTests,
+          nextUpTasks,
           files: files.map(f => ({
             id: f.id,
             fileName: f.fileName,

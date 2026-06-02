@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { useLocation } from "wouter";
 import { toast } from "sonner";
 import {
   Select,
@@ -10,12 +9,16 @@ import {
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  ChevronDown, ClipboardList, TestTube2, ListChecks, Download, Search, Folder,
+  ChevronDown, ClipboardList, Download, Search, Folder,
   CalendarClock, Rocket, RotateCcw, Check, Users, FolderOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { transformSectionProgress } from "@/lib/adminUtils";
+import { VAL_PHASES } from "@/hooks/useHomeData";
+import { QuestionnairePhaseCard } from "@/pages/home/QuestionnairePhaseCard";
+import { TestingPhaseCard } from "@/pages/home/TestingPhaseCard";
+import { TaskListPhaseCard } from "@/pages/home/TaskListPhaseCard";
 import type { SharedAdminProps, Metric, Org } from "./types";
 
 type AdminDashboardTabProps = Pick<SharedAdminProps, "isPlatformAdmin" | "orgs" | "clients" | "refetchOrgs"> & {
@@ -76,16 +79,46 @@ function computeOrgStats(orgMetrics: Metric | undefined) {
 
   const overallPct = Math.round(qPct * 0.4 + vsPct * 0.3 + tsPct * 0.3);
 
+  // Per-section in-progress / not-started counts (same basis as the site card).
+  const spVals = Object.values((orgMetrics as any)?.sectionProgress ?? {}) as Array<{ completed: number; total: number }>;
+  const qInProgressSections = spVals.filter(s => s.completed > 0 && s.completed < s.total).length;
+  const qNotStartedSections = spVals.filter(s => s.completed === 0).length;
+
+  // Task list — weighted % to match the site's TaskListPhaseCard headline.
+  const tsInProg = ts?.inProgress ?? 0;
+  const tsBlocked = ts?.blocked ?? 0;
+  const tsNa = ts?.notApplicable ?? 0;
+  const tsTotalAll = ts?.total ?? 0;
+  const implApplicable = Math.max(0, tsTotalAll - tsNa);
+  const tsWeighted = implApplicable > 0
+    ? Math.round(((tsDone + tsInProg * 0.5 + tsBlocked * 0.25) / implApplicable) * 100)
+    : (tsTotalAll > 0 ? 100 : 0);
+  const implOpenCount = Math.max(0, tsTotalAll - tsDone - tsInProg - tsBlocked - tsNa);
+
+  const valTotal = vs?.total ?? 28;
+  const qDone = totalSections > 0 && sectionsComplete === totalSections;
+  const vDone = valTotal > 0 && vsPass === valTotal;
+  const activePhase: "questionnaire" | "testing" | "implementation" =
+    !qDone ? "questionnaire" : !vDone ? "testing" : "implementation";
+
   return {
     sectionsComplete, totalSections, qPct,
     ts, tsDone, tsPct,
-    vs, vsPass, vsInProg, vsFail, vsBlocked, vsPct,
+    vs, vsPass, vsInProg, vsFail, vsBlocked, vsPct, valTotal,
     overallPct,
     filesCount: orgMetrics?.files.length ?? 0,
     qFiles: (orgMetrics as any)?.questionnaireFileCount ?? orgMetrics?.files.length ?? 0,
     siteFiles: (orgMetrics as any)?.siteFileCount ?? 0,
     userCount: orgMetrics?.userCount ?? 0,
     naQCount: (orgMetrics as any)?.naQuestionCount ?? 0,
+    // Phase-card inputs (shared with the site dashboard).
+    qInProgressSections, qNotStartedSections,
+    implApplicable, tsWeighted, tsInProg, tsBlocked, tsNa, implOpenCount,
+    valNotTested: vs?.notTested ?? 0, valNa: vs?.na ?? 0,
+    activePhase,
+    nextUpSections: ((orgMetrics as any)?.nextUpSections ?? []) as string[],
+    nextUpTests: ((orgMetrics as any)?.nextUpTests ?? []) as string[],
+    nextUpTasks: ((orgMetrics as any)?.nextUpTasks ?? []) as Array<{ id: string; title: string }>,
   };
 }
 
@@ -232,8 +265,6 @@ function GoLiveControl({
 }
 
 export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics, refetchOrgs }: AdminDashboardTabProps) {
-  const [, setLocation] = useLocation();
-
   const markCompleteMutation = trpc.admin.markOrganizationComplete.useMutation({
     onSuccess: () => { toast.success("Site marked live 🎉 — open items set to N/A"); refetchOrgs(); },
     onError: (e: any) => toast.error(e.message || "Failed to mark site live"),
@@ -420,9 +451,6 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics, ref
                     const st = statsByOrg[org.id] ?? computeOrgStats(undefined);
                     const stage = stageOf(org.status);
                     const isExpanded = expandedSiteIds.has(org.id);
-                    const intakeBase = org.clientId && clientSlugMap[org.clientId]
-                      ? `/org/${clientSlugMap[org.clientId]}/${org.slug}`
-                      : `/org/${org.slug}`;
 
                     return (
                       <div key={org.id}>
@@ -470,89 +498,46 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics, ref
                         {/* Expanded mini dashboard */}
                         {isExpanded && (
                           <div className="border-t border-border/40 px-3 sm:px-5 py-4 space-y-4 bg-background/40">
-                            {/* Three mini stat columns */}
+                            {/* Three phase cards — the SAME components the site dashboard uses */}
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                              {/* Questionnaire */}
-                              <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="flex items-center gap-2">
-                                    <ClipboardList className="w-4 h-4 text-primary" />
-                                    <span className="text-sm font-bold">Questionnaire</span>
-                                  </div>
-                                  <span className="text-lg font-bold text-primary">{st.qPct}%</span>
-                                </div>
-                                <p className="text-sm text-muted-foreground mb-1">{st.sectionsComplete}/{st.totalSections} sections complete</p>
-                                {st.naQCount > 0 && (
-                                  <p className="text-xs text-amber-400 mb-2 flex items-center gap-1">
-                                    <span className="inline-block w-2 h-2 rounded-full bg-amber-500" />
-                                    {st.naQCount} question{st.naQCount !== 1 ? "s" : ""} marked N/A
-                                  </p>
-                                )}
-                                <div className="w-full h-1.5 bg-muted rounded-full mb-3 border border-border/40">
-                                  <div className="h-full bg-primary rounded-full" style={{ width: `${st.qPct}%` }} />
-                                </div>
-                                <button
-                                  onClick={() => setLocation(`${intakeBase}/intake`)}
-                                  className="w-full text-xs py-1.5 px-3 rounded border border-primary/40 text-primary hover:bg-primary/10 transition-colors text-center font-medium"
-                                >
-                                  {st.qPct === 100 ? "View" : st.qPct === 0 ? "Start" : "Continue"}
-                                </button>
-                              </div>
-
-                              {/* Testing */}
-                              <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="flex items-center gap-2">
-                                    <TestTube2 className="w-4 h-4 text-primary" />
-                                    <span className="text-sm font-bold">Testing</span>
-                                  </div>
-                                  <span className="text-lg font-bold text-primary">{st.vsPct}%</span>
-                                </div>
-                                <p className="text-sm text-muted-foreground mb-3">{st.vsPass}/{st.vs?.total ?? 28} tests passed</p>
-                                <div className="w-full h-1.5 bg-muted rounded-full mb-2 border border-border/40">
-                                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${st.vsPct}%` }} />
-                                </div>
-                                <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs mb-3">
-                                  <span className="text-emerald-400 font-semibold">{st.vsPass} Pass</span>
-                                  {st.vsFail > 0 && <span className="text-red-400 font-semibold">{st.vsFail} Fail</span>}
-                                  {st.vsInProg > 0 && <span className="text-blue-400 font-semibold">{st.vsInProg} In Prog</span>}
-                                  {st.vsBlocked > 0 && <span className="text-orange-400 font-semibold">{st.vsBlocked} Blocked</span>}
-                                  <span className="text-muted-foreground">{st.vs?.notTested ?? (st.vs?.total ?? 28)} Open</span>
-                                </div>
-                                <button
-                                  onClick={() => setLocation(`${intakeBase}/validation`)}
-                                  className="w-full text-xs py-1.5 px-3 rounded border border-primary/40 text-primary hover:bg-primary/10 transition-colors text-center font-medium"
-                                >
-                                  {st.vsPct === 100 ? "View" : st.vsPass === 0 ? "Start" : "Continue"}
-                                </button>
-                              </div>
-
-                              {/* Task List */}
-                              <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="flex items-center gap-2">
-                                    <ListChecks className="w-4 h-4 text-primary" />
-                                    <span className="text-sm font-bold whitespace-nowrap">Task List</span>
-                                  </div>
-                                  <span className="text-lg font-bold text-primary">{st.tsPct}%</span>
-                                </div>
-                                <p className="text-sm text-muted-foreground mb-3">{st.tsDone}/{st.ts?.total ?? 0} tasks done</p>
-                                <div className="w-full h-1.5 bg-muted rounded-full mb-2 border border-border/40">
-                                  <div className="h-full bg-primary rounded-full" style={{ width: `${st.tsPct}%` }} />
-                                </div>
-                                <div className="flex flex-wrap gap-2 text-xs mb-3">
-                                  <span className="text-emerald-400 font-semibold">{st.ts?.completed ?? 0} Done</span>
-                                  <span className="text-blue-400 font-semibold">{st.ts?.inProgress ?? 0} In Prog</span>
-                                  <span className="text-red-400 font-semibold">{st.ts?.blocked ?? 0} Blocked</span>
-                                  <span className="text-muted-foreground">{st.ts ? (st.ts.total - st.tsDone - (st.ts.inProgress ?? 0) - (st.ts.blocked ?? 0) - (st.ts.notApplicable ?? 0)) : 0} Open</span>
-                                </div>
-                                <button
-                                  onClick={() => setLocation(`${intakeBase}/implement`)}
-                                  className="w-full text-xs py-1.5 px-3 rounded border border-primary/40 text-primary hover:bg-primary/10 transition-colors text-center font-medium"
-                                >
-                                  {st.tsPct === 100 ? "View" : st.tsDone === 0 ? "Start" : "Continue"}
-                                </button>
-                              </div>
+                              <QuestionnairePhaseCard
+                                clientSlug={org.clientId ? (clientSlugMap[org.clientId] ?? "") : ""}
+                                orgSlug={org.slug}
+                                completedSections={st.sectionsComplete}
+                                totalSections={st.totalSections}
+                                qInProgressSections={st.qInProgressSections}
+                                qNotStartedSections={st.qNotStartedSections}
+                                naQuestions={st.naQCount}
+                                nextUpSections={st.nextUpSections}
+                                activePhase={st.activePhase}
+                              />
+                              <TestingPhaseCard
+                                clientSlug={org.clientId ? (clientSlugMap[org.clientId] ?? "") : ""}
+                                orgSlug={org.slug}
+                                valTotal={st.valTotal}
+                                valCompleted={st.vsPass}
+                                valNaCount={st.valNa}
+                                valFailedCount={st.vsFail}
+                                valInProgressCount={st.vsInProg}
+                                valBlockedCount={st.vsBlocked}
+                                valNotTestedCount={st.valNotTested}
+                                nextUpTests={st.nextUpTests}
+                                activePhase={st.activePhase}
+                                VAL_PHASES={VAL_PHASES}
+                              />
+                              <TaskListPhaseCard
+                                clientSlug={org.clientId ? (clientSlugMap[org.clientId] ?? "") : ""}
+                                orgSlug={org.slug}
+                                iPct={st.tsWeighted}
+                                implCompleted={st.tsDone}
+                                implApplicable={st.implApplicable}
+                                implInProgressCount={st.tsInProg}
+                                implBlockedCount={st.tsBlocked}
+                                implNaCount={st.tsNa}
+                                implOpenCount={st.implOpenCount}
+                                nextUpTasks={st.nextUpTasks}
+                                activePhase={st.activePhase}
+                              />
                             </div>
 
                             {/* Per-site counts — always visible here (incl. phone) */}
