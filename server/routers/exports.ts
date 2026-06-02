@@ -723,6 +723,7 @@ export interface StatusUpdatePayload {
   subject: string;
   note: string;
   senderName?: string;
+  recipientNames?: string[];
   dashboardUrl?: string;
   include: {
     progress: boolean;
@@ -740,8 +741,8 @@ export interface StatusUpdatePayload {
     tDone: number;
     tTotal: number;
   };
-  blockers: Array<{ text: string; owner: string; link?: string }>;
-  tasks: Array<{ text: string; owner: string; due?: string; link?: string }>;
+  blockers: Array<{ text: string; owner: string; link?: string; group?: string }>;
+  tasks: Array<{ text: string; owner: string; due?: string; link?: string; group?: string }>;
 }
 
 /**
@@ -751,136 +752,187 @@ export interface StatusUpdatePayload {
  * reply prompt), email-client-safe with table layout + inline styles.
  */
 export function buildStatusUpdateEmailHtml(p: StatusUpdatePayload): string {
-  const ACCENT = "#7C1EBD";
+  // Palette from the Site Status Email design (light email, black brand bands).
+  const INK = "#18181B";
+  const INK2 = "#52525B";
+  const INK3 = "#8A8A93";
+  const LINE = "#E5E5E5";
+  const LINE2 = "#EDEDEF";
+  const SURF2 = "#FAFAFB";
+  const PURPLE = "#7C1EBD";
   const RED = "#E53E3E";
   const GREEN = "#16A34A";
+  // Figtree is requested via <link>, but email clients ignore web fonts — the
+  // system stack below is the real fallback every client will render.
+  const FONT =
+    "'Figtree',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
   const live = p.progress.stage === "live";
   const esc = (s: string) =>
     String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-  const item = (text: string, owner: string, dotColor: string, link?: string) => {
-    const label = esc(text) || "—";
-    const cell = link
-      ? `<a href="${esc(link)}" style="color:#ECECEE;text-decoration:none;border-bottom:1px solid rgba(124,30,189,0.55);">${label}</a>`
-      : label;
+  // One line item rendered as a table row: square mark, title (+meta), owner pill.
+  const item = (
+    text: string,
+    meta: string,
+    owner: string,
+    kind: "blk" | "tsk",
+    link?: string
+  ) => {
+    const title = esc(text) || "—";
+    const titleCell = link
+      ? `<a href="${esc(link)}" style="color:${INK};text-decoration:none;">${title}</a>`
+      : title;
+    const mark =
+      kind === "blk"
+        ? `<table role="presentation" cellpadding="0" cellspacing="0" width="18" style="width:18px;height:18px;background:#FCE8E8;border-radius:5px;"><tr><td align="center" style="line-height:18px;"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${RED};"></span></td></tr></table>`
+        : `<table role="presentation" cellpadding="0" cellspacing="0" width="18" style="width:18px;height:18px;border:1.5px solid #D3D3D7;border-radius:5px;"><tr><td>&nbsp;</td></tr></table>`;
     return `
     <tr>
-      <td style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.08);vertical-align:middle;width:14px;">
-        <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${dotColor};"></span>
+      <td style="padding:11px 0;border-top:1px solid ${LINE2};vertical-align:top;width:18px;">${mark}</td>
+      <td style="padding:11px 0 11px 12px;border-top:1px solid ${LINE2};vertical-align:top;">
+        <div style="font:600 14px/1.4 ${FONT};color:${INK};letter-spacing:-0.01em;">${titleCell}</div>
+        ${meta ? `<div style="font:400 12px/1.4 ${FONT};color:${INK3};margin-top:3px;">${esc(meta)}</div>` : ""}
       </td>
-      <td style="padding:7px 8px;border-bottom:1px solid rgba(255,255,255,0.08);font:500 13px/1.4 'Figtree',Arial,sans-serif;color:#ECECEE;">${cell}</td>
-      <td class="nl-owner" style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.08);text-align:right;white-space:nowrap;font:600 10.5px/1 'Roboto Mono',monospace;color:#9A9AA0;">${esc(owner)}</td>
+      <td class="nl-owner" style="padding:11px 0;border-top:1px solid ${LINE2};vertical-align:top;text-align:right;white-space:nowrap;">
+        <span style="display:inline-block;font:600 11px/1 ${FONT};color:${INK2};background:#F1F1F3;border-radius:99px;padding:5px 11px;">${esc(owner) || "Unassigned"}</span>
+      </td>
     </tr>`;
   };
 
-  const section = (title: string, color: string, rows: string) => `
-    <div style="margin-bottom:18px;">
-      <div style="font:600 11px/1 'Roboto Mono',monospace;text-transform:uppercase;letter-spacing:0.04em;color:${color};margin-bottom:6px;">${title}</div>
-      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;">${rows}</table>
-    </div>`;
+  const sectionHead = (label: string, dot: string, color: string) => `
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 4px;"><tr>
+      <td style="vertical-align:middle;padding-right:8px;"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${dot};"></span></td>
+      <td style="font:700 11px/1 ${FONT};text-transform:uppercase;letter-spacing:0.1em;color:${color};">${label}</td>
+    </tr></table>`;
 
   const blockersHtml =
     p.include.blockers && p.blockers.length
-      ? section(
-          "Blockers",
-          RED,
-          p.blockers.map((b) => item(b.text, b.owner, RED, b.link)).join("")
-        )
+      ? `<div style="margin-bottom:24px;">${sectionHead("What needs your team", RED, RED)}
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${p.blockers
+          .map((b) => item(b.text, b.group || "", b.owner, "blk", b.link))
+          .join("")}</table></div>`
       : "";
 
   const tasksHtml =
     p.include.tasks && p.tasks.length
-      ? section(
-          "Tasks &amp; assignments",
-          "#9A9AA0",
-          p.tasks
-            .map((t) => item(t.text, `${esc(t.owner)}${t.due ? ` · ${esc(t.due)}` : ""}`, ACCENT, t.link))
-            .join("")
-        )
+      ? `<div style="margin-bottom:24px;">${sectionHead("Tasks &amp; assignments", PURPLE, INK)}
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${p.tasks
+          .map((t) =>
+            item(
+              t.text,
+              t.due ? `Due ${t.due}` : t.group || "",
+              t.owner,
+              "tsk",
+              t.link
+            )
+          )
+          .join("")}</table></div>`
       : "";
 
+  const pct = Math.max(0, Math.min(100, p.progress.overall));
+  const stat = (n: number, total: number, label: string, first: boolean) => `
+    <td style="width:33.33%;text-align:center;${first ? "" : `border-left:1px solid ${LINE};`}padding:2px 6px;vertical-align:top;">
+      <div style="font:800 19px/1 ${FONT};letter-spacing:-0.03em;color:${INK};">${n}<span style="color:${INK3};font-size:13px;font-weight:600;">/${total}</span></div>
+      <div style="font:600 9.5px/1.2 ${FONT};text-transform:uppercase;letter-spacing:0.07em;color:${INK3};margin-top:4px;">${label}</div>
+    </td>`;
   const progressHtml = p.include.progress
     ? `
-    <div style="border:1px solid rgba(255,255,255,0.10);border-radius:10px;padding:13px 14px;margin-bottom:18px;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-        <td style="font:600 12.5px/1 'Figtree',Arial,sans-serif;color:#ECECEE;">Overall progress</td>
-        <td style="text-align:right;font:800 14px/1 'Figtree',Arial,sans-serif;color:${live ? GREEN : ACCENT};">${live ? "Live" : p.progress.overall + "%"}</td>
-      </tr></table>
-      <div style="height:5px;background:rgba(255,255,255,0.08);border-radius:99px;margin:8px 0 13px;overflow:hidden;">
-        <div style="height:100%;width:${Math.max(0, Math.min(100, p.progress.overall))}%;background:${live ? GREEN : ACCENT};border-radius:99px;"></div>
-      </div>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-        ${[
-          [`${p.progress.q}/${p.progress.qTotal}`, "Questionnaire"],
-          [`${p.progress.vPass}/${p.progress.vTotal}`, "Tests passed"],
-          [`${p.progress.tDone}/${p.progress.tTotal}`, "Tasks done"],
-        ]
-          .map(
-            ([v, l]) => `<td style="width:33%;vertical-align:top;">
-            <div style="font:800 16px/1 'Figtree',Arial,sans-serif;letter-spacing:-0.03em;color:#FFFFFF;">${v}</div>
-            <div style="font:600 9.5px/1.2 'Roboto Mono',monospace;text-transform:uppercase;letter-spacing:0.03em;color:#9A9AA0;margin-top:3px;">${l}</div>
-          </td>`
-          )
-          .join("")}
-      </tr></table>
-    </div>`
-    : "";
-
-  const replyHtml = p.include.promptReply
-    ? `<p style="font:500 12px/1.55 'Figtree',Arial,sans-serif;color:#9A9AA0;margin:14px 0 0;padding-top:12px;border-top:1px solid rgba(255,255,255,0.08);">Something look off, or already handled? <b style="color:#FFFFFF;">Just reply to this email</b> — it routes straight to your implementation team.</p>`
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${LINE};border-radius:12px;background:${SURF2};margin:0 0 26px;">
+      <tr><td style="padding:20px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td style="vertical-align:bottom;font:800 34px/1 ${FONT};letter-spacing:-0.04em;color:${live ? GREEN : PURPLE};">${live ? "Live" : `${pct}<span style="font-size:16px;">%</span>`}</td>
+          <td style="text-align:right;vertical-align:bottom;font:700 10px/1.3 ${FONT};text-transform:uppercase;letter-spacing:0.12em;color:${INK3};">Overall progress<span style="display:block;color:${INK};font-size:13px;letter-spacing:-0.01em;text-transform:none;margin-top:3px;">${live ? "Live and supported" : "In progress"}</span></td>
+        </tr></table>
+        <div style="height:8px;background:#ECECEE;border-radius:99px;margin:12px 0 18px;">
+          <div style="height:8px;width:${pct}%;background:${live ? GREEN : PURPLE};border-radius:99px;font-size:0;line-height:0;">&nbsp;</div>
+        </div>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+          ${stat(p.progress.q, p.progress.qTotal, "Questionnaire", true)}
+          ${stat(p.progress.vPass, p.progress.vTotal, "Tests passed", false)}
+          ${stat(p.progress.tDone, p.progress.tTotal, "Tasks done", false)}
+        </tr></table>
+      </td></tr>
+    </table>`
     : "";
 
   const ctaHtml = p.dashboardUrl
-    ? `<a href="${esc(p.dashboardUrl)}" class="nl-cta" style="display:inline-block;margin-top:4px;background:${ACCENT};color:#ffffff;font:600 12.5px/1 'Figtree',Arial,sans-serif;padding:11px 15px;border-radius:8px;text-decoration:none;">View your site dashboard →</a>`
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0 6px;"><tr><td align="center">
+        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;"><tr>
+          <td style="background:${PURPLE};border-radius:8px;">
+            <a href="${esc(p.dashboardUrl)}" class="nl-cta" style="display:inline-block;color:#FFFFFF;font:700 14px/1 ${FONT};letter-spacing:-0.01em;padding:13px 28px;text-decoration:none;">Open your dashboard &rarr;</a>
+          </td>
+        </tr></table>
+        <div style="font:400 12px/1.4 ${FONT};color:${INK3};margin-top:9px;">Log in to see everything, upload files, and explore.</div>
+      </td></tr></table>`
     : "";
 
-  const signHtml = p.senderName
-    ? `<p style="font:500 12.5px/1.55 'Figtree',Arial,sans-serif;color:#C9C9CE;margin:18px 0 0;">— ${esc(p.senderName)}<br><span style="color:#9A9AA0;">New Lantern Implementation Team</span></p>`
+  // ── Plainly-written personal note up top, printed status below ──
+  const today = new Date().toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  const joinNames = (ns: string[]) => {
+    const u = Array.from(new Set(ns.map((n) => n.trim()).filter(Boolean)));
+    if (u.length === 0) return "";
+    if (u.length === 1) return u[0];
+    if (u.length === 2) return `${u[0]} and ${u[1]}`;
+    if (u.length <= 4) return `${u.slice(0, -1).join(", ")}, and ${u[u.length - 1]}`;
+    return `${u.slice(0, 3).join(", ")}, and team`;
+  };
+  const names = joinNames(p.recipientNames || []);
+  const greetLine = names ? `Hey ${esc(names)},` : p.orgName ? `Hi ${esc(p.orgName)} team,` : "Hi there,";
+  const ps = p.include.promptReply
+    ? "\n\nP.S. If any of this is already handled, just hit reply — it comes straight to me."
     : "";
+  const noteText = `${esc(p.note)}${ps}`;
+
+  // Reads like a normal email someone typed — greeting, note, plain sign-off.
+  const writtenNote = `
+    <p style="font:400 15px/1.6 ${FONT};color:${INK};margin:0 0 12px;">${greetLine}</p>
+    <p style="font:400 14.5px/1.62 ${FONT};color:${INK2};margin:0;white-space:pre-line;">${noteText}</p>
+    ${p.senderName ? `<p style="font:400 14.5px/1.62 ${FONT};color:${INK2};margin:16px 0 0;">Thanks,<br><span style="color:${INK};font-weight:600;">${esc(p.senderName)}</span></p>` : ""}`;
+
+  const statusInner = `${progressHtml}${blockersHtml}${tasksHtml}`;
+  const statusBlock = statusInner.trim()
+    ? `<div style="height:1px;background:${LINE};margin:28px 0 18px;"></div>
+       <div style="font:600 10px/1 ${FONT};text-transform:uppercase;letter-spacing:0.12em;color:${INK3};margin-bottom:16px;">Latest from the implementation portal · as of ${today}</div>
+       ${statusInner}${ctaHtml}`
+    : ctaHtml;
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <meta name="color-scheme" content="dark light">
   <meta name="format-detection" content="telephone=no">
   <title>${esc(p.subject)}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    /* Phone-first: the card fills the screen, padding tightens, the CTA
-       becomes a full-width tap target. Clients that ignore <style> still get
-       the inline fallbacks (width:100% + max-width:560px) below. */
     @media only screen and (max-width:600px) {
-      .nl-card { width:100% !important; border-radius:0 !important; border-left:0 !important; border-right:0 !important; }
-      .nl-pad { padding:16px 14px 18px !important; }
-      .nl-subject { font-size:17px !important; }
-      .nl-cta { display:block !important; text-align:center !important; padding:14px 16px !important; }
-      .nl-owner { font-size:11px !important; }
+      .nl-card { width:100% !important; border-radius:0 !important; }
+      .nl-pad { padding:24px 20px 18px !important; }
+      .nl-cta { display:block !important; }
+      .nl-owner span { font-size:10.5px !important; }
     }
   </style>
 </head>
-<body style="margin:0;padding:0;background:#000000;-webkit-text-size-adjust:100%;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#000000;padding:24px 0;">
-    <tr><td align="center" style="padding:0 8px;">
-      <table role="presentation" cellpadding="0" cellspacing="0" class="nl-card" width="560" style="width:100%;max-width:560px;background:#0A0A0A;border:1px solid rgba(255,255,255,0.10);border-radius:12px;overflow:hidden;">
-        <tr><td style="padding:13px 16px;border-bottom:1px solid rgba(255,255,255,0.10);">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-            <td style="font:800 15px/1 'Figtree',Arial,sans-serif;color:#FFFFFF;letter-spacing:-0.02em;">New Lantern</td>
-            <td align="right" style="font:600 9px/1 'Roboto Mono',monospace;text-transform:uppercase;letter-spacing:0.06em;color:#9A9AA0;">Implementation Update</td>
-          </tr></table>
+<body style="margin:0;padding:0;background:#EDEAE3;-webkit-text-size-adjust:100%;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EDEAE3;padding:28px 0;">
+    <tr><td align="center" style="padding:0 12px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" class="nl-card" width="600" style="width:100%;max-width:600px;background:#FFFFFF;border:1px solid ${LINE};border-radius:12px;overflow:hidden;">
+
+        <tr><td class="nl-pad" style="padding:28px 30px 22px;">
+          ${writtenNote}
+          ${statusBlock}
         </td></tr>
-        <tr><td class="nl-pad" style="padding:18px 18px 20px;">
-          <div class="nl-subject" style="font:700 16px/1.3 'Figtree',Arial,sans-serif;letter-spacing:-0.02em;color:#FFFFFF;margin-bottom:10px;">${esc(p.subject)}</div>
-          <p style="font:500 12.5px/1.55 'Figtree',Arial,sans-serif;color:#C9C9CE;margin:0 0 16px;white-space:pre-line;">${esc(p.note)}</p>
-          ${progressHtml}
-          ${blockersHtml}
-          ${tasksHtml}
-          ${ctaHtml}
-          ${signHtml}
-          ${replyHtml}
+
+        <tr><td style="padding:16px 30px 22px;border-top:1px solid ${LINE};">
+          <p style="font:400 11.5px/1.6 ${FONT};color:#B98A3A;margin:0 0 6px;">Please don't reply with protected health information (PHI) — share files through your secure site portal.</p>
+          <p style="font:400 11.5px/1.6 ${FONT};color:${INK3};margin:0;">You're receiving this as a named contact on the ${esc(p.orgName)} implementation · New Lantern${p.partnerName ? " · " + esc(p.partnerName) : ""}</p>
         </td></tr>
+
       </table>
-      <div style="font:500 10.5px/1.4 'Roboto Mono',monospace;color:#5A5A60;margin-top:14px;">New Lantern · PACS Implementation${p.partnerName ? " · " + esc(p.partnerName) : ""}</div>
     </td></tr>
   </table>
 </body>
@@ -955,11 +1007,57 @@ export const exportsRouter = router({
 
       const stage = data.org.status === "completed" ? "live" : "implementing";
 
-      // ── People on the site: site users + this partner's admins ──────────────
+      // ── People on the site: named contacts (shown by first name) first, then
+      // site users + this partner's admins. ──────────────────────────────────
       const recipients: Array<{ label: string; email: string }> = [];
       const assigneeSet = new Map<string, string>(); // value → label
       const seenEmail = new Set<string>();
       if (orgRow) {
+        // Named contacts from the intake A.contacts table → the "To" row shows
+        // each person by first name (e.g. "Pranay · IT Connectivity").
+        const CONTACT_ROLE_LABELS: Record<string, string> = {
+          admin: "Administrative",
+          it: "IT Connectivity",
+          it_post_prod: "IT Post-Production Support",
+          clinical: "Clinical",
+          radiologist: "Radiologist Champion",
+          pm: "Project Manager",
+        };
+        const [contactsRow] = await db
+          .select({ response: intakeResponses.response })
+          .from(intakeResponses)
+          .where(
+            and(
+              eq(intakeResponses.organizationId, orgRow.id),
+              eq(intakeResponses.questionId, "A.contacts")
+            )
+          )
+          .limit(1);
+        if (contactsRow?.response) {
+          try {
+            const contacts = JSON.parse(contactsRow.response) as Record<
+              string,
+              { name?: string; email?: string; phone?: string }
+            >;
+            for (const [roleKey, c] of Object.entries(contacts)) {
+              const email = (c?.email || "").trim();
+              const name = (c?.name || "").trim();
+              const role = CONTACT_ROLE_LABELS[roleKey] || roleKey;
+              const firstName = name ? name.split(/\s+/)[0] : "";
+              if (name) assigneeSet.set(name, firstName || name);
+              if (email && !seenEmail.has(email.toLowerCase())) {
+                seenEmail.add(email.toLowerCase());
+                recipients.push({
+                  label: firstName ? `${firstName} · ${role}` : role,
+                  email,
+                });
+              }
+            }
+          } catch {
+            /* malformed contacts JSON — fall back to portal users below */
+          }
+        }
+
         const peopleRows = await db
           .select({
             name: users.name,
@@ -977,14 +1075,16 @@ export const exportsRouter = router({
             u.role === "admin" && !!orgRow.clientId && u.clientId === orgRow.clientId;
           if (!isSiteUser && !isPartnerAdmin) continue;
           const display = (u.name || u.email || "").trim();
-          if (u.email && !seenEmail.has(u.email)) {
-            seenEmail.add(u.email);
+          const email = (u.email || "").trim();
+          if (email && !seenEmail.has(email.toLowerCase())) {
+            seenEmail.add(email.toLowerCase());
+            const firstName = display ? display.split(/\s+/)[0] : "";
             recipients.push({
-              label: `${display || u.email}${isPartnerAdmin ? " · Partner" : " · Site"}`,
-              email: u.email,
+              label: `${firstName || display || email}${isPartnerAdmin ? " · Partner" : " · Site"}`,
+              email,
             });
           }
-          if (display) assigneeSet.set(display, display);
+          if (display) assigneeSet.set(display, display.split(/\s+/)[0] || display);
         }
       }
       // Always include jennifer@newlantern.ai as a default recipient.
@@ -1106,8 +1206,8 @@ export const exportsRouter = router({
 
       const note =
         stage === "live"
-          ? `Your site is live. Here's a quick wrap-up of where the ${data.org.name} implementation landed and anything still open.`
-          : `Here's where your New Lantern onboarding stands this week. A couple of items need your team to keep us on track for go-live.`;
+          ? `Quick wrap-up below — your site is live. I've left the final status from the implementation portal so you have it on record, plus anything still open.`
+          : `Below is our latest update from the implementation portal. There are a few next steps for your team further down — take a look when you get a chance and let me know if anything's unclear.`;
 
       return {
         orgName: data.org.name,
@@ -1148,6 +1248,7 @@ export const exportsRouter = router({
       z.object({
         organizationSlug: z.string(),
         to: z.array(z.string().email()).min(1, "At least one recipient is required"),
+        toNames: z.array(z.string()).optional(),
         cc: z.array(z.string().email()).optional(),
         subject: z.string().min(1, "Subject is required"),
         note: z.string().default(""),
@@ -1268,6 +1369,7 @@ export const exportsRouter = router({
         subject: input.subject,
         note: input.note,
         senderName,
+        recipientNames: input.toNames,
         dashboardUrl,
         include: input.include,
         progress: input.progress,

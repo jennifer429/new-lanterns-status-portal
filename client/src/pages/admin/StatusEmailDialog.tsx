@@ -319,6 +319,7 @@ export function StatusEmailDialog({ org, open, onOpenChange }: StatusEmailDialog
       {
         organizationSlug: org.slug,
         to: recipientList,
+        toNames: recipients.map((r) => r.label.split(" · ")[0].trim()).filter(Boolean),
         subject,
         note,
         include: { progress: incProgress, blockers: incBlockers, tasks: incTasks, promptReply },
