@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useLocation } from "wouter";
 import { toast } from "sonner";
 import {
   Select,
@@ -11,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import {
   ChevronDown, ClipboardList, Download, Search, Folder,
   CalendarClock, Rocket, RotateCcw, Check, Users, FolderOpen,
+  ArrowUpRight, Mail, CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
@@ -265,6 +267,8 @@ function GoLiveControl({
 }
 
 export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics, refetchOrgs }: AdminDashboardTabProps) {
+  const [, setLocation] = useLocation();
+
   const markCompleteMutation = trpc.admin.markOrganizationComplete.useMutation({
     onSuccess: () => { toast.success("Site marked live 🎉 — open items set to N/A"); refetchOrgs(); },
     onError: (e: any) => toast.error(e.message || "Failed to mark site live"),
@@ -540,13 +544,6 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics, ref
                               />
                             </div>
 
-                            {/* Per-site counts — always visible here (incl. phone) */}
-                            <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-muted-foreground">
-                              <span className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> {st.userCount} user{st.userCount !== 1 ? "s" : ""}</span>
-                              <span className="flex items-center gap-1.5"><ClipboardList className="w-3.5 h-3.5" /> {st.qFiles} questionnaire file{st.qFiles !== 1 ? "s" : ""}</span>
-                              <span className="flex items-center gap-1.5"><FolderOpen className="w-3.5 h-3.5" /> {st.siteFiles} site file{st.siteFiles !== 1 ? "s" : ""}</span>
-                            </div>
-
                             {/* Files */}
                             {orgMetricsFiles(metricsMap[org.id]).length > 0 && (
                               <div>
@@ -567,6 +564,47 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics, ref
                                 </div>
                               </div>
                             )}
+
+                            {/* Footer: per-site counts + actions */}
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-border/40">
+                              <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> {st.userCount} user{st.userCount !== 1 ? "s" : ""}</span>
+                                <span className="flex items-center gap-1.5"><ClipboardList className="w-3.5 h-3.5" /> {st.qFiles} questionnaire file{st.qFiles !== 1 ? "s" : ""}</span>
+                                <span className="flex items-center gap-1.5"><FolderOpen className="w-3.5 h-3.5" /> {st.siteFiles} site file{st.siteFiles !== 1 ? "s" : ""}</span>
+                              </div>
+
+                              <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                                <button
+                                  onClick={() => setLocation(org.clientId && clientSlugMap[org.clientId] ? `/org/${clientSlugMap[org.clientId]}/${org.slug}` : `/org/${org.slug}`)}
+                                  className="h-8 px-3 rounded-lg border border-border/60 bg-card text-xs font-medium text-muted-foreground hover:text-foreground hover:border-border/80 transition-colors flex items-center gap-1.5"
+                                >
+                                  <ArrowUpRight className="w-3.5 h-3.5" /> Open site
+                                </button>
+                                <button
+                                  onClick={() => toast.info("Status update emails aren't wired up yet.")}
+                                  className="h-8 px-3 rounded-lg border border-border/60 bg-card text-xs font-medium text-muted-foreground hover:text-foreground hover:border-border/80 transition-colors flex items-center gap-1.5"
+                                >
+                                  <Mail className="w-3.5 h-3.5" /> Send update
+                                </button>
+                                {org.status === "completed" ? (
+                                  <button
+                                    onClick={() => reopenMutation.mutate({ organizationId: org.id })}
+                                    disabled={reopenMutation.isPending}
+                                    className="h-8 px-3 rounded-lg border border-border/60 bg-card text-xs font-medium text-muted-foreground hover:text-foreground hover:border-border/80 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                                  >
+                                    <RotateCcw className="w-3.5 h-3.5" /> Reopen
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => markCompleteMutation.mutate({ organizationId: org.id, liveDate: org.targetGoLiveDate || todayStr() })}
+                                    disabled={markCompleteMutation.isPending}
+                                    className="h-8 px-3 rounded-lg bg-emerald-500/90 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                                  >
+                                    <CheckCircle2 className="w-3.5 h-3.5" /> Mark go-live complete
+                                  </button>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>
