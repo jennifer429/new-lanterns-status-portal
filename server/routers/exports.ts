@@ -32,6 +32,7 @@ import {
 import { questionnaireSections } from "@shared/questionnaireData";
 import { calculateProgress, getIncompleteVisibleQuestionIds } from "@shared/progressCalculation";
 import { SECTION_DEFS as TASK_SECTION_DEFS } from "@shared/taskDefs";
+import { computeNextUpTasks, computeNextUpTests } from "@shared/nextUp";
 
 // ---------------------------------------------------------------------------
 // Validation phase definitions (mirrors client-side)
@@ -957,6 +958,7 @@ export const exportsRouter = router({
       // ── People on the site: site users + this partner's admins ──────────────
       const recipients: Array<{ label: string; email: string }> = [];
       const assigneeSet = new Map<string, string>(); // value → label
+      const seenEmail = new Set<string>();
       if (orgRow) {
         const peopleRows = await db
           .select({
@@ -969,7 +971,6 @@ export const exportsRouter = router({
           })
           .from(users)
           .where(eq(users.isActive, 1));
-        const seenEmail = new Set<string>();
         for (const u of peopleRows) {
           const isSiteUser = u.organizationId === orgRow.id;
           const isPartnerAdmin =
@@ -986,6 +987,13 @@ export const exportsRouter = router({
           if (display) assigneeSet.set(display, display);
         }
       }
+      // Always include jennifer@newlantern.ai as a default recipient.
+      const DEFAULT_RECIPIENT = { label: "Jennifer · New Lantern", email: "jennifer@newlantern.ai" };
+      if (!seenEmail.has(DEFAULT_RECIPIENT.email)) {
+        seenEmail.add(DEFAULT_RECIPIENT.email);
+        recipients.unshift(DEFAULT_RECIPIENT);
+      }
+
       // Owner pickers: real people first, then the standard contact roles.
       const CONTACT_ROLES = [
         "Administrative",
@@ -1058,15 +1066,31 @@ export const exportsRouter = router({
         )
         .map((it) => ({ ...it, owner: it.owner || "IT Connectivity" }));
 
-      // Pre-selected "next ups" — every open / in-progress task + every
-      // outstanding test (not just a sample). Admin trims what they don't want.
+      // Pre-selected "next ups" — only the items shown on the dashboard
+      // (3 tasks + 3 tests, matching shared/nextUp.ts logic).
       const blockerIds = new Set(blockers.map((b) => b.id));
+      const allTaskDefs = TASK_SECTION_DEFS.flatMap((s) =>
+        s.tasks.map((t) => ({ ...t, section: s.title }))
+      );
+      const implStatusById: Record<string, { completed?: unknown; inProgress?: unknown; blocked?: unknown; notApplicable?: unknown }> = {};
+      for (const t of data.implementation.tasks) {
+        implStatusById[t.id] = {
+          completed: t.status === "Completed",
+          inProgress: t.status === "In Progress",
+          blocked: t.status === "Blocked",
+          notApplicable: t.status === "N/A",
+        };
+      }
+      const nextTaskIds = new Set(computeNextUpTasks(allTaskDefs, implStatusById, 3).map((t) => t.id));
+      const valByKey: Record<string, { status: string }> = {};
+      for (const t of data.validation.tests) { valByKey[t.key] = { status: t.status }; }
+      const nextTestKeys = new Set(computeNextUpTests(valByKey, 3));
       const tasks = catalog
         .filter(
           (it) =>
             !blockerIds.has(it.id) &&
-            ((it.kind === "task" && (it.status === "In Progress" || it.status === "Open")) ||
-              (it.kind === "test" && (it.status === "Not Tested" || it.status === "In Progress")))
+            ((it.kind === "task" && nextTaskIds.has(it.sourceId)) ||
+              (it.kind === "test" && nextTestKeys.has(it.sourceId)))
         )
         .map((it) => ({
           ...it,

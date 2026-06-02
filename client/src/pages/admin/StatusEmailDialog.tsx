@@ -720,12 +720,13 @@ export function StatusEmailDialog({ org, open, onOpenChange }: StatusEmailDialog
 }
 
 const STYLES = `
-.se-scrim { position: fixed; inset: 0; z-index: 120; background: rgba(0,0,0,0.66); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; padding: 28px;
+.se-scrim { position: fixed; inset: 0; z-index: 120; background: rgba(0,0,0,0.66); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; padding: 28px; overflow-y: auto;
   --se-accent:#7C1EBD; --se-accent-mid:#8F4FBD; --se-accent-soft:rgba(124,30,189,0.16); --se-accent-softer:rgba(124,30,189,0.08);
   --se-line:rgba(255,255,255,0.08); --se-line2:rgba(255,255,255,0.14); --se-fg:#FFFFFF; --se-muted:#9A9AA0; --se-faint:#6E6E73;
   --se-red:#E53E3E; --se-green:#16A34A; --se-amber:#D97706; --se-bg:#131313; --se-panel:#0E0E10; --se-mail:#0A0A0A;
   font-family: 'Figtree', system-ui, -apple-system, sans-serif; }
 .se-modal { width: min(980px, 100%); background: var(--se-bg); border: 1px solid var(--se-line2); border-radius: 16px; box-shadow: 0 24px 70px rgba(0,0,0,0.6); display: flex; flex-direction: column; max-height: calc(100vh - 56px); overflow: hidden; color: var(--se-fg); }
+@media (max-width: 640px) { .se-scrim { padding: 0; align-items: stretch; } .se-modal { width: 100%; max-height: 100vh; border-radius: 0; border: none; } .se-body { grid-template-columns: 1fr !important; } .se-preview { display: none !important; } .se-row { flex-wrap: wrap; gap: 4px; } .se-cell { min-width: 100% !important; } .se-select-wrap { max-width: 100% !important; width: 100%; } .se-due { max-width: 100% !important; width: 100%; } .se-foot { flex-direction: column; gap: 8px; } .se-foot-count { text-align: center; } .se-foot-actions { width: 100%; justify-content: stretch; } .se-foot-actions .se-btn { flex: 1; justify-content: center; } .se-confirm { padding: 24px 16px; } .se-recip-chip { max-width: 100%; } .se-recip-chip > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } }
 .se-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 18px 20px; border-bottom: 1px solid var(--se-line); }
 .se-title { font: 800 19px/1.1 'Figtree',sans-serif; letter-spacing: -0.03em; margin-top: 6px; }
 .se-mono { font: 400 12px/1 'Roboto Mono',monospace; text-transform: uppercase; letter-spacing: 0.04em; color: var(--se-muted); }
@@ -735,6 +736,7 @@ const STYLES = `
 .se-loading { padding: 60px 20px; text-align: center; color: var(--se-muted); font: 500 14px/1 'Figtree',sans-serif; }
 .se-body { display: grid; grid-template-columns: 1fr 0.95fr; gap: 0; overflow: hidden; min-height: 0; }
 @media (max-width: 860px) { .se-body { grid-template-columns: 1fr; } .se-preview { display: none; } }
+@media (max-width: 640px) { .se-compose { padding: 14px 12px; gap: 12px; } .se-head { padding: 14px 12px; } .se-title { font-size: 16px; } }
 .se-compose { padding: 18px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
 .se-field { display: flex; flex-direction: column; gap: 7px; }
 .se-label { font: 400 12px/1 'Roboto Mono',monospace; text-transform: uppercase; color: var(--se-muted); letter-spacing: 0.04em; }

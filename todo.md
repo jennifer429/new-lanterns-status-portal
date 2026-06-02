@@ -482,3 +482,6 @@
 - [ ] Write instructions for Claude/people on managing contacts in Notion
 - [x] Merge PR #88: Add admin "Send status update" email composer
 - [x] Merge PR #89: Split hero file count into questionnaire vs site files
+- [x] Fix email composer: only pre-select blockers + dashboard next-ups (3 tasks, 3 tests)
+- [x] Fix email composer: always include jennifer@newlantern.ai as default recipient
+- [x] Fix email composer: mobile responsive layout (full-screen on phone, stacked fields)
