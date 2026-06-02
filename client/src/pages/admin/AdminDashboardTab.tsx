@@ -21,6 +21,7 @@ import { VAL_PHASES } from "@/hooks/useHomeData";
 import { QuestionnairePhaseCard } from "@/pages/home/QuestionnairePhaseCard";
 import { TestingPhaseCard } from "@/pages/home/TestingPhaseCard";
 import { TaskListPhaseCard } from "@/pages/home/TaskListPhaseCard";
+import { StatusEmailDialog } from "./StatusEmailDialog";
 import type { SharedAdminProps, Metric, Org } from "./types";
 
 type AdminDashboardTabProps = Pick<SharedAdminProps, "isPlatformAdmin" | "orgs" | "clients" | "refetchOrgs"> & {
@@ -268,6 +269,7 @@ function GoLiveControl({
 
 export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics, refetchOrgs }: AdminDashboardTabProps) {
   const [, setLocation] = useLocation();
+  const [emailOrg, setEmailOrg] = useState<{ slug: string; name: string } | null>(null);
 
   const markCompleteMutation = trpc.admin.markOrganizationComplete.useMutation({
     onSuccess: () => { toast.success("Site marked live 🎉 — open items set to N/A"); refetchOrgs(); },
@@ -360,6 +362,7 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics, ref
     setExpandedSiteIds(allExpanded ? new Set() : new Set(allFilteredIds));
 
   return (
+    <>
     <div>
       {/* Header */}
       <div className="mb-1">
@@ -581,7 +584,7 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics, ref
                                   <ArrowUpRight className="w-3.5 h-3.5" /> Open site
                                 </button>
                                 <button
-                                  onClick={() => toast.info("Status update emails aren't wired up yet.")}
+                                  onClick={() => setEmailOrg({ slug: org.slug, name: org.name })}
                                   className="h-8 px-3 rounded-lg border border-border/60 bg-card text-xs font-medium text-muted-foreground hover:text-foreground hover:border-border/80 transition-colors flex items-center gap-1.5"
                                 >
                                   <Mail className="w-3.5 h-3.5" /> Send update
@@ -617,6 +620,12 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics, ref
         </div>
       )}
     </div>
+    <StatusEmailDialog
+      org={emailOrg}
+      open={!!emailOrg}
+      onOpenChange={(o) => { if (!o) setEmailOrg(null); }}
+    />
+    </>
   );
 }
 
@@ -624,3 +633,4 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics, ref
 function orgMetricsFiles(m: Metric | undefined): any[] {
   return (m?.files as any[]) ?? [];
 }
+
