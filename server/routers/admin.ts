@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { adminDbProcedure, protectedProcedure, router } from "../_core/trpc";
-import { questions, questionOptions, organizations, users, clients, intakeFileAttachments, partnerTemplates, specifications, intakeResponses, systemVendorOptions, vendorAuditLog, taskCompletion, validationResults, partnerTaskTemplates, orgCustomTasks } from "../../drizzle/schema";
+import { questions, questionOptions, organizations, users, clients, intakeFileAttachments, partnerTemplates, specifications, intakeResponses, systemVendorOptions, vendorAuditLog, taskCompletion, validationResults, partnerTaskTemplates, orgCustomTasks, orgNotes } from "../../drizzle/schema";
 import { SECTION_DEFS as TASK_SECTION_DEFS } from "@shared/taskDefs";
 import { eq, and, or, desc, inArray, sql, like } from "drizzle-orm";
 import { getAllTestKeys } from "@shared/validationDefs";
@@ -903,6 +903,14 @@ export const adminRouter = router({
           .where(eq(intakeFileAttachments.organizationId, org.id))
           .orderBy(desc(intakeFileAttachments.createdAt));
 
+        // Site files = labeled documents & notes (orgNotes), distinct from
+        // questionnaire-attached files (intakeFileAttachments / `files`).
+        const siteNoteRows = await db
+          .select({ id: orgNotes.id })
+          .from(orgNotes)
+          .where(eq(orgNotes.organizationId, org.id));
+        const siteFileCount = siteNoteRows.length;
+
         // Count N/A questions (stored as __question_na:{questionId} = 'true')
         const naQuestionCount = orgResponses.filter(r => 
           r.questionId.startsWith('__question_na:') && (r.response === 'true' || r.response === true as any)
@@ -958,6 +966,10 @@ export const adminRouter = router({
           taskStats,
           validationStats,
           naQuestionCount,
+          // Questionnaire files (attached to intake answers).
+          questionnaireFileCount: files.length,
+          // Site files (labeled documents & notes, not tied to the questionnaire).
+          siteFileCount,
           files: files.map(f => ({
             id: f.id,
             fileName: f.fileName,

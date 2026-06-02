@@ -11,7 +11,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   ChevronDown, ClipboardList, TestTube2, ListChecks, Download, Search, Folder,
-  CalendarClock, Rocket, RotateCcw,
+  CalendarClock, Rocket, RotateCcw, Check, Users, FolderOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
@@ -82,9 +82,56 @@ function computeOrgStats(orgMetrics: Metric | undefined) {
     vs, vsPass, vsInProg, vsFail, vsBlocked, vsPct,
     overallPct,
     filesCount: orgMetrics?.files.length ?? 0,
+    qFiles: (orgMetrics as any)?.questionnaireFileCount ?? orgMetrics?.files.length ?? 0,
+    siteFiles: (orgMetrics as any)?.siteFileCount ?? 0,
     userCount: orgMetrics?.userCount ?? 0,
     naQCount: (orgMetrics as any)?.naQuestionCount ?? 0,
   };
+}
+
+/**
+ * Completion donut shown beside each site name (from the Platform Admin mockup).
+ * 42px ring: purple accent while implementing, green with a check once live/100%.
+ */
+function CompletionDonut({ value, live }: { value: number; live: boolean }) {
+  const size = 42, stroke = 4;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const done = live || value >= 100;
+  const shown = live ? 100 : value;
+  const off = c * (1 - shown / 100);
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.09)" strokeWidth={stroke} />
+        <circle
+          cx={size / 2} cy={size / 2} r={r} fill="none"
+          stroke={done ? "rgb(52 211 153)" : "var(--primary)"}
+          strokeWidth={stroke} strokeLinecap="round"
+          strokeDasharray={c} strokeDashoffset={off}
+          style={{ transition: "stroke-dashoffset 0.5s ease" }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        {live ? (
+          <Check className="w-[15px] h-[15px] text-emerald-400" />
+        ) : (
+          <span className="font-bold tabular-nums leading-none" style={{ fontSize: 11, letterSpacing: "-0.03em" }}>
+            {value}<span style={{ fontSize: 8 }}>%</span>
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Compact icon + number stat used for the per-site users / file counts. */
+function CountStat({ icon: I, value, title }: { icon: typeof Users; value: number; title: string }) {
+  return (
+    <span className="flex items-center gap-1 text-xs text-muted-foreground tabular-nums" title={title}>
+      <I className="w-3.5 h-3.5 shrink-0" />{value}
+    </span>
+  );
 }
 
 /**
@@ -386,9 +433,9 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics, ref
                             onClick={() => toggleSite(org.id)}
                             className="flex-1 min-w-0 text-left flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-4"
                           >
-                            {/* Name + status dot */}
-                            <div className="flex items-center gap-2.5 min-w-0 sm:w-52 shrink-0">
-                              <span className={cn("w-2 h-2 rounded-full shrink-0", stage.dot)} />
+                            {/* Completion donut + name */}
+                            <div className="flex items-center gap-2.5 min-w-0 sm:w-56 shrink-0">
+                              <CompletionDonut value={st.overallPct} live={org.status === "completed"} />
                               <span className="font-semibold text-foreground truncate">{org.name}</span>
                             </div>
 
@@ -400,8 +447,11 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics, ref
                                   style={{ width: `${st.overallPct}%` }}
                                 />
                               </div>
-                              <span className={cn("text-sm font-bold tabular-nums shrink-0 w-10 text-right", org.status === "completed" ? "text-emerald-400" : "text-primary")}>
-                                {st.overallPct}%
+                              {/* Per-site counts — hidden on phone, shown in the expanded footer instead */}
+                              <span className="hidden md:flex items-center gap-3 shrink-0 pr-1">
+                                <CountStat icon={Users} value={st.userCount} title={`${st.userCount} users`} />
+                                <CountStat icon={ClipboardList} value={st.qFiles} title={`${st.qFiles} questionnaire files`} />
+                                <CountStat icon={FolderOpen} value={st.siteFiles} title={`${st.siteFiles} site files`} />
                               </span>
                             </div>
                           </button>
@@ -415,13 +465,10 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics, ref
                             updateTarget={(date) => updateOrgMutation.mutate({ id: org.id, targetGoLiveDate: date })}
                           />
 
-                          {/* Stage + files + chevron toggle */}
+                          {/* Stage + chevron toggle */}
                           <div className="flex items-center gap-2 shrink-0 sm:justify-end">
                             <span className={cn("px-2 py-0.5 rounded-full border text-[11px] font-medium whitespace-nowrap", stage.pill)}>
                               {stage.label}
-                            </span>
-                            <span className="flex items-center gap-1 text-xs text-muted-foreground tabular-nums w-9 justify-end">
-                              <Download className="w-3 h-3" />{st.filesCount}
                             </span>
                             <button onClick={() => toggleSite(org.id)} className="p-0.5 rounded hover:bg-muted/40 transition-colors" aria-label="Toggle details">
                               <ChevronDown className={cn("w-4 h-4 text-muted-foreground/60 transition-transform", isExpanded && "rotate-180")} />
@@ -526,6 +573,13 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics, ref
                                   {st.tsPct === 100 ? "View" : st.tsDone === 0 ? "Start" : "Continue"}
                                 </button>
                               </div>
+                            </div>
+
+                            {/* Per-site counts — always visible here (incl. phone) */}
+                            <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> {st.userCount} user{st.userCount !== 1 ? "s" : ""}</span>
+                              <span className="flex items-center gap-1.5"><ClipboardList className="w-3.5 h-3.5" /> {st.qFiles} questionnaire file{st.qFiles !== 1 ? "s" : ""}</span>
+                              <span className="flex items-center gap-1.5"><FolderOpen className="w-3.5 h-3.5" /> {st.siteFiles} site file{st.siteFiles !== 1 ? "s" : ""}</span>
                             </div>
 
                             {/* Files */}
