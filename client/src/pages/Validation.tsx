@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Link } from "wouter";
 import { useOrgParams } from "@/hooks/useOrgParams";
+import { useFocusFromQuery } from "@/hooks/useFocusFromQuery";
 import { trpc } from "@/lib/trpc";
 import { VALIDATION_PHASE_TEST_COUNTS } from "@shared/validationDefs";
 import { cn } from "@/lib/utils";
@@ -466,6 +467,7 @@ function RelatedAnswers({
 
 export default function Validation() {
   const { clientSlug, slug, orgPath } = useOrgParams("validation");
+  useFocusFromQuery("t", "test"); // deep-link from status-update emails
   const { user } = useAuth();
 
   const { data: organization } = trpc.organizations.getBySlug.useQuery(
@@ -1115,7 +1117,7 @@ export default function Validation() {
                           const badgeStatus = getStatus(key);
 
                           return (
-                            <div key={tIdx} className={cn(
+                            <div key={tIdx} id={`test-${key}`} className={cn(
                               tIdx < phase.tests.length - 1 ? "border-b border-border/20" : "",
                               isSelected && "bg-primary/5",
                               isNA && "opacity-60"

@@ -11,19 +11,26 @@
 
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { protectedProcedure, router } from "../_core/trpc";
+import { protectedProcedure, adminProcedure, router } from "../_core/trpc";
 import { requireDb } from "../db";
+import { sendEmail } from "../email/send";
+import { ENV } from "../_core/env";
 import {
   organizations,
   clients,
+  users,
   intakeResponses,
   intakeFileAttachments,
   taskCompletion,
   validationResults,
 } from "../../drizzle/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
+import {
+  syncTaskCompletionToNotion,
+  syncValidationResultToNotion,
+} from "../notionTaskValidation";
 import { questionnaireSections } from "@shared/questionnaireData";
-import { calculateProgress } from "@shared/progressCalculation";
+import { calculateProgress, getIncompleteVisibleQuestionIds } from "@shared/progressCalculation";
 import { SECTION_DEFS as TASK_SECTION_DEFS } from "@shared/taskDefs";
 
 // ---------------------------------------------------------------------------
@@ -91,6 +98,7 @@ interface OrgExportData {
   org: {
     name: string;
     slug: string;
+    clientSlug: string;
     contactName: string | null;
     contactEmail: string | null;
     startDate: string | null;
@@ -103,6 +111,12 @@ interface OrgExportData {
     totalSections: number;
     pct: number;
     sectionProgress: Record<string, { completed: number; total: number }>;
+    openQuestions: Array<{
+      id: string;
+      section: string;
+      sectionCode: string;
+      text: string;
+    }>;
   };
   implementation: {
     total: number;
@@ -137,6 +151,7 @@ interface OrgExportData {
       name: string;
       phase: string;
       status: string;
+      owner: string | null;
       notes: string | null;
     }>;
   };
@@ -158,13 +173,17 @@ async function gatherOrgData(orgSlug: string): Promise<OrgExportData> {
 
   // Partner
   let partnerName = "";
+  let clientSlug = "";
   if (org.clientId) {
     const [client] = await db
       .select()
       .from(clients)
       .where(eq(clients.id, org.clientId))
       .limit(1);
-    if (client) partnerName = client.name;
+    if (client) {
+      partnerName = client.name;
+      clientSlug = client.slug;
+    }
   }
 
   // Questionnaire progress
@@ -196,6 +215,29 @@ async function gatherOrgData(orgSlug: string): Promise<OrgExportData> {
   });
 
   const progress = calculateProgress(allQuestions, responses as any, files as any);
+
+  // Open (incomplete, visible) questionnaire items, with section code + label
+  // so the status email can deep-link straight to the question in intake.
+  const qMeta = new Map<string, { section: string; sectionCode: string; text: string }>();
+  for (const section of questionnaireSections) {
+    if (section.type === "workflow") {
+      qMeta.set(section.id + "_config", {
+        section: section.title,
+        sectionCode: section.id,
+        text: `${section.title} workflow`,
+      });
+    }
+    for (const q of section.questions || []) {
+      if (q.inactive) continue;
+      qMeta.set(q.id, { section: section.title, sectionCode: section.id, text: q.text });
+    }
+  }
+  const openQuestions = getIncompleteVisibleQuestionIds(allQuestions, responses as any, files as any)
+    .map((id) => {
+      const m = qMeta.get(String(id));
+      return m ? { id: String(id), ...m } : null;
+    })
+    .filter((x): x is { id: string; section: string; sectionCode: string; text: string } => x !== null);
   const totalSections = Object.keys(progress.sectionProgress).length;
   const completedSections = Object.values(progress.sectionProgress).filter(
     (s) => s.completed === s.total
@@ -272,6 +314,7 @@ async function gatherOrgData(orgSlug: string): Promise<OrgExportData> {
   for (const row of valRows) {
     valMap[row.testKey] = {
       status: row.status,
+      owner: row.signOff,
       notes: row.notes,
     };
   }
@@ -299,6 +342,7 @@ async function gatherOrgData(orgSlug: string): Promise<OrgExportData> {
         name: phase.tests[t],
         phase: phase.title,
         status,
+        owner: v?.owner ?? null,
         notes: v?.notes ?? null,
       });
     }
@@ -321,6 +365,7 @@ async function gatherOrgData(orgSlug: string): Promise<OrgExportData> {
     org: {
       name: org.name,
       slug: org.slug,
+      clientSlug,
       contactName: org.contactName,
       contactEmail: org.contactEmail,
       startDate: org.startDate,
@@ -333,6 +378,7 @@ async function gatherOrgData(orgSlug: string): Promise<OrgExportData> {
       totalSections,
       pct: qPct,
       sectionProgress: progress.sectionProgress,
+      openQuestions,
     },
     implementation: {
       total: implTotal,
@@ -667,6 +713,180 @@ function buildTaskEmailHtml(data: OrgExportData): string {
 }
 
 // ---------------------------------------------------------------------------
+// Status-update email (Claude Design "Implementation Update" mockup)
+// ---------------------------------------------------------------------------
+
+export interface StatusUpdatePayload {
+  orgName: string;
+  partnerName?: string;
+  subject: string;
+  note: string;
+  senderName?: string;
+  dashboardUrl?: string;
+  include: {
+    progress: boolean;
+    blockers: boolean;
+    tasks: boolean;
+    promptReply: boolean;
+  };
+  progress: {
+    overall: number;
+    stage: string; // "live" renders "Live" instead of a percentage
+    q: number;
+    qTotal: number;
+    vPass: number;
+    vTotal: number;
+    tDone: number;
+    tTotal: number;
+  };
+  blockers: Array<{ text: string; owner: string; link?: string }>;
+  tasks: Array<{ text: string; owner: string; due?: string; link?: string }>;
+}
+
+/**
+ * buildStatusUpdateEmailHtml — renders the admin-composed "Implementation
+ * Update" email. Mirrors the dark New Lantern mail card from the Claude Design
+ * mockup (note → progress snapshot → blockers → tasks/assignments → CTA →
+ * reply prompt), email-client-safe with table layout + inline styles.
+ */
+export function buildStatusUpdateEmailHtml(p: StatusUpdatePayload): string {
+  const ACCENT = "#7C1EBD";
+  const RED = "#E53E3E";
+  const GREEN = "#16A34A";
+  const live = p.progress.stage === "live";
+  const esc = (s: string) =>
+    String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  const item = (text: string, owner: string, dotColor: string, link?: string) => {
+    const label = esc(text) || "—";
+    const cell = link
+      ? `<a href="${esc(link)}" style="color:#ECECEE;text-decoration:none;border-bottom:1px solid rgba(124,30,189,0.55);">${label}</a>`
+      : label;
+    return `
+    <tr>
+      <td style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.08);vertical-align:middle;width:14px;">
+        <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${dotColor};"></span>
+      </td>
+      <td style="padding:7px 8px;border-bottom:1px solid rgba(255,255,255,0.08);font:500 13px/1.4 'Figtree',Arial,sans-serif;color:#ECECEE;">${cell}</td>
+      <td class="nl-owner" style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.08);text-align:right;white-space:nowrap;font:600 10.5px/1 'Roboto Mono',monospace;color:#9A9AA0;">${esc(owner)}</td>
+    </tr>`;
+  };
+
+  const section = (title: string, color: string, rows: string) => `
+    <div style="margin-bottom:18px;">
+      <div style="font:600 11px/1 'Roboto Mono',monospace;text-transform:uppercase;letter-spacing:0.04em;color:${color};margin-bottom:6px;">${title}</div>
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;">${rows}</table>
+    </div>`;
+
+  const blockersHtml =
+    p.include.blockers && p.blockers.length
+      ? section(
+          "Blockers",
+          RED,
+          p.blockers.map((b) => item(b.text, b.owner, RED, b.link)).join("")
+        )
+      : "";
+
+  const tasksHtml =
+    p.include.tasks && p.tasks.length
+      ? section(
+          "Tasks &amp; assignments",
+          "#9A9AA0",
+          p.tasks
+            .map((t) => item(t.text, `${esc(t.owner)}${t.due ? ` · ${esc(t.due)}` : ""}`, ACCENT, t.link))
+            .join("")
+        )
+      : "";
+
+  const progressHtml = p.include.progress
+    ? `
+    <div style="border:1px solid rgba(255,255,255,0.10);border-radius:10px;padding:13px 14px;margin-bottom:18px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+        <td style="font:600 12.5px/1 'Figtree',Arial,sans-serif;color:#ECECEE;">Overall progress</td>
+        <td style="text-align:right;font:800 14px/1 'Figtree',Arial,sans-serif;color:${live ? GREEN : ACCENT};">${live ? "Live" : p.progress.overall + "%"}</td>
+      </tr></table>
+      <div style="height:5px;background:rgba(255,255,255,0.08);border-radius:99px;margin:8px 0 13px;overflow:hidden;">
+        <div style="height:100%;width:${Math.max(0, Math.min(100, p.progress.overall))}%;background:${live ? GREEN : ACCENT};border-radius:99px;"></div>
+      </div>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+        ${[
+          [`${p.progress.q}/${p.progress.qTotal}`, "Questionnaire"],
+          [`${p.progress.vPass}/${p.progress.vTotal}`, "Tests passed"],
+          [`${p.progress.tDone}/${p.progress.tTotal}`, "Tasks done"],
+        ]
+          .map(
+            ([v, l]) => `<td style="width:33%;vertical-align:top;">
+            <div style="font:800 16px/1 'Figtree',Arial,sans-serif;letter-spacing:-0.03em;color:#FFFFFF;">${v}</div>
+            <div style="font:600 9.5px/1.2 'Roboto Mono',monospace;text-transform:uppercase;letter-spacing:0.03em;color:#9A9AA0;margin-top:3px;">${l}</div>
+          </td>`
+          )
+          .join("")}
+      </tr></table>
+    </div>`
+    : "";
+
+  const replyHtml = p.include.promptReply
+    ? `<p style="font:500 12px/1.55 'Figtree',Arial,sans-serif;color:#9A9AA0;margin:14px 0 0;padding-top:12px;border-top:1px solid rgba(255,255,255,0.08);">Something look off, or already handled? <b style="color:#FFFFFF;">Just reply to this email</b> — it routes straight to your implementation team.</p>`
+    : "";
+
+  const ctaHtml = p.dashboardUrl
+    ? `<a href="${esc(p.dashboardUrl)}" class="nl-cta" style="display:inline-block;margin-top:4px;background:${ACCENT};color:#ffffff;font:600 12.5px/1 'Figtree',Arial,sans-serif;padding:11px 15px;border-radius:8px;text-decoration:none;">View your site dashboard →</a>`
+    : "";
+
+  const signHtml = p.senderName
+    ? `<p style="font:500 12.5px/1.55 'Figtree',Arial,sans-serif;color:#C9C9CE;margin:18px 0 0;">— ${esc(p.senderName)}<br><span style="color:#9A9AA0;">New Lantern Implementation Team</span></p>`
+    : "";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta name="color-scheme" content="dark light">
+  <meta name="format-detection" content="telephone=no">
+  <title>${esc(p.subject)}</title>
+  <style>
+    /* Phone-first: the card fills the screen, padding tightens, the CTA
+       becomes a full-width tap target. Clients that ignore <style> still get
+       the inline fallbacks (width:100% + max-width:560px) below. */
+    @media only screen and (max-width:600px) {
+      .nl-card { width:100% !important; border-radius:0 !important; border-left:0 !important; border-right:0 !important; }
+      .nl-pad { padding:16px 14px 18px !important; }
+      .nl-subject { font-size:17px !important; }
+      .nl-cta { display:block !important; text-align:center !important; padding:14px 16px !important; }
+      .nl-owner { font-size:11px !important; }
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background:#000000;-webkit-text-size-adjust:100%;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#000000;padding:24px 0;">
+    <tr><td align="center" style="padding:0 8px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" class="nl-card" width="560" style="width:100%;max-width:560px;background:#0A0A0A;border:1px solid rgba(255,255,255,0.10);border-radius:12px;overflow:hidden;">
+        <tr><td style="padding:13px 16px;border-bottom:1px solid rgba(255,255,255,0.10);">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td style="font:800 15px/1 'Figtree',Arial,sans-serif;color:#FFFFFF;letter-spacing:-0.02em;">New Lantern</td>
+            <td align="right" style="font:600 9px/1 'Roboto Mono',monospace;text-transform:uppercase;letter-spacing:0.06em;color:#9A9AA0;">Implementation Update</td>
+          </tr></table>
+        </td></tr>
+        <tr><td class="nl-pad" style="padding:18px 18px 20px;">
+          <div class="nl-subject" style="font:700 16px/1.3 'Figtree',Arial,sans-serif;letter-spacing:-0.02em;color:#FFFFFF;margin-bottom:10px;">${esc(p.subject)}</div>
+          <p style="font:500 12.5px/1.55 'Figtree',Arial,sans-serif;color:#C9C9CE;margin:0 0 16px;white-space:pre-line;">${esc(p.note)}</p>
+          ${progressHtml}
+          ${blockersHtml}
+          ${tasksHtml}
+          ${ctaHtml}
+          ${signHtml}
+          ${replyHtml}
+        </td></tr>
+      </table>
+      <div style="font:500 10.5px/1.4 'Roboto Mono',monospace;color:#5A5A60;margin-top:14px;">New Lantern · PACS Implementation${p.partnerName ? " · " + esc(p.partnerName) : ""}</div>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+// ---------------------------------------------------------------------------
 // Router
 // ---------------------------------------------------------------------------
 
@@ -707,5 +927,450 @@ export const exportsRouter = router({
         remainingTests,
         overallPct: data.overallPct,
       };
+    }),
+
+  /**
+   * Pre-fill the admin "Send status update" composer (Claude Design mockup).
+   *
+   * Returns everything the composer needs from LIVE data:
+   *  - `recipients`  — prepopulated To list: this site's users + the partner's
+   *                    admins (the admin can paste more, split on , or ;).
+   *  - `assignees`   — real people on the site (+ contact roles) for owner pickers.
+   *  - `catalog`     — every implementation task + validation test, browseable
+   *                    so the admin selects real items instead of retyping.
+   *  - `blockers` / `tasks` — a sensible pre-selection, each linked back to its
+   *                    source task/test (kind + sourceId) so edits feed back.
+   */
+  statusUpdateDraft: protectedProcedure
+    .input(z.object({ organizationSlug: z.string() }))
+    .query(async ({ input }) => {
+      const data = await gatherOrgData(input.organizationSlug);
+      const db = await requireDb();
+      const [orgRow] = await db
+        .select()
+        .from(organizations)
+        .where(eq(organizations.slug, input.organizationSlug))
+        .limit(1);
+
+      const stage = data.org.status === "completed" ? "live" : "implementing";
+
+      // ── People on the site: site users + this partner's admins ──────────────
+      const recipients: Array<{ label: string; email: string }> = [];
+      const assigneeSet = new Map<string, string>(); // value → label
+      if (orgRow) {
+        const peopleRows = await db
+          .select({
+            name: users.name,
+            email: users.email,
+            role: users.role,
+            organizationId: users.organizationId,
+            clientId: users.clientId,
+            isActive: users.isActive,
+          })
+          .from(users)
+          .where(eq(users.isActive, 1));
+        const seenEmail = new Set<string>();
+        for (const u of peopleRows) {
+          const isSiteUser = u.organizationId === orgRow.id;
+          const isPartnerAdmin =
+            u.role === "admin" && !!orgRow.clientId && u.clientId === orgRow.clientId;
+          if (!isSiteUser && !isPartnerAdmin) continue;
+          const display = (u.name || u.email || "").trim();
+          if (u.email && !seenEmail.has(u.email)) {
+            seenEmail.add(u.email);
+            recipients.push({
+              label: `${display || u.email}${isPartnerAdmin ? " · Partner" : " · Site"}`,
+              email: u.email,
+            });
+          }
+          if (display) assigneeSet.set(display, display);
+        }
+      }
+      // Owner pickers: real people first, then the standard contact roles.
+      const CONTACT_ROLES = [
+        "Administrative",
+        "IT Connectivity",
+        "IT Post-Production Support",
+        "Clinical",
+        "Radiologist Champion",
+        "Project Manager",
+      ];
+      const assignees = [...assigneeSet.keys(), ...CONTACT_ROLES.filter((r) => !assigneeSet.has(r))];
+
+      // ── Deep links: each item points at its exact spot in the portal. A
+      // logged-out click is bounced through login and returned here (the
+      // intake/validation/implement pages scroll + highlight the item). ──────
+      const base = ENV.siteBaseUrl
+        ? `${ENV.siteBaseUrl.replace(/\/$/, "")}/org/${data.org.clientSlug}/${data.org.slug}`
+        : "";
+      const enc = encodeURIComponent;
+      const taskLink = (id: string) => (base ? `${base}/implement?task=${enc(id)}` : "");
+      const testLink = (key: string) => (base ? `${base}/validation?t=${enc(key)}` : "");
+      const questionLink = (sectionCode: string, id: string) =>
+        base ? `${base}/intake?section=${enc(sectionCode)}&q=${enc(id)}` : "";
+
+      // ── Browseable catalog: every open question + task + test, linked to its source ─
+      const mkQuestion = (q: OrgExportData["questionnaire"]["openQuestions"][number]) => ({
+        id: `question:${q.id}`,
+        kind: "question" as const,
+        sourceId: q.id,
+        group: q.section,
+        text: q.text,
+        owner: "",
+        due: "",
+        status: "Open",
+        link: questionLink(q.sectionCode, q.id),
+      });
+      const mkTask = (t: OrgExportData["implementation"]["tasks"][number]) => ({
+        id: `task:${t.id}`,
+        kind: "task" as const,
+        sourceId: t.id,
+        group: t.section,
+        text: t.title,
+        owner: t.owner || "",
+        due: t.targetDate || "",
+        status: t.status,
+        link: taskLink(t.id),
+      });
+      const mkTest = (t: OrgExportData["validation"]["tests"][number]) => ({
+        id: `test:${t.key}`,
+        kind: "test" as const,
+        sourceId: t.key,
+        group: t.phase,
+        text: t.name,
+        owner: t.owner || "",
+        due: "",
+        status: t.status,
+        link: testLink(t.key),
+      });
+      const catalog = [
+        ...data.questionnaire.openQuestions.map(mkQuestion),
+        ...data.implementation.tasks.map(mkTask),
+        ...data.validation.tests.map(mkTest),
+      ];
+
+      // Pre-selected blockers (blocked tasks + failed/blocked tests).
+      const blockers = catalog
+        .filter(
+          (it) =>
+            (it.kind === "task" && it.status === "Blocked") ||
+            (it.kind === "test" && (it.status === "Fail" || it.status === "Blocked"))
+        )
+        .map((it) => ({ ...it, owner: it.owner || "IT Connectivity" }));
+
+      // Pre-selected "next ups" — every open / in-progress task + every
+      // outstanding test (not just a sample). Admin trims what they don't want.
+      const blockerIds = new Set(blockers.map((b) => b.id));
+      const tasks = catalog
+        .filter(
+          (it) =>
+            !blockerIds.has(it.id) &&
+            ((it.kind === "task" && (it.status === "In Progress" || it.status === "Open")) ||
+              (it.kind === "test" && (it.status === "Not Tested" || it.status === "In Progress")))
+        )
+        .map((it) => ({
+          ...it,
+          owner: it.owner || (it.kind === "task" ? "Project Manager" : "Radiologist Champion"),
+        }));
+
+      const overall = stage === "live" ? 100 : data.overallPct;
+
+      // Browseable catalog excludes resolved work — passed/N/A tests and
+      // completed/N/A tasks — so admins can only add still-open items.
+      const DONE_STATUSES = new Set(["Pass", "N/A", "Completed"]);
+      const browseCatalog = catalog.filter((it) => !DONE_STATUSES.has(it.status));
+
+      const note =
+        stage === "live"
+          ? `Your site is live. Here's a quick wrap-up of where the ${data.org.name} implementation landed and anything still open.`
+          : `Here's where your New Lantern onboarding stands this week. A couple of items need your team to keep us on track for go-live.`;
+
+      return {
+        orgName: data.org.name,
+        partnerName: data.partnerName,
+        subject: `${data.org.name} — New Lantern onboarding update (${stage === "live" ? "Live" : overall + "% complete"})`,
+        note,
+        stage,
+        progress: {
+          overall,
+          stage,
+          q: data.questionnaire.completedSections,
+          qTotal: data.questionnaire.totalSections,
+          vPass: data.validation.passed + data.validation.notApplicable,
+          vTotal: data.validation.total,
+          tDone: data.implementation.completed + data.implementation.notApplicable,
+          tTotal: data.implementation.total,
+        },
+        recipients,
+        assignees,
+        catalog: browseCatalog,
+        blockers,
+        tasks,
+      };
+    }),
+
+  /**
+   * Send the admin-composed status update. Admin-only; partner admins are
+   * scoped to their own client's organizations. The final email HTML is built
+   * server-side from the composed payload (recipients never see raw HTML).
+   *
+   * Side effects:
+   *  - CCs the sending admin and signs the email with their name.
+   *  - Writes the chosen owner + status back to the linked task / test records
+   *    (blockers → Blocked, tasks → In Progress) and mirrors to Notion.
+   */
+  sendStatusUpdate: adminProcedure
+    .input(
+      z.object({
+        organizationSlug: z.string(),
+        to: z.array(z.string().email()).min(1, "At least one recipient is required"),
+        cc: z.array(z.string().email()).optional(),
+        subject: z.string().min(1, "Subject is required"),
+        note: z.string().default(""),
+        include: z.object({
+          progress: z.boolean(),
+          blockers: z.boolean(),
+          tasks: z.boolean(),
+          promptReply: z.boolean(),
+        }),
+        progress: z.object({
+          overall: z.number(),
+          stage: z.string(),
+          q: z.number(),
+          qTotal: z.number(),
+          vPass: z.number(),
+          vTotal: z.number(),
+          tDone: z.number(),
+          tTotal: z.number(),
+        }),
+        blockers: z.array(
+          z.object({
+            text: z.string(),
+            owner: z.string(),
+            kind: z.enum(["task", "test", "question"]).optional(),
+            sourceId: z.string().optional(),
+            group: z.string().optional(),
+            link: z.string().optional(),
+          })
+        ),
+        tasks: z.array(
+          z.object({
+            text: z.string(),
+            owner: z.string(),
+            due: z.string().optional(),
+            kind: z.enum(["task", "test", "question"]).optional(),
+            sourceId: z.string().optional(),
+            group: z.string().optional(),
+            link: z.string().optional(),
+          })
+        ),
+        writeBack: z.boolean().default(true),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const db = await requireDb();
+      const [org] = await db
+        .select()
+        .from(organizations)
+        .where(eq(organizations.slug, input.organizationSlug))
+        .limit(1);
+      if (!org)
+        throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+
+      // Partner admins may only send for their own client's organizations.
+      if (ctx.user.clientId && org.clientId !== ctx.user.clientId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You can only send updates for your own organizations",
+        });
+      }
+
+      let partnerName = "";
+      let dashboardUrl: string | undefined;
+      if (org.clientId) {
+        const [client] = await db
+          .select()
+          .from(clients)
+          .where(eq(clients.id, org.clientId))
+          .limit(1);
+        if (client) {
+          partnerName = client.name;
+          if (ENV.siteBaseUrl) {
+            dashboardUrl = `${ENV.siteBaseUrl.replace(/\/$/, "")}/org/${client.slug}/${org.slug}`;
+          }
+        }
+      }
+
+      // Sender identity → signature + auto-CC.
+      const senderEmail = ctx.user.email ?? undefined;
+      const senderName =
+        ctx.user.name?.trim() || (senderEmail ? senderEmail.split("@")[0] : "New Lantern");
+      const cc = Array.from(
+        new Set([...(input.cc ?? []), ...(senderEmail ? [senderEmail] : [])])
+      ).filter((e) => !input.to.includes(e));
+
+      // Safety net: never email or write back already-resolved work, even if
+      // the client submitted it — drop completed/N/A tasks and passed/N/A
+      // tests by re-checking their live status here. (Free-text and
+      // questionnaire items, which have no completion record, always pass.)
+      const resolvedSourceIds = new Set<string>();
+      {
+        const linked = [...input.blockers, ...input.tasks];
+        const taskIds = linked.filter((i) => i.kind === "task" && i.sourceId).map((i) => i.sourceId!);
+        const testKeys = linked.filter((i) => i.kind === "test" && i.sourceId).map((i) => i.sourceId!);
+        if (taskIds.length) {
+          const rows = await db
+            .select()
+            .from(taskCompletion)
+            .where(and(eq(taskCompletion.organizationId, org.id), inArray(taskCompletion.taskId, taskIds)));
+          for (const r of rows) if (r.notApplicable === 1 || r.completed === 1) resolvedSourceIds.add(r.taskId);
+        }
+        if (testKeys.length) {
+          const rows = await db
+            .select()
+            .from(validationResults)
+            .where(and(eq(validationResults.organizationId, org.id), inArray(validationResults.testKey, testKeys)));
+          for (const r of rows) if (r.status === "Pass" || r.status === "N/A") resolvedSourceIds.add(r.testKey);
+        }
+      }
+      const keepItem = (i: { kind?: string; sourceId?: string }) =>
+        !(i.kind && i.sourceId && resolvedSourceIds.has(i.sourceId));
+      const sendBlockers = input.blockers.filter(keepItem);
+      const sendTasks = input.tasks.filter(keepItem);
+
+      const html = buildStatusUpdateEmailHtml({
+        orgName: org.name,
+        partnerName,
+        subject: input.subject,
+        note: input.note,
+        senderName,
+        dashboardUrl,
+        include: input.include,
+        progress: input.progress,
+        blockers: input.include.blockers ? sendBlockers : [],
+        tasks: input.include.tasks ? sendTasks : [],
+      });
+
+      const sent = await sendEmail({
+        to: input.to,
+        cc: cc.length ? cc : undefined,
+        subject: input.subject,
+        html,
+        type: "task_status",
+        organizationId: org.id,
+        triggeredBy: senderEmail,
+      });
+
+      if (!sent)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Email could not be sent — check email configuration",
+        });
+
+      // ── Write owner + status back to the linked task / test records ─────────
+      let writtenBack = 0;
+      if (input.writeBack) {
+        const items = [
+          ...(input.include.blockers ? sendBlockers.map((b) => ({ ...b, bucket: "blocker" as const })) : []),
+          ...(input.include.tasks ? sendTasks.map((t) => ({ ...t, bucket: "task" as const })) : []),
+        ];
+        for (const it of items) {
+          if (!it.kind || !it.sourceId) continue; // custom free-text item, nothing to link
+          try {
+            if (it.kind === "task") {
+              const [existing] = await db
+                .select()
+                .from(taskCompletion)
+                .where(
+                  and(
+                    eq(taskCompletion.organizationId, org.id),
+                    eq(taskCompletion.taskId, it.sourceId)
+                  )
+                )
+                .limit(1);
+              const blocked = it.bucket === "blocker";
+              const dueVal = "due" in it ? it.due : undefined;
+              const payload = {
+                completedBy: it.owner || null,
+                blocked: blocked ? 1 : existing?.blocked ?? 0,
+                inProgress: blocked ? 0 : 1,
+                completed: existing?.completed ?? 0,
+                notApplicable: existing?.notApplicable ?? 0,
+                targetDate: dueVal || existing?.targetDate || null,
+                sectionName: it.group || existing?.sectionName || "",
+              };
+              if (existing) {
+                await db
+                  .update(taskCompletion)
+                  .set({ ...payload, notionLastEdited: null })
+                  .where(eq(taskCompletion.id, existing.id));
+              } else {
+                await db
+                  .insert(taskCompletion)
+                  .values({ organizationId: org.id, taskId: it.sourceId, ...payload, notionLastEdited: null });
+              }
+              syncTaskCompletionToNotion({
+                organizationId: org.id,
+                orgSlug: org.slug,
+                orgName: org.name,
+                taskId: it.sourceId,
+                sectionName: payload.sectionName,
+                completed: payload.completed,
+                inProgress: payload.inProgress,
+                blocked: payload.blocked,
+                notApplicable: payload.notApplicable,
+                completedAt: null,
+                completedBy: payload.completedBy,
+                targetDate: payload.targetDate,
+                notes: null,
+              }).catch((err) => console.error("[notion-task] write-back error:", err));
+              writtenBack++;
+            } else if (it.kind === "test") {
+              const status: "Blocked" | "In Progress" =
+                it.bucket === "blocker" ? "Blocked" : "In Progress";
+              const [existing] = await db
+                .select()
+                .from(validationResults)
+                .where(
+                  and(
+                    eq(validationResults.organizationId, org.id),
+                    eq(validationResults.testKey, it.sourceId)
+                  )
+                )
+                .limit(1);
+              // Don't clobber a passed/N/A test by re-opening it.
+              if (existing && (existing.status === "Pass" || existing.status === "N/A")) continue;
+              const payload = { status, signOff: it.owner || null, updatedBy: senderEmail ?? null };
+              if (existing) {
+                await db
+                  .update(validationResults)
+                  .set({ ...payload, notionLastEdited: null })
+                  .where(eq(validationResults.id, existing.id));
+              } else {
+                await db
+                  .insert(validationResults)
+                  .values({ organizationId: org.id, testKey: it.sourceId, ...payload, notionLastEdited: null });
+              }
+              syncValidationResultToNotion({
+                organizationId: org.id,
+                orgSlug: org.slug,
+                orgName: org.name,
+                testKey: it.sourceId,
+                actual: existing?.actual ?? null,
+                status,
+                signOff: payload.signOff,
+                notes: existing?.notes ?? null,
+                testedDate: existing?.testedDate ?? null,
+                updatedBy: payload.updatedBy,
+              }).catch((err) => console.error("[notion-validation] write-back error:", err));
+              writtenBack++;
+            }
+          } catch (err) {
+            console.error("[status-update] write-back failed for", it.kind, it.sourceId, err);
+          }
+        }
+      }
+
+      return { sent: true, count: input.to.length, cc, writtenBack };
     }),
 });
