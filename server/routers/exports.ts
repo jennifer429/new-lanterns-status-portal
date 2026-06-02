@@ -739,8 +739,8 @@ export interface StatusUpdatePayload {
     tDone: number;
     tTotal: number;
   };
-  blockers: Array<{ text: string; owner: string; link?: string }>;
-  tasks: Array<{ text: string; owner: string; due?: string; link?: string }>;
+  blockers: Array<{ text: string; owner: string; link?: string; group?: string }>;
+  tasks: Array<{ text: string; owner: string; due?: string; link?: string; group?: string }>;
 }
 
 /**
@@ -750,104 +750,158 @@ export interface StatusUpdatePayload {
  * reply prompt), email-client-safe with table layout + inline styles.
  */
 export function buildStatusUpdateEmailHtml(p: StatusUpdatePayload): string {
-  const ACCENT = "#6D28D9";
-  const RED = "#DC2626";
-  const GREEN = "#15803D";
-  const INK = "#1F2933";
-  const MUTED = "#6B7280";
-  const LINE = "#E5E7EB";
+  // Palette from the Site Status Email design (light email, black brand bands).
+  const INK = "#18181B";
+  const INK2 = "#52525B";
+  const INK3 = "#8A8A93";
+  const LINE = "#E5E5E5";
+  const LINE2 = "#EDEDEF";
+  const SURF2 = "#FAFAFB";
+  const PURPLE = "#7C1EBD";
+  const PURPLE_SOFT = "#F3EAFB";
+  const RED = "#E53E3E";
+  const GREEN = "#16A34A";
+  // Figtree is requested via <link>, but email clients ignore web fonts — the
+  // system stack below is the real fallback every client will render.
   const FONT =
-    "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+    "'Figtree',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
   const live = p.progress.stage === "live";
   const esc = (s: string) =>
     String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-  // A single line item: "Title — Owner", title links to the portal when given.
-  const item = (text: string, owner: string, dotColor: string, link?: string) => {
-    const label = esc(text) || "—";
-    const cell = link
-      ? `<a href="${esc(link)}" style="color:${ACCENT};text-decoration:underline;">${label}</a>`
-      : label;
+  // One line item rendered as a table row: square mark, title (+meta), owner pill.
+  const item = (
+    text: string,
+    meta: string,
+    owner: string,
+    kind: "blk" | "tsk",
+    link?: string
+  ) => {
+    const title = esc(text) || "—";
+    const titleCell = link
+      ? `<a href="${esc(link)}" style="color:${INK};text-decoration:none;">${title}</a>`
+      : title;
+    const mark =
+      kind === "blk"
+        ? `<table role="presentation" cellpadding="0" cellspacing="0" width="18" style="width:18px;height:18px;background:#FCE8E8;border-radius:5px;"><tr><td align="center" style="line-height:18px;"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${RED};"></span></td></tr></table>`
+        : `<table role="presentation" cellpadding="0" cellspacing="0" width="18" style="width:18px;height:18px;border:1.5px solid #D3D3D7;border-radius:5px;"><tr><td>&nbsp;</td></tr></table>`;
     return `
     <tr>
-      <td style="padding:8px 10px 8px 0;border-bottom:1px solid ${LINE};vertical-align:top;width:10px;">
-        <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${dotColor};margin-top:5px;"></span>
+      <td style="padding:11px 0;border-top:1px solid ${LINE2};vertical-align:top;width:18px;">${mark}</td>
+      <td style="padding:11px 0 11px 12px;border-top:1px solid ${LINE2};vertical-align:top;">
+        <div style="font:600 14px/1.4 ${FONT};color:${INK};letter-spacing:-0.01em;">${titleCell}</div>
+        ${meta ? `<div style="font:400 12px/1.4 ${FONT};color:${INK3};margin-top:3px;">${esc(meta)}</div>` : ""}
       </td>
-      <td style="padding:8px 8px;border-bottom:1px solid ${LINE};font:400 15px/1.45 ${FONT};color:${INK};">${cell}</td>
-      <td class="nl-owner" style="padding:8px 0;border-bottom:1px solid ${LINE};text-align:right;white-space:nowrap;font:400 13px/1.45 ${FONT};color:${MUTED};vertical-align:top;">${esc(owner)}</td>
+      <td class="nl-owner" style="padding:11px 0;border-top:1px solid ${LINE2};vertical-align:top;text-align:right;white-space:nowrap;">
+        <span style="display:inline-block;font:600 11px/1 ${FONT};color:${INK2};background:#F1F1F3;border-radius:99px;padding:5px 11px;">${esc(owner) || "Unassigned"}</span>
+      </td>
     </tr>`;
   };
 
-  const section = (title: string, rows: string) => `
-    <p style="font:700 13px/1.3 ${FONT};color:${INK};margin:22px 0 4px;">${title}</p>
-    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;">${rows}</table>`;
+  const sectionHead = (label: string, dot: string, color: string) => `
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 4px;"><tr>
+      <td style="vertical-align:middle;padding-right:8px;"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${dot};"></span></td>
+      <td style="font:700 11px/1 ${FONT};text-transform:uppercase;letter-spacing:0.1em;color:${color};">${label}</td>
+    </tr></table>`;
 
   const blockersHtml =
     p.include.blockers && p.blockers.length
-      ? section(
-          "What we need from your team",
-          p.blockers.map((b) => item(b.text, b.owner, RED, b.link)).join("")
-        )
+      ? `<div style="margin-bottom:24px;">${sectionHead("What needs your team", RED, RED)}
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${p.blockers
+          .map((b) => item(b.text, b.group || "", b.owner, "blk", b.link))
+          .join("")}</table></div>`
       : "";
 
   const tasksHtml =
     p.include.tasks && p.tasks.length
-      ? section(
-          "Coming up next",
-          p.tasks
-            .map((t) => item(t.text, `${esc(t.owner)}${t.due ? ` · ${esc(t.due)}` : ""}`, ACCENT, t.link))
-            .join("")
-        )
+      ? `<div style="margin-bottom:24px;">${sectionHead("Tasks &amp; assignments", PURPLE, INK)}
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${p.tasks
+          .map((t) =>
+            item(
+              t.text,
+              t.due ? `Due ${t.due}` : t.group || "",
+              t.owner,
+              "tsk",
+              t.link
+            )
+          )
+          .join("")}</table></div>`
       : "";
 
   const pct = Math.max(0, Math.min(100, p.progress.overall));
+  const stat = (n: number, total: number, label: string, first: boolean) => `
+    <td style="width:33.33%;text-align:center;${first ? "" : `border-left:1px solid ${LINE};`}padding:2px 6px;vertical-align:top;">
+      <div style="font:800 19px/1 ${FONT};letter-spacing:-0.03em;color:${INK};">${n}<span style="color:${INK3};font-size:13px;font-weight:600;">/${total}</span></div>
+      <div style="font:600 9.5px/1.2 ${FONT};text-transform:uppercase;letter-spacing:0.07em;color:${INK3};margin-top:4px;">${label}</div>
+    </td>`;
   const progressHtml = p.include.progress
     ? `
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${LINE};border-radius:8px;margin:6px 0 4px;">
-      <tr><td style="padding:16px 18px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${LINE};border-radius:12px;background:${SURF2};margin:0 0 26px;">
+      <tr><td style="padding:20px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-          <td style="font:600 14px/1.3 ${FONT};color:${INK};">Overall progress</td>
-          <td style="text-align:right;font:700 15px/1.3 ${FONT};color:${live ? GREEN : ACCENT};">${live ? "Live" : pct + "%"}</td>
+          <td style="vertical-align:bottom;font:800 34px/1 ${FONT};letter-spacing:-0.04em;color:${live ? GREEN : PURPLE};">${live ? "Live" : `${pct}<span style="font-size:16px;">%</span>`}</td>
+          <td style="text-align:right;vertical-align:bottom;font:700 10px/1.3 ${FONT};text-transform:uppercase;letter-spacing:0.12em;color:${INK3};">Overall progress<span style="display:block;color:${INK};font-size:13px;letter-spacing:-0.01em;text-transform:none;margin-top:3px;">${live ? "Live and supported" : "In progress"}</span></td>
         </tr></table>
-        <div style="height:8px;background:#EEF0F3;border-radius:99px;margin:10px 0 14px;">
-          <div style="height:8px;width:${pct}%;background:${live ? GREEN : ACCENT};border-radius:99px;font-size:0;line-height:0;">&nbsp;</div>
+        <div style="height:8px;background:#ECECEE;border-radius:99px;margin:12px 0 18px;">
+          <div style="height:8px;width:${pct}%;background:${live ? GREEN : PURPLE};border-radius:99px;font-size:0;line-height:0;">&nbsp;</div>
         </div>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-          ${[
-            [`${p.progress.q}/${p.progress.qTotal}`, "Questionnaire"],
-            [`${p.progress.vPass}/${p.progress.vTotal}`, "Tests passed"],
-            [`${p.progress.tDone}/${p.progress.tTotal}`, "Tasks done"],
-          ]
-            .map(
-              ([v, l]) => `<td style="width:33%;vertical-align:top;">
-              <div style="font:700 20px/1 ${FONT};color:${INK};">${v}</div>
-              <div style="font:400 12px/1.3 ${FONT};color:${MUTED};margin-top:4px;">${l}</div>
-            </td>`
-            )
-            .join("")}
+          ${stat(p.progress.q, p.progress.qTotal, "Questionnaire", true)}
+          ${stat(p.progress.vPass, p.progress.vTotal, "Tests passed", false)}
+          ${stat(p.progress.tDone, p.progress.tTotal, "Tasks done", false)}
         </tr></table>
       </td></tr>
     </table>`
     : "";
 
   const ctaHtml = p.dashboardUrl
-    ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0 4px;"><tr>
-        <td style="background:${ACCENT};border-radius:6px;">
-          <a href="${esc(p.dashboardUrl)}" class="nl-cta" style="display:inline-block;color:#ffffff;font:600 15px/1 ${FONT};padding:13px 22px;text-decoration:none;">View your site dashboard &rarr;</a>
-        </td>
-      </tr></table>`
-    : "";
-
-  const signHtml = p.senderName
-    ? `<p style="font:400 15px/1.5 ${FONT};color:${INK};margin:24px 0 0;">Best,<br>${esc(p.senderName)}<br><span style="color:${MUTED};">New Lantern Implementation Team</span></p>`
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:28px 0 24px;"><tr><td align="center">
+        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;"><tr>
+          <td style="background:${PURPLE};border-radius:8px;">
+            <a href="${esc(p.dashboardUrl)}" class="nl-cta" style="display:inline-block;color:#FFFFFF;font:700 15px/1 ${FONT};letter-spacing:-0.01em;padding:14px 30px;text-decoration:none;">View your site dashboard &rarr;</a>
+          </td>
+        </tr></table>
+        <div style="font:400 12px/1.4 ${FONT};color:${INK3};margin-top:11px;">See full status, upload files, and look up answers anytime.</div>
+      </td></tr></table>`
     : "";
 
   const replyHtml = p.include.promptReply
-    ? `<p style="font:400 14px/1.55 ${FONT};color:${MUTED};margin:22px 0 0;padding-top:16px;border-top:1px solid ${LINE};">Something look off, or already handled? Just reply to this email and it will reach your implementation team directly.</p>`
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${LINE};border-radius:12px;background:${SURF2};margin:0 0 26px;"><tr><td style="padding:16px 18px;">
+        <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+          <td style="vertical-align:top;padding-right:13px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="34" style="width:34px;height:34px;background:${PURPLE_SOFT};border-radius:9px;"><tr><td align="center" style="font-size:18px;line-height:34px;color:${PURPLE};">&#9993;</td></tr></table>
+          </td>
+          <td style="vertical-align:top;">
+            <div style="font:700 13.5px/1.3 ${FONT};color:${INK};">Something already handled, or look off?</div>
+            <div style="font:400 13px/1.55 ${FONT};color:${INK2};margin-top:3px;"><b style="color:${INK};">Just reply to this email.</b> It routes straight to your implementation team — no separate login needed.</div>
+          </td>
+        </tr></table>
+      </td></tr></table>`
+    : "";
+
+  // Signature with an initials avatar (purple gradient → solid fallback).
+  const initials = (p.senderName || "New Lantern")
+    .split(/\s+/)
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+  const signHtml = p.senderName
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${LINE};margin-top:4px;"><tr><td style="padding-top:20px;">
+        <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+          <td style="vertical-align:middle;padding-right:12px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="40" style="width:40px;height:40px;background:${PURPLE};border-radius:50%;"><tr><td align="center" style="font:700 14px/40px ${FONT};color:#FFFFFF;">${esc(initials)}</td></tr></table>
+          </td>
+          <td style="vertical-align:middle;">
+            <div style="font:700 14px/1.2 ${FONT};color:${INK};">${esc(p.senderName)}</div>
+            <div style="font:400 12.5px/1.3 ${FONT};color:${INK3};margin-top:1px;">Implementation Lead · New Lantern</div>
+          </td>
+        </tr></table>
+      </td></tr></table>`
     : "";
 
   const greeting = p.orgName
-    ? `<p style="font:400 15px/1.55 ${FONT};color:${INK};margin:0 0 14px;">Hi ${esc(p.orgName)} team,</p>`
+    ? `<p style="font:400 15px/1.6 ${FONT};color:${INK2};margin:0 0 6px;">Hi <b style="color:${INK};font-weight:700;">${esc(p.orgName)}</b> team,</p>`
     : "";
 
   return `<!DOCTYPE html>
@@ -857,39 +911,47 @@ export function buildStatusUpdateEmailHtml(p: StatusUpdatePayload): string {
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <meta name="format-detection" content="telephone=no">
   <title>${esc(p.subject)}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
     @media only screen and (max-width:600px) {
       .nl-card { width:100% !important; border-radius:0 !important; }
-      .nl-pad { padding:22px 18px 24px !important; }
-      .nl-cta { display:block !important; text-align:center !important; }
-      .nl-owner { font-size:12px !important; }
+      .nl-hdr, .nl-ft { padding-left:20px !important; padding-right:20px !important; }
+      .nl-pad { padding:24px 20px 6px !important; }
+      .nl-cta { display:block !important; }
+      .nl-owner span { font-size:10.5px !important; }
     }
   </style>
 </head>
-<body style="margin:0;padding:0;background:#F4F5F7;-webkit-text-size-adjust:100%;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F4F5F7;padding:28px 0;">
+<body style="margin:0;padding:0;background:#0C0C0D;-webkit-text-size-adjust:100%;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0C0C0D;padding:28px 0;">
     <tr><td align="center" style="padding:0 12px;">
-      <table role="presentation" cellpadding="0" cellspacing="0" class="nl-card" width="600" style="width:100%;max-width:600px;background:#FFFFFF;border:1px solid ${LINE};border-radius:10px;">
-        <tr><td style="padding:18px 22px;border-bottom:1px solid ${LINE};">
+      <table role="presentation" cellpadding="0" cellspacing="0" class="nl-card" width="600" style="width:100%;max-width:600px;background:#FFFFFF;border-radius:14px;overflow:hidden;">
+
+        <tr><td class="nl-hdr" style="background:#000000;padding:22px 32px;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-            <td style="font:700 17px/1 ${FONT};color:${INK};">New Lantern</td>
-            <td align="right" style="font:400 13px/1 ${FONT};color:${MUTED};">Implementation update</td>
+            <td style="font:800 18px/1 ${FONT};letter-spacing:-0.02em;color:#FFFFFF;">New Lantern</td>
+            <td align="right" style="font:600 10px/1 ${FONT};text-transform:uppercase;letter-spacing:0.14em;color:#9A9AA2;">Implementation Update</td>
           </tr></table>
         </td></tr>
-        <tr><td class="nl-pad" style="padding:26px 26px 28px;">
-          <h1 style="font:700 21px/1.3 ${FONT};color:${INK};margin:0 0 16px;">${esc(p.subject)}</h1>
+
+        <tr><td class="nl-pad" style="padding:30px 32px 8px;">
           ${greeting}
-          <p style="font:400 15px/1.6 ${FONT};color:${INK};margin:0 0 18px;white-space:pre-line;">${esc(p.note)}</p>
+          <p style="font:400 14.5px/1.62 ${FONT};color:${INK2};margin:0 0 24px;white-space:pre-line;">${esc(p.note)}</p>
           ${progressHtml}
           ${blockersHtml}
           ${tasksHtml}
           ${ctaHtml}
-          ${signHtml}
           ${replyHtml}
+          ${signHtml}
         </td></tr>
-        <tr><td style="padding:16px 26px 22px;border-top:1px solid ${LINE};">
-          <div style="font:400 12px/1.5 ${FONT};color:${MUTED};">New Lantern · PACS Implementation${p.partnerName ? " · " + esc(p.partnerName) : ""}</div>
+
+        <tr><td class="nl-ft" style="background:#000000;padding:22px 32px 26px;">
+          <div style="font:700 14px/1 ${FONT};color:#FFFFFF;margin-bottom:12px;">New Lantern</div>
+          <p style="font:400 11.5px/1.6 ${FONT};color:#B98A3A;margin:0 0 8px;">Do not reply with protected health information (PHI). Share files through your secure site portal.</p>
+          <p style="font:400 11.5px/1.6 ${FONT};color:#7A7A82;margin:0 0 8px;">You're receiving this as a named contact on the ${esc(p.orgName)} implementation.</p>
+          <p style="font:400 11.5px/1.6 ${FONT};color:#7A7A82;margin:0;">New Lantern${p.partnerName ? " · " + esc(p.partnerName) : ""} · PACS Implementation</p>
         </td></tr>
+
       </table>
     </td></tr>
   </table>
@@ -965,10 +1027,57 @@ export const exportsRouter = router({
 
       const stage = data.org.status === "completed" ? "live" : "implementing";
 
-      // ── People on the site: site users + this partner's admins ──────────────
+      // ── People on the site: named contacts (shown by first name) first, then
+      // site users + this partner's admins. ──────────────────────────────────
       const recipients: Array<{ label: string; email: string }> = [];
       const assigneeSet = new Map<string, string>(); // value → label
+      const seenEmail = new Set<string>();
       if (orgRow) {
+        // Named contacts from the intake A.contacts table → the "To" row shows
+        // each person by first name (e.g. "Pranay · IT Connectivity").
+        const CONTACT_ROLE_LABELS: Record<string, string> = {
+          admin: "Administrative",
+          it: "IT Connectivity",
+          it_post_prod: "IT Post-Production Support",
+          clinical: "Clinical",
+          radiologist: "Radiologist Champion",
+          pm: "Project Manager",
+        };
+        const [contactsRow] = await db
+          .select({ response: intakeResponses.response })
+          .from(intakeResponses)
+          .where(
+            and(
+              eq(intakeResponses.organizationId, orgRow.id),
+              eq(intakeResponses.questionId, "A.contacts")
+            )
+          )
+          .limit(1);
+        if (contactsRow?.response) {
+          try {
+            const contacts = JSON.parse(contactsRow.response) as Record<
+              string,
+              { name?: string; email?: string; phone?: string }
+            >;
+            for (const [roleKey, c] of Object.entries(contacts)) {
+              const email = (c?.email || "").trim();
+              const name = (c?.name || "").trim();
+              const role = CONTACT_ROLE_LABELS[roleKey] || roleKey;
+              const firstName = name ? name.split(/\s+/)[0] : "";
+              if (name) assigneeSet.set(name, firstName || name);
+              if (email && !seenEmail.has(email.toLowerCase())) {
+                seenEmail.add(email.toLowerCase());
+                recipients.push({
+                  label: firstName ? `${firstName} · ${role}` : role,
+                  email,
+                });
+              }
+            }
+          } catch {
+            /* malformed contacts JSON — fall back to portal users below */
+          }
+        }
+
         const peopleRows = await db
           .select({
             name: users.name,
@@ -980,21 +1089,22 @@ export const exportsRouter = router({
           })
           .from(users)
           .where(eq(users.isActive, 1));
-        const seenEmail = new Set<string>();
         for (const u of peopleRows) {
           const isSiteUser = u.organizationId === orgRow.id;
           const isPartnerAdmin =
             u.role === "admin" && !!orgRow.clientId && u.clientId === orgRow.clientId;
           if (!isSiteUser && !isPartnerAdmin) continue;
           const display = (u.name || u.email || "").trim();
-          if (u.email && !seenEmail.has(u.email)) {
-            seenEmail.add(u.email);
+          const email = (u.email || "").trim();
+          if (email && !seenEmail.has(email.toLowerCase())) {
+            seenEmail.add(email.toLowerCase());
+            const firstName = display ? display.split(/\s+/)[0] : "";
             recipients.push({
-              label: `${display || u.email}${isPartnerAdmin ? " · Partner" : " · Site"}`,
-              email: u.email,
+              label: `${firstName || display || email}${isPartnerAdmin ? " · Partner" : " · Site"}`,
+              email,
             });
           }
-          if (display) assigneeSet.set(display, display);
+          if (display) assigneeSet.set(display, display.split(/\s+/)[0] || display);
         }
       }
       // Owner pickers: real people first, then the standard contact roles.
