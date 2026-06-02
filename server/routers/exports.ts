@@ -986,6 +986,12 @@ export const exportsRouter = router({
         }));
 
       const overall = stage === "live" ? 100 : data.overallPct;
+
+      // Browseable catalog excludes resolved work — passed/N/A tests and
+      // completed/N/A tasks — so admins can only add still-open items.
+      const DONE_STATUSES = new Set(["Pass", "N/A", "Completed"]);
+      const browseCatalog = catalog.filter((it) => !DONE_STATUSES.has(it.status));
+
       const note =
         stage === "live"
           ? `Your site is live. Here's a quick wrap-up of where the ${data.org.name} implementation landed and anything still open.`
@@ -1009,7 +1015,7 @@ export const exportsRouter = router({
         },
         recipients,
         assignees,
-        catalog,
+        catalog: browseCatalog,
         blockers,
         tasks,
       };
