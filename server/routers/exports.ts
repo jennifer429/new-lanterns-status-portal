@@ -24,7 +24,7 @@ import {
   taskCompletion,
   validationResults,
 } from "../../drizzle/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import {
   syncTaskCompletionToNotion,
   syncValidationResultToNotion,
@@ -1209,6 +1209,35 @@ export const exportsRouter = router({
         new Set([...(input.cc ?? []), ...(senderEmail ? [senderEmail] : [])])
       ).filter((e) => !input.to.includes(e));
 
+      // Safety net: never email or write back already-resolved work, even if
+      // the client submitted it — drop completed/N/A tasks and passed/N/A
+      // tests by re-checking their live status here. (Free-text and
+      // questionnaire items, which have no completion record, always pass.)
+      const resolvedSourceIds = new Set<string>();
+      {
+        const linked = [...input.blockers, ...input.tasks];
+        const taskIds = linked.filter((i) => i.kind === "task" && i.sourceId).map((i) => i.sourceId!);
+        const testKeys = linked.filter((i) => i.kind === "test" && i.sourceId).map((i) => i.sourceId!);
+        if (taskIds.length) {
+          const rows = await db
+            .select()
+            .from(taskCompletion)
+            .where(and(eq(taskCompletion.organizationId, org.id), inArray(taskCompletion.taskId, taskIds)));
+          for (const r of rows) if (r.notApplicable === 1 || r.completed === 1) resolvedSourceIds.add(r.taskId);
+        }
+        if (testKeys.length) {
+          const rows = await db
+            .select()
+            .from(validationResults)
+            .where(and(eq(validationResults.organizationId, org.id), inArray(validationResults.testKey, testKeys)));
+          for (const r of rows) if (r.status === "Pass" || r.status === "N/A") resolvedSourceIds.add(r.testKey);
+        }
+      }
+      const keepItem = (i: { kind?: string; sourceId?: string }) =>
+        !(i.kind && i.sourceId && resolvedSourceIds.has(i.sourceId));
+      const sendBlockers = input.blockers.filter(keepItem);
+      const sendTasks = input.tasks.filter(keepItem);
+
       const html = buildStatusUpdateEmailHtml({
         orgName: org.name,
         partnerName,
@@ -1218,8 +1247,8 @@ export const exportsRouter = router({
         dashboardUrl,
         include: input.include,
         progress: input.progress,
-        blockers: input.include.blockers ? input.blockers : [],
-        tasks: input.include.tasks ? input.tasks : [],
+        blockers: input.include.blockers ? sendBlockers : [],
+        tasks: input.include.tasks ? sendTasks : [],
       });
 
       const sent = await sendEmail({
@@ -1242,8 +1271,8 @@ export const exportsRouter = router({
       let writtenBack = 0;
       if (input.writeBack) {
         const items = [
-          ...(input.include.blockers ? input.blockers.map((b) => ({ ...b, bucket: "blocker" as const })) : []),
-          ...(input.include.tasks ? input.tasks.map((t) => ({ ...t, bucket: "task" as const })) : []),
+          ...(input.include.blockers ? sendBlockers.map((b) => ({ ...b, bucket: "blocker" as const })) : []),
+          ...(input.include.tasks ? sendTasks.map((t) => ({ ...t, bucket: "task" as const })) : []),
         ];
         for (const it of items) {
           if (!it.kind || !it.sourceId) continue; // custom free-text item, nothing to link
