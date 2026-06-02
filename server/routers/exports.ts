@@ -750,39 +750,42 @@ export interface StatusUpdatePayload {
  * reply prompt), email-client-safe with table layout + inline styles.
  */
 export function buildStatusUpdateEmailHtml(p: StatusUpdatePayload): string {
-  const ACCENT = "#7C1EBD";
-  const RED = "#E53E3E";
-  const GREEN = "#16A34A";
+  const ACCENT = "#6D28D9";
+  const RED = "#DC2626";
+  const GREEN = "#15803D";
+  const INK = "#1F2933";
+  const MUTED = "#6B7280";
+  const LINE = "#E5E7EB";
+  const FONT =
+    "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
   const live = p.progress.stage === "live";
   const esc = (s: string) =>
     String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+  // A single line item: "Title — Owner", title links to the portal when given.
   const item = (text: string, owner: string, dotColor: string, link?: string) => {
     const label = esc(text) || "—";
     const cell = link
-      ? `<a href="${esc(link)}" style="color:#ECECEE;text-decoration:none;border-bottom:1px solid rgba(124,30,189,0.55);">${label}</a>`
+      ? `<a href="${esc(link)}" style="color:${ACCENT};text-decoration:underline;">${label}</a>`
       : label;
     return `
     <tr>
-      <td style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.08);vertical-align:middle;width:14px;">
-        <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${dotColor};"></span>
+      <td style="padding:8px 10px 8px 0;border-bottom:1px solid ${LINE};vertical-align:top;width:10px;">
+        <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${dotColor};margin-top:5px;"></span>
       </td>
-      <td style="padding:7px 8px;border-bottom:1px solid rgba(255,255,255,0.08);font:500 13px/1.4 'Figtree',Arial,sans-serif;color:#ECECEE;">${cell}</td>
-      <td class="nl-owner" style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.08);text-align:right;white-space:nowrap;font:600 10.5px/1 'Roboto Mono',monospace;color:#9A9AA0;">${esc(owner)}</td>
+      <td style="padding:8px 8px;border-bottom:1px solid ${LINE};font:400 15px/1.45 ${FONT};color:${INK};">${cell}</td>
+      <td class="nl-owner" style="padding:8px 0;border-bottom:1px solid ${LINE};text-align:right;white-space:nowrap;font:400 13px/1.45 ${FONT};color:${MUTED};vertical-align:top;">${esc(owner)}</td>
     </tr>`;
   };
 
-  const section = (title: string, color: string, rows: string) => `
-    <div style="margin-bottom:18px;">
-      <div style="font:600 11px/1 'Roboto Mono',monospace;text-transform:uppercase;letter-spacing:0.04em;color:${color};margin-bottom:6px;">${title}</div>
-      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;">${rows}</table>
-    </div>`;
+  const section = (title: string, rows: string) => `
+    <p style="font:700 13px/1.3 ${FONT};color:${INK};margin:22px 0 4px;">${title}</p>
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;">${rows}</table>`;
 
   const blockersHtml =
     p.include.blockers && p.blockers.length
       ? section(
-          "Blockers",
-          RED,
+          "What we need from your team",
           p.blockers.map((b) => item(b.text, b.owner, RED, b.link)).join("")
         )
       : "";
@@ -790,51 +793,61 @@ export function buildStatusUpdateEmailHtml(p: StatusUpdatePayload): string {
   const tasksHtml =
     p.include.tasks && p.tasks.length
       ? section(
-          "Tasks &amp; assignments",
-          "#9A9AA0",
+          "Coming up next",
           p.tasks
             .map((t) => item(t.text, `${esc(t.owner)}${t.due ? ` · ${esc(t.due)}` : ""}`, ACCENT, t.link))
             .join("")
         )
       : "";
 
+  const pct = Math.max(0, Math.min(100, p.progress.overall));
   const progressHtml = p.include.progress
     ? `
-    <div style="border:1px solid rgba(255,255,255,0.10);border-radius:10px;padding:13px 14px;margin-bottom:18px;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-        <td style="font:600 12.5px/1 'Figtree',Arial,sans-serif;color:#ECECEE;">Overall progress</td>
-        <td style="text-align:right;font:800 14px/1 'Figtree',Arial,sans-serif;color:${live ? GREEN : ACCENT};">${live ? "Live" : p.progress.overall + "%"}</td>
-      </tr></table>
-      <div style="height:5px;background:rgba(255,255,255,0.08);border-radius:99px;margin:8px 0 13px;overflow:hidden;">
-        <div style="height:100%;width:${Math.max(0, Math.min(100, p.progress.overall))}%;background:${live ? GREEN : ACCENT};border-radius:99px;"></div>
-      </div>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-        ${[
-          [`${p.progress.q}/${p.progress.qTotal}`, "Questionnaire"],
-          [`${p.progress.vPass}/${p.progress.vTotal}`, "Tests passed"],
-          [`${p.progress.tDone}/${p.progress.tTotal}`, "Tasks done"],
-        ]
-          .map(
-            ([v, l]) => `<td style="width:33%;vertical-align:top;">
-            <div style="font:800 16px/1 'Figtree',Arial,sans-serif;letter-spacing:-0.03em;color:#FFFFFF;">${v}</div>
-            <div style="font:600 9.5px/1.2 'Roboto Mono',monospace;text-transform:uppercase;letter-spacing:0.03em;color:#9A9AA0;margin-top:3px;">${l}</div>
-          </td>`
-          )
-          .join("")}
-      </tr></table>
-    </div>`
-    : "";
-
-  const replyHtml = p.include.promptReply
-    ? `<p style="font:500 12px/1.55 'Figtree',Arial,sans-serif;color:#9A9AA0;margin:14px 0 0;padding-top:12px;border-top:1px solid rgba(255,255,255,0.08);">Something look off, or already handled? <b style="color:#FFFFFF;">Just reply to this email</b> — it routes straight to your implementation team.</p>`
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${LINE};border-radius:8px;margin:6px 0 4px;">
+      <tr><td style="padding:16px 18px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td style="font:600 14px/1.3 ${FONT};color:${INK};">Overall progress</td>
+          <td style="text-align:right;font:700 15px/1.3 ${FONT};color:${live ? GREEN : ACCENT};">${live ? "Live" : pct + "%"}</td>
+        </tr></table>
+        <div style="height:8px;background:#EEF0F3;border-radius:99px;margin:10px 0 14px;">
+          <div style="height:8px;width:${pct}%;background:${live ? GREEN : ACCENT};border-radius:99px;font-size:0;line-height:0;">&nbsp;</div>
+        </div>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+          ${[
+            [`${p.progress.q}/${p.progress.qTotal}`, "Questionnaire"],
+            [`${p.progress.vPass}/${p.progress.vTotal}`, "Tests passed"],
+            [`${p.progress.tDone}/${p.progress.tTotal}`, "Tasks done"],
+          ]
+            .map(
+              ([v, l]) => `<td style="width:33%;vertical-align:top;">
+              <div style="font:700 20px/1 ${FONT};color:${INK};">${v}</div>
+              <div style="font:400 12px/1.3 ${FONT};color:${MUTED};margin-top:4px;">${l}</div>
+            </td>`
+            )
+            .join("")}
+        </tr></table>
+      </td></tr>
+    </table>`
     : "";
 
   const ctaHtml = p.dashboardUrl
-    ? `<a href="${esc(p.dashboardUrl)}" class="nl-cta" style="display:inline-block;margin-top:4px;background:${ACCENT};color:#ffffff;font:600 12.5px/1 'Figtree',Arial,sans-serif;padding:11px 15px;border-radius:8px;text-decoration:none;">View your site dashboard →</a>`
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0 4px;"><tr>
+        <td style="background:${ACCENT};border-radius:6px;">
+          <a href="${esc(p.dashboardUrl)}" class="nl-cta" style="display:inline-block;color:#ffffff;font:600 15px/1 ${FONT};padding:13px 22px;text-decoration:none;">View your site dashboard &rarr;</a>
+        </td>
+      </tr></table>`
     : "";
 
   const signHtml = p.senderName
-    ? `<p style="font:500 12.5px/1.55 'Figtree',Arial,sans-serif;color:#C9C9CE;margin:18px 0 0;">— ${esc(p.senderName)}<br><span style="color:#9A9AA0;">New Lantern Implementation Team</span></p>`
+    ? `<p style="font:400 15px/1.5 ${FONT};color:${INK};margin:24px 0 0;">Best,<br>${esc(p.senderName)}<br><span style="color:${MUTED};">New Lantern Implementation Team</span></p>`
+    : "";
+
+  const replyHtml = p.include.promptReply
+    ? `<p style="font:400 14px/1.55 ${FONT};color:${MUTED};margin:22px 0 0;padding-top:16px;border-top:1px solid ${LINE};">Something look off, or already handled? Just reply to this email and it will reach your implementation team directly.</p>`
+    : "";
+
+  const greeting = p.orgName
+    ? `<p style="font:400 15px/1.55 ${FONT};color:${INK};margin:0 0 14px;">Hi ${esc(p.orgName)} team,</p>`
     : "";
 
   return `<!DOCTYPE html>
@@ -842,35 +855,31 @@ export function buildStatusUpdateEmailHtml(p: StatusUpdatePayload): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <meta name="color-scheme" content="dark light">
   <meta name="format-detection" content="telephone=no">
   <title>${esc(p.subject)}</title>
   <style>
-    /* Phone-first: the card fills the screen, padding tightens, the CTA
-       becomes a full-width tap target. Clients that ignore <style> still get
-       the inline fallbacks (width:100% + max-width:560px) below. */
     @media only screen and (max-width:600px) {
-      .nl-card { width:100% !important; border-radius:0 !important; border-left:0 !important; border-right:0 !important; }
-      .nl-pad { padding:16px 14px 18px !important; }
-      .nl-subject { font-size:17px !important; }
-      .nl-cta { display:block !important; text-align:center !important; padding:14px 16px !important; }
-      .nl-owner { font-size:11px !important; }
+      .nl-card { width:100% !important; border-radius:0 !important; }
+      .nl-pad { padding:22px 18px 24px !important; }
+      .nl-cta { display:block !important; text-align:center !important; }
+      .nl-owner { font-size:12px !important; }
     }
   </style>
 </head>
-<body style="margin:0;padding:0;background:#000000;-webkit-text-size-adjust:100%;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#000000;padding:24px 0;">
-    <tr><td align="center" style="padding:0 8px;">
-      <table role="presentation" cellpadding="0" cellspacing="0" class="nl-card" width="560" style="width:100%;max-width:560px;background:#0A0A0A;border:1px solid rgba(255,255,255,0.10);border-radius:12px;overflow:hidden;">
-        <tr><td style="padding:13px 16px;border-bottom:1px solid rgba(255,255,255,0.10);">
+<body style="margin:0;padding:0;background:#F4F5F7;-webkit-text-size-adjust:100%;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F4F5F7;padding:28px 0;">
+    <tr><td align="center" style="padding:0 12px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" class="nl-card" width="600" style="width:100%;max-width:600px;background:#FFFFFF;border:1px solid ${LINE};border-radius:10px;">
+        <tr><td style="padding:18px 22px;border-bottom:1px solid ${LINE};">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-            <td style="font:800 15px/1 'Figtree',Arial,sans-serif;color:#FFFFFF;letter-spacing:-0.02em;">New Lantern</td>
-            <td align="right" style="font:600 9px/1 'Roboto Mono',monospace;text-transform:uppercase;letter-spacing:0.06em;color:#9A9AA0;">Implementation Update</td>
+            <td style="font:700 17px/1 ${FONT};color:${INK};">New Lantern</td>
+            <td align="right" style="font:400 13px/1 ${FONT};color:${MUTED};">Implementation update</td>
           </tr></table>
         </td></tr>
-        <tr><td class="nl-pad" style="padding:18px 18px 20px;">
-          <div class="nl-subject" style="font:700 16px/1.3 'Figtree',Arial,sans-serif;letter-spacing:-0.02em;color:#FFFFFF;margin-bottom:10px;">${esc(p.subject)}</div>
-          <p style="font:500 12.5px/1.55 'Figtree',Arial,sans-serif;color:#C9C9CE;margin:0 0 16px;white-space:pre-line;">${esc(p.note)}</p>
+        <tr><td class="nl-pad" style="padding:26px 26px 28px;">
+          <h1 style="font:700 21px/1.3 ${FONT};color:${INK};margin:0 0 16px;">${esc(p.subject)}</h1>
+          ${greeting}
+          <p style="font:400 15px/1.6 ${FONT};color:${INK};margin:0 0 18px;white-space:pre-line;">${esc(p.note)}</p>
           ${progressHtml}
           ${blockersHtml}
           ${tasksHtml}
@@ -878,8 +887,10 @@ export function buildStatusUpdateEmailHtml(p: StatusUpdatePayload): string {
           ${signHtml}
           ${replyHtml}
         </td></tr>
+        <tr><td style="padding:16px 26px 22px;border-top:1px solid ${LINE};">
+          <div style="font:400 12px/1.5 ${FONT};color:${MUTED};">New Lantern · PACS Implementation${p.partnerName ? " · " + esc(p.partnerName) : ""}</div>
+        </td></tr>
       </table>
-      <div style="font:500 10.5px/1.4 'Roboto Mono',monospace;color:#5A5A60;margin-top:14px;">New Lantern · PACS Implementation${p.partnerName ? " · " + esc(p.partnerName) : ""}</div>
     </td></tr>
   </table>
 </body>
