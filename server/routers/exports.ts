@@ -865,8 +865,7 @@ export function buildStatusUpdateEmailHtml(p: StatusUpdatePayload): string {
       </td></tr></table>`
     : "";
 
-  // ── Handwritten note up top (fake-personal sticky note), printed status below ──
-  const HAND = "'Caveat','Segoe Script','Bradley Hand','Comic Sans MS',cursive";
+  // ── Plainly-written personal note up top, printed status below ──
   const today = new Date().toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -887,21 +886,15 @@ export function buildStatusUpdateEmailHtml(p: StatusUpdatePayload): string {
     : "";
   const noteText = `${esc(p.note)}${ps}`;
 
-  // The sticky note: warm paper, cursive — looks hand-written even when the
-  // web font is stripped (the `cursive` fallback renders the client's script face).
-  const stickyNote = `
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 6px;"><tr><td
-      style="background:#FEF6C7;border:1px solid #F4E59A;border-radius:3px;box-shadow:0 8px 22px rgba(0,0,0,0.12);">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="padding:28px 32px 26px;">
-        <div style="font:700 26px/1.35 ${HAND};color:#2E2A1A;margin-bottom:8px;">${greetLine}</div>
-        <div style="font:400 22px/1.5 ${HAND};color:#3A3320;white-space:pre-line;">${noteText}</div>
-        ${p.senderName ? `<div style="font:700 24px/1.2 ${HAND};color:${PURPLE};margin-top:16px;">– ${esc(p.senderName)}</div>` : ""}
-      </td></tr></table>
-    </td></tr></table>`;
+  // Reads like a normal email someone typed — greeting, note, plain sign-off.
+  const writtenNote = `
+    <p style="font:400 15px/1.6 ${FONT};color:${INK};margin:0 0 12px;">${greetLine}</p>
+    <p style="font:400 14.5px/1.62 ${FONT};color:${INK2};margin:0;white-space:pre-line;">${noteText}</p>
+    ${p.senderName ? `<p style="font:400 14.5px/1.62 ${FONT};color:${INK2};margin:16px 0 0;">Thanks,<br><span style="color:${INK};font-weight:600;">${esc(p.senderName)}</span></p>` : ""}`;
 
   const statusInner = `${progressHtml}${blockersHtml}${tasksHtml}`;
   const statusBlock = statusInner.trim()
-    ? `<div style="height:1px;background:${LINE};margin:30px 0 18px;"></div>
+    ? `<div style="height:1px;background:${LINE};margin:28px 0 18px;"></div>
        <div style="font:600 10px/1 ${FONT};text-transform:uppercase;letter-spacing:0.12em;color:${INK3};margin-bottom:16px;">Latest from the implementation portal · as of ${today}</div>
        ${statusInner}${ctaHtml}`
     : ctaHtml;
@@ -913,11 +906,11 @@ export function buildStatusUpdateEmailHtml(p: StatusUpdatePayload): string {
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <meta name="format-detection" content="telephone=no">
   <title>${esc(p.subject)}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     @media only screen and (max-width:600px) {
       .nl-card { width:100% !important; border-radius:0 !important; }
-      .nl-pad { padding:22px 18px 18px !important; }
+      .nl-pad { padding:24px 20px 18px !important; }
       .nl-cta { display:block !important; }
       .nl-owner span { font-size:10.5px !important; }
     }
@@ -928,8 +921,8 @@ export function buildStatusUpdateEmailHtml(p: StatusUpdatePayload): string {
     <tr><td align="center" style="padding:0 12px;">
       <table role="presentation" cellpadding="0" cellspacing="0" class="nl-card" width="600" style="width:100%;max-width:600px;background:#FFFFFF;border:1px solid ${LINE};border-radius:12px;overflow:hidden;">
 
-        <tr><td class="nl-pad" style="padding:26px 30px 20px;">
-          ${stickyNote}
+        <tr><td class="nl-pad" style="padding:28px 30px 22px;">
+          ${writtenNote}
           ${statusBlock}
         </td></tr>
 
