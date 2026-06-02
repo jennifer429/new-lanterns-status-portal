@@ -480,3 +480,5 @@
 - [ ] Remove A.contacts intakeResponses dependency — contacts come from Notion Contacts v2 only
 - [ ] Display all contacts dynamically with whatever roles exist (no fixed slot limit)
 - [ ] Write instructions for Claude/people on managing contacts in Notion
+- [x] Merge PR #88: Add admin "Send status update" email composer
+- [x] Merge PR #89: Split hero file count into questionnaire vs site files

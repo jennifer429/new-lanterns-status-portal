@@ -1,0 +1,46 @@
+{
+  "query": "SELECT questionId, LEFT(response, 80) as response_preview FROM intakeResponses WHERE organizationId = 990001 AND questionId IN ('H.1', 'H.2', 'H.3', 'A.contacts', 'A.6', 'A.6.1', 'L.2', 'L.3', 'L.4', 'L.8') ORDER BY questionId;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT questionId, LEFT(response, 80) as response_preview FROM intakeResponses WHERE organizationId = 990001 AND questionId IN ('H.1', 'H.2', 'H.3', 'A.contacts', 'A.6', 'A.6.1', 'L.2', 'L.3', 'L.4', 'L.8') ORDER BY questionId;",
+  "rows": [
+    {
+      "questionId": "A.6",
+      "response_preview": "No"
+    },
+    {
+      "questionId": "A.contacts",
+      "response_preview": "{\"it\":{\"name\":\"John Jordan\",\"phone\":\"256-235-5976\",\"email\":\"jjordan@rmccares.org"
+    },
+    {
+      "questionId": "H.1",
+      "response_preview": "1 connection point with 2 route-based VPN tunnels (primary and secondary) for re"
+    },
+    {
+      "questionId": "H.2",
+      "response_preview": "Regional Medical Center of Anniston (RMCA) — rmccares.org"
+    },
+    {
+      "questionId": "H.3",
+      "response_preview": "None noted"
+    },
+    {
+      "questionId": "L.2",
+      "response_preview": ""
+    },
+    {
+      "questionId": "L.3",
+      "response_preview": ""
+    },
+    {
+      "questionId": "L.4",
+      "response_preview": "Tentative Go-Live: June 24, 2026"
+    }
+  ],
+  "messages": [
+    "Sites/locations under",
+    "Key milestones:",
+    "- HL7 test environment target "
+  ],
+  "stdout": "questionId\tresponse_preview\nA.6\tNo\nA.contacts\t{\"it\":{\"name\":\"John Jordan\",\"phone\":\"256-235-5976\",\"email\":\"jjordan@rmccares.org\nH.1\t1 connection point with 2 route-based VPN tunnels (primary and secondary) for re\nH.2\tRegional Medical Center of Anniston (RMCA) — rmccares.org\n\nSites/locations under\nH.3\tNone noted\nL.2\t\nL.3\t\nL.4\tTentative Go-Live: June 24, 2026\n\nKey milestones:\n- HL7 test environment target \n",
+  "stderr": "",
+  "execution_time_ms": 259
+}
