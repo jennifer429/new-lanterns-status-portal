@@ -722,6 +722,7 @@ export interface StatusUpdatePayload {
   subject: string;
   note: string;
   senderName?: string;
+  recipientNames?: string[];
   dashboardUrl?: string;
   include: {
     progress: boolean;
@@ -758,7 +759,6 @@ export function buildStatusUpdateEmailHtml(p: StatusUpdatePayload): string {
   const LINE2 = "#EDEDEF";
   const SURF2 = "#FAFAFB";
   const PURPLE = "#7C1EBD";
-  const PURPLE_SOFT = "#F3EAFB";
   const RED = "#E53E3E";
   const GREEN = "#16A34A";
   // Figtree is requested via <link>, but email clients ignore web fonts — the
@@ -855,54 +855,56 @@ export function buildStatusUpdateEmailHtml(p: StatusUpdatePayload): string {
     : "";
 
   const ctaHtml = p.dashboardUrl
-    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:28px 0 24px;"><tr><td align="center">
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0 6px;"><tr><td align="center">
         <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;"><tr>
           <td style="background:${PURPLE};border-radius:8px;">
-            <a href="${esc(p.dashboardUrl)}" class="nl-cta" style="display:inline-block;color:#FFFFFF;font:700 15px/1 ${FONT};letter-spacing:-0.01em;padding:14px 30px;text-decoration:none;">View your site dashboard &rarr;</a>
+            <a href="${esc(p.dashboardUrl)}" class="nl-cta" style="display:inline-block;color:#FFFFFF;font:700 14px/1 ${FONT};letter-spacing:-0.01em;padding:13px 28px;text-decoration:none;">Open your dashboard &rarr;</a>
           </td>
         </tr></table>
-        <div style="font:400 12px/1.4 ${FONT};color:${INK3};margin-top:11px;">See full status, upload files, and look up answers anytime.</div>
+        <div style="font:400 12px/1.4 ${FONT};color:${INK3};margin-top:9px;">Log in to see everything, upload files, and explore.</div>
       </td></tr></table>`
     : "";
 
-  const replyHtml = p.include.promptReply
-    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${LINE};border-radius:12px;background:${SURF2};margin:0 0 26px;"><tr><td style="padding:16px 18px;">
-        <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-          <td style="vertical-align:top;padding-right:13px;">
-            <table role="presentation" cellpadding="0" cellspacing="0" width="34" style="width:34px;height:34px;background:${PURPLE_SOFT};border-radius:9px;"><tr><td align="center" style="font-size:18px;line-height:34px;color:${PURPLE};">&#9993;</td></tr></table>
-          </td>
-          <td style="vertical-align:top;">
-            <div style="font:700 13.5px/1.3 ${FONT};color:${INK};">Something already handled, or look off?</div>
-            <div style="font:400 13px/1.55 ${FONT};color:${INK2};margin-top:3px;"><b style="color:${INK};">Just reply to this email.</b> It routes straight to your implementation team — no separate login needed.</div>
-          </td>
-        </tr></table>
-      </td></tr></table>`
+  // ── Handwritten note up top (fake-personal sticky note), printed status below ──
+  const HAND = "'Caveat','Segoe Script','Bradley Hand','Comic Sans MS',cursive";
+  const today = new Date().toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  const joinNames = (ns: string[]) => {
+    const u = Array.from(new Set(ns.map((n) => n.trim()).filter(Boolean)));
+    if (u.length === 0) return "";
+    if (u.length === 1) return u[0];
+    if (u.length === 2) return `${u[0]} and ${u[1]}`;
+    if (u.length <= 4) return `${u.slice(0, -1).join(", ")}, and ${u[u.length - 1]}`;
+    return `${u.slice(0, 3).join(", ")}, and team`;
+  };
+  const names = joinNames(p.recipientNames || []);
+  const greetLine = names ? `Hey ${esc(names)},` : p.orgName ? `Hi ${esc(p.orgName)} team,` : "Hi there,";
+  const ps = p.include.promptReply
+    ? "\n\nP.S. If any of this is already handled, just hit reply — it comes straight to me."
     : "";
+  const noteText = `${esc(p.note)}${ps}`;
 
-  // Signature with an initials avatar (purple gradient → solid fallback).
-  const initials = (p.senderName || "New Lantern")
-    .split(/\s+/)
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-  const signHtml = p.senderName
-    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${LINE};margin-top:4px;"><tr><td style="padding-top:20px;">
-        <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-          <td style="vertical-align:middle;padding-right:12px;">
-            <table role="presentation" cellpadding="0" cellspacing="0" width="40" style="width:40px;height:40px;background:${PURPLE};border-radius:50%;"><tr><td align="center" style="font:700 14px/40px ${FONT};color:#FFFFFF;">${esc(initials)}</td></tr></table>
-          </td>
-          <td style="vertical-align:middle;">
-            <div style="font:700 14px/1.2 ${FONT};color:${INK};">${esc(p.senderName)}</div>
-            <div style="font:400 12.5px/1.3 ${FONT};color:${INK3};margin-top:1px;">Implementation Lead · New Lantern</div>
-          </td>
-        </tr></table>
-      </td></tr></table>`
-    : "";
+  // The sticky note: warm paper, cursive — looks hand-written even when the
+  // web font is stripped (the `cursive` fallback renders the client's script face).
+  const stickyNote = `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 6px;"><tr><td
+      style="background:#FEF6C7;border:1px solid #F4E59A;border-radius:3px;box-shadow:0 8px 22px rgba(0,0,0,0.12);">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="padding:28px 32px 26px;">
+        <div style="font:700 26px/1.35 ${HAND};color:#2E2A1A;margin-bottom:8px;">${greetLine}</div>
+        <div style="font:400 22px/1.5 ${HAND};color:#3A3320;white-space:pre-line;">${noteText}</div>
+        ${p.senderName ? `<div style="font:700 24px/1.2 ${HAND};color:${PURPLE};margin-top:16px;">– ${esc(p.senderName)}</div>` : ""}
+      </td></tr></table>
+    </td></tr></table>`;
 
-  const greeting = p.orgName
-    ? `<p style="font:400 15px/1.6 ${FONT};color:${INK2};margin:0 0 6px;">Hi <b style="color:${INK};font-weight:700;">${esc(p.orgName)}</b> team,</p>`
-    : "";
+  const statusInner = `${progressHtml}${blockersHtml}${tasksHtml}`;
+  const statusBlock = statusInner.trim()
+    ? `<div style="height:1px;background:${LINE};margin:30px 0 18px;"></div>
+       <div style="font:600 10px/1 ${FONT};text-transform:uppercase;letter-spacing:0.12em;color:${INK3};margin-bottom:16px;">Latest from the implementation portal · as of ${today}</div>
+       ${statusInner}${ctaHtml}`
+    : ctaHtml;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -911,45 +913,29 @@ export function buildStatusUpdateEmailHtml(p: StatusUpdatePayload): string {
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <meta name="format-detection" content="telephone=no">
   <title>${esc(p.subject)}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     @media only screen and (max-width:600px) {
       .nl-card { width:100% !important; border-radius:0 !important; }
-      .nl-hdr, .nl-ft { padding-left:20px !important; padding-right:20px !important; }
-      .nl-pad { padding:24px 20px 6px !important; }
+      .nl-pad { padding:22px 18px 18px !important; }
       .nl-cta { display:block !important; }
       .nl-owner span { font-size:10.5px !important; }
     }
   </style>
 </head>
-<body style="margin:0;padding:0;background:#0C0C0D;-webkit-text-size-adjust:100%;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0C0C0D;padding:28px 0;">
+<body style="margin:0;padding:0;background:#EDEAE3;-webkit-text-size-adjust:100%;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EDEAE3;padding:28px 0;">
     <tr><td align="center" style="padding:0 12px;">
-      <table role="presentation" cellpadding="0" cellspacing="0" class="nl-card" width="600" style="width:100%;max-width:600px;background:#FFFFFF;border-radius:14px;overflow:hidden;">
+      <table role="presentation" cellpadding="0" cellspacing="0" class="nl-card" width="600" style="width:100%;max-width:600px;background:#FFFFFF;border:1px solid ${LINE};border-radius:12px;overflow:hidden;">
 
-        <tr><td class="nl-hdr" style="background:#000000;padding:22px 32px;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-            <td style="font:800 18px/1 ${FONT};letter-spacing:-0.02em;color:#FFFFFF;">New Lantern</td>
-            <td align="right" style="font:600 10px/1 ${FONT};text-transform:uppercase;letter-spacing:0.14em;color:#9A9AA2;">Implementation Update</td>
-          </tr></table>
+        <tr><td class="nl-pad" style="padding:26px 30px 20px;">
+          ${stickyNote}
+          ${statusBlock}
         </td></tr>
 
-        <tr><td class="nl-pad" style="padding:30px 32px 8px;">
-          ${greeting}
-          <p style="font:400 14.5px/1.62 ${FONT};color:${INK2};margin:0 0 24px;white-space:pre-line;">${esc(p.note)}</p>
-          ${progressHtml}
-          ${blockersHtml}
-          ${tasksHtml}
-          ${ctaHtml}
-          ${replyHtml}
-          ${signHtml}
-        </td></tr>
-
-        <tr><td class="nl-ft" style="background:#000000;padding:22px 32px 26px;">
-          <div style="font:700 14px/1 ${FONT};color:#FFFFFF;margin-bottom:12px;">New Lantern</div>
-          <p style="font:400 11.5px/1.6 ${FONT};color:#B98A3A;margin:0 0 8px;">Do not reply with protected health information (PHI). Share files through your secure site portal.</p>
-          <p style="font:400 11.5px/1.6 ${FONT};color:#7A7A82;margin:0 0 8px;">You're receiving this as a named contact on the ${esc(p.orgName)} implementation.</p>
-          <p style="font:400 11.5px/1.6 ${FONT};color:#7A7A82;margin:0;">New Lantern${p.partnerName ? " · " + esc(p.partnerName) : ""} · PACS Implementation</p>
+        <tr><td style="padding:16px 30px 22px;border-top:1px solid ${LINE};">
+          <p style="font:400 11.5px/1.6 ${FONT};color:#B98A3A;margin:0 0 6px;">Please don't reply with protected health information (PHI) — share files through your secure site portal.</p>
+          <p style="font:400 11.5px/1.6 ${FONT};color:${INK3};margin:0;">You're receiving this as a named contact on the ${esc(p.orgName)} implementation · New Lantern${p.partnerName ? " · " + esc(p.partnerName) : ""}</p>
         </td></tr>
 
       </table>
@@ -1203,8 +1189,8 @@ export const exportsRouter = router({
 
       const note =
         stage === "live"
-          ? `Your site is live. Here's a quick wrap-up of where the ${data.org.name} implementation landed and anything still open.`
-          : `Here's where your New Lantern onboarding stands this week. A couple of items need your team to keep us on track for go-live.`;
+          ? `Quick wrap-up below — your site is live. I've left the final status from the implementation portal so you have it on record, plus anything still open.`
+          : `Below is our latest update from the implementation portal. There are a few next steps for your team further down — take a look when you get a chance and let me know if anything's unclear.`;
 
       return {
         orgName: data.org.name,
@@ -1245,6 +1231,7 @@ export const exportsRouter = router({
       z.object({
         organizationSlug: z.string(),
         to: z.array(z.string().email()).min(1, "At least one recipient is required"),
+        toNames: z.array(z.string()).optional(),
         cc: z.array(z.string().email()).optional(),
         subject: z.string().min(1, "Subject is required"),
         note: z.string().default(""),
@@ -1365,6 +1352,7 @@ export const exportsRouter = router({
         subject: input.subject,
         note: input.note,
         senderName,
+        recipientNames: input.toNames,
         dashboardUrl,
         include: input.include,
         progress: input.progress,
