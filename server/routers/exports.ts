@@ -15,8 +15,6 @@ import { protectedProcedure, adminProcedure, router } from "../_core/trpc";
 import { requireDb } from "../db";
 import { sendEmail } from "../email/send";
 import { ENV } from "../_core/env";
-import { storagePut } from "../storage";
-import { renderDashboardSnapshotPng } from "../_core/dashboardSnapshot";
 import {
   organizations,
   clients,
@@ -745,8 +743,6 @@ export interface StatusUpdatePayload {
   blockers: Array<{ text: string; owner: string; link?: string; group?: string }>;
   tasks: Array<{ text: string; owner: string; due?: string; link?: string; group?: string }>;
   completed?: Array<{ text: string }>;
-  /** Absolute URL of the rendered dashboard snapshot PNG (embedded + clickable). */
-  dashboardImageUrl?: string;
 }
 
 /**
@@ -860,21 +856,46 @@ export function buildStatusUpdateEmailHtml(p: StatusUpdatePayload): string {
     ? para(`Thanks,<br><span style="font-weight:600;">${esc(p.senderName)}</span>`, 20)
     : "";
 
-  // The dashboard "screenshot": a real PNG (generated server-side) embedded and
-  // linked to login. Falls back to a plain link if the image isn't available.
-  const snapshotHtml = p.dashboardImageUrl
+  // The dashboard "snapshot": a clean HTML look-alike of the site dashboard
+  // (progress + counts), clickable to login. Always visible (no image blocking),
+  // and the one lightly-styled block in an otherwise plain-text email.
+  const pctSnap = Math.max(0, Math.min(100, Math.round(p.progress.overall)));
+  const liveSite = p.progress.stage === "live";
+  const ACCENT = liveSite ? "#16A34A" : PURPLE;
+  const TRACK = "#ECECEE";
+  const snapStat = (n: string, label: string, first: boolean) =>
+    `<td style="width:33.33%;${first ? "" : `border-left:1px solid ${LINE};`}padding:0 0 0 ${first ? 0 : 14}px;vertical-align:top;">
+      <div style="font:700 18px/1 ${FONT};color:${INK};">${n}</div>
+      <div style="font:400 11px/1.3 ${FONT};color:${INK3};margin-top:4px;">${label}</div>
+    </td>`;
+  const snapshotHtml = p.dashboardUrl
     ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 0;"><tr><td>
-        <a href="${esc(p.dashboardUrl || p.dashboardImageUrl)}" style="text-decoration:none;display:block;">
-          <img src="${esc(p.dashboardImageUrl)}" width="100%" alt="${site} implementation dashboard — click to log in" style="display:block;width:100%;max-width:540px;border:1px solid ${LINE};border-radius:10px;" />
+        <a href="${esc(p.dashboardUrl)}" style="text-decoration:none;display:block;color:${INK};">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${LINE};border-radius:10px;background:#FFFFFF;">
+            <tr><td style="padding:20px 22px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+                <td style="font:700 14px/1.2 ${FONT};color:${INK};">${site} &middot; Implementation</td>
+                <td align="right" style="font:400 12px/1.2 ${FONT};color:${INK3};">${p.partnerName ? esc(p.partnerName) : ""}</td>
+              </tr></table>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:14px;"><tr>
+                <td style="vertical-align:bottom;font:700 36px/1 ${FONT};color:${ACCENT};">${liveSite ? "Live" : `${pctSnap}%`}</td>
+                <td style="vertical-align:bottom;padding-left:10px;font:400 12.5px/1.3 ${FONT};color:${INK3};">${liveSite ? "live and supported" : "overall onboarding progress"}</td>
+              </tr></table>
+              <div style="height:8px;background:${TRACK};border-radius:99px;margin:12px 0 16px;"><div style="height:8px;width:${liveSite ? 100 : pctSnap}%;background:${ACCENT};border-radius:99px;font-size:0;line-height:0;">&nbsp;</div></div>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+                ${snapStat(`${p.progress.q} / ${p.progress.qTotal}`, "Questionnaire", true)}
+                ${snapStat(`${p.progress.vPass} / ${p.progress.vTotal}`, "Tests passed", false)}
+                ${snapStat(`${p.progress.tDone} / ${p.progress.tTotal}`, "Tasks done", false)}
+              </tr></table>
+            </td></tr>
+          </table>
         </a>
         <div style="font:400 12px/1.4 ${FONT};color:${INK3};margin-top:8px;">${link(
           "Open the implementation site &rarr;",
           p.dashboardUrl
         )}</div>
       </td></tr></table>`
-    : p.dashboardUrl
-      ? para(link("Open the implementation site &rarr;", p.dashboardUrl), 24)
-      : "";
+    : "";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -1132,16 +1153,32 @@ export const exportsRouter = router({
         )
         .map((it) => ({ ...it, owner: it.owner || "IT Connectivity" }));
 
-      // Pre-selected "next ups" — every open / in-progress task + every
-      // outstanding test (not just a sample). Admin trims what they don't want.
+      // Pre-selected follow-ups — auto-fill only a few. Overdue items first
+      // (a due date in the past that isn't done yet, soonest first), then the
+      // next items in list order. Capped at 3; the admin adds more from the
+      // catalog if they want.
+      const AUTO_TASK_LIMIT = 3;
+      const now = Date.now();
+      const dueTime = (d: string) => {
+        const t = d ? new Date(d).getTime() : NaN;
+        return Number.isNaN(t) ? null : t;
+      };
       const blockerIds = new Set(blockers.map((b) => b.id));
-      const tasks = catalog
-        .filter(
-          (it) =>
-            !blockerIds.has(it.id) &&
-            ((it.kind === "task" && (it.status === "In Progress" || it.status === "Open")) ||
-              (it.kind === "test" && (it.status === "Not Tested" || it.status === "In Progress")))
-        )
+      const candidates = catalog.filter(
+        (it) =>
+          !blockerIds.has(it.id) &&
+          ((it.kind === "task" && (it.status === "In Progress" || it.status === "Open")) ||
+            (it.kind === "test" && (it.status === "Not Tested" || it.status === "In Progress")))
+      );
+      const overdue = candidates
+        .filter((it) => {
+          const t = dueTime(it.due);
+          return t !== null && t < now;
+        })
+        .sort((a, b) => dueTime(a.due)! - dueTime(b.due)!);
+      const overdueIds = new Set(overdue.map((it) => it.id));
+      const tasks = [...overdue, ...candidates.filter((it) => !overdueIds.has(it.id))]
+        .slice(0, AUTO_TASK_LIMIT)
         .map((it) => ({
           ...it,
           owner: it.owner || (it.kind === "task" ? "Project Manager" : "Radiologist Champion"),
@@ -1313,35 +1350,6 @@ export const exportsRouter = router({
       const sendBlockers = input.blockers.filter(keepItem);
       const sendTasks = input.tasks.filter(keepItem);
 
-      // Render the dashboard "screenshot" (a real PNG) and upload it so the
-      // email can embed it and link it to login. Best-effort: if rendering or
-      // upload fails, the email falls back to a plain link.
-      let dashboardImageUrl: string | undefined;
-      try {
-        const png = await renderDashboardSnapshotPng({
-          orgName: org.name,
-          partnerName,
-          live: input.progress.stage === "live",
-          pct: input.progress.overall,
-          q: input.progress.q,
-          qTotal: input.progress.qTotal,
-          vPass: input.progress.vPass,
-          vTotal: input.progress.vTotal,
-          tDone: input.progress.tDone,
-          tTotal: input.progress.tTotal,
-        });
-        if (png) {
-          const { url } = await storagePut(
-            `status-snapshots/${org.slug}-${Date.now()}.png`,
-            png,
-            "image/png"
-          );
-          dashboardImageUrl = url;
-        }
-      } catch (err) {
-        console.warn("[sendStatusUpdate] dashboard snapshot failed:", err);
-      }
-
       const html = buildStatusUpdateEmailHtml({
         orgName: org.name,
         partnerName,
@@ -1350,7 +1358,6 @@ export const exportsRouter = router({
         senderName,
         recipientNames: input.toNames,
         dashboardUrl,
-        dashboardImageUrl,
         include: input.include,
         progress: input.progress,
         blockers: input.include.blockers ? sendBlockers : [],
