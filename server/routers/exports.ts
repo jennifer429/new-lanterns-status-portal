@@ -15,6 +15,8 @@ import { protectedProcedure, adminProcedure, router } from "../_core/trpc";
 import { requireDb } from "../db";
 import { sendEmail } from "../email/send";
 import { ENV } from "../_core/env";
+import { storagePut } from "../storage";
+import { renderDashboardSnapshotPng } from "../_core/dashboardSnapshot";
 import {
   organizations,
   clients,
@@ -742,6 +744,9 @@ export interface StatusUpdatePayload {
   };
   blockers: Array<{ text: string; owner: string; link?: string; group?: string }>;
   tasks: Array<{ text: string; owner: string; due?: string; link?: string; group?: string }>;
+  completed?: Array<{ text: string }>;
+  /** Absolute URL of the rendered dashboard snapshot PNG (embedded + clickable). */
+  dashboardImageUrl?: string;
 }
 
 /**
@@ -751,126 +756,25 @@ export interface StatusUpdatePayload {
  * reply prompt), email-client-safe with table layout + inline styles.
  */
 export function buildStatusUpdateEmailHtml(p: StatusUpdatePayload): string {
-  // Palette from the Site Status Email design (light email, black brand bands).
+  // Plain-email palette: it should read like a typed message, not a newsletter.
   const INK = "#18181B";
-  const INK2 = "#52525B";
   const INK3 = "#8A8A93";
   const LINE = "#E5E5E5";
-  const LINE2 = "#EDEDEF";
-  const SURF2 = "#FAFAFB";
   const PURPLE = "#7C1EBD";
-  const RED = "#E53E3E";
-  const GREEN = "#16A34A";
   // Figtree is requested via <link>, but email clients ignore web fonts — the
   // system stack below is the real fallback every client will render.
   const FONT =
     "'Figtree',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
-  const live = p.progress.stage === "live";
   const esc = (s: string) =>
     String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-  // One line item rendered as a table row: square mark, title (+meta), owner pill.
-  const item = (
-    text: string,
-    meta: string,
-    owner: string,
-    kind: "blk" | "tsk",
-    link?: string
-  ) => {
-    const title = esc(text) || "—";
-    const titleCell = link
-      ? `<a href="${esc(link)}" style="color:${INK};text-decoration:none;">${title}</a>`
-      : title;
-    const mark =
-      kind === "blk"
-        ? `<table role="presentation" cellpadding="0" cellspacing="0" width="18" style="width:18px;height:18px;background:#FCE8E8;border-radius:5px;"><tr><td align="center" style="line-height:18px;"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${RED};"></span></td></tr></table>`
-        : `<table role="presentation" cellpadding="0" cellspacing="0" width="18" style="width:18px;height:18px;border:1.5px solid #D3D3D7;border-radius:5px;"><tr><td>&nbsp;</td></tr></table>`;
-    return `
-    <tr>
-      <td style="padding:11px 0;border-top:1px solid ${LINE2};vertical-align:top;width:18px;">${mark}</td>
-      <td style="padding:11px 0 11px 12px;border-top:1px solid ${LINE2};vertical-align:top;">
-        <div style="font:600 14px/1.4 ${FONT};color:${INK};letter-spacing:-0.01em;">${titleCell}</div>
-        ${meta ? `<div style="font:400 12px/1.4 ${FONT};color:${INK3};margin-top:3px;">${esc(meta)}</div>` : ""}
-      </td>
-      <td class="nl-owner" style="padding:11px 0;border-top:1px solid ${LINE2};vertical-align:top;text-align:right;white-space:nowrap;">
-        <span style="display:inline-block;font:600 11px/1 ${FONT};color:${INK2};background:#F1F1F3;border-radius:99px;padding:5px 11px;">${esc(owner) || "Unassigned"}</span>
-      </td>
-    </tr>`;
-  };
+  const site = esc(p.orgName) || "your site";
+  const link = (text: string, href?: string) =>
+    href
+      ? `<a href="${esc(href)}" style="color:${PURPLE};text-decoration:underline;">${text}</a>`
+      : text;
 
-  const sectionHead = (label: string, dot: string, color: string) => `
-    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 4px;"><tr>
-      <td style="vertical-align:middle;padding-right:8px;"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${dot};"></span></td>
-      <td style="font:700 11px/1 ${FONT};text-transform:uppercase;letter-spacing:0.1em;color:${color};">${label}</td>
-    </tr></table>`;
-
-  const blockersHtml =
-    p.include.blockers && p.blockers.length
-      ? `<div style="margin-bottom:24px;">${sectionHead("What needs your team", RED, RED)}
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${p.blockers
-          .map((b) => item(b.text, b.group || "", b.owner, "blk", b.link))
-          .join("")}</table></div>`
-      : "";
-
-  const tasksHtml =
-    p.include.tasks && p.tasks.length
-      ? `<div style="margin-bottom:24px;">${sectionHead("Tasks &amp; assignments", PURPLE, INK)}
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${p.tasks
-          .map((t) =>
-            item(
-              t.text,
-              t.due ? `Due ${t.due}` : t.group || "",
-              t.owner,
-              "tsk",
-              t.link
-            )
-          )
-          .join("")}</table></div>`
-      : "";
-
-  const pct = Math.max(0, Math.min(100, p.progress.overall));
-  const stat = (n: number, total: number, label: string, first: boolean) => `
-    <td style="width:33.33%;text-align:center;${first ? "" : `border-left:1px solid ${LINE};`}padding:2px 6px;vertical-align:top;">
-      <div style="font:800 19px/1 ${FONT};letter-spacing:-0.03em;color:${INK};">${n}<span style="color:${INK3};font-size:13px;font-weight:600;">/${total}</span></div>
-      <div style="font:600 9.5px/1.2 ${FONT};text-transform:uppercase;letter-spacing:0.07em;color:${INK3};margin-top:4px;">${label}</div>
-    </td>`;
-  const progressHtml = p.include.progress
-    ? `
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${LINE};border-radius:12px;background:${SURF2};margin:0 0 26px;">
-      <tr><td style="padding:20px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-          <td style="vertical-align:bottom;font:800 34px/1 ${FONT};letter-spacing:-0.04em;color:${live ? GREEN : PURPLE};">${live ? "Live" : `${pct}<span style="font-size:16px;">%</span>`}</td>
-          <td style="text-align:right;vertical-align:bottom;font:700 10px/1.3 ${FONT};text-transform:uppercase;letter-spacing:0.12em;color:${INK3};">Overall progress<span style="display:block;color:${INK};font-size:13px;letter-spacing:-0.01em;text-transform:none;margin-top:3px;">${live ? "Live and supported" : "In progress"}</span></td>
-        </tr></table>
-        <div style="height:8px;background:#ECECEE;border-radius:99px;margin:12px 0 18px;">
-          <div style="height:8px;width:${pct}%;background:${live ? GREEN : PURPLE};border-radius:99px;font-size:0;line-height:0;">&nbsp;</div>
-        </div>
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-          ${stat(p.progress.q, p.progress.qTotal, "Questionnaire", true)}
-          ${stat(p.progress.vPass, p.progress.vTotal, "Tests passed", false)}
-          ${stat(p.progress.tDone, p.progress.tTotal, "Tasks done", false)}
-        </tr></table>
-      </td></tr>
-    </table>`
-    : "";
-
-  const ctaHtml = p.dashboardUrl
-    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0 6px;"><tr><td align="center">
-        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;"><tr>
-          <td style="background:${PURPLE};border-radius:8px;">
-            <a href="${esc(p.dashboardUrl)}" class="nl-cta" style="display:inline-block;color:#FFFFFF;font:700 14px/1 ${FONT};letter-spacing:-0.01em;padding:13px 28px;text-decoration:none;">Open your dashboard &rarr;</a>
-          </td>
-        </tr></table>
-        <div style="font:400 12px/1.4 ${FONT};color:${INK3};margin-top:9px;">Log in to see everything, upload files, and explore.</div>
-      </td></tr></table>`
-    : "";
-
-  // ── Plainly-written personal note up top, printed status below ──
-  const today = new Date().toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  // Recipients greeted by first name, the way a person would type it.
   const joinNames = (ns: string[]) => {
     const u = Array.from(new Set(ns.map((n) => n.trim()).filter(Boolean)));
     if (u.length === 0) return "";
@@ -881,23 +785,96 @@ export function buildStatusUpdateEmailHtml(p: StatusUpdatePayload): string {
   };
   const names = joinNames(p.recipientNames || []);
   const greetLine = names ? `Hey ${esc(names)},` : p.orgName ? `Hi ${esc(p.orgName)} team,` : "Hi there,";
-  const ps = p.include.promptReply
-    ? "\n\nP.S. If any of this is already handled, just hit reply — it comes straight to me."
+
+  // Plain prose paragraph / bold lead-in / bullet list helpers — no cards, no
+  // pills, no progress bars in the body. It should read like an email.
+  const para = (inner: string, mt = 16) =>
+    `<p style="font:400 14.5px/1.62 ${FONT};color:${INK};margin:${mt}px 0 0;">${inner}</p>`;
+  const lead = (inner: string, mt = 22) =>
+    `<p style="font:700 14.5px/1.5 ${FONT};color:${INK};margin:${mt}px 0 0;">${inner}</p>`;
+  const bullets = (items: string[]) =>
+    `<ul style="margin:7px 0 0;padding:0 0 0 22px;">${items
+      .map(
+        (li) =>
+          `<li style="font:400 14.5px/1.55 ${FONT};color:${INK};margin:0 0 7px;">${li}</li>`
+      )
+      .join("")}</ul>`;
+
+  // "This week we completed:"
+  const completedHtml =
+    p.completed && p.completed.length
+      ? lead("This week we completed:") + bullets(p.completed.map((c) => esc(c.text)))
+      : "";
+
+  // Follow-up items, grouped by the person who owns them ("@Nikki — ...").
+  let followupsHtml = "";
+  if (p.include.tasks && p.tasks.length) {
+    const groups = new Map<string, typeof p.tasks>();
+    for (const t of p.tasks) {
+      const key = t.owner?.trim() || "Your team";
+      (groups.get(key) ?? groups.set(key, []).get(key)!).push(t);
+    }
+    for (const [owner, items] of groups) {
+      followupsHtml +=
+        lead(`@${esc(owner)} — follow-up items for ${site}:`) +
+        bullets(
+          items.map((t) => {
+            const title = link(esc(t.text) || "—", t.link);
+            const meta = t.due ? ` <span style="color:${INK3};">(due ${esc(t.due)})</span>` : "";
+            return `${title}${meta}`;
+          })
+        );
+    }
+  }
+
+  // "The following items are blocked:"
+  const blockedHtml =
+    p.include.blockers && p.blockers.length
+      ? lead("The following items are blocked:") +
+        bullets(
+          p.blockers.map((b) => {
+            const title = link(esc(b.text) || "—", b.link);
+            const why = b.group ? ` — ${esc(b.group)}` : "";
+            const who = b.owner ? ` <span style="color:${INK3};">(${esc(b.owner)})</span>` : "";
+            return `${title}${why}${who}`;
+          })
+        )
+      : "";
+
+  // Closing line + reply-all nudge, then the clickable dashboard screenshot.
+  const replyBit = p.include.promptReply
+    ? " — or just reply all and send them back to me"
     : "";
-  const noteText = `${esc(p.note)}${ps}`;
+  const closing = p.dashboardUrl
+    ? para(
+        `You can make updates right on the implementation site (screenshot below — ${link(
+          "click to log in",
+          p.dashboardUrl
+        )})${replyBit}.`
+      )
+    : p.include.promptReply
+      ? para("Just reply all with any updates and I'll get them in.")
+      : "";
 
-  // Reads like a normal email someone typed — greeting, note, plain sign-off.
-  const writtenNote = `
-    <p style="font:400 15px/1.6 ${FONT};color:${INK};margin:0 0 12px;">${greetLine}</p>
-    <p style="font:400 14.5px/1.62 ${FONT};color:${INK2};margin:0;white-space:pre-line;">${noteText}</p>
-    ${p.senderName ? `<p style="font:400 14.5px/1.62 ${FONT};color:${INK2};margin:16px 0 0;">Thanks,<br><span style="color:${INK};font-weight:600;">${esc(p.senderName)}</span></p>` : ""}`;
+  const signHtml = p.senderName
+    ? para(`Thanks,<br><span style="font-weight:600;">${esc(p.senderName)}</span>`, 20)
+    : "";
 
-  const statusInner = `${progressHtml}${blockersHtml}${tasksHtml}`;
-  const statusBlock = statusInner.trim()
-    ? `<div style="height:1px;background:${LINE};margin:28px 0 18px;"></div>
-       <div style="font:600 10px/1 ${FONT};text-transform:uppercase;letter-spacing:0.12em;color:${INK3};margin-bottom:16px;">Latest from the implementation portal · as of ${today}</div>
-       ${statusInner}${ctaHtml}`
-    : ctaHtml;
+  // The dashboard "screenshot": a real PNG (generated server-side) embedded and
+  // linked to login. Falls back to a plain link if the image isn't available.
+  const snapshotHtml = p.dashboardImageUrl
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 0;"><tr><td>
+        <a href="${esc(p.dashboardUrl || p.dashboardImageUrl)}" style="text-decoration:none;display:block;">
+          <img src="${esc(p.dashboardImageUrl)}" width="100%" alt="${site} implementation dashboard — click to log in" style="display:block;width:100%;max-width:540px;border:1px solid ${LINE};border-radius:10px;" />
+        </a>
+        <div style="font:400 12px/1.4 ${FONT};color:${INK3};margin-top:8px;">${link(
+          "Open the implementation site &rarr;",
+          p.dashboardUrl
+        )}</div>
+      </td></tr></table>`
+    : p.dashboardUrl
+      ? para(link("Open the implementation site &rarr;", p.dashboardUrl), 24)
+      : "";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -906,31 +883,28 @@ export function buildStatusUpdateEmailHtml(p: StatusUpdatePayload): string {
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <meta name="format-detection" content="telephone=no">
   <title>${esc(p.subject)}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     @media only screen and (max-width:600px) {
-      .nl-card { width:100% !important; border-radius:0 !important; }
-      .nl-pad { padding:24px 20px 18px !important; }
-      .nl-cta { display:block !important; }
-      .nl-owner span { font-size:10.5px !important; }
+      .nl-wrap { padding:20px 18px !important; }
     }
   </style>
 </head>
-<body style="margin:0;padding:0;background:#EDEAE3;-webkit-text-size-adjust:100%;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EDEAE3;padding:28px 0;">
-    <tr><td align="center" style="padding:0 12px;">
-      <table role="presentation" cellpadding="0" cellspacing="0" class="nl-card" width="600" style="width:100%;max-width:600px;background:#FFFFFF;border:1px solid ${LINE};border-radius:12px;overflow:hidden;">
-
-        <tr><td class="nl-pad" style="padding:28px 30px 22px;">
-          ${writtenNote}
-          ${statusBlock}
+<body style="margin:0;padding:0;background:#FFFFFF;-webkit-text-size-adjust:100%;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FFFFFF;">
+    <tr><td align="center">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="width:100%;max-width:600px;">
+        <tr><td class="nl-wrap" style="padding:30px 28px 26px;">
+          <p style="font:400 14.5px/1.6 ${FONT};color:${INK};margin:0;">${greetLine}</p>
+          ${para(esc(p.note))}
+          ${completedHtml}
+          ${followupsHtml}
+          ${blockedHtml}
+          ${closing}
+          ${signHtml}
+          ${snapshotHtml}
+          <p style="font:400 11px/1.5 ${FONT};color:${INK3};margin:26px 0 0;border-top:1px solid ${LINE};padding-top:14px;">Please don't reply with protected health information (PHI) — share files through the secure site portal. You're receiving this as a named contact on the ${site} implementation${p.partnerName ? " · " + esc(p.partnerName) : ""}.</p>
         </td></tr>
-
-        <tr><td style="padding:16px 30px 22px;border-top:1px solid ${LINE};">
-          <p style="font:400 11.5px/1.6 ${FONT};color:#B98A3A;margin:0 0 6px;">Please don't reply with protected health information (PHI) — share files through your secure site portal.</p>
-          <p style="font:400 11.5px/1.6 ${FONT};color:${INK3};margin:0;">You're receiving this as a named contact on the ${esc(p.orgName)} implementation · New Lantern${p.partnerName ? " · " + esc(p.partnerName) : ""}</p>
-        </td></tr>
-
       </table>
     </td></tr>
   </table>
@@ -1339,6 +1313,35 @@ export const exportsRouter = router({
       const sendBlockers = input.blockers.filter(keepItem);
       const sendTasks = input.tasks.filter(keepItem);
 
+      // Render the dashboard "screenshot" (a real PNG) and upload it so the
+      // email can embed it and link it to login. Best-effort: if rendering or
+      // upload fails, the email falls back to a plain link.
+      let dashboardImageUrl: string | undefined;
+      try {
+        const png = await renderDashboardSnapshotPng({
+          orgName: org.name,
+          partnerName,
+          live: input.progress.stage === "live",
+          pct: input.progress.overall,
+          q: input.progress.q,
+          qTotal: input.progress.qTotal,
+          vPass: input.progress.vPass,
+          vTotal: input.progress.vTotal,
+          tDone: input.progress.tDone,
+          tTotal: input.progress.tTotal,
+        });
+        if (png) {
+          const { url } = await storagePut(
+            `status-snapshots/${org.slug}-${Date.now()}.png`,
+            png,
+            "image/png"
+          );
+          dashboardImageUrl = url;
+        }
+      } catch (err) {
+        console.warn("[sendStatusUpdate] dashboard snapshot failed:", err);
+      }
+
       const html = buildStatusUpdateEmailHtml({
         orgName: org.name,
         partnerName,
@@ -1347,6 +1350,7 @@ export const exportsRouter = router({
         senderName,
         recipientNames: input.toNames,
         dashboardUrl,
+        dashboardImageUrl,
         include: input.include,
         progress: input.progress,
         blockers: input.include.blockers ? sendBlockers : [],
