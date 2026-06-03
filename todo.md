@@ -489,3 +489,9 @@
 ## Documents Library Filtering by Partner
 
 - [x] Platform admin "view as partner" should filter documents library — pass effectiveClientId to ProceduralLibrary component and query with clientId parameter
+
+## Silent Self-Ping Implementation
+
+- [x] Implement silent self-ping module that runs every 8 minutes internally
+- [x] Integrate self-ping into server startup (no external requests, no messages)
+- [x] Disable noisy Manus scheduled task

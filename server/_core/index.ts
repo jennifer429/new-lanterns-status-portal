@@ -5,6 +5,7 @@ import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { startCronJobs } from "../cron";
+import { startSelfPing } from "../selfPing";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
@@ -66,6 +67,9 @@ async function startServer() {
 
   // Start periodic cron jobs (Notion sync-back, etc.)
   startCronJobs();
+
+  // Start silent self-ping to keep server awake on Cloud Run
+  startSelfPing();
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
