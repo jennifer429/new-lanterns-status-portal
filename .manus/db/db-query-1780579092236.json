@@ -1,0 +1,19 @@
+{
+  "query": "SELECT COUNT(*) as null_count FROM taskCompletion WHERE organizationId = 240001 AND notionLastEdited IS NULL;\nSELECT COUNT(*) as null_count FROM validationResults WHERE organizationId = 240001 AND notionLastEdited IS NULL;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT COUNT(*) as null_count FROM taskCompletion WHERE organizationId = 240001 AND notionLastEdited IS NULL;\nSELECT COUNT(*) as null_count FROM validationResults WHERE organizationId = 240001 AND notionLastEdited IS NULL;",
+  "rows": [
+    {
+      "null_count": "0"
+    },
+    {
+      "null_count": "null_count"
+    },
+    {
+      "null_count": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "null_count\n0\nnull_count\n0\n",
+  "stderr": "",
+  "execution_time_ms": 340
+}

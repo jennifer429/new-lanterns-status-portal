@@ -1,0 +1,106 @@
+{
+  "query": "SELECT id, organizationId, testKey, status, updatedAt, notionLastEdited FROM validationResults WHERE notionLastEdited IS NULL AND updatedAt < DATE_SUB(NOW(), INTERVAL 1 DAY) ORDER BY updatedAt DESC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, organizationId, testKey, status, updatedAt, notionLastEdited FROM validationResults WHERE notionLastEdited IS NULL AND updatedAt < DATE_SUB(NOW(), INTERVAL 1 DAY) ORDER BY updatedAt DESC;",
+  "rows": [
+    {
+      "id": "300005",
+      "organizationId": "240001",
+      "testKey": "1:1",
+      "status": "N/A",
+      "updatedAt": "2026-06-02 01:34:14",
+      "notionLastEdited": "NULL"
+    },
+    {
+      "id": "300006",
+      "organizationId": "240001",
+      "testKey": "1:2",
+      "status": "N/A",
+      "updatedAt": "2026-06-02 01:34:14",
+      "notionLastEdited": "NULL"
+    },
+    {
+      "id": "300007",
+      "organizationId": "240001",
+      "testKey": "1:3",
+      "status": "N/A",
+      "updatedAt": "2026-06-02 01:34:14",
+      "notionLastEdited": "NULL"
+    },
+    {
+      "id": "660001",
+      "organizationId": "240001",
+      "testKey": "0:1",
+      "status": "N/A",
+      "updatedAt": "2026-06-02 01:34:14",
+      "notionLastEdited": "NULL"
+    },
+    {
+      "id": "690002",
+      "organizationId": "240001",
+      "testKey": "2:1",
+      "status": "N/A",
+      "updatedAt": "2026-06-02 01:34:14",
+      "notionLastEdited": "NULL"
+    },
+    {
+      "id": "690004",
+      "organizationId": "240001",
+      "testKey": "2:3",
+      "status": "N/A",
+      "updatedAt": "2026-06-02 01:34:14",
+      "notionLastEdited": "NULL"
+    },
+    {
+      "id": "690007",
+      "organizationId": "240001",
+      "testKey": "3:2",
+      "status": "N/A",
+      "updatedAt": "2026-06-02 01:34:14",
+      "notionLastEdited": "NULL"
+    },
+    {
+      "id": "690010",
+      "organizationId": "240001",
+      "testKey": "3:5",
+      "status": "N/A",
+      "updatedAt": "2026-06-02 01:34:14",
+      "notionLastEdited": "NULL"
+    },
+    {
+      "id": "690011",
+      "organizationId": "240001",
+      "testKey": "3:6",
+      "status": "N/A",
+      "updatedAt": "2026-06-02 01:34:14",
+      "notionLastEdited": "NULL"
+    },
+    {
+      "id": "690012",
+      "organizationId": "240001",
+      "testKey": "3:7",
+      "status": "N/A",
+      "updatedAt": "2026-06-02 01:34:14",
+      "notionLastEdited": "NULL"
+    },
+    {
+      "id": "690013",
+      "organizationId": "240001",
+      "testKey": "3:8",
+      "status": "N/A",
+      "updatedAt": "2026-06-02 01:34:14",
+      "notionLastEdited": "NULL"
+    },
+    {
+      "id": "690016",
+      "organizationId": "240001",
+      "testKey": "3:11",
+      "status": "N/A",
+      "updatedAt": "2026-06-02 01:34:14",
+      "notionLastEdited": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\torganizationId\ttestKey\tstatus\tupdatedAt\tnotionLastEdited\n300005\t240001\t1:1\tN/A\t2026-06-02 01:34:14\tNULL\n300006\t240001\t1:2\tN/A\t2026-06-02 01:34:14\tNULL\n300007\t240001\t1:3\tN/A\t2026-06-02 01:34:14\tNULL\n660001\t240001\t0:1\tN/A\t2026-06-02 01:34:14\tNULL\n690002\t240001\t2:1\tN/A\t2026-06-02 01:34:14\tNULL\n690004\t240001\t2:3\tN/A\t2026-06-02 01:34:14\tNULL\n690007\t240001\t3:2\tN/A\t2026-06-02 01:34:14\tNULL\n690010\t240001\t3:5\tN/A\t2026-06-02 01:34:14\tNULL\n690011\t240001\t3:6\tN/A\t2026-06-02 01:34:14\tNULL\n690012\t240001\t3:7\tN/A\t2026-06-02 01:34:14\tNULL\n690013\t240001\t3:8\tN/A\t2026-06-02 01:34:14\tNULL\n690016\t240001\t3:11\tN/A\t2026-06-02 01:34:14\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 262
+}

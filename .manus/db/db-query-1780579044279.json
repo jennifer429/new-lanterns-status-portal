@@ -1,0 +1,100 @@
+{
+  "query": "SELECT id, organizationId, sectionName, taskId, completed, updatedAt, notionLastEdited FROM taskCompletion WHERE notionLastEdited IS NULL AND updatedAt < DATE_SUB(NOW(), INTERVAL 1 DAY) ORDER BY updatedAt DESC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, organizationId, sectionName, taskId, completed, updatedAt, notionLastEdited FROM taskCompletion WHERE notionLastEdited IS NULL AND updatedAt < DATE_SUB(NOW(), INTERVAL 1 DAY) ORDER BY updatedAt DESC;",
+  "rows": [
+    {
+      "id": "630003",
+      "organizationId": "240001",
+      "sectionName": "Training & Go-Live Preparation",
+      "taskId": "train:users",
+      "completed": "0",
+      "updatedAt": "2026-06-02 01:34:14",
+      "notionLastEdited": "NULL"
+    },
+    {
+      "id": "630004",
+      "organizationId": "240001",
+      "sectionName": "Training & Go-Live Preparation",
+      "taskId": "train:downtime",
+      "completed": "0",
+      "updatedAt": "2026-06-02 01:34:14",
+      "notionLastEdited": "NULL"
+    },
+    {
+      "id": "630005",
+      "organizationId": "240001",
+      "sectionName": "Training & Go-Live Preparation",
+      "taskId": "train:troubleshoot",
+      "completed": "0",
+      "updatedAt": "2026-06-02 01:34:14",
+      "notionLastEdited": "NULL"
+    },
+    {
+      "id": "630016",
+      "organizationId": "240001",
+      "sectionName": "HL7 Interface Build",
+      "taskId": "hl7:adt",
+      "completed": "0",
+      "updatedAt": "2026-06-02 01:34:14",
+      "notionLastEdited": "NULL"
+    },
+    {
+      "id": "630027",
+      "organizationId": "240001",
+      "sectionName": "Production Data Validation (2 Weeks)",
+      "taskId": "prod:timeliness",
+      "completed": "0",
+      "updatedAt": "2026-06-02 01:34:14",
+      "notionLastEdited": "NULL"
+    },
+    {
+      "id": "630028",
+      "organizationId": "240001",
+      "sectionName": "Production Data Validation (2 Weeks)",
+      "taskId": "prod:normal-wf",
+      "completed": "0",
+      "updatedAt": "2026-06-02 01:34:14",
+      "notionLastEdited": "NULL"
+    },
+    {
+      "id": "630029",
+      "organizationId": "240001",
+      "sectionName": "Production Data Validation (2 Weeks)",
+      "taskId": "prod:addendum",
+      "completed": "0",
+      "updatedAt": "2026-06-02 01:34:14",
+      "notionLastEdited": "NULL"
+    },
+    {
+      "id": "630031",
+      "organizationId": "240001",
+      "sectionName": "Production Data Validation (2 Weeks)",
+      "taskId": "prod:cancel",
+      "completed": "0",
+      "updatedAt": "2026-06-02 01:34:14",
+      "notionLastEdited": "NULL"
+    },
+    {
+      "id": "630033",
+      "organizationId": "240001",
+      "sectionName": "Production Data Validation (2 Weeks)",
+      "taskId": "prod:adjustments",
+      "completed": "0",
+      "updatedAt": "2026-06-02 01:34:14",
+      "notionLastEdited": "NULL"
+    },
+    {
+      "id": "630034",
+      "organizationId": "240001",
+      "sectionName": "Production Data Validation (2 Weeks)",
+      "taskId": "prod:downtime",
+      "completed": "0",
+      "updatedAt": "2026-06-02 01:34:14",
+      "notionLastEdited": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\torganizationId\tsectionName\ttaskId\tcompleted\tupdatedAt\tnotionLastEdited\n630003\t240001\tTraining & Go-Live Preparation\ttrain:users\t0\t2026-06-02 01:34:14\tNULL\n630004\t240001\tTraining & Go-Live Preparation\ttrain:downtime\t0\t2026-06-02 01:34:14\tNULL\n630005\t240001\tTraining & Go-Live Preparation\ttrain:troubleshoot\t0\t2026-06-02 01:34:14\tNULL\n630016\t240001\tHL7 Interface Build\thl7:adt\t0\t2026-06-02 01:34:14\tNULL\n630027\t240001\tProduction Data Validation (2 Weeks)\tprod:timeliness\t0\t2026-06-02 01:34:14\tNULL\n630028\t240001\tProduction Data Validation (2 Weeks)\tprod:normal-wf\t0\t2026-06-02 01:34:14\tNULL\n630029\t240001\tProduction Data Validation (2 Weeks)\tprod:addendum\t0\t2026-06-02 01:34:14\tNULL\n630031\t240001\tProduction Data Validation (2 Weeks)\tprod:cancel\t0\t2026-06-02 01:34:14\tNULL\n630033\t240001\tProduction Data Validation (2 Weeks)\tprod:adjustments\t0\t2026-06-02 01:34:14\tNULL\n630034\t240001\tProduction Data Validation (2 Weeks)\tprod:downtime\t0\t2026-06-02 01:34:14\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 278
+}

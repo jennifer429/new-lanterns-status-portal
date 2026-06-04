@@ -1,0 +1,19 @@
+{
+  "query": "SELECT COUNT(*) as stale_count FROM taskCompletion WHERE organizationId = 240001 AND notionLastEdited IS NULL;\nSELECT COUNT(*) as stale_count FROM validationResults WHERE organizationId = 240001 AND notionLastEdited IS NULL;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT COUNT(*) as stale_count FROM taskCompletion WHERE organizationId = 240001 AND notionLastEdited IS NULL;\nSELECT COUNT(*) as stale_count FROM validationResults WHERE organizationId = 240001 AND notionLastEdited IS NULL;",
+  "rows": [
+    {
+      "stale_count": "10"
+    },
+    {
+      "stale_count": "stale_count"
+    },
+    {
+      "stale_count": "12"
+    }
+  ],
+  "messages": [],
+  "stdout": "stale_count\n10\nstale_count\n12\n",
+  "stderr": "",
+  "execution_time_ms": 276
+}

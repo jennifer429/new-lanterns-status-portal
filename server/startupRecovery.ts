@@ -48,15 +48,8 @@ export async function runStartupRecovery(): Promise<RecoveryStats> {
 
     // ── Recover Task Completions ──────────────────────────────────────────
     try {
-      const checkpoint = await db
-        .select()
-        .from(syncCheckpoints)
-        .where(eq(syncCheckpoints.pipeline, TASK_PIPELINE))
-        .limit(1);
-
-      const lastSync = checkpoint[0]?.lastSuccessfulSync || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-
-      // Find all unconfirmed task rows updated since last sync
+      // Find ALL unconfirmed task rows (notionLastEdited IS NULL)
+      // This catches rows that fell through gaps during missed cron executions
       const unconfirmedTasks = await db
         .select({
           id: taskCompletion.id,
@@ -76,12 +69,7 @@ export async function runStartupRecovery(): Promise<RecoveryStats> {
         })
         .from(taskCompletion)
         .leftJoin(organizations, eq(taskCompletion.organizationId, organizations.id))
-        .where(
-          and(
-            gt(taskCompletion.updatedAt, lastSync),
-            isNull(taskCompletion.notionLastEdited)
-          )
-        );
+        .where(isNull(taskCompletion.notionLastEdited));
 
       console.log(`[startup-recovery] Found ${unconfirmedTasks.length} unconfirmed task completions to recover`);
 
@@ -136,15 +124,8 @@ export async function runStartupRecovery(): Promise<RecoveryStats> {
 
     // ── Recover Validation Results ────────────────────────────────────────
     try {
-      const checkpoint = await db
-        .select()
-        .from(syncCheckpoints)
-        .where(eq(syncCheckpoints.pipeline, VALIDATION_PIPELINE))
-        .limit(1);
-
-      const lastSync = checkpoint[0]?.lastSuccessfulSync || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-
-      // Find all unconfirmed validation rows updated since last sync
+      // Find ALL unconfirmed validation rows (notionLastEdited IS NULL)
+      // This catches rows that fell through gaps during missed cron executions
       const unconfirmedValidation = await db
         .select({
           id: validationResults.id,
@@ -161,12 +142,7 @@ export async function runStartupRecovery(): Promise<RecoveryStats> {
         })
         .from(validationResults)
         .leftJoin(organizations, eq(validationResults.organizationId, organizations.id))
-        .where(
-          and(
-            gt(validationResults.updatedAt, lastSync),
-            isNull(validationResults.notionLastEdited)
-          )
-        );
+        .where(isNull(validationResults.notionLastEdited));
 
       console.log(`[startup-recovery] Found ${unconfirmedValidation.length} unconfirmed validation results to recover`);
 
