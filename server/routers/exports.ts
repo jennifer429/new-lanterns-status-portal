@@ -722,7 +722,6 @@ export interface StatusUpdatePayload {
   subject: string;
   note: string;
   senderName?: string;
-  recipientNames?: string[];
   dashboardUrl?: string;
   include: {
     progress: boolean;
@@ -740,161 +739,105 @@ export interface StatusUpdatePayload {
     tDone: number;
     tTotal: number;
   };
-  blockers: Array<{ text: string; owner: string; link?: string; group?: string }>;
-  tasks: Array<{ text: string; owner: string; due?: string; link?: string; group?: string }>;
-  completed?: Array<{ text: string }>;
+  blockers: Array<{ text: string; owner: string; link?: string }>;
+  tasks: Array<{ text: string; owner: string; due?: string; link?: string }>;
 }
 
 /**
  * buildStatusUpdateEmailHtml — renders the admin-composed "Implementation
- * Update" email. Mirrors the dark New Lantern mail card from the Claude Design
- * mockup (note → progress snapshot → blockers → tasks/assignments → CTA →
- * reply prompt), email-client-safe with table layout + inline styles.
+ * Update" email. Deliberately plain: a white, left-aligned message that reads
+ * like a normal email typed by hand (note → progress → blockers → tasks →
+ * dashboard link → sign-off → reply prompt), not a branded newsletter.
+ * Email-client-safe with table layout + inline styles.
  */
 export function buildStatusUpdateEmailHtml(p: StatusUpdatePayload): string {
-  // Plain-email palette: it should read like a typed message, not a newsletter.
-  const INK = "#18181B";
-  const INK3 = "#8A8A93";
-  const LINE = "#E5E5E5";
-  const PURPLE = "#7C1EBD";
-  // Figtree is requested via <link>, but email clients ignore web fonts — the
-  // system stack below is the real fallback every client will render.
-  const FONT =
-    "'Figtree',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+  const ACCENT = "#7C1EBD";
+  const RED = "#B91C1C";
+  const GREEN = "#15803D";
+  const INK = "#1F2937"; // body text
+  const INK2 = "#374151"; // headings
+  const MUTE = "#6B7280"; // owners / secondary
+  const LINE = "#E5E7EB";
+  const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+  const live = p.progress.stage === "live";
+  const pct = Math.max(0, Math.min(100, p.progress.overall));
   const esc = (s: string) =>
     String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-  const site = esc(p.orgName) || "your site";
-  const link = (text: string, href?: string) =>
-    href
-      ? `<a href="${esc(href)}" style="color:${PURPLE};text-decoration:underline;">${text}</a>`
-      : text;
-
-  // Recipients greeted by first name, the way a person would type it.
-  const joinNames = (ns: string[]) => {
-    const u = Array.from(new Set(ns.map((n) => n.trim()).filter(Boolean)));
-    if (u.length === 0) return "";
-    if (u.length === 1) return u[0];
-    if (u.length === 2) return `${u[0]} and ${u[1]}`;
-    if (u.length <= 4) return `${u.slice(0, -1).join(", ")}, and ${u[u.length - 1]}`;
-    return `${u.slice(0, 3).join(", ")}, and team`;
+  const item = (text: string, owner: string, dotColor: string, link?: string) => {
+    const label = esc(text) || "—";
+    const cell = link
+      ? `<a href="${esc(link)}" style="color:${INK};text-decoration:underline;">${label}</a>`
+      : label;
+    return `
+    <tr>
+      <td style="padding:6px 0;border-bottom:1px solid ${LINE};vertical-align:top;width:14px;line-height:1.5;">
+        <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${dotColor};vertical-align:middle;"></span>
+      </td>
+      <td style="padding:6px 8px;border-bottom:1px solid ${LINE};font:400 14px/1.5 ${FONT};color:${INK};">${cell}</td>
+      <td style="padding:6px 0;border-bottom:1px solid ${LINE};text-align:right;white-space:nowrap;font:400 12px/1.5 ${FONT};color:${MUTE};vertical-align:top;">${esc(owner)}</td>
+    </tr>`;
   };
-  const names = joinNames(p.recipientNames || []);
-  const greetLine = names ? `Hey ${esc(names)},` : p.orgName ? `Hi ${esc(p.orgName)} team,` : "Hi there,";
 
-  // Plain prose paragraph / bold lead-in / bullet list helpers — no cards, no
-  // pills, no progress bars in the body. It should read like an email.
-  const para = (inner: string, mt = 16) =>
-    `<p style="font:400 14.5px/1.62 ${FONT};color:${INK};margin:${mt}px 0 0;">${inner}</p>`;
-  const lead = (inner: string, mt = 22) =>
-    `<p style="font:700 14.5px/1.5 ${FONT};color:${INK};margin:${mt}px 0 0;">${inner}</p>`;
-  const bullets = (items: string[]) =>
-    `<ul style="margin:7px 0 0;padding:0 0 0 22px;">${items
-      .map(
-        (li) =>
-          `<li style="font:400 14.5px/1.55 ${FONT};color:${INK};margin:0 0 7px;">${li}</li>`
-      )
-      .join("")}</ul>`;
+  const section = (title: string, color: string, rows: string) => `
+    <div style="margin:0 0 20px;">
+      <div style="font:700 12px/1 ${FONT};text-transform:uppercase;letter-spacing:0.04em;color:${color};margin:0 0 6px;">${title}</div>
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;">${rows}</table>
+    </div>`;
 
-  // "This week we completed:"
-  const completedHtml =
-    p.completed && p.completed.length
-      ? lead("This week we completed:") + bullets(p.completed.map((c) => esc(c.text)))
+  const blockersHtml =
+    p.include.blockers && p.blockers.length
+      ? section("Blockers", RED, p.blockers.map((b) => item(b.text, b.owner, RED, b.link)).join(""))
       : "";
 
-  // Follow-up items, grouped by the person who owns them ("@Nikki — ...").
-  let followupsHtml = "";
-  if (p.include.tasks && p.tasks.length) {
-    const groups = new Map<string, typeof p.tasks>();
-    for (const t of p.tasks) {
-      const key = t.owner?.trim() || "Your team";
-      (groups.get(key) ?? groups.set(key, []).get(key)!).push(t);
-    }
-    for (const [owner, items] of groups) {
-      followupsHtml +=
-        lead(`@${esc(owner)} — follow-up items for ${site}:`) +
-        bullets(
-          items.map((t) => {
-            const title = link(esc(t.text) || "—", t.link);
-            const meta = t.due ? ` <span style="color:${INK3};">(due ${esc(t.due)})</span>` : "";
-            return `${title}${meta}`;
-          })
-        );
-    }
-  }
-
-  // "The following items are blocked:"
-  const blockedHtml =
-    p.include.blockers && p.blockers.length
-      ? lead("The following items are blocked:") +
-        bullets(
-          p.blockers.map((b) => {
-            const title = link(esc(b.text) || "—", b.link);
-            const why = b.group ? ` — ${esc(b.group)}` : "";
-            const who = b.owner ? ` <span style="color:${INK3};">(${esc(b.owner)})</span>` : "";
-            return `${title}${why}${who}`;
-          })
+  const tasksHtml =
+    p.include.tasks && p.tasks.length
+      ? section(
+          "Tasks &amp; assignments",
+          INK2,
+          p.tasks
+            .map((t) => item(t.text, `${esc(t.owner)}${t.due ? ` · ${esc(t.due)}` : ""}`, ACCENT, t.link))
+            .join("")
         )
       : "";
 
-  // Closing line + reply-all nudge, then the clickable dashboard screenshot.
-  const replyBit = p.include.promptReply
-    ? " — or just reply all and send them back to me"
+  const progressHtml = p.include.progress
+    ? `
+    <div style="margin:0 0 20px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+        <td style="font:600 14px/1 ${FONT};color:${INK2};">Overall progress</td>
+        <td style="text-align:right;font:700 14px/1 ${FONT};color:${live ? GREEN : ACCENT};">${live ? "Live" : pct + "%"}</td>
+      </tr></table>
+      <div style="height:6px;background:${LINE};border-radius:99px;margin:7px 0 12px;">
+        <div style="height:6px;width:${pct}%;background:${live ? GREEN : ACCENT};border-radius:99px;font-size:0;line-height:0;">&nbsp;</div>
+      </div>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+        ${[
+          [`${p.progress.q}/${p.progress.qTotal}`, "Questionnaire"],
+          [`${p.progress.vPass}/${p.progress.vTotal}`, "Tests passed"],
+          [`${p.progress.tDone}/${p.progress.tTotal}`, "Tasks done"],
+        ]
+          .map(
+            ([v, l]) => `<td style="width:33%;vertical-align:top;">
+            <div style="font:700 16px/1 ${FONT};color:${INK};">${v}</div>
+            <div style="font:400 12px/1.3 ${FONT};color:${MUTE};margin-top:2px;">${l}</div>
+          </td>`
+          )
+          .join("")}
+      </tr></table>
+    </div>`
     : "";
-  const closing = p.dashboardUrl
-    ? para(
-        `You can make updates right on the implementation site (screenshot below — ${link(
-          "click to log in",
-          p.dashboardUrl
-        )})${replyBit}.`
-      )
-    : p.include.promptReply
-      ? para("Just reply all with any updates and I'll get them in.")
-      : "";
+
+  const replyHtml = p.include.promptReply
+    ? `<p style="font:400 13px/1.6 ${FONT};color:${MUTE};margin:18px 0 0;">Something look off, or already handled? Just reply to this email — it goes straight to your implementation team.</p>`
+    : "";
+
+  const ctaHtml = p.dashboardUrl
+    ? `<p style="font:400 14px/1.6 ${FONT};color:${INK};margin:0 0 4px;"><a href="${esc(p.dashboardUrl)}" style="color:${ACCENT};text-decoration:underline;">View your site dashboard &rarr;</a></p>`
+    : "";
 
   const signHtml = p.senderName
-    ? para(`Thanks,<br><span style="font-weight:600;">${esc(p.senderName)}</span>`, 20)
-    : "";
-
-  // The dashboard "snapshot": a clean HTML look-alike of the site dashboard
-  // (progress + counts), clickable to login. Always visible (no image blocking),
-  // and the one lightly-styled block in an otherwise plain-text email.
-  const pctSnap = Math.max(0, Math.min(100, Math.round(p.progress.overall)));
-  const liveSite = p.progress.stage === "live";
-  const ACCENT = liveSite ? "#16A34A" : PURPLE;
-  const TRACK = "#ECECEE";
-  const snapStat = (n: string, label: string, first: boolean) =>
-    `<td style="width:33.33%;${first ? "" : `border-left:1px solid ${LINE};`}padding:0 0 0 ${first ? 0 : 14}px;vertical-align:top;">
-      <div style="font:700 18px/1 ${FONT};color:${INK};">${n}</div>
-      <div style="font:400 11px/1.3 ${FONT};color:${INK3};margin-top:4px;">${label}</div>
-    </td>`;
-  const snapshotHtml = p.dashboardUrl
-    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 0;"><tr><td>
-        <a href="${esc(p.dashboardUrl)}" style="text-decoration:none;display:block;color:${INK};">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${LINE};border-radius:10px;background:#FFFFFF;">
-            <tr><td style="padding:20px 22px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-                <td style="font:700 14px/1.2 ${FONT};color:${INK};">${site} &middot; Implementation</td>
-                <td align="right" style="font:400 12px/1.2 ${FONT};color:${INK3};">${p.partnerName ? esc(p.partnerName) : ""}</td>
-              </tr></table>
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:14px;"><tr>
-                <td style="vertical-align:bottom;font:700 36px/1 ${FONT};color:${ACCENT};">${liveSite ? "Live" : `${pctSnap}%`}</td>
-                <td style="vertical-align:bottom;padding-left:10px;font:400 12.5px/1.3 ${FONT};color:${INK3};">${liveSite ? "live and supported" : "overall onboarding progress"}</td>
-              </tr></table>
-              <div style="height:8px;background:${TRACK};border-radius:99px;margin:12px 0 16px;"><div style="height:8px;width:${liveSite ? 100 : pctSnap}%;background:${ACCENT};border-radius:99px;font-size:0;line-height:0;">&nbsp;</div></div>
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-                ${snapStat(`${p.progress.q} / ${p.progress.qTotal}`, "Questionnaire", true)}
-                ${snapStat(`${p.progress.vPass} / ${p.progress.vTotal}`, "Tests passed", false)}
-                ${snapStat(`${p.progress.tDone} / ${p.progress.tTotal}`, "Tasks done", false)}
-              </tr></table>
-            </td></tr>
-          </table>
-        </a>
-        <div style="font:400 12px/1.4 ${FONT};color:${INK3};margin-top:8px;">${link(
-          "Open the implementation site &rarr;",
-          p.dashboardUrl
-        )}</div>
-      </td></tr></table>`
+    ? `<p style="font:400 14px/1.6 ${FONT};color:${INK};margin:18px 0 0;">— ${esc(p.senderName)}<br><span style="color:${MUTE};">New Lantern Implementation Team</span></p>`
     : "";
 
   return `<!DOCTYPE html>
@@ -902,29 +845,23 @@ export function buildStatusUpdateEmailHtml(p: StatusUpdatePayload): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta name="color-scheme" content="light">
   <meta name="format-detection" content="telephone=no">
   <title>${esc(p.subject)}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    @media only screen and (max-width:600px) {
-      .nl-wrap { padding:20px 18px !important; }
-    }
-  </style>
 </head>
-<body style="margin:0;padding:0;background:#FFFFFF;-webkit-text-size-adjust:100%;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FFFFFF;">
-    <tr><td align="center">
-      <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="width:100%;max-width:600px;">
-        <tr><td class="nl-wrap" style="padding:30px 28px 26px;">
-          <p style="font:400 14.5px/1.6 ${FONT};color:${INK};margin:0;">${greetLine}</p>
-          ${para(esc(p.note))}
-          ${completedHtml}
-          ${followupsHtml}
-          ${blockedHtml}
-          ${closing}
+<body style="margin:0;padding:0;background:#ffffff;-webkit-text-size-adjust:100%;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;">
+    <tr><td align="left" style="padding:24px 20px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="width:100%;max-width:600px;text-align:left;">
+        <tr><td>
+          <div style="font:700 18px/1.3 ${FONT};color:#111827;margin:0 0 14px;">${esc(p.subject)}</div>
+          <p style="font:400 14px/1.6 ${FONT};color:${INK};margin:0 0 20px;white-space:pre-line;">${esc(p.note)}</p>
+          ${progressHtml}
+          ${blockersHtml}
+          ${tasksHtml}
+          ${ctaHtml}
           ${signHtml}
-          ${snapshotHtml}
-          <p style="font:400 11px/1.5 ${FONT};color:${INK3};margin:26px 0 0;border-top:1px solid ${LINE};padding-top:14px;">Please don't reply with protected health information (PHI) — share files through the secure site portal. You're receiving this as a named contact on the ${site} implementation${p.partnerName ? " · " + esc(p.partnerName) : ""}.</p>
+          ${replyHtml}
         </td></tr>
       </table>
     </td></tr>
@@ -1001,57 +938,10 @@ export const exportsRouter = router({
 
       const stage = data.org.status === "completed" ? "live" : "implementing";
 
-      // ── People on the site: named contacts (shown by first name) first, then
-      // site users + this partner's admins. ──────────────────────────────────
+      // ── People on the site: site users + this partner's admins ──────────────
       const recipients: Array<{ label: string; email: string }> = [];
       const assigneeSet = new Map<string, string>(); // value → label
-      const seenEmail = new Set<string>();
       if (orgRow) {
-        // Named contacts from the intake A.contacts table → the "To" row shows
-        // each person by first name (e.g. "Pranay · IT Connectivity").
-        const CONTACT_ROLE_LABELS: Record<string, string> = {
-          admin: "Administrative",
-          it: "IT Connectivity",
-          it_post_prod: "IT Post-Production Support",
-          clinical: "Clinical",
-          radiologist: "Radiologist Champion",
-          pm: "Project Manager",
-        };
-        const [contactsRow] = await db
-          .select({ response: intakeResponses.response })
-          .from(intakeResponses)
-          .where(
-            and(
-              eq(intakeResponses.organizationId, orgRow.id),
-              eq(intakeResponses.questionId, "A.contacts")
-            )
-          )
-          .limit(1);
-        if (contactsRow?.response) {
-          try {
-            const contacts = JSON.parse(contactsRow.response) as Record<
-              string,
-              { name?: string; email?: string; phone?: string }
-            >;
-            for (const [roleKey, c] of Object.entries(contacts)) {
-              const email = (c?.email || "").trim();
-              const name = (c?.name || "").trim();
-              const role = CONTACT_ROLE_LABELS[roleKey] || roleKey;
-              const firstName = name ? name.split(/\s+/)[0] : "";
-              if (name) assigneeSet.set(name, firstName || name);
-              if (email && !seenEmail.has(email.toLowerCase())) {
-                seenEmail.add(email.toLowerCase());
-                recipients.push({
-                  label: firstName ? `${firstName} · ${role}` : role,
-                  email,
-                });
-              }
-            }
-          } catch {
-            /* malformed contacts JSON — fall back to portal users below */
-          }
-        }
-
         const peopleRows = await db
           .select({
             name: users.name,
@@ -1063,22 +953,21 @@ export const exportsRouter = router({
           })
           .from(users)
           .where(eq(users.isActive, 1));
+        const seenEmail = new Set<string>();
         for (const u of peopleRows) {
           const isSiteUser = u.organizationId === orgRow.id;
           const isPartnerAdmin =
             u.role === "admin" && !!orgRow.clientId && u.clientId === orgRow.clientId;
           if (!isSiteUser && !isPartnerAdmin) continue;
           const display = (u.name || u.email || "").trim();
-          const email = (u.email || "").trim();
-          if (email && !seenEmail.has(email.toLowerCase())) {
-            seenEmail.add(email.toLowerCase());
-            const firstName = display ? display.split(/\s+/)[0] : "";
+          if (u.email && !seenEmail.has(u.email)) {
+            seenEmail.add(u.email);
             recipients.push({
-              label: `${firstName || display || email}${isPartnerAdmin ? " · Partner" : " · Site"}`,
-              email,
+              label: `${display || u.email}${isPartnerAdmin ? " · Partner" : " · Site"}`,
+              email: u.email,
             });
           }
-          if (display) assigneeSet.set(display, display.split(/\s+/)[0] || display);
+          if (display) assigneeSet.set(display, display);
         }
       }
       // Owner pickers: real people first, then the standard contact roles.
@@ -1153,32 +1042,16 @@ export const exportsRouter = router({
         )
         .map((it) => ({ ...it, owner: it.owner || "IT Connectivity" }));
 
-      // Pre-selected follow-ups — auto-fill only a few. Overdue items first
-      // (a due date in the past that isn't done yet, soonest first), then the
-      // next items in list order. Capped at 3; the admin adds more from the
-      // catalog if they want.
-      const AUTO_TASK_LIMIT = 3;
-      const now = Date.now();
-      const dueTime = (d: string) => {
-        const t = d ? new Date(d).getTime() : NaN;
-        return Number.isNaN(t) ? null : t;
-      };
+      // Pre-selected "next ups" — every open / in-progress task + every
+      // outstanding test (not just a sample). Admin trims what they don't want.
       const blockerIds = new Set(blockers.map((b) => b.id));
-      const candidates = catalog.filter(
-        (it) =>
-          !blockerIds.has(it.id) &&
-          ((it.kind === "task" && (it.status === "In Progress" || it.status === "Open")) ||
-            (it.kind === "test" && (it.status === "Not Tested" || it.status === "In Progress")))
-      );
-      const overdue = candidates
-        .filter((it) => {
-          const t = dueTime(it.due);
-          return t !== null && t < now;
-        })
-        .sort((a, b) => dueTime(a.due)! - dueTime(b.due)!);
-      const overdueIds = new Set(overdue.map((it) => it.id));
-      const tasks = [...overdue, ...candidates.filter((it) => !overdueIds.has(it.id))]
-        .slice(0, AUTO_TASK_LIMIT)
+      const tasks = catalog
+        .filter(
+          (it) =>
+            !blockerIds.has(it.id) &&
+            ((it.kind === "task" && (it.status === "In Progress" || it.status === "Open")) ||
+              (it.kind === "test" && (it.status === "Not Tested" || it.status === "In Progress")))
+        )
         .map((it) => ({
           ...it,
           owner: it.owner || (it.kind === "task" ? "Project Manager" : "Radiologist Champion"),
@@ -1193,8 +1066,8 @@ export const exportsRouter = router({
 
       const note =
         stage === "live"
-          ? `Quick wrap-up below — your site is live. I've left the final status from the implementation portal so you have it on record, plus anything still open.`
-          : `Below is our latest update from the implementation portal. There are a few next steps for your team further down — take a look when you get a chance and let me know if anything's unclear.`;
+          ? `Your site is live. Here's a quick wrap-up of where the ${data.org.name} implementation landed and anything still open.`
+          : `Here's where your New Lantern onboarding stands this week. A couple of items need your team to keep us on track for go-live.`;
 
       return {
         orgName: data.org.name,
@@ -1235,7 +1108,6 @@ export const exportsRouter = router({
       z.object({
         organizationSlug: z.string(),
         to: z.array(z.string().email()).min(1, "At least one recipient is required"),
-        toNames: z.array(z.string()).optional(),
         cc: z.array(z.string().email()).optional(),
         subject: z.string().min(1, "Subject is required"),
         note: z.string().default(""),
@@ -1356,7 +1228,6 @@ export const exportsRouter = router({
         subject: input.subject,
         note: input.note,
         senderName,
-        recipientNames: input.toNames,
         dashboardUrl,
         include: input.include,
         progress: input.progress,
