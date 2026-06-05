@@ -504,3 +504,57 @@
 - [x] Changed section progress calculation to check normalized table presence instead of parsing JSON responses
 - [x] Result: Green check now appears automatically when contacts/systems data exists (synced from Notion)
 - [x] All 285 tests pass, TypeScript compiles cleanly
+
+## Critical Sync Fix: completedAt Type Handling (Jun 5)
+
+- [x] Fixed `TypeError: payload.completedAt.toISOString is not a function` in notionTaskValidation.ts
+- [x] Root cause: Retry queue had stale payloads where completedAt was a string (from Notion), but code expected Date
+- [x] Solution: Added type checking — if string, use as-is; if Date, call toISOString(); otherwise convert to string
+- [x] Retry queue now processes 20 tasks successfully (0 failed)
+- [x] Contacts/Systems sync working (85 contacts, 77 systems)
+- [x] All 285 tests pass
+
+## Database Hardening — Phased Constraint Deployment (Jun 5)
+
+### Phase 1 Gate: Data Quality Check
+- [ ] Copy scripts/data-quality-check.mjs from claude/relaxed-ritchie-FVOWS branch
+- [ ] Run data quality check locally (must pass before Phase 1 constraints can be applied)
+- [ ] Verify all 26 orphan checks pass (FAIL severity)
+- [ ] Verify all 7 uniqueness checks pass (FAIL severity)
+- [ ] Document any WARN-level issues for monitoring
+
+### Phase 1 Constraints: Unique Indexes
+- [ ] Copy drizzle/schema.ts updates from claude/relaxed-ritchie-FVOWS (7 composite uniqueIndex definitions)
+- [ ] Copy drizzle/manual/phase1_unique_keys.sql
+- [ ] Copy drizzle/manual/README.md
+- [ ] Run pnpm db:push to apply Phase 1 unique constraints
+- [ ] Verify schema.ts compiles and tests pass
+
+### Phase 2 Constraints: Check() + Enums
+- [ ] Copy drizzle/schema.ts Phase 2 updates (4 check() constraints, 6 enum conversions)
+- [ ] Copy drizzle/manual/phase2_checks_enums.sql
+- [ ] Run pnpm db:push to apply Phase 2 constraints
+- [ ] Verify all 285 tests pass
+
+### Phase 3 Constraints: Foreign Keys
+- [ ] Copy drizzle/schema.ts Phase 3 updates (24 .references() FKs with onDelete behavior)
+- [ ] Copy drizzle/manual/phase3_foreign_keys.sql
+- [ ] Review onDelete semantics (cascade for child data, set null / restrict for parents)
+- [ ] Test dual-write/import/cron paths to ensure they handle FK rejection gracefully
+- [ ] Run pnpm db:push to apply Phase 3 constraints
+- [ ] Verify all 285 tests pass
+
+### Update Call-Sites for ON DUPLICATE KEY UPDATE
+- [ ] Wire ON DUPLICATE KEY UPDATE into intake.saveResponse (responses table upsert)
+- [ ] Wire ON DUPLICATE KEY UPDATE into intake.saveResponses (batch upsert)
+- [ ] Wire ON DUPLICATE KEY UPDATE into organizations.updateProgress (sectionProgress upsert)
+- [ ] Wire ON DUPLICATE KEY UPDATE into implementation.completeTask (taskCompletion upsert)
+- [ ] Wire ON DUPLICATE KEY UPDATE into validation.saveResult (validationResults upsert)
+- [ ] Wire ON DUPLICATE KEY UPDATE into swimlane.assignTask (taskOrgAssignment upsert)
+- [ ] Wire ON DUPLICATE KEY UPDATE into partnerTemplates admin endpoints
+- [ ] Verify all 285 tests pass after upsert changes
+
+### Post-Deployment Monitoring
+- [ ] Wire data-quality-check.mjs into cron.ts (run daily/weekly to detect residual gaps)
+- [ ] Add check results to Sync Dashboard for visibility
+- [ ] Monitor Notion-sourced tables (contacts/systems) for transient FK violations during sync

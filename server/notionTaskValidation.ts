@@ -139,7 +139,7 @@ export async function syncTaskCompletionToNotion(payload: TaskCompletionPayload)
       "Notes": { rich_text: [{ text: { content: (payload.notes || "").substring(0, 2000) } }] },
       "Completed By": { rich_text: [{ text: { content: payload.completedBy || "" } }] },
       "Target Date": { rich_text: [{ text: { content: payload.targetDate || "" } }] },
-      "Completed At": { rich_text: [{ text: { content: payload.completedAt ? payload.completedAt.toISOString() : "" } }] },
+      "Completed At": { rich_text: [{ text: { content: payload.completedAt ? (typeof payload.completedAt === 'string' ? payload.completedAt : (payload.completedAt instanceof Date ? payload.completedAt.toISOString() : String(payload.completedAt))) : "" } }] },
       "Site": { rich_text: [{ text: { content: payload.orgName || payload.orgSlug } }] },
       "Last Updated From": { rich_text: [{ text: { content: "Portal" } }] },
     };
