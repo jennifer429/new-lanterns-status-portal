@@ -1,0 +1,9 @@
+{
+  "query": "SELECT \n  r.questionId,\n  r.response,\n  COUNT(*) as count\nFROM responses r\nWHERE r.organizationId = 990001\n  AND r.questionId IN ('H.1', 'H.2', 'H.3', 'A.contacts', 'A.6', 'L.2', 'L.3', 'L.4', 'L.8', 'L.9', 'L.10', 'L.11')\nGROUP BY r.questionId, r.response\nORDER BY r.questionId;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT \n  r.questionId,\n  r.response,\n  COUNT(*) as count\nFROM responses r\nWHERE r.organizationId = 990001\n  AND r.questionId IN ('H.1', 'H.2', 'H.3', 'A.contacts', 'A.6', 'L.2', 'L.3', 'L.4', 'L.8', 'L.9', 'L.10', 'L.11')\nGROUP BY r.questionId, r.response\nORDER BY r.questionId;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 288
+}

@@ -476,9 +476,10 @@
 - [x] Fix connectivity filter to match RMCA rows when Institution Group is empty (fallback to Flow Name prefix matching)
 
 ## Contacts: Single Source of Truth from Notion (Jun 1)
-- [ ] Replace hardcoded 6-slot contacts-table in intake questionnaire with dynamic display from contacts MySQL table (synced from Notion Contacts v2)
-- [ ] Remove A.contacts intakeResponses dependency — contacts come from Notion Contacts v2 only
-- [ ] Display all contacts dynamically with whatever roles exist (no fixed slot limit)
+- [x] Replace hardcoded 6-slot contacts-table in intake questionnaire with dynamic display from contacts MySQL table (synced from Notion Contacts v2)
+- [x] Remove A.contacts intakeResponses dependency — contacts come from Notion Contacts v2 only
+- [x] Display all contacts dynamically with whatever roles exist (no fixed slot limit)
+- [x] Fix Organization Info green check — check contacts/systems tables directly instead of responses table (single source of truth, no duplication)
 - [ ] Write instructions for Claude/people on managing contacts in Notion
 - [x] Merge PR #88: Add admin "Send status update" email composer
 - [x] Merge PR #89: Split hero file count into questionnaire vs site files
@@ -495,3 +496,11 @@
 - [x] Implement silent self-ping module that runs every 8 minutes internally
 - [x] Integrate self-ping into server startup (no external requests, no messages)
 - [x] Disable noisy Manus scheduled task
+
+## Questionnaire Completion Logic Fix (Jun 5)
+
+- [x] Fix Organization Info section green check — was checking responses table (which had no data) instead of contacts/systems tables
+- [x] Updated useIntakeData.ts to fetch contacts.getForOrg and systems.getForOrg
+- [x] Changed section progress calculation to check normalized table presence instead of parsing JSON responses
+- [x] Result: Green check now appears automatically when contacts/systems data exists (synced from Notion)
+- [x] All 285 tests pass, TypeScript compiles cleanly

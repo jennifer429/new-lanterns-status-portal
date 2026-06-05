@@ -52,6 +52,17 @@ export function useIntakeData(slug: string, clientSlug: string) {
     { enabled: !!slug }
   );
 
+  // Fetch contacts and systems from normalized tables (source of truth from Notion)
+  const { data: contactsData } = trpc.contacts.getForOrg.useQuery(
+    { organizationSlug: slug || "" },
+    { enabled: !!slug }
+  );
+
+  const { data: systemsData } = trpc.systems.getForOrg.useQuery(
+    { organizationSlug: slug || "" },
+    { enabled: !!slug }
+  );
+
   // ── tRPC mutations ───────────────────────────────────────────────────────────
 
   const utils = trpc.useUtils();
@@ -404,36 +415,14 @@ export function useIntakeData(slug: string, clientSlug: string) {
 
       const response = responses[q.id];
 
-      // systems-list: complete if at least one system has been added
+      // systems-list: complete if at least one system exists in normalized table
       if (q.type === "systems-list") {
-        try {
-          const data = response
-            ? typeof response === "string"
-              ? JSON.parse(response)
-              : response
-            : [];
-          return Array.isArray(data) && data.length > 0;
-        } catch {
-          return false;
-        }
+        return systemsData?.rows && systemsData.rows.length > 0;
       }
 
-      // contacts-table: complete if any contact field is non-empty
+      // contacts-table: complete if at least one contact exists in normalized table
       if (q.type === "contacts-table") {
-        try {
-          const data = response
-            ? typeof response === "string"
-              ? JSON.parse(response)
-              : response
-            : {};
-          return Object.values(data).some((row: any) =>
-            Object.values(row || {}).some(
-              (v: any) => v && String(v).trim() !== ""
-            )
-          );
-        } catch {
-          return false;
-        }
+        return contactsData?.rows && contactsData.rows.length > 0;
       }
 
       const hasResponse = Array.isArray(response)
