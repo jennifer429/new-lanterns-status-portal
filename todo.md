@@ -558,3 +558,85 @@
 - [ ] Wire data-quality-check.mjs into cron.ts (run daily/weekly to detect residual gaps)
 - [ ] Add check results to Sync Dashboard for visibility
 - [ ] Monitor Notion-sourced tables (contacts/systems) for transient FK violations during sync
+
+## Critical Design Review: Sync Brittleness, Data Dictionary Drift, Type Checking (Jun 5)
+
+**Status:** Design document created, immediate fixes required  
+**Severity:** High — Data silently disappears from questionnaire  
+**Root Cause:** Hardcoded sync column names, no data dictionary, mixed data types
+
+**Design Document:** See `/references/DESIGN_REVIEW_SYNC_DATA_TYPES.md`
+
+### Problem Summary
+
+1. **Sync Brittleness:** notionSyncBack.ts hardcoded to look for `Slug`, `Question ID`, `Answer` columns. When Claude added `Orders Description`, `Reports Description`, `Priors Description` to Notion, sync silently ignored them.
+2. **Data Dictionary Drift:** No single source of truth for schema. Notion, MySQL, sync code, and frontend each have their own definitions.
+3. **Type Checking Gaps:** `completedAt` stored as string in Notion, expected as Date in code. Led to `TypeError: payload.completedAt.toISOString is not a function`.
+
+### Immediate Fixes (This Week)
+
+- [ ] **Fix 1: Update notionSyncBack.ts to handle new workflow fields**
+  - Add field mappings: `Orders Description` → `IW.orders_description`, etc.
+  - Extract all mapped columns from Notion properties
+  - Test with RMCA data to verify workflow descriptions sync
+
+- [ ] **Fix 2: Add type checking at sync boundaries**
+  - Validate answer types before upsert (string, JSON, boolean)
+  - Handle string vs Date confusion gracefully
+  - Add runtime validation for all field types
+
+- [ ] **Fix 3: Add alerting for unmapped Notion columns**
+  - Log warnings when new columns appear in Notion
+  - Alert owner after N unmapped columns detected
+  - Provide actionable next steps (update sync code, update data dictionary)
+
+- [ ] **Fix 4: Create DATA_DICTIONARY.md**
+  - Centralized schema definition (single source of truth)
+  - Document all fields: Notion column, questionId, type, source, sync frequency
+  - Make it the reference for all schema changes
+
+### Long-Term Fixes (Next Sprint)
+
+- [ ] **Build Schema Validation Framework**
+  - Define field schemas once, use everywhere
+  - Runtime validation at sync boundaries
+  - Type checking in frontend and backend
+
+- [ ] **Make Sync Auto-Discoverable**
+  - Query Notion schema dynamically instead of hardcoding columns
+  - Auto-infer questionIds from column names
+  - Handle schema changes gracefully without code updates
+
+- [ ] **Add Comprehensive Monitoring**
+  - Track sync health metrics (rows fetched/processed/failed, unmapped columns, type errors)
+  - Alert on degradation
+  - Provide visibility into sync status
+
+- [ ] **Create Notion Update Playbook**
+  - Document when/how to safely edit Notion schema
+  - Coordinate with code changes
+  - Test sync before deploying
+
+### Prevention: Process Changes
+
+- [ ] **Data Dictionary Review Before Notion Changes**
+  - Before Claude edits Notion schema, document in DATA_DICTIONARY.md
+  - Identify corresponding questionId
+  - Specify data type and validation rules
+  - Plan sync code changes
+
+- [ ] **Sync Code Changes Must Include Tests**
+  - Add test data to Notion
+  - Verify sync pulls it correctly
+  - Verify type validation works
+  - Verify frontend displays it
+
+- [ ] **Type Definitions Are Contracts**
+  - Define in shared/types.ts with JSDoc
+  - Add runtime validation
+  - Add test cases for edge cases (null, empty, wrong type)
+
+- [ ] **Sync Failures Must Alert**
+  - Log with context (which column, which org, which row)
+  - Alert owner after N failures
+  - Provide actionable next steps

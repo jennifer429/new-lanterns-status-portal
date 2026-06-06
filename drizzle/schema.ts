@@ -1,4 +1,5 @@
-import { int, json, mysqlEnum, mysqlTable, text, timestamp, tinyint, varchar } from "drizzle-orm/mysql-core";
+import { check, int, json, mysqlEnum, mysqlTable, text, timestamp, tinyint, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
+import { sql } from "drizzle-orm";
 
 /**
  * Core user table backing auth flow.
@@ -18,8 +19,8 @@ export const users = mysqlTable("users", {
   passwordHash: varchar("passwordHash", { length: 255 }), // bcrypt hash for email/password auth
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
-  clientId: int("clientId"), // Link user to client (RadOne, SRV, etc.)
-  organizationId: int("organizationId"), // Link user to organization (null for admins)
+  clientId: int("clientId").references(() => clients.id, { onDelete: "set null" }), // Link user to client (RadOne, SRV, etc.)
+  organizationId: int("organizationId").references(() => organizations.id, { onDelete: "set null" }), // Link user to organization (null for admins)
   isActive: tinyint("isActive").default(1).notNull(), // 1 = active, 0 = deactivated (works for all user types)
   invitedAt: timestamp("invitedAt"), // When the invite email was sent
   inviteToken: varchar("inviteToken", { length: 128 }), // One-time token for "set your password" link
@@ -56,7 +57,7 @@ export type InsertClient = typeof clients.$inferInsert;
  * Each organization gets a unique slug for URL-based access
  */
 export const organizations = mysqlTable("organizations", {
-  clientId: int("clientId"), // FK to clients.id (temporarily optional for migration)
+  clientId: int("clientId").references(() => clients.id, { onDelete: "restrict" }), // FK to clients.id (temporarily optional for migration)
   id: int("id").autoincrement().primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   slug: varchar("slug", { length: 100 }).notNull().unique(), // URL-safe identifier
@@ -82,7 +83,7 @@ export type InsertOrganization = typeof organizations.$inferInsert;
  */
 export const sectionProgress = mysqlTable("sectionProgress", {
   id: int("id").autoincrement().primaryKey(),
-  organizationId: int("organizationId").notNull(),
+  organizationId: int("organizationId").notNull().references(() => organizations.id, { onDelete: "cascade" }),
   sectionName: varchar("sectionName", { length: 255 }).notNull(),
   status: mysqlEnum("status", ["pending", "in-progress", "complete"]).default("pending").notNull(),
   progress: int("progress").default(0).notNull(), // 0-100
@@ -90,7 +91,12 @@ export const sectionProgress = mysqlTable("sectionProgress", {
   actualEnd: varchar("actualEnd", { length: 50 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (t) => ({
+  // P0: one progress row per org+section (portal upserts on this tuple)
+  orgSection: uniqueIndex("uq_section_org_name").on(t.organizationId, t.sectionName),
+  // P1: progress is a percentage
+  progressRange: check("chk_section_progress_pct", sql`progress between 0 and 100`),
+}));
 
 export type SectionProgress = typeof sectionProgress.$inferSelect;
 export type InsertSectionProgress = typeof sectionProgress.$inferInsert;
@@ -100,7 +106,7 @@ export type InsertSectionProgress = typeof sectionProgress.$inferInsert;
  */
 export const taskCompletion = mysqlTable("taskCompletion", {
   id: int("id").autoincrement().primaryKey(),
-  organizationId: int("organizationId").notNull(),
+  organizationId: int("organizationId").notNull().references(() => organizations.id, { onDelete: "cascade" }),
   sectionName: varchar("sectionName", { length: 255 }).notNull(),
   taskId: varchar("taskId", { length: 50 }).notNull(),
   completed: int("completed").default(0).notNull(), // 0 or 1 (boolean)
@@ -115,7 +121,15 @@ export const taskCompletion = mysqlTable("taskCompletion", {
   notionLastEdited: timestamp("notionLastEdited"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (t) => ({
+  // P0: one status row per org+task
+  orgTask: uniqueIndex("uq_taskcompletion_org_task").on(t.organizationId, t.taskId),
+  // P1: completed / notApplicable / inProgress / blocked are mutually exclusive
+  statusExclusive: check(
+    "chk_task_status_exclusive",
+    sql`(completed + notApplicable + inProgress + blocked) <= 1`
+  ),
+}));
 
 export type TaskCompletion = typeof taskCompletion.$inferSelect;
 export type InsertTaskCompletion = typeof taskCompletion.$inferInsert;
@@ -125,7 +139,7 @@ export type InsertTaskCompletion = typeof taskCompletion.$inferInsert;
  */
 export const fileAttachments = mysqlTable("fileAttachments", {
   id: int("id").autoincrement().primaryKey(),
-  organizationId: int("organizationId").notNull(),
+  organizationId: int("organizationId").notNull().references(() => organizations.id, { onDelete: "cascade" }),
   taskId: varchar("taskId", { length: 50 }).notNull(),
   fileName: varchar("fileName", { length: 255 }).notNull(),
   fileUrl: text("fileUrl").notNull(), // S3 URL
@@ -167,14 +181,17 @@ export type InsertQuestion = typeof questions.$inferInsert;
  */
 export const responses = mysqlTable("responses", {
   id: int("id").autoincrement().primaryKey(),
-  organizationId: int("organizationId").notNull(),
-  questionId: int("questionId").notNull(), // Foreign key to questions.id
+  organizationId: int("organizationId").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  questionId: int("questionId").notNull().references(() => questions.id, { onDelete: "cascade" }), // Foreign key to questions.id
   response: text("response"), // Text answer or JSON for complex responses
   fileUrl: text("fileUrl"), // For file uploads
   userEmail: varchar("userEmail", { length: 320 }), // Who provided this response
   createdAt: timestamp("createdAt").defaultNow().notNull(), // When first answered
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(), // When last modified
-});
+}, (t) => ({
+  // P0: one response row per org+question
+  orgQuestion: uniqueIndex("uq_responses_org_question").on(t.organizationId, t.questionId),
+}));
 
 export type Response = typeof responses.$inferSelect;
 export type InsertResponse = typeof responses.$inferInsert;
@@ -185,14 +202,17 @@ export type InsertResponse = typeof responses.$inferInsert;
  */
 export const questionOptions = mysqlTable("question_options", {
   id: int("id").autoincrement().primaryKey(),
-  questionId: int("questionId").notNull(), // FK to questions.id
+  questionId: int("questionId").notNull().references(() => questions.id, { onDelete: "cascade" }), // FK to questions.id
   optionValue: varchar("optionValue", { length: 255 }).notNull(), // Internal value (e.g., "eastern")
   optionLabel: varchar("optionLabel", { length: 255 }).notNull(), // Display text (e.g., "Eastern Time")
   displayOrder: int("displayOrder").default(0).notNull(), // Order in dropdown (1, 2, 3...)
   isActive: int("isActive").default(1).notNull(), // 0 = disabled, 1 = active
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (t) => ({
+  // P0: one option per question+value
+  questionValue: uniqueIndex("uq_qoption_question_value").on(t.questionId, t.optionValue),
+}));
 
 export type QuestionOption = typeof questionOptions.$inferSelect;
 export type InsertQuestionOption = typeof questionOptions.$inferInsert;
@@ -203,7 +223,7 @@ export type InsertQuestionOption = typeof questionOptions.$inferInsert;
  */
 export const intakeResponses = mysqlTable("intakeResponses", {
   id: int("id").autoincrement().primaryKey(),
-  organizationId: int("organizationId").notNull(),
+  organizationId: int("organizationId").notNull().references(() => organizations.id, { onDelete: "cascade" }),
   questionId: varchar("questionId", { length: 50 }).notNull(),
   section: varchar("section", { length: 255 }).notNull(),
   response: text("response"),
@@ -212,7 +232,10 @@ export const intakeResponses = mysqlTable("intakeResponses", {
   updatedBy: varchar("updatedBy", { length: 255 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (t) => ({
+  // P0: one intake response per org+question
+  orgQuestion: uniqueIndex("uq_intake_org_question").on(t.organizationId, t.questionId),
+}));
 
 export type IntakeResponse = typeof intakeResponses.$inferSelect;
 export type InsertIntakeResponse = typeof intakeResponses.$inferInsert;
@@ -222,7 +245,7 @@ export type InsertIntakeResponse = typeof intakeResponses.$inferInsert;
  */
 export const intakeFileAttachments = mysqlTable("intakeFileAttachments", {
   id: int("id").autoincrement().primaryKey(),
-  organizationId: int("organizationId").notNull(),
+  organizationId: int("organizationId").notNull().references(() => organizations.id, { onDelete: "cascade" }),
   questionId: varchar("questionId", { length: 50 }).notNull(), // e.g., "active_directory_sso"
   fileName: varchar("fileName", { length: 255 }).notNull(),
   fileUrl: text("fileUrl").notNull(), // Google Drive shareable link
@@ -241,7 +264,7 @@ export type InsertIntakeFileAttachment = typeof intakeFileAttachments.$inferInse
  */
 export const activityFeed = mysqlTable("activityFeed", {
   id: int("id").autoincrement().primaryKey(),
-  organizationId: int("organizationId").notNull(),
+  organizationId: int("organizationId").notNull().references(() => organizations.id, { onDelete: "cascade" }),
   source: mysqlEnum("source", ["manual", "clickup", "linear"]).notNull(),
   sourceId: varchar("sourceId", { length: 100 }),
   author: varchar("author", { length: 255 }),
@@ -257,7 +280,7 @@ export type InsertActivityFeed = typeof activityFeed.$inferInsert;
  */
 export const passwordResetTokens = mysqlTable("passwordResetTokens", {
   id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
   token: varchar("token", { length: 255 }).notNull().unique(),
   expiresAt: timestamp("expiresAt").notNull(),
   used: int("used").default(0).notNull(), // 0 or 1 (boolean)
@@ -272,12 +295,15 @@ export type InsertPasswordResetToken = typeof passwordResetTokens.$inferInsert;
  */
 export const onboardingFeedback = mysqlTable("onboardingFeedback", {
   id: int("id").autoincrement().primaryKey(),
-  organizationId: int("organizationId").notNull(),
+  organizationId: int("organizationId").notNull().references(() => organizations.id, { onDelete: "cascade" }),
   rating: int("rating").notNull(), // 1-5 stars
   comments: text("comments"),
   submittedBy: varchar("submittedBy", { length: 320 }), // User email
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, (t) => ({
+  // P1: rating is a 1-5 star score
+  ratingRange: check("chk_feedback_rating", sql`rating between 1 and 5`),
+}));
 
 export type OnboardingFeedback = typeof onboardingFeedback.$inferSelect;
 export type InsertOnboardingFeedback = typeof onboardingFeedback.$inferInsert;
@@ -290,7 +316,7 @@ export type InsertOnboardingFeedback = typeof onboardingFeedback.$inferInsert;
  */
 export const partnerTemplates = mysqlTable("partnerTemplates", {
   id: int("id").autoincrement().primaryKey(),
-  clientId: int("clientId").notNull(), // FK to clients.id - which partner owns this template
+  clientId: int("clientId").notNull().references(() => clients.id, { onDelete: "cascade" }), // FK to clients.id - which partner owns this template
   questionId: varchar("questionId", { length: 50 }).notNull(), // Which intake question this template belongs to (e.g., "E.1" for VPN form)
   label: varchar("label", { length: 255 }).notNull(), // Display name (e.g., "VPN Configuration Form")
   fileName: varchar("fileName", { length: 255 }).notNull(), // Original uploaded file name
@@ -351,7 +377,10 @@ export const validationResults = mysqlTable("validationResults", {
   notionLastEdited: timestamp("notionLastEdited"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (t) => ({
+  // P0: one result row per org+test
+  orgTest: uniqueIndex("uq_validation_org_testkey").on(t.organizationId, t.testKey),
+}));
 
 export type ValidationResult = typeof validationResults.$inferSelect;
 export type InsertValidationResult = typeof validationResults.$inferInsert;
@@ -400,8 +429,8 @@ export type InsertVendorAuditLog = typeof vendorAuditLog.$inferInsert;
  */
 export const orgNotes = mysqlTable("orgNotes", {
   id: int("id").autoincrement().primaryKey(),
-  organizationId: int("organizationId"), // set for org-level notes; null for partner-level
-  clientId: int("clientId"), // set for partner-level notes; also set on org-level for easy filtering
+  organizationId: int("organizationId").references(() => organizations.id, { onDelete: "cascade" }), // set for org-level notes; null for partner-level
+  clientId: int("clientId").references(() => clients.id, { onDelete: "cascade" }), // set for partner-level notes; also set on org-level for easy filtering
   label: varchar("label", { length: 100 }).notNull().default("General"),
   fileName: varchar("fileName", { length: 255 }).notNull(),
   fileUrl: text("fileUrl").notNull(),
@@ -411,7 +440,10 @@ export const orgNotes = mysqlTable("orgNotes", {
   mimeType: varchar("mimeType", { length: 100 }),
   uploadedBy: varchar("uploadedBy", { length: 255 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, (t) => ({
+  // P1: a note must belong to an org or a partner (or both)
+  ownerPresent: check("chk_orgnote_owner", sql`organizationId is not null or clientId is not null`),
+}));
 
 export type OrgNote = typeof orgNotes.$inferSelect;
 export type InsertOrgNote = typeof orgNotes.$inferInsert;
@@ -425,10 +457,10 @@ export type InsertOrgNote = typeof orgNotes.$inferInsert;
  */
 export const partnerTaskTemplates = mysqlTable("partnerTaskTemplates", {
   id: int("id").autoincrement().primaryKey(),
-  clientId: int("clientId").notNull(),
+  clientId: int("clientId").notNull().references(() => clients.id, { onDelete: "cascade" }),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
-  type: varchar("type", { length: 50 }).notNull().default("review"), // upload | schedule | form | review
+  type: mysqlEnum("type", ["upload", "schedule", "form", "review"]).notNull().default("review"),
   section: varchar("section", { length: 255 }),
   sortOrder: int("sortOrder").default(0).notNull(),
   isActive: tinyint("isActive").default(1).notNull(),
@@ -447,10 +479,10 @@ export type InsertPartnerTaskTemplate = typeof partnerTaskTemplates.$inferInsert
  */
 export const orgCustomTasks = mysqlTable("orgCustomTasks", {
   id: int("id").autoincrement().primaryKey(),
-  organizationId: int("organizationId").notNull(),
+  organizationId: int("organizationId").notNull().references(() => organizations.id, { onDelete: "cascade" }),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
-  type: varchar("type", { length: 50 }).notNull().default("review"),
+  type: mysqlEnum("type", ["upload", "schedule", "form", "review"]).notNull().default("review"),
   section: varchar("section", { length: 255 }),
   isComplete: tinyint("isComplete").default(0).notNull(),
   createdBy: varchar("createdBy", { length: 320 }),
@@ -518,8 +550,8 @@ export type InsertAiAuditLog = typeof aiAuditLogs.$inferInsert;
  */
 export const partnerDocuments = mysqlTable("partnerDocuments", {
   id: int("id").autoincrement().primaryKey(),
-  clientId: int("clientId").notNull(), // FK to clients.id — which partner owns this document
-  categoryId: int("categoryId"), // FK to partnerDocCategories.id — nullable for uncategorized
+  clientId: int("clientId").notNull().references(() => clients.id, { onDelete: "cascade" }), // FK to clients.id — which partner owns this document
+  categoryId: int("categoryId"), // FK to partnerDocCategories.id — nullable for uncategorized (no table defined; not enforced)
   title: varchar("title", { length: 500 }).notNull(), // Document title
   description: text("description"), // Description of what the document is
   filename: varchar("filename", { length: 500 }).notNull(), // Original filename
@@ -542,8 +574,8 @@ export type InsertPartnerDocument = typeof partnerDocuments.$inferInsert;
  */
 export const partnerDocAudit = mysqlTable("partnerDocAudit", {
   id: int("id").autoincrement().primaryKey(),
-  documentId: int("documentId").notNull(), // FK to partnerDocuments.id
-  userId: int("userId").notNull(), // FK to users.id — who performed the action
+  documentId: int("documentId").notNull().references(() => partnerDocuments.id, { onDelete: "cascade" }), // FK to partnerDocuments.id
+  userId: int("userId").notNull(), // FK to users.id — who performed the action (denormalized name/email kept; no FK so audit survives user deletion)
   userName: varchar("userName", { length: 255 }).notNull(), // Denormalized for display
   userEmail: varchar("userEmail", { length: 320 }).notNull(), // Denormalized for display
   action: mysqlEnum("action", ["upload", "view", "download"]).notNull(),
@@ -561,7 +593,7 @@ export type InsertPartnerDocAudit = typeof partnerDocAudit.$inferInsert;
  */
 export const implementationOrgs = mysqlTable("implementationOrgs", {
   id: int("id").autoincrement().primaryKey(),
-  organizationId: int("organizationId").notNull(), // FK to organizations.id
+  organizationId: int("organizationId").notNull().references(() => organizations.id, { onDelete: "cascade" }), // FK to organizations.id
   name: varchar("name", { length: 255 }).notNull(), // e.g., "RadOne", "Memorial Hospital IT"
   orgType: varchar("orgType", { length: 100 }).notNull(), // e.g., "rad_group", "hospital", "new_lantern", "scipio", "silverback", "ehr_vendor", "ris_vendor", "pacs_vendor", "other"
   color: varchar("color", { length: 20 }), // Optional custom color for the swimlane
@@ -580,12 +612,15 @@ export type InsertImplementationOrg = typeof implementationOrgs.$inferInsert;
  */
 export const taskOrgAssignment = mysqlTable("taskOrgAssignment", {
   id: int("id").autoincrement().primaryKey(),
-  organizationId: int("organizationId").notNull(), // FK to organizations.id (the hospital/site)
+  organizationId: int("organizationId").notNull().references(() => organizations.id, { onDelete: "cascade" }), // FK to organizations.id (the hospital/site)
   taskId: varchar("taskId", { length: 50 }).notNull(), // e.g., "network:vpn" from taskDefs
-  implOrgId: int("implOrgId").notNull(), // FK to implementationOrgs.id (which org owns this task)
+  implOrgId: int("implOrgId").notNull().references(() => implementationOrgs.id, { onDelete: "cascade" }), // FK to implementationOrgs.id (which org owns this task)
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (t) => ({
+  // P0: one impl-org assignment per org+task
+  orgTask: uniqueIndex("uq_taskorg_org_task").on(t.organizationId, t.taskId),
+}));
 
 export type TaskOrgAssignment = typeof taskOrgAssignment.$inferSelect;
 export type InsertTaskOrgAssignment = typeof taskOrgAssignment.$inferInsert;
@@ -659,7 +694,7 @@ export const notionRetryQueue = mysqlTable("notionRetryQueue", {
   /** Whether the owner has been notified about persistent failure */
   ownerNotified: tinyint("ownerNotified").default(0).notNull(),
   /** Status: "pending" | "succeeded" | "failed_permanent" */
-  status: varchar("status", { length: 30 }).default("pending").notNull(),
+  status: mysqlEnum("status", ["pending", "succeeded", "failed_permanent"]).default("pending").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -682,7 +717,7 @@ export const reconciliationLog = mysqlTable("reconciliationLog", {
   /** Duration of the reconciliation run in ms */
   durationMs: int("durationMs"),
   /** Overall status: "healthy" | "issues_found" | "error" */
-  status: varchar("status", { length: 30 }).default("healthy").notNull(),
+  status: mysqlEnum("status", ["healthy", "issues_found", "error"]).default("healthy").notNull(),
   /** Error message if the run failed */
   errorMessage: text("errorMessage"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -709,12 +744,12 @@ export type InsertSyncCheckpoint = typeof syncCheckpoints.$inferInsert;
 
 export const emailLog = mysqlTable("emailLog", {
   id: int("id").primaryKey().autoincrement(),
-  direction: varchar("direction", { length: 10 }).notNull(),
+  direction: mysqlEnum("direction", ["inbound", "outbound"]).notNull(),
   type: varchar("type", { length: 30 }).notNull(),
   toAddress: varchar("toAddress", { length: 255 }).notNull(),
   fromAddress: varchar("fromAddress", { length: 255 }).notNull(),
   subject: varchar("subject", { length: 500 }).notNull(),
-  status: varchar("status", { length: 20 }).notNull().default("sent"),
+  status: mysqlEnum("status", ["sent", "failed", "queued", "bounced"]).notNull().default("sent"),
   errorMessage: text("errorMessage"),
   organizationId: int("organizationId"),
   triggeredBy: varchar("triggeredBy", { length: 255 }),
