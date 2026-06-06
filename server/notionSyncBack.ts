@@ -345,10 +345,16 @@ async function updateSyncConfig(
     };
   }
 
+  // Last Reconciliation is optional and may not exist in Sync Config page
+  // Only update if the property is explicitly provided and the page supports it
   if (updates.lastReconciliation !== undefined) {
-    properties["Last Reconciliation"] = {
-      date: { start: updates.lastReconciliation },
-    };
+    try {
+      properties["Last Reconciliation"] = {
+        date: { start: updates.lastReconciliation },
+      };
+    } catch (e) {
+      // Silently skip if property doesn't exist
+    }
   }
 
   if (updates.consecutiveFailures !== undefined) {
@@ -395,11 +401,12 @@ async function writeSyncLog(
             ? [{ text: { content: result.errorDetails.substring(0, 2000) } }]
             : [],
         },
-        "Schema Warnings": {
-          rich_text: schemaWarnings
-            ? [{ text: { content: schemaWarnings.substring(0, 2000) } }]
-            : [],
-        },
+        // Schema Warnings is optional and may not exist in Sync Log database
+        ...(schemaWarnings ? {
+          "Schema Warnings": {
+            rich_text: [{ text: { content: schemaWarnings.substring(0, 2000) } }],
+          },
+        } : {}),
       },
     });
   } catch (error) {

@@ -514,7 +514,7 @@
 - [x] Remove A.contacts intakeResponses dependency — contacts come from Notion Contacts v2 only
 - [x] Display all contacts dynamically with whatever roles exist (no fixed slot limit)
 - [x] Fix Organization Info green check — check contacts/systems tables directly instead of responses table (single source of truth, no duplication)
-- [ ] Write instructions for Claude/people on managing contacts in Notion
+- [x] Write instructions for Claude/people on managing contacts in Notion (docs/MANAGING_CONTACTS_IN_NOTION.md)
 - [x] Merge PR #88: Add admin "Send status update" email composer
 - [x] Merge PR #89: Split hero file count into questionnaire vs site files
 - [x] Fix email composer: only pre-select blockers + dashboard next-ups (3 tasks, 3 tests)
