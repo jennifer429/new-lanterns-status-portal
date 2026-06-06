@@ -13,6 +13,7 @@ import { isForeignKeyViolation } from "../dbErrors";
 import { fileUploadInput } from "../_core/fileValidation";
 import { syncAnswerToNotion, syncFileToNotion, removeFileFromNotion } from "../notion";
 import { syncConnectivityToNotion } from "./connectivity";
+import { assertOrgAccess } from "../_core/orgAccess";
 
 /**
  * Replace each attachment's stored `fileUrl` with a freshly-resolved, directly
@@ -1321,18 +1322,21 @@ export const intakeRouter = router({
    * Get the per-org completion state for partner template tasks.
    * Returns the rows so the client can build the set of completed template IDs.
    */
-  getTemplateTaskCompletion: publicProcedure
+  getTemplateTaskCompletion: protectedProcedure
     .input(z.object({ organizationSlug: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const db = await requireDb();
 
       const [org] = await db
-        .select({ id: organizations.id })
+        .select({ id: organizations.id, clientId: organizations.clientId })
         .from(organizations)
         .where(eq(organizations.slug, input.organizationSlug))
         .limit(1);
 
       if (!org) return [];
+
+      // Verify access: platform admin, partner admin (if org.clientId matches), or org user
+      await assertOrgAccess(ctx.user, org);
 
       return db
         .select()
@@ -1345,22 +1349,25 @@ export const intakeRouter = router({
    * Upserts on (organizationId, templateTaskId): creates a completed row the
    * first time, then flips isComplete on subsequent calls.
    */
-  toggleTemplateTask: publicProcedure
+  toggleTemplateTask: protectedProcedure
     .input(z.object({
       organizationSlug: z.string(),
       templateTaskId: z.number(),
       userEmail: z.string().email().optional(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await requireDb();
 
       const [org] = await db
-        .select({ id: organizations.id })
+        .select({ id: organizations.id, clientId: organizations.clientId })
         .from(organizations)
         .where(eq(organizations.slug, input.organizationSlug))
         .limit(1);
 
       if (!org) throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+
+      // Verify access: platform admin, partner admin (if org.clientId matches), or org user
+      await assertOrgAccess(ctx.user, org);
 
       const [existing] = await db
         .select()
