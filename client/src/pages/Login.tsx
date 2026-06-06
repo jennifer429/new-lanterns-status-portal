@@ -114,7 +114,7 @@ export default function Login() {
             color: "#A855D9",
           }}
         >
-          Customer Implementation Portal
+          Status Portal
         </p>
 
         {/* Heading */}

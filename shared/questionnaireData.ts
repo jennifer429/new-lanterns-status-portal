@@ -78,7 +78,7 @@ export const questionnaireSections: Section[] = [
     id: 'integration-workflows',
     type: 'integration-workflows',
     title: 'Integration Workflows',
-    description: 'Workflow descriptions for orders, images, priors, and reports',
+    description: 'Describe how orders, images, priors, and reports move between your systems.',
     questions: [
       { id: 'IW.orders_description', text: 'Orders Workflow: Describe how imaging orders reach the platform', type: 'textarea', placeholder: 'e.g., Orders originate in Epic, sent via HL7 ORM through Mirth Connect to New Lantern...' },
       { id: 'IW.images_description', text: 'Images Workflow: Describe how imaging studies are routed', type: 'textarea', placeholder: 'e.g., Studies acquired on modalities (CT, MR, XR) and sent via DICOM C-STORE to PACS, then forwarded to New Lantern...' },
@@ -89,7 +89,7 @@ export const questionnaireSections: Section[] = [
   {
     id: 'connectivity',
     title: 'Connectivity',
-    description: 'VPN setup and network endpoints',
+    description: 'Network plumbing — VPN tunnel, IP addresses, ports, and firewall rules.',
     type: 'connectivity-table',
     questions: [
       // D.1 moved here from HL7 & DICOM section
@@ -121,7 +121,7 @@ export const questionnaireSections: Section[] = [
   {
     id: 'hl7-dicom',
     title: 'HL7 & DICOM Data',
-    description: 'Data exchange configuration, modalities, go-live details, and HL7 message field values',
+    description: 'Message contents — HL7 field values, DICOM tags, modalities, and your go-live date.',
     questions: [
       // D.1 moved to Connectivity section
       { id: 'D.2', text: 'Requested go-live date', type: 'date', placeholder: 'MM/DD/YYYY' },

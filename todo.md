@@ -716,13 +716,13 @@
 
 ### Tier 2: UX Polish & Real Estate
 
-- [ ] **Empty states** — add "No specs uploaded yet" / "Fill this workflow" guidance on blank pages
-- [ ] **Remove ProgressHero duplication** — sidebar already shows same 3 percentages; remove from Home
-- [ ] **Consolidate Intake chrome** — reduce Breadcrumb + Header + Section title stacking (3 levels before content)
-- [ ] **Fix Connectivity page layout** — expand table from 40% width to full width
+- [x] **Empty states** — Workflows page now points users to Intake when a workflow is undescribed; Specs already had a strong empty state
+- [x] **Remove ProgressHero duplication** — 3-stat grid removed; hero is just ring + title + subtitle + file/phase sidebar
+- [x] **Consolidate Intake chrome** — removed the breadcrumb (header already shows "Questionnaire" + org); 3 layers → 2
+- [x] **Fix Connectivity page layout** — dropped `max-w-[1600px]` so the table uses full width on wide screens
 
 ### Tier 3: Branding & Content Consistency
 
-- [ ] **Standardize branding** — use "Status Portal" everywhere (not "Customer Implementation Portal")
-- [ ] **Rename Home section** — "Onboarding Progress" (not "Implementation Progress" which is vague)
-- [ ] **Add section descriptions** — clarify Integration Workflows / Connectivity / HL7 & DICOM (overlap confuses first-time users)
+- [x] **Standardize branding** — Login / Home / SetPassword now say "Status Portal"
+- [x] **Rename Home section** — `ProgressHero` heading is "Onboarding Progress"
+- [x] **Add section descriptions** — Integration Workflows / Connectivity / HL7 & DICOM Data now scoped distinctly (how data flows / network plumbing / message contents)

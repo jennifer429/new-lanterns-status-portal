@@ -110,7 +110,7 @@ export default function SetPassword() {
           <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-8 mx-auto mb-4" />
           <CardTitle>Set Your Password</CardTitle>
           <CardDescription>
-            Welcome to the New Lantern Implementation Portal. Choose a password to get started.
+            Welcome to the New Lantern Status Portal. Choose a password to get started.
           </CardDescription>
         </CardHeader>
         <CardContent>

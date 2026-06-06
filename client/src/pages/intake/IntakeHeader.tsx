@@ -1,7 +1,6 @@
 import { Link } from "wouter";
 import { Download, Menu, Upload, Loader2 } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
-import { PageBreadcrumb } from "@/components/PageBreadcrumb";
 import { questionnaireSections } from "@shared/questionnaireData";
 import type { Section } from "@shared/questionnaireData";
 
@@ -106,9 +105,6 @@ export function IntakeHeader({
           </div>
         </div>
       </header>
-
-      {/* Breadcrumb */}
-      <PageBreadcrumb orgSlug={slug} items={[{ label: "Questionnaire" }]} />
 
       {/* Overall Stats Banner */}
       <div className="bg-card border-b border-border px-4 md:px-8 py-3 md:py-4">

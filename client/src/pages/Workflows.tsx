@@ -152,10 +152,15 @@ export default function Workflows() {
                     <p className="text-sm leading-relaxed">{wf.content}</p>
                   </div>
                 ) : (
-                  <div className="rounded-lg border-2 border-dashed border-border/40 p-4 min-h-[100px] flex items-center justify-center">
-                    <p className="text-sm text-muted-foreground italic">
-                      No description provided yet
+                  <div className="rounded-lg border-2 border-dashed border-border/40 p-4 min-h-[100px] flex flex-col items-center justify-center gap-2 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      Not described yet.
                     </p>
+                    <Link href={`${orgPath}/intake?section=integration-workflows`}>
+                      <Button variant="ghost" size="sm" className="text-primary hover:text-primary h-7">
+                        Add a description in Intake →
+                      </Button>
+                    </Link>
                   </div>
                 )}
 
