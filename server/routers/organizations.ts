@@ -132,9 +132,29 @@ export const organizationsRouter = router({
     )
     .mutation(async ({ input }) => {
       const db = await requireDb();
-      // Check if section progress exists
-      const [existing] = await db
-        .select()
+
+      // Race-safe upsert keyed on the (organizationId, sectionName) unique index
+      // (uq_section_org_name). Concurrent saves can no longer create duplicate rows.
+      await db
+        .insert(sectionProgress)
+        .values({
+          organizationId: input.organizationId,
+          sectionName: input.sectionName,
+          status: input.status,
+          progress: input.progress,
+          expectedEnd: input.expectedEnd,
+        })
+        .onDuplicateKeyUpdate({
+          set: {
+            status: input.status,
+            progress: input.progress,
+            expectedEnd: input.expectedEnd,
+          },
+        });
+
+      // Look up the (now guaranteed single) row id for the Notion dual-write.
+      const [row] = await db
+        .select({ id: sectionProgress.id })
         .from(sectionProgress)
         .where(
           and(
@@ -144,40 +164,16 @@ export const organizationsRouter = router({
         )
         .limit(1);
 
-      if (existing) {
-        // Update existing
-        await db
-          .update(sectionProgress)
-          .set({
-            status: input.status,
-            progress: input.progress,
-            expectedEnd: input.expectedEnd,
-          })
-          .where(eq(sectionProgress.id, existing.id));
-        dispatch.sectionProgress({
-          mysqlId: existing.id,
-          organizationId: input.organizationId,
-          orgName: "",
-          sectionName: input.sectionName,
-          status: input.status,
-          progress: input.progress,
-          expectedEnd: input.expectedEnd || null,
-          updatedAt: new Date(),
-        });
-      } else {
-        // Insert new
-        const [spRes] = await db.insert(sectionProgress).values(input);
-        dispatch.sectionProgress({
-          mysqlId: (spRes as any).insertId || 0,
-          organizationId: input.organizationId,
-          orgName: "",
-          sectionName: input.sectionName,
-          status: input.status,
-          progress: input.progress,
-          expectedEnd: input.expectedEnd || null,
-          updatedAt: new Date(),
-        });
-      }
+      dispatch.sectionProgress({
+        mysqlId: row?.id ?? 0,
+        organizationId: input.organizationId,
+        orgName: "",
+        sectionName: input.sectionName,
+        status: input.status,
+        progress: input.progress,
+        expectedEnd: input.expectedEnd || null,
+        updatedAt: new Date(),
+      });
 
       return { success: true };
     }),

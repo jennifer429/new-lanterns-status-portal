@@ -3,7 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { publicProcedure, router } from "../_core/trpc";
 import { requireDb } from "../db";
 import { organizations, validationResults } from "../../drizzle/schema";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { syncValidationResultToNotion } from "../notionTaskValidation";
 
 export const validationRouter = router({
@@ -72,17 +72,6 @@ export const validationRouter = router({
 
       if (!org) throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
 
-      const [existing] = await db
-        .select()
-        .from(validationResults)
-        .where(
-          and(
-            eq(validationResults.organizationId, org.id),
-            eq(validationResults.testKey, input.testKey)
-          )
-        )
-        .limit(1);
-
       const payload = {
         actual: input.actual ?? null,
         status: input.status,
@@ -92,19 +81,20 @@ export const validationRouter = router({
         updatedBy: input.updatedBy ?? null,
       };
 
-      if (existing) {
-        await db
-          .update(validationResults)
-          .set({ ...payload, notionLastEdited: null })
-          .where(eq(validationResults.id, existing.id));
-      } else {
-        await db.insert(validationResults).values({
+      // Race-safe upsert keyed on the (organizationId, testKey) unique index
+      // (uq_validation_org_testkey). notionLastEdited is reset to null so the
+      // sync-back version check knows the portal wrote last.
+      await db
+        .insert(validationResults)
+        .values({
           organizationId: org.id,
           testKey: input.testKey,
           ...payload,
           notionLastEdited: null,
+        })
+        .onDuplicateKeyUpdate({
+          set: { ...payload, notionLastEdited: null },
         });
-      }
 
       // Fire-and-forget dual-write to Notion
       syncValidationResultToNotion({

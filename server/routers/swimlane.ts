@@ -202,21 +202,19 @@ export const swimlaneRouter = router({
       const db = await requireDb();
       const orgId = await resolveOrgId(db, input.organizationSlug);
 
-      // Upsert: delete existing then insert
+      // Race-safe upsert keyed on the (organizationId, taskId) unique index
+      // (uq_taskorg_org_task). Replaces the old delete-then-insert, which could
+      // briefly drop the assignment or duplicate it under concurrent writes.
       await db
-        .delete(taskOrgAssignment)
-        .where(
-          and(
-            eq(taskOrgAssignment.organizationId, orgId),
-            eq(taskOrgAssignment.taskId, input.taskId)
-          )
-        );
-
-      await db.insert(taskOrgAssignment).values({
-        organizationId: orgId,
-        taskId: input.taskId,
-        implOrgId: input.implOrgId,
-      });
+        .insert(taskOrgAssignment)
+        .values({
+          organizationId: orgId,
+          taskId: input.taskId,
+          implOrgId: input.implOrgId,
+        })
+        .onDuplicateKeyUpdate({
+          set: { implOrgId: input.implOrgId },
+        });
 
       return { success: true };
     }),
@@ -235,20 +233,17 @@ export const swimlaneRouter = router({
       const orgId = await resolveOrgId(db, input.organizationSlug);
 
       for (const taskId of input.taskIds) {
+        // Race-safe upsert keyed on the (organizationId, taskId) unique index.
         await db
-          .delete(taskOrgAssignment)
-          .where(
-            and(
-              eq(taskOrgAssignment.organizationId, orgId),
-              eq(taskOrgAssignment.taskId, taskId)
-            )
-          );
-
-        await db.insert(taskOrgAssignment).values({
-          organizationId: orgId,
-          taskId,
-          implOrgId: input.implOrgId,
-        });
+          .insert(taskOrgAssignment)
+          .values({
+            organizationId: orgId,
+            taskId,
+            implOrgId: input.implOrgId,
+          })
+          .onDuplicateKeyUpdate({
+            set: { implOrgId: input.implOrgId },
+          });
       }
 
       return { success: true };
