@@ -1,7 +1,9 @@
 import { z } from "zod";
-import { router, publicProcedure, protectedProcedure } from "../_core/trpc";
+import { TRPCError } from "@trpc/server";
+import { router, protectedProcedure } from "../_core/trpc";
 import { getConnectivityNotionClient } from "../notion";
 import { ENV } from "../_core/env";
+import { assertOrgAccess } from "../_core/orgAccess";
 
 // ── Notion property extractors ────────────────────────────────────────────────
 
@@ -365,25 +367,55 @@ export async function syncConnectivityToNotion(
   }
 }
 
+/**
+ * Resolve an org by slug and assert the caller may access it.
+ * Used by the connectivity write endpoints, which otherwise only touch Notion.
+ */
+async function assertConnectivityOrgAccess(
+  user: { role: string; clientId: number | null; organizationId: number | null },
+  organizationSlug: string,
+): Promise<void> {
+  const { requireDb } = await import("../db");
+  const db = await requireDb();
+  const { organizations } = await import("../../drizzle/schema");
+  const { eq } = await import("drizzle-orm");
+  const [org] = await db
+    .select({ id: organizations.id, clientId: organizations.clientId })
+    .from(organizations)
+    .where(eq(organizations.slug, organizationSlug))
+    .limit(1);
+  if (!org) throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+  assertOrgAccess(user, org);
+}
+
 export const connectivityRouter = router({
   /**
    * Fetch connectivity rows from the Notion database and filter by org.
    * Filters by "Institution Group" multi-select field.
    * Returns `configured: false` when the Notion API key is missing.
    */
-  getForOrg: publicProcedure
+  getForOrg: protectedProcedure
     .input(z.object({
       organizationSlug: z.string(),
       organizationName: z.string().optional(),
     }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const client = getConnectivityNotionClient();
       const dsId = getDataSourceId();
       const { requireDb } = await import("../db");
       const db = await requireDb();
-      const { connectivityCache } = await import("../../drizzle/schema");
+      const { organizations, connectivityCache } = await import("../../drizzle/schema");
       const { eq } = await import("drizzle-orm");
-      
+
+      // Enforce org-scoped access before returning any connectivity data.
+      const [org] = await db
+        .select({ id: organizations.id, clientId: organizations.clientId })
+        .from(organizations)
+        .where(eq(organizations.slug, input.organizationSlug))
+        .limit(1);
+      if (!org) throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      assertOrgAccess(ctx.user, org);
+
       const slugNorm = normalise(input.organizationSlug);
       const nameNorm = input.organizationName ? normalise(input.organizationName) : null;
 
@@ -495,7 +527,8 @@ export const connectivityRouter = router({
       organizationName: z.string(),
       rows: z.array(ConnectivityRowSchema),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      await assertConnectivityOrgAccess(ctx.user, input.organizationSlug);
       const client = getConnectivityNotionClient();
       const dbId = getDatabaseId();
       const dsId = getDataSourceId();
@@ -567,8 +600,9 @@ export const connectivityRouter = router({
 
   /** Create a new Notion page for one connectivity row. Returns the new Notion page ID. */
   createRow: protectedProcedure
-    .input(z.object({ organizationName: z.string(), row: ConnectivityRowSchema }))
-    .mutation(async ({ input }) => {
+    .input(z.object({ organizationSlug: z.string(), organizationName: z.string(), row: ConnectivityRowSchema }))
+    .mutation(async ({ input, ctx }) => {
+      await assertConnectivityOrgAccess(ctx.user, input.organizationSlug);
       const client = getConnectivityNotionClient();
       const dbId = getDatabaseId();
       if (!client || !dbId) throw new Error("Notion not configured");
@@ -583,8 +617,9 @@ export const connectivityRouter = router({
 
   /** Update an existing Notion page for one connectivity row. */
   updateRow: protectedProcedure
-    .input(z.object({ pageId: z.string(), organizationName: z.string(), row: ConnectivityRowSchema }))
-    .mutation(async ({ input }) => {
+    .input(z.object({ pageId: z.string(), organizationSlug: z.string(), organizationName: z.string(), row: ConnectivityRowSchema }))
+    .mutation(async ({ input, ctx }) => {
+      await assertConnectivityOrgAccess(ctx.user, input.organizationSlug);
       const client = getConnectivityNotionClient();
       const dbId = getDatabaseId();
       if (!client || !dbId) throw new Error("Notion not configured");
@@ -596,8 +631,9 @@ export const connectivityRouter = router({
 
     /** Archive (delete) a Notion page. */
   archiveRow: protectedProcedure
-    .input(z.object({ pageId: z.string() }))
-    .mutation(async ({ input }) => {
+    .input(z.object({ pageId: z.string(), organizationSlug: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      await assertConnectivityOrgAccess(ctx.user, input.organizationSlug);
       const client = getConnectivityNotionClient();
       if (!client) throw new Error("Notion not configured");
       await client.pages.update({ page_id: input.pageId, archived: true });

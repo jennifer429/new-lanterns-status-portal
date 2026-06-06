@@ -68,14 +68,14 @@ export default function Connectivity() {
     try {
       for (const row of connRows) {
         if (!newIds.has(row.id) && notionPageIds.current.has(row.id)) {
-          archiveRowMutation.mutate({ pageId: row.id });
+          archiveRowMutation.mutate({ pageId: row.id, organizationSlug: orgSlug });
           notionPageIds.current.delete(row.id);
         }
       }
       for (const row of newRows) {
         if (!oldIds.has(row.id)) {
           createRowMutation.mutate(
-            { organizationName: organization.name, row },
+            { organizationSlug: orgSlug, organizationName: organization.name, row },
             {
               onSuccess: ({ pageId }) => {
                 notionPageIds.current.add(pageId);
@@ -88,7 +88,7 @@ export default function Connectivity() {
         } else if (notionPageIds.current.has(row.id)) {
           const old = connRows.find((r) => r.id === row.id);
           if (old && JSON.stringify(old) !== JSON.stringify(row)) {
-            updateRowMutation.mutate({ pageId: row.id, organizationName: organization.name, row });
+            updateRowMutation.mutate({ pageId: row.id, organizationSlug: orgSlug, organizationName: organization.name, row });
           }
         }
       }

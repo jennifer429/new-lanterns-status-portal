@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { publicProcedure, router } from "../_core/trpc";
+import { protectedProcedure, router } from "../_core/trpc";
 import { dispatch } from "../notionSyncDispatcher";
 import { requireDb } from "../db";
 import {
@@ -11,6 +11,7 @@ import {
   clients,
 } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
+import { assertOrgAccess } from "../_core/orgAccess";
 
 /**
  * Default org types seeded when a PM first opens the swimlane view.
@@ -30,15 +31,29 @@ const DEFAULT_ORG_TYPES = [
   { name: "New Lantern", orgType: "new_lantern", sortOrder: 8 },
 ];
 
-/** Resolve an org slug to its numeric ID, or throw NOT_FOUND. */
-async function resolveOrgId(db: ReturnType<typeof requireDb> extends Promise<infer T> ? T : never, slug: string) {
+type DbHandle = ReturnType<typeof requireDb> extends Promise<infer T> ? T : never;
+
+/** Resolve an org slug to its id + clientId, or throw NOT_FOUND. */
+async function resolveOrg(db: DbHandle, slug: string) {
   const [org] = await db
-    .select({ id: organizations.id })
+    .select({ id: organizations.id, clientId: organizations.clientId })
     .from(organizations)
     .where(eq(organizations.slug, slug))
     .limit(1);
   if (!org) throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
-  return org.id;
+  return org;
+}
+
+/** Resolve the parent org (id + clientId) for an implementation-org row, or throw NOT_FOUND. */
+async function resolveOrgByImplOrgId(db: DbHandle, implOrgId: number) {
+  const [row] = await db
+    .select({ id: organizations.id, clientId: organizations.clientId })
+    .from(implementationOrgs)
+    .innerJoin(organizations, eq(implementationOrgs.organizationId, organizations.id))
+    .where(eq(implementationOrgs.id, implOrgId))
+    .limit(1);
+  if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "Implementation org not found" });
+  return row;
 }
 
 export const swimlaneRouter = router({
@@ -48,11 +63,13 @@ export const swimlaneRouter = router({
    * Get all implementation orgs for a site.
    * Auto-seeds defaults if none exist yet.
    */
-  getOrgs: publicProcedure
+  getOrgs: protectedProcedure
     .input(z.object({ organizationSlug: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const db = await requireDb();
-      const orgId = await resolveOrgId(db, input.organizationSlug);
+      const org = await resolveOrg(db, input.organizationSlug);
+      assertOrgAccess(ctx.user, org);
+      const orgId = org.id;
 
       let rows = await db
         .select()
@@ -81,7 +98,7 @@ export const swimlaneRouter = router({
     }),
 
   /** Add a new implementation org to a site's swimlane. */
-  addOrg: publicProcedure
+  addOrg: protectedProcedure
     .input(
       z.object({
         organizationSlug: z.string(),
@@ -91,9 +108,11 @@ export const swimlaneRouter = router({
         sortOrder: z.number().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await requireDb();
-      const orgId = await resolveOrgId(db, input.organizationSlug);
+      const org = await resolveOrg(db, input.organizationSlug);
+      assertOrgAccess(ctx.user, org);
+      const orgId = org.id;
 
       // Default sortOrder: max + 1
       let sortOrder = input.sortOrder;
@@ -128,7 +147,7 @@ export const swimlaneRouter = router({
     }),
 
   /** Update an implementation org (rename, recolor, reorder). */
-  updateOrg: publicProcedure
+  updateOrg: protectedProcedure
     .input(
       z.object({
         id: z.number(),
@@ -137,8 +156,10 @@ export const swimlaneRouter = router({
         sortOrder: z.number().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await requireDb();
+      const org = await resolveOrgByImplOrgId(db, input.id);
+      assertOrgAccess(ctx.user, org);
       const set: Record<string, unknown> = {};
       if (input.name !== undefined) set.name = input.name;
       if (input.color !== undefined) set.color = input.color;
@@ -154,10 +175,12 @@ export const swimlaneRouter = router({
     }),
 
   /** Soft-delete an implementation org. */
-  removeOrg: publicProcedure
+  removeOrg: protectedProcedure
     .input(z.object({ id: z.number() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await requireDb();
+      const org = await resolveOrgByImplOrgId(db, input.id);
+      assertOrgAccess(ctx.user, org);
       await db
         .update(implementationOrgs)
         .set({ isActive: 0 })
@@ -171,11 +194,13 @@ export const swimlaneRouter = router({
    * Get all task→org assignments for a site.
    * Returns a map of taskId → implOrgId.
    */
-  getAssignments: publicProcedure
+  getAssignments: protectedProcedure
     .input(z.object({ organizationSlug: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const db = await requireDb();
-      const orgId = await resolveOrgId(db, input.organizationSlug);
+      const org = await resolveOrg(db, input.organizationSlug);
+      assertOrgAccess(ctx.user, org);
+      const orgId = org.id;
 
       const rows = await db
         .select()
@@ -190,7 +215,7 @@ export const swimlaneRouter = router({
     }),
 
   /** Assign (or reassign) a task to an implementation org. */
-  assignTask: publicProcedure
+  assignTask: protectedProcedure
     .input(
       z.object({
         organizationSlug: z.string(),
@@ -198,9 +223,11 @@ export const swimlaneRouter = router({
         implOrgId: z.number(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await requireDb();
-      const orgId = await resolveOrgId(db, input.organizationSlug);
+      const org = await resolveOrg(db, input.organizationSlug);
+      assertOrgAccess(ctx.user, org);
+      const orgId = org.id;
 
       // Race-safe upsert keyed on the (organizationId, taskId) unique index
       // (uq_taskorg_org_task). Replaces the old delete-then-insert, which could
@@ -220,7 +247,7 @@ export const swimlaneRouter = router({
     }),
 
   /** Bulk assign multiple tasks to an implementation org. */
-  bulkAssignTasks: publicProcedure
+  bulkAssignTasks: protectedProcedure
     .input(
       z.object({
         organizationSlug: z.string(),
@@ -228,9 +255,11 @@ export const swimlaneRouter = router({
         implOrgId: z.number(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await requireDb();
-      const orgId = await resolveOrgId(db, input.organizationSlug);
+      const org = await resolveOrg(db, input.organizationSlug);
+      assertOrgAccess(ctx.user, org);
+      const orgId = org.id;
 
       for (const taskId of input.taskIds) {
         // Race-safe upsert keyed on the (organizationId, taskId) unique index.
@@ -255,11 +284,13 @@ export const swimlaneRouter = router({
    * Also pulls the organization name for the Hospital IT row.
    * Returns a map of partyId → display name.
    */
-  getVendorNames: publicProcedure
+  getVendorNames: protectedProcedure
     .input(z.object({ organizationSlug: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const db = await requireDb();
-      const orgId = await resolveOrgId(db, input.organizationSlug);
+      const orgRef = await resolveOrg(db, input.organizationSlug);
+      assertOrgAccess(ctx.user, orgRef);
+      const orgId = orgRef.id;
 
       // Get the org name for the Hospital IT row and the partner (client) name
       const [org] = await db
@@ -355,16 +386,18 @@ export const swimlaneRouter = router({
     }),
 
   /** Unassign a task (remove from swimlane). */
-  unassignTask: publicProcedure
+  unassignTask: protectedProcedure
     .input(
       z.object({
         organizationSlug: z.string(),
         taskId: z.string(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await requireDb();
-      const orgId = await resolveOrgId(db, input.organizationSlug);
+      const org = await resolveOrg(db, input.organizationSlug);
+      assertOrgAccess(ctx.user, org);
+      const orgId = org.id;
 
       await db
         .delete(taskOrgAssignment)
