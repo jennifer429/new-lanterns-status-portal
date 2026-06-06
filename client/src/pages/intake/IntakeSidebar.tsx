@@ -67,8 +67,10 @@ export function IntakeSidebar({
           <div className="mb-3">
             <div className="text-xs text-muted-foreground mb-1">Overall Progress</div>
             <div className="text-lg font-bold text-white">
-              {questionnaireSections.filter((s) => calculateSectionProgress(s) === 100).length} of{" "}
-              {questionnaireSections.length} sections complete
+              {Math.round(
+                questionnaireSections.reduce((sum, s) => sum + calculateSectionProgress(s), 0) /
+                  questionnaireSections.length
+              )}% questions answered
             </div>
           </div>
 

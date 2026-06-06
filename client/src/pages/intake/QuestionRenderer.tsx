@@ -15,6 +15,7 @@ import {
   FileIcon,
   Loader2,
   Upload,
+  AlertCircle,
 } from "lucide-react";
 import { type Question } from "@shared/questionnaireData";
 import { cn } from "@/lib/utils";
@@ -42,6 +43,8 @@ interface QuestionRendererProps {
   onFileDelete: (fileId: number) => void;
   slug: string;
   isFileDeleting: boolean;
+  naQuestions?: Set<string>;
+  toggleQuestionNa?: (questionId: string) => void;
 }
 
 export function QuestionRenderer({
@@ -55,54 +58,94 @@ export function QuestionRenderer({
   onFileDelete,
   slug,
   isFileDeleting,
+  naQuestions = new Set(),
+  toggleQuestionNa,
 }: QuestionRendererProps) {
   const value = responses[question.id];
   const isUploading = uploadingFiles.has(question.id);
+  const isNa = naQuestions.has(question.id);
+  const isEmpty = !isNa && !value && value !== 0 && (!Array.isArray(value) || value.length === 0);
 
   switch (question.type) {
     case "text":
       return (
-        <LocalInput
-          value={value || ""}
-          onCommit={(val) =>
-            setResponses((prev) => ({ ...prev, [question.id]: val }))
-          }
-          placeholder={question.placeholder}
-          className="!bg-white !text-black"
-        />
+        <div className="relative">
+          <LocalInput
+            value={value || ""}
+            onCommit={(val) =>
+              setResponses((prev) => ({ ...prev, [question.id]: val }))
+            }
+            placeholder={question.placeholder}
+            className="!bg-white !text-black"
+          />
+          {isEmpty && !isNa && (
+            <div className="absolute -left-6 top-1/2 -translate-y-1/2">
+              <AlertCircle className="w-4 h-4 text-red-500" title="Unanswered" />
+            </div>
+          )}
+          {isNa && (
+            <div className="absolute -left-6 top-1/2 -translate-y-1/2">
+              <CheckCircle2 className="w-4 h-4 text-gray-400" title="Marked N/A" />
+            </div>
+          )}
+        </div>
       );
 
     case "textarea":
       return (
-        <LocalTextarea
-          value={value || ""}
-          onCommit={(val) =>
-            setResponses((prev) => ({ ...prev, [question.id]: val }))
+        <div className="relative">
+          <LocalTextarea
+            value={value || ""}
+            onCommit={(val) =>
+              setResponses((prev) => ({ ...prev, [question.id]: val }))
           }
-          placeholder={question.placeholder}
-          className="!bg-white !text-black min-h-[100px]"
-        />
+            placeholder={question.placeholder}
+            className="!bg-white !text-black min-h-[100px]"
+          />
+          {isEmpty && !isNa && (
+            <div className="absolute -left-6 top-3">
+              <AlertCircle className="w-4 h-4 text-red-500" title="Unanswered" />
+            </div>
+          )}
+          {isNa && (
+            <div className="absolute -left-6 top-3">
+              <CheckCircle2 className="w-4 h-4 text-gray-400" title="Marked N/A" />
+            </div>
+          )}
+        </div>
       );
 
     case "dropdown":
       return (
-        <Select
-          value={value || ""}
-          onValueChange={(val) =>
-            setResponses((prev) => ({ ...prev, [question.id]: val }))
-          }
-        >
-          <SelectTrigger className="!bg-white !text-black">
-            <SelectValue placeholder="Select an option" />
-          </SelectTrigger>
-          <SelectContent>
-            {question.options?.map((opt) => (
+        <div className="relative">
+          <Select
+            value={value || ""}
+            onValueChange={(val) =>
+              setResponses((prev) => ({ ...prev, [question.id]: val }))
+            }
+          >
+            <SelectTrigger className="!bg-white !text-black">
+              <SelectValue placeholder="Select an option" />
+            </SelectTrigger>
+            <SelectContent>
+              {question.options?.map((opt) => (
               <SelectItem key={opt} value={opt}>
                 {opt}
               </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+              ))}
+            </SelectContent>
+          </Select>
+          {isEmpty && !isNa && (
+            <div className="absolute -left-6 top-1/2 -translate-y-1/2">
+              <AlertCircle className="w-4 h-4 text-red-500" title="Unanswered" />
+            </div>
+          )}
+          {isNa && (
+            <div className="absolute -left-6 top-1/2 -translate-y-1/2">
+              <CheckCircle2 className="w-4 h-4 text-gray-400" title="Marked N/A" />
+            </div>
+          )}
+        </div>
       );
 
     case "date":

@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { CheckCircle2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface LocalInputProps {
   value: string;
@@ -10,6 +12,7 @@ interface LocalInputProps {
   placeholder?: string;
   className?: string;
   type?: string;
+  showFilled?: boolean;
 }
 
 export function LocalInput({
@@ -27,15 +30,24 @@ export function LocalInput({
       setLocal(value);
     }
   }, [value]);
+  const isFilled = local.trim().length > 0;
   return (
-    <Input
-      type={type}
-      value={local}
-      onChange={(e) => setLocal(e.target.value)}
-      onBlur={() => { committed.current = local; onCommit(local); }}
-      placeholder={placeholder}
-      className={className}
-    />
+    <div className="relative">
+      <Input
+        type={type}
+        value={local}
+        onChange={(e) => setLocal(e.target.value)}
+        onBlur={() => { committed.current = local; onCommit(local); }}
+        placeholder={placeholder}
+        className={cn(
+          className,
+          isFilled && "bg-green-50/50 border-green-200"
+        )}
+      />
+      {isFilled && (
+        <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600 pointer-events-none" />
+      )}
+    </div>
   );
 }
 
@@ -44,6 +56,7 @@ interface LocalTextareaProps {
   onCommit: (val: string) => void;
   placeholder?: string;
   className?: string;
+  showFilled?: boolean;
 }
 
 export function LocalTextarea({
@@ -60,13 +73,22 @@ export function LocalTextarea({
       setLocal(value);
     }
   }, [value]);
+  const isFilled = local.trim().length > 0;
   return (
-    <Textarea
-      value={local}
-      onChange={(e) => setLocal(e.target.value)}
-      onBlur={() => { committed.current = local; onCommit(local); }}
-      placeholder={placeholder}
-      className={className}
-    />
+    <div className="relative">
+      <Textarea
+        value={local}
+        onChange={(e) => setLocal(e.target.value)}
+        onBlur={() => { committed.current = local; onCommit(local); }}
+        placeholder={placeholder}
+        className={cn(
+          className,
+          isFilled && "bg-green-50/50 border-green-200"
+        )}
+      />
+      {isFilled && (
+        <CheckCircle2 className="absolute right-3 top-3 w-4 h-4 text-green-600 pointer-events-none" />
+      )}
+    </div>
   );
 }

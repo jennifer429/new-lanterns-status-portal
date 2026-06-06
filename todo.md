@@ -710,9 +710,9 @@
 ### Tier 1: Data Loss & Trust Issues
 
 - [x] **Tasks page persistence** — template-defined tasks survive refresh (not just session state)
-- [ ] **Intake progress metric** — count answered questions, not visited sections
-- [ ] **Form field indicators** — show answered vs unanswered questions visually (checkmark/color/badge)
-- [ ] **Terminology** — rename "Testing Checklist" → "Validation Checklist" and "Set status to Tested" → "Mark Validated"
+- [x] **Intake progress metric** — count answered questions, not visited sections
+- [x] **Form field indicators** — show answered vs unanswered questions visually (checkmark/color/badge)
+- [x] **Terminology** — rename "Testing Checklist" → "Validation Checklist" and "Set status to Tested" → "Mark Validated"
 
 ### Tier 2: UX Polish & Real Estate
 

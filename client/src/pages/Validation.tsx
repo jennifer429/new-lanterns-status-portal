@@ -1,8 +1,8 @@
 /**
- * Testing Checklist Page
- * Select rows → set status (Tested / N/A / Undo).
+ * Validation Checklist Page
+ * Select rows → set status (Validated / N/A / Undo).
  * Floating bulk action toolbar appears when rows are selected.
- * Status date auto-records when Tested or N/A is set.
+ * Status date auto-records when Validated or N/A is set.
  * Related questionnaire answers shown beside each test for context.
  */
 
@@ -732,7 +732,7 @@ export default function Validation() {
   // ── CSV Export ──────────────────────────────────────────────────────────────
 
   function handleExportCSV() {
-    const headers = ["Phase", "Test Name", "Description", "Status", "Date Tested", "Sign-Off", "Notes"];
+    const headers = ["Phase", "Test Name", "Description", "Status", "Date Validated", "Sign-Off", "Notes"];
     const rows: string[][] = [];
     phases.forEach((phase, pIdx) => {
       phase.tests.forEach((test, tIdx) => {
@@ -845,7 +845,7 @@ export default function Validation() {
           <div className="flex items-center gap-3 min-w-0">
             <img src="/images/new-lantern-logo.png" alt="New Lantern" className="h-8 flex-shrink-0" />
             <div className="hidden sm:flex flex-col border-l border-border/40 pl-3 min-w-0">
-              <div className="text-sm font-bold tracking-tight truncate">Testing Checklist</div>
+              <div className="text-sm font-bold tracking-tight truncate">Validation Checklist</div>
               {orgName && <div className="text-xs text-muted-foreground truncate">{orgName}{partnerName ? ` · ${partnerName}` : ""}</div>}
             </div>
             {orgName && <div className="sm:hidden text-sm font-semibold truncate max-w-[100px]">{orgName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 4)}</div>}
@@ -879,7 +879,7 @@ export default function Validation() {
           </div>
         </div>
       </header>
-      <PageBreadcrumb orgPath={orgPath} items={[{ label: "Testing Checklist" }]} />
+      <PageBreadcrumb orgPath={orgPath} items={[{ label: "Validation Checklist" }]} />
 
       {/* Import status banner */}
       {importStatus && (
