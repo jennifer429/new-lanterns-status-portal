@@ -293,3 +293,48 @@ and logs rather than throws**, so one poisoned Notion row can't sink the batch:
 6. New tRPC procedure name + input schema match the client call sites.
 7. Added/renamed a synced Notion column or field? Updated §8, and either added it
    to `KNOWN_COLUMNS` (and wired extraction) or confirmed it's modeled as a row.
+
+### 8.4 Task Definitions (Notion → MySQL, Phase 1)
+
+The `taskDefinitions` table is populated by `notionSyncTaskDefs` every 5 minutes from the Notion "Task Definitions" database. This is the source of truth for all task metadata (title, description, section, swim lanes, dependencies, links).
+
+| Notion column | MySQL table | MySQL column | Type | Source | Sync | Notes |
+|---|---|---|---|---|---|---|
+| `Key` | `taskDefinitions` | `taskId` | text | Notion | Notion→MySQL every 5 min | **Primary key** — must be unique; required |
+| `Title` | `taskDefinitions` | `title` | text | Notion | Notion→MySQL every 5 min | Fallback to `taskId` if missing |
+| `Description` | `taskDefinitions` | `description` | text | Notion | Notion→MySQL every 5 min | Optional; null if missing |
+| `Section` | `taskDefinitions` | `sectionId` | text | Notion | Notion→MySQL every 5 min | Select enum: `network`, `hl7`, `config`, `templates`, `training`, `testing`, `prod-validation` |
+| `Section Title` | `taskDefinitions` | `sectionTitle` | text | Notion | Notion→MySQL every 5 min | Optional; human-readable section name |
+| `Section Duration` | `taskDefinitions` | `sectionDuration` | text | Notion | Notion→MySQL every 5 min | Optional; e.g., "2 weeks" |
+| `Swim Lanes` | `taskDefinitions` | `swimLanes` | JSON array | Notion | Notion→MySQL every 5 min | Multi-select; stored as lowercase array; e.g., `["it", "clinical"]` |
+| `Depends On` | `taskDefinitions` | `dependsOn` | JSON array | Notion | Notion→MySQL every 5 min | Comma/newline-separated; parsed into array; e.g., `["network:vpn", "hl7:orm"]` |
+| `Sort Order` | `taskDefinitions` | `sortOrder` | number | Notion | Notion→MySQL every 5 min | Optional; display order within section |
+| `Intake Link` | `taskDefinitions` | `intakeLink` | text | Notion | Notion→MySQL every 5 min | Optional; URL to intake form |
+| `Intake Link Label` | `taskDefinitions` | `intakeLinkLabel` | text | Notion | Notion→MySQL every 5 min | Optional; label for intake link button |
+| `Spec Link` | `taskDefinitions` | `specLink` | text | Notion | Notion→MySQL every 5 min | Optional; URL to specification |
+| `Spec Link Label` | `taskDefinitions` | `specLinkLabel` | text | Notion | Notion→MySQL every 5 min | Optional; label for spec link button |
+| `Active` | `taskDefinitions` | `isActive` | tinyint | Notion | Notion→MySQL every 5 min | Checkbox; `1` = active, `0` = inactive (soft-delete) |
+| — | `taskDefinitions` | `notionPageId` | text | Notion | Notion→MySQL every 5 min | Notion page UUID; used for sync tracking |
+| — | `taskDefinitions` | `notionLastEdited` | datetime | Notion | Notion→MySQL every 5 min | Notion `last_edited_time`; used for reconciliation |
+| — | `taskDefinitions` | `syncedAt` | datetime | MySQL | set on every sync | Timestamp of last sync run |
+
+**Soft-delete behavior:** Tasks that disappear from Notion are marked `isActive = 0` (not deleted), preserving `taskCompletion` history.
+
+### 8.5 Workflow Pathways (MySQL ← Portal, Phase 1)
+
+The `workflowPathways` table stores per-organization swim-lane diagram state (which tasks are in which swim lanes). This is **portal-sourced** (not Notion-synced); users edit it via the PersistedWorkflowDiagram component.
+
+| Column | Type | Source | Notes |
+|---|---|---|---|
+| `id` | bigint | MySQL | Primary key |
+| `organizationId` | bigint | Portal | Foreign key to `organizations` |
+| `swimLaneName` | text | Portal | e.g., `"IT"`, `"Clinical"`, `"Admin"` |
+| `taskId` | text | Portal | Foreign key to `taskDefinitions.taskId` |
+| `sortOrder` | int | Portal | Display order within swim lane |
+| `createdAt` | datetime | MySQL | Set on insert |
+| `updatedAt` | datetime | MySQL | Set on every update |
+| `createdBy` | text | Portal | User email |
+| `updatedBy` | text | Portal | User email |
+
+**No Notion sync:** This table is purely portal-managed. Changes are persisted to MySQL only.
+

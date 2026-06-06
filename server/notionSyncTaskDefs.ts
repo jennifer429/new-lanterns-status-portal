@@ -105,10 +105,10 @@ export async function runTaskDefsSync(): Promise<TaskDefsSyncResult> {
     try {
       const p = page.properties as Record<string, any>;
 
-      const taskId = getStr(p["Task ID"]);
+      const taskId = getStr(p["Key"]) || getStr(p["Task ID"]);
       if (!taskId) {
         result.failed++;
-        result.errors.push(`Page ${page.id} skipped: missing Task ID`);
+        result.errors.push(`Page ${page.id} skipped: missing Key or Task ID`);
         continue;
       }
       seenTaskIds.push(taskId);
