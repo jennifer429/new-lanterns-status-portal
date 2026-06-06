@@ -1,0 +1,21 @@
+{
+  "query": "SHOW FULL COLUMNS FROM organizations LIKE 'slug'",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SHOW FULL COLUMNS FROM organizations LIKE 'slug'",
+  "rows": [
+    {
+      "Field": "slug",
+      "Type": "varchar(100)",
+      "Collation": "utf8mb4_unicode_ci",
+      "Null": "NO",
+      "Key": "UNI",
+      "Default": "NULL",
+      "Extra": "",
+      "Privileges": "select,insert,update,references",
+      "Comment": ""
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tCollation\tNull\tKey\tDefault\tExtra\tPrivileges\tComment\nslug\tvarchar(100)\tutf8mb4_unicode_ci\tNO\tUNI\tNULL\t\tselect,insert,update,references\t\n",
+  "stderr": "",
+  "execution_time_ms": 278
+}

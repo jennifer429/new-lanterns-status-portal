@@ -640,7 +640,7 @@ export const adminRouter = router({
       z.object({
         clientId: z.number().optional(), // Optional - will be auto-assigned for partner admins
         name: z.string(),
-        slug: z.string(),
+        slug: z.string().regex(/^[a-z0-9-]+$/, "Slug must contain only lowercase letters, numbers, and hyphens").min(3, "Slug must be at least 3 characters").max(100, "Slug must be at most 100 characters"),
         contactName: z.string().optional(),
         contactEmail: z.string().optional(),
         contactPhone: z.string().optional(),

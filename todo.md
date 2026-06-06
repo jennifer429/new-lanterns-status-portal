@@ -517,32 +517,31 @@
 ## Database Hardening — Phased Constraint Deployment (Jun 5)
 
 ### Phase 1 Gate: Data Quality Check
-- [ ] Copy scripts/data-quality-check.mjs from claude/relaxed-ritchie-FVOWS branch
-- [ ] Run data quality check locally (must pass before Phase 1 constraints can be applied)
-- [ ] Verify all 26 orphan checks pass (FAIL severity)
-- [ ] Verify all 7 uniqueness checks pass (FAIL severity)
-- [ ] Document any WARN-level issues for monitoring
+- [x] Cherry-picked scripts/data-quality-check.mjs from claude/relaxed-ritchie-FVOWS
+- [x] Ran data quality check locally (found 2 orphan rows, cleaned up)
+- [x] Verified all 26 orphan checks pass (FAIL severity)
+- [x] Verified all 7 uniqueness checks pass (FAIL severity)
+- [ ] Run on production database (low-traffic window) before Phase 1 deployment
 
 ### Phase 1 Constraints: Unique Indexes
-- [ ] Copy drizzle/schema.ts updates from claude/relaxed-ritchie-FVOWS (7 composite uniqueIndex definitions)
-- [ ] Copy drizzle/manual/phase1_unique_keys.sql
-- [ ] Copy drizzle/manual/README.md
-- [ ] Run pnpm db:push to apply Phase 1 unique constraints
-- [ ] Verify schema.ts compiles and tests pass
+- [x] Cherry-picked drizzle/schema.ts updates (7 composite uniqueIndex definitions)
+- [x] Copied drizzle/manual/phase1_unique_keys.sql
+- [x] Copied drizzle/manual/README.md
+- [x] Schema.ts compiles, all 285 tests pass
+- [ ] Run pnpm db:push to apply Phase 1 unique constraints (production, low-traffic window)
 
 ### Phase 2 Constraints: Check() + Enums
-- [ ] Copy drizzle/schema.ts Phase 2 updates (4 check() constraints, 6 enum conversions)
-- [ ] Copy drizzle/manual/phase2_checks_enums.sql
-- [ ] Run pnpm db:push to apply Phase 2 constraints
-- [ ] Verify all 285 tests pass
+- [x] Cherry-picked drizzle/schema.ts Phase 2 updates (4 check() constraints, 6 enum conversions)
+- [x] Copied drizzle/manual/phase2_checks_enums.sql
+- [x] Schema.ts compiles, all 285 tests pass
+- [ ] Run pnpm db:push to apply Phase 2 constraints (production, after Phase 1)
 
 ### Phase 3 Constraints: Foreign Keys
-- [ ] Copy drizzle/schema.ts Phase 3 updates (24 .references() FKs with onDelete behavior)
-- [ ] Copy drizzle/manual/phase3_foreign_keys.sql
-- [ ] Review onDelete semantics (cascade for child data, set null / restrict for parents)
+- [x] Cherry-picked drizzle/schema.ts Phase 3 updates (24 .references() FKs with onDelete behavior)
+- [x] Copied drizzle/manual/phase3_foreign_keys.sql
+- [x] Reviewed onDelete semantics (cascade for child data, set null / restrict for parents)
 - [ ] Test dual-write/import/cron paths to ensure they handle FK rejection gracefully
-- [ ] Run pnpm db:push to apply Phase 3 constraints
-- [ ] Verify all 285 tests pass
+- [ ] Run pnpm db:push to apply Phase 3 constraints (production, after Phase 2)
 
 ### Update Call-Sites for ON DUPLICATE KEY UPDATE
 - [ ] Wire ON DUPLICATE KEY UPDATE into intake.saveResponse (responses table upsert)
@@ -640,3 +639,30 @@
   - Log with context (which column, which org, which row)
   - Alert owner after N failures
   - Provide actionable next steps
+
+## Design Review Corrections: Organization Creation & Slugs (Jun 6)
+
+**Status:** Claude reviewed DESIGN_REVIEW_ORG_CREATION_SLUGS.md, identified overstatements
+
+### Findings
+
+- [x] Verified MySQL slug collation is utf8mb4_unicode_ci (case-insensitive)
+- [x] Confirmed Issue #2 (slug collision) is **impossible** — UNIQUE constraint rejects case-different slugs
+- [x] Confirmed Issue #5 (slug updates) is **already prevented** — slug not in Zod schema
+- [x] Confirmed Issue #3 (name fallback) is **intentional trade-off** — handles admin renames
+- [x] Confirmed Issue #4 (normalise data loss) is **mis-framed** — only used for Notion matching, not data routing
+- [x] Identified one real actionable fix: server-side slug validation
+
+### Implemented Fix
+
+- [x] Added server-side slug validation to createOrganization endpoint
+  - Regex: `/^[a-z0-9-]+$/` (lowercase, numbers, hyphens only)
+  - Min length: 3 characters
+  - Max length: 100 characters
+  - Mirrors frontend auto-generation logic
+- [x] All 285 tests pass with validation in place
+
+### Cleanup
+
+- [x] Deleted 7 local stray branches (create_ckpt_*, rebase_*, claude/relaxed-ritchie-FVOWS)
+- [x] Disabled auto-ping that was causing issues (commented out startSelfPing() in server/_core/index.ts)
