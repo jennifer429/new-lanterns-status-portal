@@ -588,9 +588,9 @@
 - [x] Verify tests pass after upsert changes — tsc clean; vitest baseline unchanged (213 passed / 55 skipped; the 43 "Database not available"/Notion-403 failures are sandbox-only and identical with or without these changes)
 
 ### Post-Deployment Monitoring
-- [ ] Wire data-quality-check.mjs into cron.ts (run daily/weekly to detect residual gaps)
-- [ ] Add check results to Sync Dashboard for visibility
-- [ ] Monitor Notion-sourced tables (contacts/systems) for transient FK violations during sync
+- [x] Wire data-quality-check.mjs into cron.ts (ported to in-process `server/dataQualityCheck.ts`; daily at 02:15 UTC + one-shot 60s after startup; FAIL/WARN findings written to Notion Sync Log, owner notified on hard FAIL)
+- [x] Add check results to Sync Dashboard for visibility (cached result exposed via `syncHealth.dashboard.dataQuality`; on-demand `syncHealth.runDataQualityCheck` admin mutation)
+- [x] Monitor Notion-sourced tables (contacts/systems) for transient FK violations during sync (orphan checks on contacts/systems run at WARN severity — surfaced but not paged, since they're transient during sync)
 
 ## Critical Design Review: Sync Brittleness, Data Dictionary Drift, Type Checking (Jun 5)
 
@@ -614,10 +614,11 @@
   - [ ] Verify column names match Notion schema (may need adjustment)
   - [ ] Test with RMCA data to verify workflow descriptions sync
 
-- [ ] **Fix 2: Add type checking at sync boundaries**
-  - Validate answer types before upsert (string, JSON, boolean)
-  - Handle string vs Date confusion gracefully
-  - Add runtime validation for all field types
+- [x] **Fix 2: Add type checking at sync boundaries** (`server/syncBoundary.ts`, 11 tests)
+  - [x] `coerceNotionDate` — parses Notion date strings to a valid Date or null; rejects Invalid Date so it can't poison the `notionLastEdited` version check (NaN compare) or the DATETIME write. Wired into task `completedAt`/`lastEdited` + validation `lastEdited` in notionSyncBackTasks.ts (replaced raw `new Date(row.x)`).
+  - [x] `coerceValidationStatus` — validates against the MySQL enum, falls back to "Not Tested" + warns on unknown, so an out-of-enum Notion select can't be rejected by the CHECK constraint and sink the row. Replaced `row.status as any` in the validation upsert.
+  - [x] `safeJsonParse` — non-throwing JSON parse with fallback for boundaries where a value might be JSON.
+  - Note: these coerce/log instead of throwing, so one poisoned Notion row no longer fails the whole sync batch (the original `completedAt.toISOString` crash class).
 
 - [ ] **Fix 3: Add alerting for unmapped Notion columns**
   - Log warnings when new columns appear in Notion

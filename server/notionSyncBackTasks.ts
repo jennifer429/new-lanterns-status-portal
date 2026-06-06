@@ -27,6 +27,7 @@ import {
   type NotionTaskRow,
   type NotionValidationRow,
 } from "./notionTaskValidation";
+import { coerceNotionDate, coerceValidationStatus } from "./syncBoundary";
 
 // Notion client for marking "Last Updated From" after sync-back
 let _notionClient: Client | null = null;
@@ -168,7 +169,8 @@ export interface TaskValidationSyncResult {
 async function upsertTaskCompletion(row: NotionTaskRow): Promise<"inserted" | "updated" | "skipped"> {
   const db = await requireDb();
   const flags = statusToTaskFlags(row.status);
-  const notionTimestamp = row.lastEdited ? new Date(row.lastEdited) : null;
+  const notionTimestamp = coerceNotionDate(row.lastEdited, "task lastEdited");
+  const completedAt = coerceNotionDate(row.completedAt, "task completedAt");
 
   const [existing] = await db
     .select()
@@ -197,7 +199,7 @@ async function upsertTaskCompletion(row: NotionTaskRow): Promise<"inserted" | "u
       inProgress: flags.inProgress,
       blocked: flags.blocked,
       notApplicable: flags.notApplicable,
-      completedAt: row.completedAt ? new Date(row.completedAt) : null,
+      completedAt,
       completedBy: row.completedBy || null,
       targetDate: row.targetDate || null,
       notes: row.notes || null,
@@ -219,7 +221,7 @@ async function upsertTaskCompletion(row: NotionTaskRow): Promise<"inserted" | "u
       inProgress: flags.inProgress,
       blocked: flags.blocked,
       notApplicable: flags.notApplicable,
-      completedAt: row.completedAt ? new Date(row.completedAt) : null,
+      completedAt,
       completedBy: row.completedBy || null,
       targetDate: row.targetDate || null,
       notes: row.notes || null,
@@ -235,7 +237,8 @@ async function upsertTaskCompletion(row: NotionTaskRow): Promise<"inserted" | "u
  */
 async function upsertValidationResult(row: NotionValidationRow): Promise<"inserted" | "updated" | "skipped"> {
   const db = await requireDb();
-  const notionTimestamp = row.lastEdited ? new Date(row.lastEdited) : null;
+  const notionTimestamp = coerceNotionDate(row.lastEdited, "validation lastEdited");
+  const status = coerceValidationStatus(row.status);
 
   const [existing] = await db
     .select()
@@ -260,7 +263,7 @@ async function upsertValidationResult(row: NotionValidationRow): Promise<"insert
 
     const payload = {
       actual: row.actual || null,
-      status: row.status as any,
+      status,
       signOff: row.signOff || null,
       notes: row.notes || null,
       testedDate: row.testedDate || null,
@@ -279,7 +282,7 @@ async function upsertValidationResult(row: NotionValidationRow): Promise<"insert
       organizationId: row.organizationId,
       testKey: row.testKey,
       actual: row.actual || null,
-      status: row.status as any,
+      status,
       signOff: row.signOff || null,
       notes: row.notes || null,
       testedDate: row.testedDate || null,
