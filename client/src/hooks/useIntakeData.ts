@@ -668,14 +668,14 @@ export function useIntakeData(slug: string, clientSlug: string) {
         !newIds.has(row.id) &&
         notionPageIds.current.has(row.id)
       ) {
-        archiveConnRow.mutate({ pageId: row.id });
+        archiveConnRow.mutate({ pageId: row.id, organizationSlug: slug });
         notionPageIds.current.delete(row.id);
       }
     }
     for (const row of newRows) {
       if (!oldIds.has(row.id)) {
         createConnRow.mutate(
-          { organizationName: org.name, row },
+          { organizationSlug: slug, organizationName: org.name, row },
           {
             onSuccess: ({ pageId }) => {
               notionPageIds.current.add(pageId);
@@ -690,6 +690,7 @@ export function useIntakeData(slug: string, clientSlug: string) {
         if (JSON.stringify(old) !== JSON.stringify(row)) {
           updateConnRow.mutate({
             pageId: row.id,
+            organizationSlug: slug,
             organizationName: org.name,
             row,
           });

@@ -1,19 +1,20 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { publicProcedure, router } from "../_core/trpc";
+import { protectedProcedure, router } from "../_core/trpc";
 import { requireDb } from "../db";
 import { organizations, validationResults } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { syncValidationResultToNotion } from "../notionTaskValidation";
+import { assertOrgAccess } from "../_core/orgAccess";
 
 export const validationRouter = router({
   /**
    * Get all stored validation results for an organization.
    * Returns a map of testKey → {actual, status, signOff}.
    */
-  getResults: publicProcedure
+  getResults: protectedProcedure
     .input(z.object({ organizationSlug: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const db = await requireDb();
 
       const [org] = await db
@@ -23,6 +24,7 @@ export const validationRouter = router({
         .limit(1);
 
       if (!org) throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      assertOrgAccess(ctx.user, org);
 
       const rows = await db
         .select()
@@ -48,7 +50,7 @@ export const validationRouter = router({
   /**
    * Upsert a single test result.
    */
-  updateResult: publicProcedure
+  updateResult: protectedProcedure
     .input(
       z.object({
         organizationSlug: z.string(),
@@ -61,7 +63,7 @@ export const validationRouter = router({
         updatedBy: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await requireDb();
 
       const [org] = await db
@@ -71,6 +73,7 @@ export const validationRouter = router({
         .limit(1);
 
       if (!org) throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      assertOrgAccess(ctx.user, org);
 
       const payload = {
         actual: input.actual ?? null,
