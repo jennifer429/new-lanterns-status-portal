@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, publicProcedure, protectedProcedure } from "../_core/trpc";
+import { router, protectedProcedure } from "../_core/trpc";
 import { getConnectivityNotionClient } from "../notion";
 import { ENV } from "../_core/env";
 
@@ -371,7 +371,7 @@ export const connectivityRouter = router({
    * Filters by "Institution Group" multi-select field.
    * Returns `configured: false` when the Notion API key is missing.
    */
-  getForOrg: publicProcedure
+  getForOrg: protectedProcedure
     .input(z.object({
       organizationSlug: z.string(),
       organizationName: z.string().optional(),

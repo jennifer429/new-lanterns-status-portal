@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { publicProcedure, router } from "../_core/trpc";
+import { protectedProcedure, router } from "../_core/trpc";
 import { dispatch } from "../notionSyncDispatcher";
 import { requireDb } from "../db";
 import {
@@ -48,7 +48,7 @@ export const swimlaneRouter = router({
    * Get all implementation orgs for a site.
    * Auto-seeds defaults if none exist yet.
    */
-  getOrgs: publicProcedure
+  getOrgs: protectedProcedure
     .input(z.object({ organizationSlug: z.string() }))
     .query(async ({ input }) => {
       const db = await requireDb();
@@ -81,7 +81,7 @@ export const swimlaneRouter = router({
     }),
 
   /** Add a new implementation org to a site's swimlane. */
-  addOrg: publicProcedure
+  addOrg: protectedProcedure
     .input(
       z.object({
         organizationSlug: z.string(),
@@ -128,7 +128,7 @@ export const swimlaneRouter = router({
     }),
 
   /** Update an implementation org (rename, recolor, reorder). */
-  updateOrg: publicProcedure
+  updateOrg: protectedProcedure
     .input(
       z.object({
         id: z.number(),
@@ -154,7 +154,7 @@ export const swimlaneRouter = router({
     }),
 
   /** Soft-delete an implementation org. */
-  removeOrg: publicProcedure
+  removeOrg: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       const db = await requireDb();
@@ -171,7 +171,7 @@ export const swimlaneRouter = router({
    * Get all task→org assignments for a site.
    * Returns a map of taskId → implOrgId.
    */
-  getAssignments: publicProcedure
+  getAssignments: protectedProcedure
     .input(z.object({ organizationSlug: z.string() }))
     .query(async ({ input }) => {
       const db = await requireDb();
@@ -190,7 +190,7 @@ export const swimlaneRouter = router({
     }),
 
   /** Assign (or reassign) a task to an implementation org. */
-  assignTask: publicProcedure
+  assignTask: protectedProcedure
     .input(
       z.object({
         organizationSlug: z.string(),
@@ -222,7 +222,7 @@ export const swimlaneRouter = router({
     }),
 
   /** Bulk assign multiple tasks to an implementation org. */
-  bulkAssignTasks: publicProcedure
+  bulkAssignTasks: protectedProcedure
     .input(
       z.object({
         organizationSlug: z.string(),
@@ -260,7 +260,7 @@ export const swimlaneRouter = router({
    * Also pulls the organization name for the Hospital IT row.
    * Returns a map of partyId → display name.
    */
-  getVendorNames: publicProcedure
+  getVendorNames: protectedProcedure
     .input(z.object({ organizationSlug: z.string() }))
     .query(async ({ input }) => {
       const db = await requireDb();
@@ -360,7 +360,7 @@ export const swimlaneRouter = router({
     }),
 
   /** Unassign a task (remove from swimlane). */
-  unassignTask: publicProcedure
+  unassignTask: protectedProcedure
     .input(
       z.object({
         organizationSlug: z.string(),

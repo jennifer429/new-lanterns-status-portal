@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { publicProcedure, router } from "../_core/trpc";
+import { protectedProcedure, router } from "../_core/trpc";
 import { requireDb } from "../db";
 import { organizations, validationResults } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
@@ -11,7 +11,7 @@ export const validationRouter = router({
    * Get all stored validation results for an organization.
    * Returns a map of testKey → {actual, status, signOff}.
    */
-  getResults: publicProcedure
+  getResults: protectedProcedure
     .input(z.object({ organizationSlug: z.string() }))
     .query(async ({ input }) => {
       const db = await requireDb();
@@ -48,7 +48,7 @@ export const validationRouter = router({
   /**
    * Upsert a single test result.
    */
-  updateResult: publicProcedure
+  updateResult: protectedProcedure
     .input(
       z.object({
         organizationSlug: z.string(),
