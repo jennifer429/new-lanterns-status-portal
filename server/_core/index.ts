@@ -69,7 +69,8 @@ async function startServer() {
   startCronJobs();
 
   // Start silent self-ping to keep server awake on Cloud Run
-  startSelfPing();
+  // DISABLED: Causing issues (Jun 5, 2026)
+  // startSelfPing();
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
