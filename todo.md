@@ -323,6 +323,40 @@
 - [ ] Fix vendor-options test assertions (limit:5 → limit:50, addSystemType return shape)
 - [ ] Update CLAUDE.md to reflect actual routers, tables, and endpoints
 
+## RMCA Workflow Descriptions Fix (Jun 5, 2026)
+- [x] Identify missing workflow descriptions (IW.orders_description, IW.reports_description, IW.priors_description)
+- [x] Root cause: sync filters by last_edited_time, misses old rows that exist in Notion
+- [x] Manually insert RMCA workflow descriptions into MySQL intakeResponses table
+- [x] Verify frontend component (IntegrationWorkflows.tsx) is ready to display them
+- [x] Verify hook (useIntakeData.ts) fetches all responses including new ones
+- [ ] Test in production: RMCA user views questionnaire, sees all 3 workflow descriptions with green checkmarks
+
+## Robust Notion Sync Refactoring (Jun 5, 2026)
+- [ ] **Phase 1: Dynamic Column Detection** — Build runtime column mapping instead of hardcoding field names
+  - [ ] Add buildColumnMapping() function to query Notion schema
+  - [ ] Add extractFieldsFromRow() to dynamically extract values based on type
+  - [ ] Update fetchChangedRows() to use dynamic mapping
+  - [ ] Write vitest tests (5 tests)
+- [ ] **Phase 2: Full Reconciliation** — Periodically compare ALL Notion rows vs MySQL
+  - [ ] Add fullReconciliation() function to catch missed rows
+  - [ ] Add reconciliation schedule (hourly)
+  - [ ] Add reconciliation results to Sync Log
+  - [ ] Write vitest tests (8 tests)
+- [ ] **Phase 3: Hybrid Sync** — Combine incremental (fast) + reconciliation (thorough)
+  - [ ] Update runNotionSyncBack() to call both incremental + reconciliation
+  - [ ] Update Sync Config schema to track last reconciliation time
+  - [ ] Write integration tests (5 tests)
+- [ ] **Phase 4: Schema Validation** — Log warnings when columns are missing
+  - [ ] Add logging for missing required columns
+  - [ ] Add schema validation report to Sync Log
+  - [ ] Add admin endpoint to view schema validation results
+  - [ ] Write vitest tests (3 tests)
+- [ ] **Phase 5: Testing & Verification** — Verify all edge cases work
+  - [ ] Test with RMCA workflow descriptions (should now sync automatically)
+  - [ ] Test with old rows (should be caught by reconciliation)
+  - [ ] Test with new Notion columns (should be auto-detected)
+  - [ ] Verify all 285 tests still pass
+
 ## Option C: notionLastEdited version check
 - [x] Add notionLastEdited column to taskCompletion and validationResults schemas
 - [x] Run migration (pnpm db:push)

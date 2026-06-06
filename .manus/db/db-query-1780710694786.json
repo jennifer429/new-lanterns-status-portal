@@ -1,0 +1,14 @@
+{
+  "query": "SELECT questionId, LEFT(response, 100) FROM intakeResponses WHERE organizationId = 990001 AND questionId LIKE 'IW.%' ORDER BY questionId",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT questionId, LEFT(response, 100) FROM intakeResponses WHERE organizationId = 990001 AND questionId LIKE 'IW.%' ORDER BY questionId",
+  "rows": [
+    {
+      "questionId": "IW.tech_sheets_dicom_wrapped",
+      "LEFT(response, 100)": "yes"
+    }
+  ],
+  "messages": [],
+  "stdout": "questionId\tLEFT(response, 100)\nIW.tech_sheets_dicom_wrapped\tyes\n",
+  "stderr": "",
+  "execution_time_ms": 262
+}

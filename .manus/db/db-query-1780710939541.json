@@ -1,0 +1,25 @@
+{
+  "query": "SELECT organizationId, questionId, response FROM intakeResponses WHERE organizationId = 990001 AND questionId IN ('IW.orders_description', 'IW.reports_description', 'IW.priors_description') ORDER BY questionId",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT organizationId, questionId, response FROM intakeResponses WHERE organizationId = 990001 AND questionId IN ('IW.orders_description', 'IW.reports_description', 'IW.priors_description') ORDER BY questionId",
+  "rows": [
+    {
+      "organizationId": "990001",
+      "questionId": "IW.orders_description",
+      "response": "Orders originate in Altera Paragon and route as HL7 ORM via Corepoint → DataFirst/Silverback → New Lantern. New / cancel / reschedule order types unblocked and in testing (wk of 6/2); STAT/stroke prioritization being validated with dedicated ER/inpatient test orders. ORC-1=NW with missing ORC-5 is treated as a scheduled order for prefetch (transform implemented). Open: Paragon ORM filing errors from invalid patient account/visit numbers, being corrected upstream by RMC IT. Test routing PV1.11 _RMCA_TEST (port 7080) / prod RMCA (7081)."
+    },
+    {
+      "organizationId": "990001",
+      "questionId": "IW.priors_description",
+      "response": "Priors retrieved on-demand from RMC PACS via Silverback DICOM Q/R (no bulk preload). Prior-report retention reduced 7 → 3 years (6/4 decision). Prefetch driven off scheduled-order logic. Evaluating extraction of historical reports from the PowerScribe DB (flat-file export) to support AI dictation training and prior-exam matching — NL to provide the flat-file spec."
+    },
+    {
+      "organizationId": "990001",
+      "questionId": "IW.reports_description",
+      "response": "Signed reports flow from New Lantern as HL7 ORU back through Silverback → Corepoint → Paragon for filing. Sign time carried in OBR-22 (per 6/5 feedback). Report sends tested with/without RMCA accession prefix; Dr. Stone physician-ID prefix 'P' removed per request. Open: Paragon-side ORU filing errors under diagnosis with Paragon. Radiation dose (Radimetrics → Paragon → NL) integration planned for ALARA compliance (eff. 1/2027)."
+    }
+  ],
+  "messages": [],
+  "stdout": "organizationId\tquestionId\tresponse\n990001\tIW.orders_description\tOrders originate in Altera Paragon and route as HL7 ORM via Corepoint → DataFirst/Silverback → New Lantern. New / cancel / reschedule order types unblocked and in testing (wk of 6/2); STAT/stroke prioritization being validated with dedicated ER/inpatient test orders. ORC-1=NW with missing ORC-5 is treated as a scheduled order for prefetch (transform implemented). Open: Paragon ORM filing errors from invalid patient account/visit numbers, being corrected upstream by RMC IT. Test routing PV1.11 _RMCA_TEST (port 7080) / prod RMCA (7081).\n990001\tIW.priors_description\tPriors retrieved on-demand from RMC PACS via Silverback DICOM Q/R (no bulk preload). Prior-report retention reduced 7 → 3 years (6/4 decision). Prefetch driven off scheduled-order logic. Evaluating extraction of historical reports from the PowerScribe DB (flat-file export) to support AI dictation training and prior-exam matching — NL to provide the flat-file spec.\n990001\tIW.reports_description\tSigned reports flow from New Lantern as HL7 ORU back through Silverback → Corepoint → Paragon for filing. Sign time carried in OBR-22 (per 6/5 feedback). Report sends tested with/without RMCA accession prefix; Dr. Stone physician-ID prefix 'P' removed per request. Open: Paragon-side ORU filing errors under diagnosis with Paragon. Radiation dose (Radimetrics → Paragon → NL) integration planned for ALARA compliance (eff. 1/2027).\n",
+  "stderr": "",
+  "execution_time_ms": 265
+}

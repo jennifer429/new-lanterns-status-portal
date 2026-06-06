@@ -1,0 +1,124 @@
+{
+  "query": "SELECT questionId, LEFT(response, 100) as response_preview FROM intakeResponses WHERE organizationId = 990001 ORDER BY questionId LIMIT 30",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT questionId, LEFT(response, 100) as response_preview FROM intakeResponses WHERE organizationId = 990001 ORDER BY questionId LIMIT 30",
+  "rows": [
+    {
+      "questionId": "__question_na:A.contacts",
+      "response_preview": "false"
+    },
+    {
+      "questionId": "__question_na:CF.2",
+      "response_preview": "true"
+    },
+    {
+      "questionId": "__question_na:L.10",
+      "response_preview": "true"
+    },
+    {
+      "questionId": "__question_na:L.2",
+      "response_preview": "true"
+    },
+    {
+      "questionId": "__question_na:L.3",
+      "response_preview": "true"
+    },
+    {
+      "questionId": "__question_na:L.8",
+      "response_preview": "true"
+    },
+    {
+      "questionId": "__question_na:L.9",
+      "response_preview": "true"
+    },
+    {
+      "questionId": "A.6",
+      "response_preview": "No"
+    },
+    {
+      "questionId": "A.contacts",
+      "response_preview": "{\"it\":{\"name\":\"John Jordan\",\"phone\":\"256-235-5976\",\"email\":\"jjordan@rmccares.org\",\"notes\":\"IT / netw"
+    },
+    {
+      "questionId": "ARCH.diagram",
+      "response_preview": "No formal diagram on file yet. Jim Conyers (DataFirst) to map/diagram DICOM router workflows incl. S"
+    },
+    {
+      "questionId": "ARCH.systems",
+      "response_preview": "[{\"id\":\"3ac90d6e-b2ab-47ad-9b4a-3326826e2193\",\"name\":\"Change\",\"type\":\"PACS\",\"description\":\"\"},{\"id\":"
+    },
+    {
+      "questionId": "CF.1",
+      "response_preview": "Procedure codes received from RMC (Tracie Schmiedl, 4/17) including Oxford Mediplex PO codes; AI-map"
+    },
+    {
+      "questionId": "D.1",
+      "response_preview": "Yes"
+    },
+    {
+      "questionId": "D.2",
+      "response_preview": "2026-06-24"
+    },
+    {
+      "questionId": "D.3",
+      "response_preview": "[\"CT\",\"MRI\",\"X-Ray\",\"Ultrasound\",\"Nuclear Medicine\",\"Mammography\"]"
+    },
+    {
+      "questionId": "D.4",
+      "response_preview": ""
+    },
+    {
+      "questionId": "E.1",
+      "response_preview": ""
+    },
+    {
+      "questionId": "G.5",
+      "response_preview": ""
+    },
+    {
+      "questionId": "G.6",
+      "response_preview": ""
+    },
+    {
+      "questionId": "H.1",
+      "response_preview": "1 connection point with 2 route-based VPN tunnels (primary and secondary) for redundancy and failove"
+    },
+    {
+      "questionId": "H.2",
+      "response_preview": "Regional Medical Center of Anniston (RMCA) — rmccares.org"
+    },
+    {
+      "questionId": "H.3",
+      "response_preview": "None noted"
+    },
+    {
+      "questionId": "IW.tech_sheets_dicom_wrapped",
+      "response_preview": "yes"
+    },
+    {
+      "questionId": "L.11",
+      "response_preview": "Current RMCA downtime workflow:"
+    },
+    {
+      "questionId": "L.2",
+      "response_preview": ""
+    },
+    {
+      "questionId": "L.3",
+      "response_preview": ""
+    },
+    {
+      "questionId": "L.4",
+      "response_preview": "Tentative Go-Live: June 24, 2026"
+    }
+  ],
+  "messages": [
+    "Sites/locations under RMCA umbrella:",
+    "- RM",
+    "- During HL7 downtime, radiologists read without HL7. Orders are cre",
+    "Key milestones:",
+    "- HL7 test environment target completion: April 17"
+  ],
+  "stdout": "questionId\tresponse_preview\n__question_na:A.contacts\tfalse\n__question_na:CF.2\ttrue\n__question_na:L.10\ttrue\n__question_na:L.2\ttrue\n__question_na:L.3\ttrue\n__question_na:L.8\ttrue\n__question_na:L.9\ttrue\nA.6\tNo\nA.contacts\t{\"it\":{\"name\":\"John Jordan\",\"phone\":\"256-235-5976\",\"email\":\"jjordan@rmccares.org\",\"notes\":\"IT / netw\nARCH.diagram\tNo formal diagram on file yet. Jim Conyers (DataFirst) to map/diagram DICOM router workflows incl. S\nARCH.systems\t[{\"id\":\"3ac90d6e-b2ab-47ad-9b4a-3326826e2193\",\"name\":\"Change\",\"type\":\"PACS\",\"description\":\"\"},{\"id\":\nCF.1\tProcedure codes received from RMC (Tracie Schmiedl, 4/17) including Oxford Mediplex PO codes; AI-map\nD.1\tYes\nD.2\t2026-06-24\nD.3\t[\"CT\",\"MRI\",\"X-Ray\",\"Ultrasound\",\"Nuclear Medicine\",\"Mammography\"]\nD.4\t\nE.1\t\nG.5\t\nG.6\t\nH.1\t1 connection point with 2 route-based VPN tunnels (primary and secondary) for redundancy and failove\nH.2\tRegional Medical Center of Anniston (RMCA) — rmccares.org\n\nSites/locations under RMCA umbrella:\n- RM\nH.3\tNone noted\nIW.tech_sheets_dicom_wrapped\tyes\nL.11\tCurrent RMCA downtime workflow:\n- During HL7 downtime, radiologists read without HL7. Orders are cre\nL.2\t\nL.3\t\nL.4\tTentative Go-Live: June 24, 2026\n\nKey milestones:\n- HL7 test environment target completion: April 17\n",
+  "stderr": "",
+  "execution_time_ms": 276
+}
