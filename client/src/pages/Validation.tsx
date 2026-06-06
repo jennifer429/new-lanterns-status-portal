@@ -520,7 +520,11 @@ export default function Validation() {
   const [localOverrides, setLocalOverrides] = useState<Record<string, { status?: string; signOff?: string; notes?: string; testedDate?: string }>>({});
   const [importStatus, setImportStatus] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({});
-  const [collapsedPhases, setCollapsedPhases] = useState<Record<number, boolean>>({});
+  const [collapsedPhases, setCollapsedPhases] = useState<Record<number, boolean>>(() => {
+    const initial: Record<number, boolean> = {};
+    phases.forEach((_, idx) => { initial[idx] = true; });
+    return initial;
+  });
   const [expandedRelated, setExpandedRelated] = useState<Record<string, boolean>>({});
   const [resetTargetPhase, setResetTargetPhase] = useState<number | null>(null);
   const [selectedTestKeys, setSelectedTestKeys] = useState<Set<string>>(new Set());

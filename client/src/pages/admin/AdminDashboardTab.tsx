@@ -319,6 +319,11 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics, ref
   const [partnerFilter, setPartnerFilter] = useState<number | null>(null);
   const [stageFilter, setStageFilter] = useState<StageFilter>("all");
   const [expandedSiteIds, setExpandedSiteIds] = useState<Set<number>>(new Set());
+  const [collapsedPartners, setCollapsedPartners] = useState<Set<number | null>>(() => {
+    const initial = new Set<number | null>();
+    partnerGroups.forEach(group => { initial.add(group.clientId); });
+    return initial;
+  });
 
   // Apply search + partner + stage filters.
   const filteredOrgs = useMemo(() => {
@@ -354,6 +359,11 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics, ref
   const toggleSite = (id: number) => setExpandedSiteIds(prev => {
     const next = new Set(prev);
     next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+  const togglePartner = (clientId: number | null) => setCollapsedPartners(prev => {
+    const next = new Set(prev);
+    next.has(clientId) ? next.delete(clientId) : next.add(clientId);
     return next;
   });
   const allFilteredIds = filteredOrgs.map(o => o.id);
@@ -441,18 +451,32 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics, ref
               ? Math.round(group.sites.reduce((sum, s) => sum + (statsByOrg[s.id]?.overallPct ?? 0), 0) / group.sites.length)
               : 0;
 
+            const implementingCount = group.sites.filter(s => s.status === "active").length;
+            const liveCount = group.sites.filter(s => s.status === "completed").length;
+            
             return (
               <div key={String(group.clientId)}>
                 {/* Partner header */}
-                <div className="flex items-center gap-2 px-1 mb-2">
+                <button
+                  onClick={() => togglePartner(group.clientId)}
+                  className="w-full flex items-center gap-2 px-2 mb-2 rounded-lg hover:bg-muted/20 transition-colors py-1"
+                >
+                  <ChevronDown className={cn("w-4 h-4 text-primary/70 shrink-0 transition-transform", collapsedPartners.has(group.clientId) && "-rotate-90")} />
                   <Folder className="w-4 h-4 text-primary/70 shrink-0" />
                   <span className="font-semibold text-sm truncate">{group.name}</span>
-                  <span className="text-xs text-muted-foreground/70 whitespace-nowrap">
-                    {group.sites.length} site{group.sites.length !== 1 ? "s" : ""} · {activeCount} active · {avg}% avg
-                  </span>
-                </div>
+                  {collapsedPartners.has(group.clientId) ? (
+                    <span className="text-xs text-muted-foreground/70 whitespace-nowrap">
+                      {implementingCount} implementing, {liveCount} live
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground/70 whitespace-nowrap">
+                      {group.sites.length} site{group.sites.length !== 1 ? "s" : ""} · {activeCount} active · {avg}% avg
+                    </span>
+                  )}
+                </button>
 
                 {/* Site rows */}
+                {!collapsedPartners.has(group.clientId) && (
                 <div className="rounded-xl border border-border/50 overflow-hidden divide-y divide-border/40 bg-card/30">
                   {group.sites.map(org => {
                     const st = statsByOrg[org.id] ?? computeOrgStats(undefined);
@@ -612,8 +636,10 @@ export function AdminDashboardTab({ isPlatformAdmin, orgs, clients, metrics, ref
                         )}
                       </div>
                     );
-                  })}
-                </div>
+                  })
+                }
+              </div>
+                )}
               </div>
             );
           })}
