@@ -494,6 +494,30 @@ export type OrgCustomTask = typeof orgCustomTasks.$inferSelect;
 export type InsertOrgCustomTask = typeof orgCustomTasks.$inferInsert;
 
 /**
+ * Per-org completion state for partner-defined template tasks.
+ *
+ * The task definition lives in `partnerTaskTemplates` (shared across all of a
+ * partner's sites), but each org tracks its own completion here so progress
+ * persists across page refreshes and is isolated per site.
+ */
+export const templateTaskCompletion = mysqlTable("templateTaskCompletion", {
+  id: int("id").autoincrement().primaryKey(),
+  organizationId: int("organizationId").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  templateTaskId: int("templateTaskId").notNull().references(() => partnerTaskTemplates.id, { onDelete: "cascade" }),
+  isComplete: tinyint("isComplete").default(0).notNull(),
+  completedAt: timestamp("completedAt"),
+  completedBy: varchar("completedBy", { length: 320 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (t) => ({
+  // P0: one completion row per org+template task
+  orgTemplateTask: uniqueIndex("uq_templatetask_org_task").on(t.organizationId, t.templateTaskId),
+}));
+
+export type TemplateTaskCompletion = typeof templateTaskCompletion.$inferSelect;
+export type InsertTemplateTaskCompletion = typeof templateTaskCompletion.$inferInsert;
+
+/**
  * AI Audit Logs - comprehensive logging for all AI assistant actions.
  * Every tool call, chat interaction, and data mutation initiated through the AI
  * is recorded here for compliance, debugging, and accountability.

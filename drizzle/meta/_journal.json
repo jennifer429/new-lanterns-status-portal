@@ -428,6 +428,13 @@
       "when": 1780764149199,
       "tag": "0060_task_definitions",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "5",
+      "when": 1780774500804,
+      "tag": "0061_medical_rogue",
+      "breakpoints": true
     }
   ]
 }

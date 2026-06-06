@@ -1,8 +1,9 @@
 /**
  * Tasks Page - Shows partner-defined and org-specific custom action items.
  *
- * Template tasks (from partnerTaskTemplates): completion is local state for
- * the session — they're defined by the partner for all sites.
+ * Template tasks (from partnerTaskTemplates): defined by the partner for all
+ * sites. The definition is shared, but each org's completion state is persisted
+ * per-org in the templateTaskCompletion table.
  *
  * Custom tasks (orgCustomTasks): per-org tasks added by hospital users.
  * Both completion state and the task itself persist in the DB.
@@ -38,8 +39,20 @@ export default function Tasks() {
   const { data: templateTasks = [], isLoading: loadingTemplates } =
     trpc.intake.getTaskTemplatesForOrg.useQuery({ organizationSlug: orgSlug });
 
-  // Completion for template tasks is local (session-only)
-  const [completedTemplateIds, setCompletedTemplateIds] = useState<Set<number>>(new Set());
+  // Completion for template tasks is persisted per-org in the DB
+  const { data: templateCompletion = [] } =
+    trpc.intake.getTemplateTaskCompletion.useQuery({ organizationSlug: orgSlug });
+
+  const completedTemplateIds = new Set(
+    templateCompletion.filter((c) => c.isComplete).map((c) => c.templateTaskId)
+  );
+
+  const toggleTemplateMutation = trpc.intake.toggleTemplateTask.useMutation({
+    onSuccess: () => {
+      utils.intake.getTemplateTaskCompletion.invalidate({ organizationSlug: orgSlug });
+    },
+    onError: () => toast.error("Failed to update task"),
+  });
 
   // --- Custom tasks (this org only, persisted) ---
   const { data: customTasks = [], isLoading: loadingCustom } =
@@ -120,10 +133,10 @@ export default function Tasks() {
   };
 
   const toggleTemplate = (id: number) => {
-    setCompletedTemplateIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
+    toggleTemplateMutation.mutate({
+      organizationSlug: orgSlug,
+      templateTaskId: id,
+      userEmail: user?.email ?? undefined,
     });
   };
 

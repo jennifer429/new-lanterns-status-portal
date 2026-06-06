@@ -338,3 +338,24 @@ The `workflowPathways` table stores per-organization swim-lane diagram state (wh
 
 **No Notion sync:** This table is purely portal-managed. Changes are persisted to MySQL only.
 
+
+
+### 8.6 Template Task Completion (MySQL-only, per-org)
+
+The `templateTaskCompletion` table stores completion state for partner-defined template tasks. Template tasks are shared across all orgs (defined once by the partner), but completion is tracked per-org so each hospital can mark them done independently.
+
+| Column | Type | Source | Notes |
+|---|---|---|---|
+| `id` | int | MySQL | Primary key |
+| `organizationId` | int | Portal | Foreign key to `organizations`; cascading delete |
+| `templateTaskId` | int | Portal | Foreign key to `partnerTaskTemplates`; cascading delete |
+| `isComplete` | tinyint | Portal | `0` = not done, `1` = done; toggled on each mutation call |
+| `completedAt` | datetime | Portal | Set when `isComplete` flips to `1`; cleared when flips to `0` |
+| `completedBy` | varchar | Portal | User email who marked complete; optional |
+| `createdAt` | datetime | MySQL | Set on insert |
+| `updatedAt` | datetime | MySQL | Set on every update |
+
+**Unique constraint:** `(organizationId, templateTaskId)` — one completion row per org+task pair.
+
+**No Notion sync:** This table is purely portal-managed. Template task definitions come from Notion (`taskDefinitions` table), but completion state is local to the portal.
+
