@@ -113,7 +113,7 @@ export default function Home() {
               </div>
               {data.partnerName && (
                 <div className="text-[11px] text-muted-foreground truncate leading-tight">
-                  {data.partnerName} · Implementation Portal
+                  {data.partnerName} · Status Portal
                 </div>
               )}
             </div>
@@ -221,16 +221,6 @@ export default function Home() {
         <ProgressHero
           overallPct={data.overallPct}
           activePhase={activePhase}
-          completedSections={data.completedSections}
-          totalSections={data.totalSections}
-          qPct={data.qPct}
-          qDone={data.qDone}
-          valCompleted={data.valCompleted}
-          valApplicable={data.valApplicable}
-          vPct={data.vPct}
-          implCompleted={data.implCompleted}
-          implApplicable={data.implApplicable}
-          iPct={data.iPct}
           questionnaireFilesCount={data.allFiles.length}
           siteFilesCount={data.adhocFilesList.length}
           diagramFilesCount={data.diagramFiles.length}
