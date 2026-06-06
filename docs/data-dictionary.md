@@ -211,6 +211,77 @@ production, bind exactly to `process.env.PORT` and skip the fallback.
 
 ---
 
+## 8. ⭐ Notion sync field mapping (Notion column ↔ MySQL)
+
+> **Why this section exists:** the recurring "data silently disappeared from the
+> questionnaire" failures (see `references/DESIGN_REVIEW_SYNC_DATA_TYPES.md`) all
+> trace back to **no single place** that says how a Notion column maps to a MySQL
+> column, what type it is, which side is authoritative, and how often it syncs.
+> This table is that place. When you add/rename a Notion column or a synced
+> field, update this table in the same change.
+
+### 8.1 Questionnaire (row-per-answer)
+
+The Questionnaire database stores **one row per (org, question)** — it is *not*
+one column per question. The columns below are the same on every row; the
+**`Question ID`** value is what distinguishes an orders-workflow answer from a
+PACS-vendor answer.
+
+| Notion column | MySQL table | MySQL column | Type | Source of truth | Sync | Notes |
+|---|---|---|---|---|---|---|
+| `Slug` | `organizations` | `slug` | text | MySQL | dual-write → Notion | Resolves to `intakeResponses.organizationId`; required key |
+| `Question ID` | `intakeResponses` | `questionId` | text | MySQL | dual-write → Notion | Required key; composite `(slug, questionId)` is the logical row id |
+| `Answer` | `intakeResponses` | `response` | text / JSON string | **bidirectional** | dual-write → Notion **and** Notion→MySQL every 5 min | Scalars stored as text; complex answers stored as JSON string |
+| `Summary` | — | — | text | derived | regenerated on every write | `⚙️ Auto:` human-readable summary (`notionSummary.ts`); never read back into MySQL |
+| `Last Updated From` | — | — | text | derived | set on every write | `"Portal"` or `"Notion"`; provenance only |
+
+**Workflow descriptions are ROWS, not columns.** `IW.orders_description`,
+`IW.reports_description`, and `IW.priors_description` are ordinary
+`Question ID` values, each living in its own row with its text in `Answer`:
+
+| Logical field | Notion `Question ID` | MySQL | Type | Source | Sync | Notes |
+|---|---|---|---|---|---|---|
+| Orders workflow description | `IW.orders_description` | `intakeResponses.response` | text | bidirectional | 5-min sync-back + hourly reconciliation | Recovered by reconciliation if edited before the incremental window (the RMCA bug) |
+| Reports workflow description | `IW.reports_description` | `intakeResponses.response` | text | bidirectional | same | same |
+| Priors workflow description | `IW.priors_description` | `intakeResponses.response` | text | bidirectional | same | same |
+
+> Adding a brand-new **column** (e.g. `Orders Description`) to the Questionnaire
+> DB does **not** make data sync — only `Slug` / `Question ID` / `Answer` are
+> consumed (`KNOWN_COLUMNS` in `server/notionSyncBack.ts`). The sync now pages
+> the owner (throttled, once/day) via `maybeAlertUnmappedColumns()` when it sees
+> a column it doesn't recognize, so this can't fail silently. To actually sync a
+> new column, add it to `KNOWN_COLUMNS` and wire its extraction — or, correctly,
+> model the data as a new `Question ID` row.
+
+### 8.2 Task completions & validation results
+
+These sync **MySQL → Notion** as the live source of truth, with a Notion→MySQL
+sync-back guarded by the `notionLastEdited` version check
+(`server/notionTaskValidation.ts`, `server/notionSyncBackTasks.ts`).
+
+| Notion column | MySQL table | MySQL column | Type | Source | Sync | Special handling |
+|---|---|---|---|---|---|---|
+| `Status` (select) | `taskCompletion` | `completed/inProgress/blocked/notApplicable` | enum select | bidirectional | dual-write + sync-back | Mapped via `deriveTaskStatus` / `statusToTaskFlags` |
+| `Completed At` | `taskCompletion` | `completedAt` | datetime | bidirectional | dual-write + sync-back | **Coerced via `coerceNotionDate()`** — Notion sends a string; invalid → `null` (never `Invalid Date`) |
+| `Section Name`, `Notes`, `Completed By`, `Target Date` | `taskCompletion` | same-named | text | bidirectional | dual-write + sync-back | Plain rich_text |
+| `Status` (select) | `validationResults` | `status` | enum | bidirectional | dual-write + sync-back | **Coerced via `coerceValidationStatus()`** — unknown select → `"Not Tested"` so the MySQL CHECK can't reject the row |
+| `Actual`, `Sign Off`, `Notes`, `Tested Date`, `Updated By` | `validationResults` | same-named | text | bidirectional | dual-write + sync-back | Plain rich_text |
+| `Organization ID` | both | `organizationId` | number | MySQL | dual-write | Lookup key for the Notion page |
+| `Last Updated From` | — | — | text | derived | every write | `"Portal"` / `"Notion"`; drives the reconciliation loop guard |
+
+### 8.3 Type-coercion contract (sync boundary)
+
+All Notion→MySQL values pass through `server/syncBoundary.ts`, which **coerces
+and logs rather than throws**, so one poisoned Notion row can't sink the batch:
+
+| Helper | Applies to | Bad input → |
+|---|---|---|
+| `coerceNotionDate(v)` | any datetime column (`completedAt`, `lastEdited`) | `null` (rejects `Invalid Date`) |
+| `coerceValidationStatus(v)` | `validationResults.status` | `"Not Tested"` + warning |
+| `safeJsonParse(v, fallback)` | JSON-valued answers | `fallback` + warning |
+
+---
+
 ## Pre-flight checklist (before commit / PR)
 
 1. `npm run check` → **0** `tsc` errors. (Not "build passes" — `tsc`.)
@@ -220,3 +291,5 @@ production, bind exactly to `process.env.PORT` and skip the fallback.
 5. Any `dispatch.*` call maps DB columns to payload fields per §5 — verified
    against the `*Payload` interface, not guessed.
 6. New tRPC procedure name + input schema match the client call sites.
+7. Added/renamed a synced Notion column or field? Updated §8, and either added it
+   to `KNOWN_COLUMNS` (and wired extraction) or confirmed it's modeled as a row.

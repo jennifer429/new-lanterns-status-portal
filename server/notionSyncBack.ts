@@ -283,6 +283,77 @@ export async function getSchemaHealth(): Promise<
 }
 
 // ---------------------------------------------------------------------------
+// Fix 3: Alerting for unmapped Notion columns
+// ---------------------------------------------------------------------------
+
+/**
+ * Columns present in the live Notion schema that the sync does not recognize
+ * (i.e. not in KNOWN_COLUMNS). Dynamic detection means these are still *read*,
+ * but nothing consumes them — slug/question_id/answer are the only fields the
+ * upsert uses. A genuinely new column is therefore a signal that a human added
+ * something to Notion the sync (and data dictionary) hasn't been taught about.
+ */
+export function findUnmappedColumns(mapping: ColumnMapping[]): ColumnMapping[] {
+  return mapping.filter(
+    (m) => !KNOWN_COLUMNS.some((k) => k.notionPropertyName === m.notionPropertyName)
+  );
+}
+
+// Alert at most once per day so a lingering unmapped column doesn't page on
+// every 5-minute cycle. State is module-level but injectable for tests.
+const UNMAPPED_ALERT_INTERVAL_MS = 24 * 60 * 60 * 1000;
+let lastUnmappedAlertAt = 0;
+
+export interface UnmappedAlertOptions {
+  /** Owner-notification sink. Defaults to the real notifyOwner. */
+  notify?: (msg: { title: string; content: string }) => Promise<unknown>;
+  /** Current time (ms). Defaults to Date.now(). */
+  now?: number;
+  /** Read the last-alert timestamp. Defaults to the module-level value. */
+  getLastAlertAt?: () => number;
+  /** Persist the last-alert timestamp. Defaults to the module-level value. */
+  setLastAlertAt?: (ts: number) => void;
+}
+
+/**
+ * Notify the owner when Notion has columns the sync doesn't know about, with
+ * actionable next steps. Throttled to once per UNMAPPED_ALERT_INTERVAL_MS.
+ * Returns the unmapped column names and whether an alert was actually sent.
+ */
+export async function maybeAlertUnmappedColumns(
+  mapping: ColumnMapping[],
+  opts: UnmappedAlertOptions = {}
+): Promise<{ alerted: boolean; columns: string[] }> {
+  const unmapped = findUnmappedColumns(mapping);
+  const columns = unmapped.map((c) => c.notionPropertyName);
+  if (columns.length === 0) return { alerted: false, columns };
+
+  const now = opts.now ?? Date.now();
+  const getLast = opts.getLastAlertAt ?? (() => lastUnmappedAlertAt);
+  const setLast = opts.setLastAlertAt ?? ((ts: number) => { lastUnmappedAlertAt = ts; });
+
+  if (now - getLast() < UNMAPPED_ALERT_INTERVAL_MS) {
+    return { alerted: false, columns };
+  }
+
+  const notify = opts.notify ?? notifyOwner;
+  await notify({
+    title: "⚠️ Unmapped Notion columns detected",
+    content:
+      `The questionnaire sync found ${columns.length} Notion column(s) it does not recognize:\n` +
+      `${columns.map((c) => `  • ${c}`).join("\n")}\n\n` +
+      `These columns are read but never written to MySQL, so any data in them is invisible to the portal.\n\n` +
+      `Next steps:\n` +
+      `  1. Decide whether the column should sync. Workflow answers belong in their own ROW ` +
+      `(Question ID = e.g. "IW.orders_description"), not a new column.\n` +
+      `  2. If it should sync, add it to KNOWN_COLUMNS in server/notionSyncBack.ts and wire its extraction.\n` +
+      `  3. Document it in docs/data-dictionary.md (§8 Notion sync field mapping).`,
+  });
+  setLast(now);
+  return { alerted: true, columns };
+}
+
+// ---------------------------------------------------------------------------
 // Notion client + config
 // ---------------------------------------------------------------------------
 
@@ -721,6 +792,12 @@ export async function runNotionSyncBack(): Promise<SyncResult> {
   if (schemaReport.warnings.length > 0) {
     console.warn(`[notion-sync] Schema warnings: ${schemaReport.warnings.join("; ")}`);
   }
+
+  // Fix 3: page the owner (throttled) when Notion has columns the sync doesn't
+  // know about, so silently-ignored data can't disappear unnoticed. Best-effort.
+  await maybeAlertUnmappedColumns(columnMapping).catch((e) =>
+    console.warn("[notion-sync] Unmapped-column alert failed:", e?.message)
+  );
 
   // Default to 10 minutes ago if no last sync
   const since = config.lastSuccessfulSync || new Date(Date.now() - 10 * 60 * 1000).toISOString();

@@ -8,6 +8,8 @@ import {
   fullReconciliation,
   dedupeRowsByKey,
   getSyncHealth,
+  findUnmappedColumns,
+  maybeAlertUnmappedColumns,
   KNOWN_COLUMNS,
   type ColumnMapping,
   type ReconciliationDeps,
@@ -329,5 +331,162 @@ describe("Phase 4 — validateSchema", () => {
     const report = await validateSchema(null, mapping);
     expect(report.missingColumns).toContain("Slug");
     expect(report.warnings.some((w) => w.includes("Missing required column"))).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Fix 1 — RMCA workflow descriptions (verify column names + RMCA data)
+//
+// Workflow descriptions are NOT separate Notion columns; each is its own ROW
+// keyed by (Slug, Question ID) where Question ID is e.g. "IW.orders_description".
+// The contract the sync depends on is the three KNOWN_COLUMNS property names
+// matching the live Notion schema, and reconciliation recovering these rows even
+// when their last_edited_time predates the incremental window (the RMCA bug).
+// ---------------------------------------------------------------------------
+
+describe("Fix 1 — Notion column-name contract", () => {
+  it("KNOWN_COLUMNS uses the exact Notion property names the schema exposes", () => {
+    const names = KNOWN_COLUMNS.map((c) => c.notionPropertyName).sort();
+    expect(names).toEqual(["Answer", "Question ID", "Slug"]);
+  });
+
+  it("Slug and Question ID are the required key columns", () => {
+    expect(KNOWN_COLUMNS.find((c) => c.notionPropertyName === "Slug")!.required).toBe(true);
+    expect(KNOWN_COLUMNS.find((c) => c.notionPropertyName === "Question ID")!.required).toBe(true);
+    expect(KNOWN_COLUMNS.find((c) => c.notionPropertyName === "Answer")!.required).toBe(false);
+  });
+
+  it("extracts an RMCA workflow-description row into (slug, question_id, answer)", async () => {
+    const page = questionnairePage(
+      "rmca-orders",
+      "RMCA",
+      "IW.orders_description",
+      "Orders flow from Epic via HL7 ORM to the RIS."
+    );
+    const fields = await extractFieldsFromRow(page, KNOWN_COLUMNS);
+    expect(fields.slug).toBe("RMCA");
+    expect(fields.question_id).toBe("IW.orders_description");
+    expect(fields.answer).toContain("Orders flow from Epic");
+  });
+});
+
+describe("Fix 1 — reconciliation recovers RMCA workflow descriptions", () => {
+  const RMCA_WORKFLOW_QUESTIONS = [
+    "IW.orders_description",
+    "IW.reports_description",
+    "IW.priors_description",
+  ];
+
+  it("flags all three RMCA workflow rows present in Notion but missing in MySQL", async () => {
+    // These rows were edited in May (before the incremental window) so the
+    // last_edited_time filter misses them — reconciliation does not filter by
+    // date, so it must still catch them.
+    const pages = RMCA_WORKFLOW_QUESTIONS.map((q, i) =>
+      questionnairePageEdited(`rmca-${i}`, "RMCA", q, `desc ${i}`, "2026-05-19T19:48:00.000Z")
+    );
+    const deps: ReconciliationDeps = {
+      getOrgId: async (slug) => (slug === "RMCA" ? 7 : null),
+      getMysqlAnswer: async () => null, // nothing in MySQL yet
+    };
+    const result = await fullReconciliation(makeClient(pages), KNOWN_COLUMNS, deps);
+
+    expect(result.totalRowsChecked).toBe(3);
+    expect(result.missingInMysql.map((r) => r.questionId).sort()).toEqual(
+      [...RMCA_WORKFLOW_QUESTIONS].sort()
+    );
+  });
+
+  it("does not re-flag RMCA rows once MySQL holds the same answer", async () => {
+    const pages = RMCA_WORKFLOW_QUESTIONS.map((q, i) =>
+      questionnairePage(`rmca-${i}`, "RMCA", q, "synced")
+    );
+    const deps: ReconciliationDeps = {
+      getOrgId: async () => 7,
+      getMysqlAnswer: async () => "synced",
+    };
+    const result = await fullReconciliation(makeClient(pages), KNOWN_COLUMNS, deps);
+    expect(result.missingInMysql).toEqual([]);
+    expect(result.staleSyncedRows).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Fix 3 — Alerting for unmapped Notion columns
+// ---------------------------------------------------------------------------
+
+describe("Fix 3 — findUnmappedColumns", () => {
+  it("returns nothing when the mapping is exactly KNOWN_COLUMNS", () => {
+    expect(findUnmappedColumns(KNOWN_COLUMNS)).toEqual([]);
+  });
+
+  it("returns columns not present in KNOWN_COLUMNS", () => {
+    const mapping: ColumnMapping[] = [
+      ...KNOWN_COLUMNS,
+      { notionPropertyName: "Orders Description", mysqlFieldName: "orders_description", type: "rich_text", required: false },
+      { notionPropertyName: "Priority", mysqlFieldName: "priority", type: "number", required: false },
+    ];
+    const unmapped = findUnmappedColumns(mapping).map((c) => c.notionPropertyName).sort();
+    expect(unmapped).toEqual(["Orders Description", "Priority"]);
+  });
+});
+
+describe("Fix 3 — maybeAlertUnmappedColumns", () => {
+  function makeAlertHarness() {
+    const calls: Array<{ title: string; content: string }> = [];
+    let last = 0;
+    return {
+      calls,
+      opts: {
+        notify: async (msg: { title: string; content: string }) => { calls.push(msg); },
+        getLastAlertAt: () => last,
+        setLastAlertAt: (ts: number) => { last = ts; },
+      },
+      get last() { return last; },
+    };
+  }
+
+  const withExtra: ColumnMapping[] = [
+    ...KNOWN_COLUMNS,
+    { notionPropertyName: "Orders Description", mysqlFieldName: "orders_description", type: "rich_text", required: false },
+  ];
+
+  it("does not alert when there are no unmapped columns", async () => {
+    const h = makeAlertHarness();
+    const res = await maybeAlertUnmappedColumns(KNOWN_COLUMNS, { ...h.opts, now: 1_000_000 });
+    expect(res.alerted).toBe(false);
+    expect(res.columns).toEqual([]);
+    expect(h.calls).toHaveLength(0);
+  });
+
+  // A realistic epoch-ms base well past the 24h throttle window (so the first
+  // alert isn't suppressed by the initial last-alert timestamp of 0).
+  const BASE = 1_700_000_000_000;
+
+  it("alerts with actionable content when an unmapped column appears", async () => {
+    const h = makeAlertHarness();
+    const res = await maybeAlertUnmappedColumns(withExtra, { ...h.opts, now: BASE });
+    expect(res.alerted).toBe(true);
+    expect(res.columns).toContain("Orders Description");
+    expect(h.calls).toHaveLength(1);
+    expect(h.calls[0].title).toMatch(/unmapped/i);
+    expect(h.calls[0].content).toContain("Orders Description");
+    expect(h.calls[0].content).toContain("KNOWN_COLUMNS");
+  });
+
+  it("throttles repeat alerts within the 24h window", async () => {
+    const h = makeAlertHarness();
+    const first = await maybeAlertUnmappedColumns(withExtra, { ...h.opts, now: BASE });
+    expect(first.alerted).toBe(true);
+
+    // 1 hour later — still throttled
+    const second = await maybeAlertUnmappedColumns(withExtra, { ...h.opts, now: BASE + 60 * 60 * 1000 });
+    expect(second.alerted).toBe(false);
+    expect(second.columns).toContain("Orders Description"); // still reported, just not paged
+    expect(h.calls).toHaveLength(1);
+
+    // 25 hours after the first alert — window elapsed, alerts again
+    const third = await maybeAlertUnmappedColumns(withExtra, { ...h.opts, now: BASE + 25 * 60 * 60 * 1000 });
+    expect(third.alerted).toBe(true);
+    expect(h.calls).toHaveLength(2);
   });
 });

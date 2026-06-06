@@ -9,6 +9,7 @@ import { uploadToGoogleDrive } from "./files";
 import { resolveFileUrl } from "../googleDrive";
 import { logFileActivity } from "../fileAuditLog";
 import { resolveOrgByIdentifier } from "../_core/orgLookup";
+import { isForeignKeyViolation } from "../dbErrors";
 import { fileUploadInput } from "../_core/fileValidation";
 import { syncAnswerToNotion, syncFileToNotion, removeFileFromNotion } from "../notion";
 import { syncConnectivityToNotion } from "./connectivity";
@@ -186,11 +187,21 @@ export const intakeRouter = router({
 
       // Use INSERT ... ON DUPLICATE KEY UPDATE to prevent race conditions
       // that can create duplicate rows when concurrent saves hit the server
-      await db.execute(
-        sql`INSERT INTO intakeResponses (organizationId, questionId, section, response, updatedBy)
-            VALUES (${org.id}, ${input.questionId}, 'intake', ${input.response}, ${input.userEmail})
-            ON DUPLICATE KEY UPDATE response = VALUES(response), updatedBy = VALUES(updatedBy)`
-      );
+      try {
+        await db.execute(
+          sql`INSERT INTO intakeResponses (organizationId, questionId, section, response, updatedBy)
+              VALUES (${org.id}, ${input.questionId}, 'intake', ${input.response}, ${input.userEmail})
+              ON DUPLICATE KEY UPDATE response = VALUES(response), updatedBy = VALUES(updatedBy)`
+        );
+      } catch (error) {
+        // The org's FK can be rejected if the organization was deleted between
+        // the lookup above and this write (cascade delete / concurrent removal).
+        // Surface a clean 404 instead of a raw 500.
+        if (isForeignKeyViolation(error)) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Organization no longer exists" });
+        }
+        throw error;
+      }
 
       // Sync answer to Notion (fire-and-forget, don't block the response)
       syncAnswerToNotion(org.slug, input.questionId, input.response, input.userEmail)
@@ -250,11 +261,21 @@ export const intakeRouter = router({
         // Convert response to string for storage
         const responseStr = typeof response === 'object' ? JSON.stringify(response) : String(response);
 
-        await db.execute(
-          sql`INSERT INTO intakeResponses (organizationId, questionId, section, response, updatedBy)
-              VALUES (${org.id}, ${questionIdStr}, 'intake', ${responseStr}, ${userEmail})
-              ON DUPLICATE KEY UPDATE response = VALUES(response), updatedBy = VALUES(updatedBy)`
-        );
+        try {
+          await db.execute(
+            sql`INSERT INTO intakeResponses (organizationId, questionId, section, response, updatedBy)
+                VALUES (${org.id}, ${questionIdStr}, 'intake', ${responseStr}, ${userEmail})
+                ON DUPLICATE KEY UPDATE response = VALUES(response), updatedBy = VALUES(updatedBy)`
+          );
+        } catch (error) {
+          // Every row in this batch targets the same org, so an FK rejection
+          // means the organization was deleted underneath us — stop and surface
+          // a clean 404 rather than a raw 500 partway through the loop.
+          if (isForeignKeyViolation(error)) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Organization no longer exists" });
+          }
+          throw error;
+        }
 
         // Sync each answer to Notion (fire-and-forget)
         syncAnswerToNotion(org.slug, questionIdStr, responseStr, userEmail)

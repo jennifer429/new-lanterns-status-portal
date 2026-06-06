@@ -574,7 +574,7 @@
 - [x] Cherry-picked drizzle/schema.ts Phase 3 updates (24 .references() FKs with onDelete behavior)
 - [x] Copied drizzle/manual/phase3_foreign_keys.sql
 - [x] Reviewed onDelete semantics (cascade for child data, set null / restrict for parents)
-- [ ] Test dual-write/import/cron paths to ensure they handle FK rejection gracefully
+- [x] Test dual-write/import/cron paths to ensure they handle FK rejection gracefully (`server/dbErrors.ts` `isForeignKeyViolation`; intake save paths translate FK rejection → NOT_FOUND; `server/fk-rejection.test.ts`)
 - [x] Run pnpm db:push to apply Phase 3 constraints (production, after Phase 2) — completed Jun 6
 
 ### Update Call-Sites for ON DUPLICATE KEY UPDATE
@@ -611,8 +611,8 @@
 - [x] **Fix 1: Update notionSyncBack.ts to handle new workflow fields**
   - [x] Added field mappings: `Orders Description` → `IW.orders_description`, `Reports Description` → `IW.reports_description`, `Priors Description` → `IW.priors_description`
   - [x] Extract all mapped columns from Notion properties
-  - [ ] Verify column names match Notion schema (may need adjustment)
-  - [ ] Test with RMCA data to verify workflow descriptions sync
+  - [x] Verify column names match Notion schema (KNOWN_COLUMNS = Slug/Question ID/Answer; workflow descriptions are ROWS not columns — contract asserted in `notionSyncBack.test.ts`)
+  - [x] Test with RMCA data to verify workflow descriptions sync (reconciliation recovers the 3 IW.*_description rows; `server/rmca-questionnaire.test.ts` proves the read path)
 
 - [x] **Fix 2: Add type checking at sync boundaries** (`server/syncBoundary.ts`, 11 tests)
   - [x] `coerceNotionDate` — parses Notion date strings to a valid Date or null; rejects Invalid Date so it can't poison the `notionLastEdited` version check (NaN compare) or the DATETIME write. Wired into task `completedAt`/`lastEdited` + validation `lastEdited` in notionSyncBackTasks.ts (replaced raw `new Date(row.x)`).
@@ -620,15 +620,15 @@
   - [x] `safeJsonParse` — non-throwing JSON parse with fallback for boundaries where a value might be JSON.
   - Note: these coerce/log instead of throwing, so one poisoned Notion row no longer fails the whole sync batch (the original `completedAt.toISOString` crash class).
 
-- [ ] **Fix 3: Add alerting for unmapped Notion columns**
-  - Log warnings when new columns appear in Notion
-  - Alert owner after N unmapped columns detected
-  - Provide actionable next steps (update sync code, update data dictionary)
+- [x] **Fix 3: Add alerting for unmapped Notion columns** (`maybeAlertUnmappedColumns` in `notionSyncBack.ts`, wired into `runNotionSyncBack`; tests in `notionSyncBack.test.ts`)
+  - [x] Log warnings when new columns appear in Notion (existing `validateSchema` warnings + new alert)
+  - [x] Alert owner when unmapped columns detected (throttled once/day)
+  - [x] Provide actionable next steps (alert body links to KNOWN_COLUMNS + data dictionary §8)
 
-- [ ] **Fix 4: Create DATA_DICTIONARY.md**
-  - Centralized schema definition (single source of truth)
-  - Document all fields: Notion column, questionId, type, source, sync frequency
-  - Make it the reference for all schema changes
+- [x] **Fix 4: Create DATA_DICTIONARY.md** — added §8 "Notion sync field mapping" to `docs/data-dictionary.md` (the existing root `DATA_DICTIONARY.md` is the DB-schema dictionary; §8 is the Notion↔MySQL field-flow dictionary the design review asked for)
+  - [x] Centralized field-flow definition (single source of truth for sync mappings)
+  - [x] Document all fields: Notion column, questionId, MySQL column, type, source, sync frequency, coercion
+  - [x] Make it the reference for Notion schema changes (cross-referenced from the unmapped-column alert)
 
 ### Long-Term Fixes (Next Sprint)
 
