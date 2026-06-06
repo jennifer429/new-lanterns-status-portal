@@ -1,0 +1,250 @@
+{
+  "query": "SELECT \n  tc.id,\n  tc.organizationId,\n  tc.sectionName,\n  tc.taskId,\n  tc.completed,\n  tc.notionLastEdited\nFROM taskCompletion tc\nWHERE tc.organizationId = 990001\nORDER BY tc.notionLastEdited DESC\nLIMIT 30;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT \n  tc.id,\n  tc.organizationId,\n  tc.sectionName,\n  tc.taskId,\n  tc.completed,\n  tc.notionLastEdited\nFROM taskCompletion tc\nWHERE tc.organizationId = 990001\nORDER BY tc.notionLastEdited DESC\nLIMIT 30;",
+  "rows": [
+    {
+      "id": "750023",
+      "organizationId": "990001",
+      "sectionName": "System Configuration",
+      "taskId": "config:proc",
+      "completed": "0",
+      "notionLastEdited": "2026-05-30 10:33:00"
+    },
+    {
+      "id": "750022",
+      "organizationId": "990001",
+      "sectionName": "HL7 Interface Build",
+      "taskId": "hl7:orm-spec",
+      "completed": "1",
+      "notionLastEdited": "2026-05-30 10:33:00"
+    },
+    {
+      "id": "750017",
+      "organizationId": "990001",
+      "sectionName": "HL7 Interface Build",
+      "taskId": "hl7:oru",
+      "completed": "0",
+      "notionLastEdited": "2026-05-30 10:33:00"
+    },
+    {
+      "id": "750020",
+      "organizationId": "990001",
+      "sectionName": "HL7 Interface Build",
+      "taskId": "hl7:oru-spec",
+      "completed": "1",
+      "notionLastEdited": "2026-05-30 10:33:00"
+    },
+    {
+      "id": "750021",
+      "organizationId": "990001",
+      "sectionName": "HL7 Interface Build",
+      "taskId": "hl7:validate",
+      "completed": "0",
+      "notionLastEdited": "2026-05-30 10:32:00"
+    },
+    {
+      "id": "480003",
+      "organizationId": "990001",
+      "sectionName": "Network & Connectivity",
+      "taskId": "network:hl7-port",
+      "completed": "1",
+      "notionLastEdited": "2026-05-30 10:32:00"
+    },
+    {
+      "id": "750001",
+      "organizationId": "990001",
+      "sectionName": "Network & Connectivity",
+      "taskId": "network:dicom-t",
+      "completed": "0",
+      "notionLastEdited": "2026-05-30 10:32:00"
+    },
+    {
+      "id": "840018",
+      "organizationId": "990001",
+      "sectionName": "Worklist & Templates",
+      "taskId": "tmpl:worklist",
+      "completed": "0",
+      "notionLastEdited": "2026-05-30 10:32:00"
+    },
+    {
+      "id": "750002",
+      "organizationId": "990001",
+      "sectionName": "Network & Connectivity",
+      "taskId": "network:dicom-p",
+      "completed": "0",
+      "notionLastEdited": "2026-05-30 10:32:00"
+    },
+    {
+      "id": "840017",
+      "organizationId": "990001",
+      "sectionName": "System Configuration",
+      "taskId": "config:provider",
+      "completed": "0",
+      "notionLastEdited": "2026-05-30 10:32:00"
+    },
+    {
+      "id": "840019",
+      "organizationId": "990001",
+      "sectionName": "System Configuration",
+      "taskId": "config:users",
+      "completed": "0",
+      "notionLastEdited": "2026-05-30 10:32:00"
+    },
+    {
+      "id": "750007",
+      "organizationId": "990001",
+      "sectionName": "Production Data Validation (2 Weeks)",
+      "taskId": "prod:addendum",
+      "completed": "0",
+      "notionLastEdited": "2026-05-30 10:32:00"
+    },
+    {
+      "id": "840021",
+      "organizationId": "990001",
+      "sectionName": "Worklist & Templates",
+      "taskId": "tmpl:reports",
+      "completed": "0",
+      "notionLastEdited": "2026-05-30 10:32:00"
+    },
+    {
+      "id": "480002",
+      "organizationId": "990001",
+      "sectionName": "Network & Connectivity",
+      "taskId": "network:firewall",
+      "completed": "1",
+      "notionLastEdited": "2026-05-30 10:32:00"
+    },
+    {
+      "id": "750019",
+      "organizationId": "990001",
+      "sectionName": "HL7 Interface Build",
+      "taskId": "hl7:orm",
+      "completed": "1",
+      "notionLastEdited": "2026-05-30 10:32:00"
+    },
+    {
+      "id": "840016",
+      "organizationId": "990001",
+      "sectionName": "System Configuration",
+      "taskId": "config:worklist",
+      "completed": "0",
+      "notionLastEdited": "2026-05-30 10:32:00"
+    },
+    {
+      "id": "480001",
+      "organizationId": "990001",
+      "sectionName": "Network & Connectivity",
+      "taskId": "network:vpn",
+      "completed": "1",
+      "notionLastEdited": "2026-05-30 10:32:00"
+    },
+    {
+      "id": "840020",
+      "organizationId": "990001",
+      "sectionName": "System Configuration",
+      "taskId": "config:sso",
+      "completed": "0",
+      "notionLastEdited": "2026-05-30 10:32:00"
+    },
+    {
+      "id": "840022",
+      "organizationId": "990001",
+      "sectionName": "Worklist & Templates",
+      "taskId": "tmpl:macros",
+      "completed": "0",
+      "notionLastEdited": "2026-05-30 10:32:00"
+    },
+    {
+      "id": "750018",
+      "organizationId": "990001",
+      "sectionName": "HL7 Interface Build",
+      "taskId": "hl7:adt",
+      "completed": "0",
+      "notionLastEdited": "2026-05-30 10:32:00"
+    },
+    {
+      "id": "840023",
+      "organizationId": "990001",
+      "sectionName": "Training & Go-Live Preparation",
+      "taskId": "train:downtime",
+      "completed": "0",
+      "notionLastEdited": "2026-05-30 10:22:00"
+    },
+    {
+      "id": "750004",
+      "organizationId": "990001",
+      "sectionName": "Training & Go-Live Preparation",
+      "taskId": "train:tech",
+      "completed": "0",
+      "notionLastEdited": "2026-05-30 10:22:00"
+    },
+    {
+      "id": "750003",
+      "organizationId": "990001",
+      "sectionName": "Training & Go-Live Preparation",
+      "taskId": "train:admin",
+      "completed": "0",
+      "notionLastEdited": "2026-05-30 10:22:00"
+    },
+    {
+      "id": "840026",
+      "organizationId": "990001",
+      "sectionName": "Training & Go-Live Preparation",
+      "taskId": "train:troubleshoot",
+      "completed": "0",
+      "notionLastEdited": "2026-05-30 10:22:00"
+    },
+    {
+      "id": "750005",
+      "organizationId": "990001",
+      "sectionName": "Training & Go-Live Preparation",
+      "taskId": "train:users",
+      "completed": "0",
+      "notionLastEdited": "2026-05-30 10:22:00"
+    },
+    {
+      "id": "750012",
+      "organizationId": "990001",
+      "sectionName": "Production Data Validation (2 Weeks)",
+      "taskId": "prod:downtime",
+      "completed": "0",
+      "notionLastEdited": "2026-05-30 10:12:00"
+    },
+    {
+      "id": "750015",
+      "organizationId": "990001",
+      "sectionName": "Production Data Validation (2 Weeks)",
+      "taskId": "prod:cancel",
+      "completed": "0",
+      "notionLastEdited": "2026-05-30 10:12:00"
+    },
+    {
+      "id": "750014",
+      "organizationId": "990001",
+      "sectionName": "Production Data Validation (2 Weeks)",
+      "taskId": "prod:adjustments",
+      "completed": "0",
+      "notionLastEdited": "2026-05-30 10:12:00"
+    },
+    {
+      "id": "750013",
+      "organizationId": "990001",
+      "sectionName": "Production Data Validation (2 Weeks)",
+      "taskId": "prod:data-quality",
+      "completed": "0",
+      "notionLastEdited": "2026-05-30 10:12:00"
+    },
+    {
+      "id": "750016",
+      "organizationId": "990001",
+      "sectionName": "Production Data Validation (2 Weeks)",
+      "taskId": "prod:golive",
+      "completed": "0",
+      "notionLastEdited": "2026-05-30 10:11:00"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\torganizationId\tsectionName\ttaskId\tcompleted\tnotionLastEdited\n750023\t990001\tSystem Configuration\tconfig:proc\t0\t2026-05-30 10:33:00\n750022\t990001\tHL7 Interface Build\thl7:orm-spec\t1\t2026-05-30 10:33:00\n750017\t990001\tHL7 Interface Build\thl7:oru\t0\t2026-05-30 10:33:00\n750020\t990001\tHL7 Interface Build\thl7:oru-spec\t1\t2026-05-30 10:33:00\n750021\t990001\tHL7 Interface Build\thl7:validate\t0\t2026-05-30 10:32:00\n480003\t990001\tNetwork & Connectivity\tnetwork:hl7-port\t1\t2026-05-30 10:32:00\n750001\t990001\tNetwork & Connectivity\tnetwork:dicom-t\t0\t2026-05-30 10:32:00\n840018\t990001\tWorklist & Templates\ttmpl:worklist\t0\t2026-05-30 10:32:00\n750002\t990001\tNetwork & Connectivity\tnetwork:dicom-p\t0\t2026-05-30 10:32:00\n840017\t990001\tSystem Configuration\tconfig:provider\t0\t2026-05-30 10:32:00\n840019\t990001\tSystem Configuration\tconfig:users\t0\t2026-05-30 10:32:00\n750007\t990001\tProduction Data Validation (2 Weeks)\tprod:addendum\t0\t2026-05-30 10:32:00\n840021\t990001\tWorklist & Templates\ttmpl:reports\t0\t2026-05-30 10:32:00\n480002\t990001\tNetwork & Connectivity\tnetwork:firewall\t1\t2026-05-30 10:32:00\n750019\t990001\tHL7 Interface Build\thl7:orm\t1\t2026-05-30 10:32:00\n840016\t990001\tSystem Configuration\tconfig:worklist\t0\t2026-05-30 10:32:00\n480001\t990001\tNetwork & Connectivity\tnetwork:vpn\t1\t2026-05-30 10:32:00\n840020\t990001\tSystem Configuration\tconfig:sso\t0\t2026-05-30 10:32:00\n840022\t990001\tWorklist & Templates\ttmpl:macros\t0\t2026-05-30 10:32:00\n750018\t990001\tHL7 Interface Build\thl7:adt\t0\t2026-05-30 10:32:00\n840023\t990001\tTraining & Go-Live Preparation\ttrain:downtime\t0\t2026-05-30 10:22:00\n750004\t990001\tTraining & Go-Live Preparation\ttrain:tech\t0\t2026-05-30 10:22:00\n750003\t990001\tTraining & Go-Live Preparation\ttrain:admin\t0\t2026-05-30 10:22:00\n840026\t990001\tTraining & Go-Live Preparation\ttrain:troubleshoot\t0\t2026-05-30 10:22:00\n750005\t990001\tTraining & Go-Live Preparation\ttrain:users\t0\t2026-05-30 10:22:00\n750012\t990001\tProduction Data Validation (2 Weeks)\tprod:downtime\t0\t2026-05-30 10:12:00\n750015\t990001\tProduction Data Validation (2 Weeks)\tprod:cancel\t0\t2026-05-30 10:12:00\n750014\t990001\tProduction Data Validation (2 Weeks)\tprod:adjustments\t0\t2026-05-30 10:12:00\n750013\t990001\tProduction Data Validation (2 Weeks)\tprod:data-quality\t0\t2026-05-30 10:12:00\n750016\t990001\tProduction Data Validation (2 Weeks)\tprod:golive\t0\t2026-05-30 10:11:00\n",
+  "stderr": "",
+  "execution_time_ms": 262
+}

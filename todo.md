@@ -562,20 +562,20 @@
 - [x] Copied drizzle/manual/phase1_unique_keys.sql
 - [x] Copied drizzle/manual/README.md
 - [x] Schema.ts compiles, all 285 tests pass
-- [ ] Run pnpm db:push to apply Phase 1 unique constraints (production, low-traffic window)
+- [x] Run pnpm db:push to apply Phase 1 unique constraints (production, low-traffic window) — completed Jun 6
 
 ### Phase 2 Constraints: Check() + Enums
 - [x] Cherry-picked drizzle/schema.ts Phase 2 updates (4 check() constraints, 6 enum conversions)
 - [x] Copied drizzle/manual/phase2_checks_enums.sql
 - [x] Schema.ts compiles, all 285 tests pass
-- [ ] Run pnpm db:push to apply Phase 2 constraints (production, after Phase 1)
+- [x] Run pnpm db:push to apply Phase 2 constraints (production, after Phase 1) — completed Jun 6
 
 ### Phase 3 Constraints: Foreign Keys
 - [x] Cherry-picked drizzle/schema.ts Phase 3 updates (24 .references() FKs with onDelete behavior)
 - [x] Copied drizzle/manual/phase3_foreign_keys.sql
 - [x] Reviewed onDelete semantics (cascade for child data, set null / restrict for parents)
 - [ ] Test dual-write/import/cron paths to ensure they handle FK rejection gracefully
-- [ ] Run pnpm db:push to apply Phase 3 constraints (production, after Phase 2)
+- [x] Run pnpm db:push to apply Phase 3 constraints (production, after Phase 2) — completed Jun 6
 
 ### Update Call-Sites for ON DUPLICATE KEY UPDATE
 - [ ] Wire ON DUPLICATE KEY UPDATE into intake.saveResponse (responses table upsert)

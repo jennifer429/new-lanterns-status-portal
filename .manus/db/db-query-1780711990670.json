@@ -1,0 +1,180 @@
+{
+  "query": "SELECT \n  ir.questionId,\n  SUBSTRING(ir.response, 1, 80) as response_preview,\n  ir.createdAt,\n  ir.updatedAt\nFROM intakeResponses ir\nWHERE ir.organizationId = (SELECT id FROM organizations WHERE slug = 'rmca')\nORDER BY ir.questionId\nLIMIT 50;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT \n  ir.questionId,\n  SUBSTRING(ir.response, 1, 80) as response_preview,\n  ir.createdAt,\n  ir.updatedAt\nFROM intakeResponses ir\nWHERE ir.organizationId = (SELECT id FROM organizations WHERE slug = 'rmca')\nORDER BY ir.questionId\nLIMIT 50;",
+  "rows": [
+    {
+      "questionId": "__question_na:A.contacts",
+      "response_preview": "false",
+      "createdAt": "2026-05-29 19:05:16",
+      "updatedAt": "2026-06-05 19:20:54"
+    },
+    {
+      "questionId": "__question_na:CF.2",
+      "response_preview": "true",
+      "createdAt": "2026-06-02 00:02:42",
+      "updatedAt": "2026-06-05 19:20:54"
+    },
+    {
+      "questionId": "__question_na:L.10",
+      "response_preview": "true",
+      "createdAt": "2026-06-01 17:03:07",
+      "updatedAt": "2026-06-05 19:20:54"
+    },
+    {
+      "questionId": "__question_na:L.2",
+      "response_preview": "true",
+      "createdAt": "2026-06-01 17:02:49",
+      "updatedAt": "2026-06-05 19:20:54"
+    },
+    {
+      "questionId": "__question_na:L.3",
+      "response_preview": "true",
+      "createdAt": "2026-06-01 17:03:01",
+      "updatedAt": "2026-06-05 19:20:54"
+    },
+    {
+      "questionId": "__question_na:L.8",
+      "response_preview": "true",
+      "createdAt": "2026-06-01 17:03:08",
+      "updatedAt": "2026-06-05 19:20:54"
+    },
+    {
+      "questionId": "__question_na:L.9",
+      "response_preview": "true",
+      "createdAt": "2026-06-01 17:03:07",
+      "updatedAt": "2026-06-05 19:20:54"
+    },
+    {
+      "questionId": "A.6",
+      "response_preview": "No",
+      "createdAt": "2026-04-22 13:34:49",
+      "updatedAt": "2026-06-06 02:01:20"
+    },
+    {
+      "questionId": "A.contacts",
+      "response_preview": "{\"it\":{\"name\":\"John Jordan\",\"phone\":\"256-235-5976\",\"email\":\"jjordan@rmccares.org",
+      "createdAt": "2026-04-02 13:51:30",
+      "updatedAt": "2026-06-06 02:01:17"
+    },
+    {
+      "questionId": "ARCH.diagram",
+      "response_preview": "No formal diagram on file yet. Jim Conyers (DataFirst) to map/diagram DICOM rout",
+      "createdAt": "2026-06-01 23:35:09",
+      "updatedAt": "2026-06-06 02:00:44"
+    },
+    {
+      "questionId": "ARCH.systems",
+      "response_preview": "[{\"id\":\"3ac90d6e-b2ab-47ad-9b4a-3326826e2193\",\"name\":\"Change\",\"type\":\"PACS\",\"des",
+      "createdAt": "2026-04-02 14:01:04",
+      "updatedAt": "2026-06-06 02:01:15"
+    },
+    {
+      "questionId": "CF.1",
+      "response_preview": "Procedure codes received from RMC (Tracie Schmiedl, 4/17) including Oxford Medip",
+      "createdAt": "2026-06-01 22:05:00",
+      "updatedAt": "2026-06-06 02:00:25"
+    },
+    {
+      "questionId": "D.1",
+      "response_preview": "Yes",
+      "createdAt": "2026-06-02 00:02:33",
+      "updatedAt": "2026-06-06 02:00:30"
+    },
+    {
+      "questionId": "D.2",
+      "response_preview": "2026-06-24",
+      "createdAt": "2026-06-02 00:03:02",
+      "updatedAt": "2026-06-06 02:00:21"
+    },
+    {
+      "questionId": "D.3",
+      "response_preview": "[\"CT\",\"MRI\",\"X-Ray\",\"Ultrasound\",\"Nuclear Medicine\",\"Mammography\"]",
+      "createdAt": "2026-06-05 21:28:26",
+      "updatedAt": "2026-06-06 02:00:19"
+    },
+    {
+      "questionId": "D.4",
+      "response_preview": "",
+      "createdAt": "2026-06-05 22:59:32",
+      "updatedAt": "2026-06-06 02:00:17"
+    },
+    {
+      "questionId": "E.1",
+      "response_preview": "",
+      "createdAt": "2026-06-01 22:05:01",
+      "updatedAt": "2026-06-06 02:00:27"
+    },
+    {
+      "questionId": "G.5",
+      "response_preview": "",
+      "createdAt": "2026-06-05 22:59:54",
+      "updatedAt": "2026-06-06 02:00:14"
+    },
+    {
+      "questionId": "G.6",
+      "response_preview": "",
+      "createdAt": "2026-06-05 22:59:47",
+      "updatedAt": "2026-06-06 02:00:09"
+    },
+    {
+      "questionId": "H.1",
+      "response_preview": "1 connection point with 2 route-based VPN tunnels (primary and secondary) for re",
+      "createdAt": "2026-04-02 13:48:31",
+      "updatedAt": "2026-06-06 02:01:11"
+    },
+    {
+      "questionId": "H.3",
+      "response_preview": "None noted",
+      "createdAt": "2026-04-22 13:34:48",
+      "updatedAt": "2026-06-06 02:01:04"
+    },
+    {
+      "questionId": "IW.orders_description",
+      "response_preview": "Orders originate in Altera Paragon and route as HL7 ORM via Corepoint → DataFirs",
+      "createdAt": "2026-06-06 01:51:57",
+      "updatedAt": "2026-06-06 02:00:42"
+    },
+    {
+      "questionId": "IW.priors_description",
+      "response_preview": "Priors retrieved on-demand from RMC PACS via Silverback DICOM Q/R (no bulk prelo",
+      "createdAt": "2026-06-06 01:51:57",
+      "updatedAt": "2026-06-06 02:00:38"
+    },
+    {
+      "questionId": "IW.reports_description",
+      "response_preview": "Signed reports flow from New Lantern as HL7 ORU back through Silverback → Corepo",
+      "createdAt": "2026-06-06 01:51:57",
+      "updatedAt": "2026-06-06 02:00:33"
+    },
+    {
+      "questionId": "IW.tech_sheets_dicom_wrapped",
+      "response_preview": "yes",
+      "createdAt": "2026-06-05 13:42:28",
+      "updatedAt": "2026-06-05 19:20:54"
+    },
+    {
+      "questionId": "L.2",
+      "response_preview": "",
+      "createdAt": "2026-04-22 13:34:54",
+      "updatedAt": "2026-06-06 02:00:50"
+    },
+    {
+      "questionId": "L.3",
+      "response_preview": "",
+      "createdAt": "2026-04-22 13:34:54",
+      "updatedAt": "2026-06-06 02:00:47"
+    }
+  ],
+  "messages": [
+    "H.2\tRegional Medical Center of Anniston (RMCA) — rmccares.org",
+    "Sites/locations under\t2026-04-02 13:49:30\t2026-06-06 02:01:09",
+    "L.11\tCurrent RMCA downtime workflow:",
+    "- During HL7 downtime, radiologists read without\t2026-04-09 15:37:01\t2026-06-06 02:00:56",
+    "L.4\tTentative Go-Live: June 24, 2026",
+    "Key milestones:",
+    "- HL7 test environment target \t2026-04-02 13:58:13\t2026-06-06 02:00:53"
+  ],
+  "stdout": "questionId\tresponse_preview\tcreatedAt\tupdatedAt\n__question_na:A.contacts\tfalse\t2026-05-29 19:05:16\t2026-06-05 19:20:54\n__question_na:CF.2\ttrue\t2026-06-02 00:02:42\t2026-06-05 19:20:54\n__question_na:L.10\ttrue\t2026-06-01 17:03:07\t2026-06-05 19:20:54\n__question_na:L.2\ttrue\t2026-06-01 17:02:49\t2026-06-05 19:20:54\n__question_na:L.3\ttrue\t2026-06-01 17:03:01\t2026-06-05 19:20:54\n__question_na:L.8\ttrue\t2026-06-01 17:03:08\t2026-06-05 19:20:54\n__question_na:L.9\ttrue\t2026-06-01 17:03:07\t2026-06-05 19:20:54\nA.6\tNo\t2026-04-22 13:34:49\t2026-06-06 02:01:20\nA.contacts\t{\"it\":{\"name\":\"John Jordan\",\"phone\":\"256-235-5976\",\"email\":\"jjordan@rmccares.org\t2026-04-02 13:51:30\t2026-06-06 02:01:17\nARCH.diagram\tNo formal diagram on file yet. Jim Conyers (DataFirst) to map/diagram DICOM rout\t2026-06-01 23:35:09\t2026-06-06 02:00:44\nARCH.systems\t[{\"id\":\"3ac90d6e-b2ab-47ad-9b4a-3326826e2193\",\"name\":\"Change\",\"type\":\"PACS\",\"des\t2026-04-02 14:01:04\t2026-06-06 02:01:15\nCF.1\tProcedure codes received from RMC (Tracie Schmiedl, 4/17) including Oxford Medip\t2026-06-01 22:05:00\t2026-06-06 02:00:25\nD.1\tYes\t2026-06-02 00:02:33\t2026-06-06 02:00:30\nD.2\t2026-06-24\t2026-06-02 00:03:02\t2026-06-06 02:00:21\nD.3\t[\"CT\",\"MRI\",\"X-Ray\",\"Ultrasound\",\"Nuclear Medicine\",\"Mammography\"]\t2026-06-05 21:28:26\t2026-06-06 02:00:19\nD.4\t\t2026-06-05 22:59:32\t2026-06-06 02:00:17\nE.1\t\t2026-06-01 22:05:01\t2026-06-06 02:00:27\nG.5\t\t2026-06-05 22:59:54\t2026-06-06 02:00:14\nG.6\t\t2026-06-05 22:59:47\t2026-06-06 02:00:09\nH.1\t1 connection point with 2 route-based VPN tunnels (primary and secondary) for re\t2026-04-02 13:48:31\t2026-06-06 02:01:11\nH.2\tRegional Medical Center of Anniston (RMCA) — rmccares.org\n\nSites/locations under\t2026-04-02 13:49:30\t2026-06-06 02:01:09\nH.3\tNone noted\t2026-04-22 13:34:48\t2026-06-06 02:01:04\nIW.orders_description\tOrders originate in Altera Paragon and route as HL7 ORM via Corepoint → DataFirs\t2026-06-06 01:51:57\t2026-06-06 02:00:42\nIW.priors_description\tPriors retrieved on-demand from RMC PACS via Silverback DICOM Q/R (no bulk prelo\t2026-06-06 01:51:57\t2026-06-06 02:00:38\nIW.reports_description\tSigned reports flow from New Lantern as HL7 ORU back through Silverback → Corepo\t2026-06-06 01:51:57\t2026-06-06 02:00:33\nIW.tech_sheets_dicom_wrapped\tyes\t2026-06-05 13:42:28\t2026-06-05 19:20:54\nL.11\tCurrent RMCA downtime workflow:\n- During HL7 downtime, radiologists read without\t2026-04-09 15:37:01\t2026-06-06 02:00:56\nL.2\t\t2026-04-22 13:34:54\t2026-06-06 02:00:50\nL.3\t\t2026-04-22 13:34:54\t2026-06-06 02:00:47\nL.4\tTentative Go-Live: June 24, 2026\n\nKey milestones:\n- HL7 test environment target \t2026-04-02 13:58:13\t2026-06-06 02:00:53\n",
+  "stderr": "",
+  "execution_time_ms": 257
+}

@@ -1,0 +1,190 @@
+{
+  "query": "SELECT \n  tc.id,\n  tc.organizationId,\n  tc.sectionName,\n  tc.taskId,\n  tc.completed,\n  tc.completedAt,\n  tc.notionLastEdited\nFROM taskCompletion tc\nWHERE tc.id = (SELECT id FROM taskCompletion ORDER BY notionLastEdited DESC LIMIT 1)\n  OR tc.notionLastEdited > DATE_SUB(NOW(), INTERVAL 7 DAY)\nORDER BY tc.notionLastEdited DESC\nLIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT \n  tc.id,\n  tc.organizationId,\n  tc.sectionName,\n  tc.taskId,\n  tc.completed,\n  tc.completedAt,\n  tc.notionLastEdited\nFROM taskCompletion tc\nWHERE tc.id = (SELECT id FROM taskCompletion ORDER BY notionLastEdited DESC LIMIT 1)\n  OR tc.notionLastEdited > DATE_SUB(NOW(), INTERVAL 7 DAY)\nORDER BY tc.notionLastEdited DESC\nLIMIT 20;",
+  "rows": [
+    {
+      "id": "1050005",
+      "organizationId": "960001",
+      "sectionName": "Network & Connectivity",
+      "taskId": "network:hl7-port",
+      "completed": "0",
+      "completedAt": "2026-06-05 19:06:35",
+      "notionLastEdited": "2026-06-06 00:03:00"
+    },
+    {
+      "id": "1050004",
+      "organizationId": "960001",
+      "sectionName": "Network & Connectivity",
+      "taskId": "network:dicom-p",
+      "completed": "0",
+      "completedAt": "2026-06-05 19:06:35",
+      "notionLastEdited": "2026-06-06 00:03:00"
+    },
+    {
+      "id": "1050002",
+      "organizationId": "960001",
+      "sectionName": "Network & Connectivity",
+      "taskId": "network:firewall",
+      "completed": "0",
+      "completedAt": "2026-06-05 19:06:35",
+      "notionLastEdited": "2026-06-06 00:03:00"
+    },
+    {
+      "id": "1050001",
+      "organizationId": "960001",
+      "sectionName": "Network & Connectivity",
+      "taskId": "network:vpn",
+      "completed": "0",
+      "completedAt": "2026-06-05 19:06:35",
+      "notionLastEdited": "2026-06-06 00:03:00"
+    },
+    {
+      "id": "1050003",
+      "organizationId": "960001",
+      "sectionName": "Network & Connectivity",
+      "taskId": "network:dicom-t",
+      "completed": "0",
+      "completedAt": "2026-06-05 19:06:35",
+      "notionLastEdited": "2026-06-06 00:03:00"
+    },
+    {
+      "id": "1050039",
+      "organizationId": "960001",
+      "sectionName": "Production Data Validation (2 Weeks)",
+      "taskId": "prod:golive",
+      "completed": "0",
+      "completedAt": "2026-06-05 19:06:35",
+      "notionLastEdited": "2026-06-05 23:58:00"
+    },
+    {
+      "id": "1050037",
+      "organizationId": "960001",
+      "sectionName": "Production Data Validation (2 Weeks)",
+      "taskId": "prod:volume",
+      "completed": "0",
+      "completedAt": "2026-06-05 19:06:35",
+      "notionLastEdited": "2026-06-05 23:56:00"
+    },
+    {
+      "id": "1050030",
+      "organizationId": "960001",
+      "sectionName": "Production Data Validation (2 Weeks)",
+      "taskId": "prod:data-quality",
+      "completed": "0",
+      "completedAt": "2026-06-05 19:06:35",
+      "notionLastEdited": "2026-06-05 23:56:00"
+    },
+    {
+      "id": "1050031",
+      "organizationId": "960001",
+      "sectionName": "Production Data Validation (2 Weeks)",
+      "taskId": "prod:timeliness",
+      "completed": "0",
+      "completedAt": "2026-06-05 19:06:35",
+      "notionLastEdited": "2026-06-05 23:56:00"
+    },
+    {
+      "id": "1050038",
+      "organizationId": "960001",
+      "sectionName": "Production Data Validation (2 Weeks)",
+      "taskId": "prod:adjustments",
+      "completed": "0",
+      "completedAt": "2026-06-05 19:06:35",
+      "notionLastEdited": "2026-06-05 23:56:00"
+    },
+    {
+      "id": "1050034",
+      "organizationId": "960001",
+      "sectionName": "Production Data Validation (2 Weeks)",
+      "taskId": "prod:addendum",
+      "completed": "0",
+      "completedAt": "2026-06-05 19:06:35",
+      "notionLastEdited": "2026-06-05 23:56:00"
+    },
+    {
+      "id": "1050033",
+      "organizationId": "960001",
+      "sectionName": "Production Data Validation (2 Weeks)",
+      "taskId": "prod:stat",
+      "completed": "0",
+      "completedAt": "2026-06-05 19:06:35",
+      "notionLastEdited": "2026-06-05 23:56:00"
+    },
+    {
+      "id": "1050032",
+      "organizationId": "960001",
+      "sectionName": "Production Data Validation (2 Weeks)",
+      "taskId": "prod:normal-wf",
+      "completed": "0",
+      "completedAt": "2026-06-05 19:06:35",
+      "notionLastEdited": "2026-06-05 23:56:00"
+    },
+    {
+      "id": "1050035",
+      "organizationId": "960001",
+      "sectionName": "Production Data Validation (2 Weeks)",
+      "taskId": "prod:cancel",
+      "completed": "0",
+      "completedAt": "2026-06-05 19:06:35",
+      "notionLastEdited": "2026-06-05 23:56:00"
+    },
+    {
+      "id": "1050036",
+      "organizationId": "960001",
+      "sectionName": "Production Data Validation (2 Weeks)",
+      "taskId": "prod:downtime",
+      "completed": "0",
+      "completedAt": "2026-06-05 19:06:35",
+      "notionLastEdited": "2026-06-05 23:56:00"
+    },
+    {
+      "id": "1050029",
+      "organizationId": "960001",
+      "sectionName": "Production Data Validation (2 Weeks)",
+      "taskId": "prod:start",
+      "completed": "0",
+      "completedAt": "2026-06-05 19:06:35",
+      "notionLastEdited": "2026-06-05 23:51:00"
+    },
+    {
+      "id": "1050027",
+      "organizationId": "960001",
+      "sectionName": "End-to-End Testing",
+      "taskId": "test:perf",
+      "completed": "0",
+      "completedAt": "2026-06-05 19:06:35",
+      "notionLastEdited": "2026-06-05 23:51:00"
+    },
+    {
+      "id": "1050028",
+      "organizationId": "960001",
+      "sectionName": "End-to-End Testing",
+      "taskId": "test:signoff",
+      "completed": "0",
+      "completedAt": "2026-06-05 19:06:35",
+      "notionLastEdited": "2026-06-05 23:51:00"
+    },
+    {
+      "id": "1050022",
+      "organizationId": "960001",
+      "sectionName": "Training & Go-Live Preparation",
+      "taskId": "train:users",
+      "completed": "0",
+      "completedAt": "2026-06-05 19:06:35",
+      "notionLastEdited": "2026-06-05 23:46:00"
+    },
+    {
+      "id": "1050023",
+      "organizationId": "960001",
+      "sectionName": "Training & Go-Live Preparation",
+      "taskId": "train:downtime",
+      "completed": "0",
+      "completedAt": "2026-06-05 19:06:35",
+      "notionLastEdited": "2026-06-05 23:46:00"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\torganizationId\tsectionName\ttaskId\tcompleted\tcompletedAt\tnotionLastEdited\n1050005\t960001\tNetwork & Connectivity\tnetwork:hl7-port\t0\t2026-06-05 19:06:35\t2026-06-06 00:03:00\n1050004\t960001\tNetwork & Connectivity\tnetwork:dicom-p\t0\t2026-06-05 19:06:35\t2026-06-06 00:03:00\n1050002\t960001\tNetwork & Connectivity\tnetwork:firewall\t0\t2026-06-05 19:06:35\t2026-06-06 00:03:00\n1050001\t960001\tNetwork & Connectivity\tnetwork:vpn\t0\t2026-06-05 19:06:35\t2026-06-06 00:03:00\n1050003\t960001\tNetwork & Connectivity\tnetwork:dicom-t\t0\t2026-06-05 19:06:35\t2026-06-06 00:03:00\n1050039\t960001\tProduction Data Validation (2 Weeks)\tprod:golive\t0\t2026-06-05 19:06:35\t2026-06-05 23:58:00\n1050037\t960001\tProduction Data Validation (2 Weeks)\tprod:volume\t0\t2026-06-05 19:06:35\t2026-06-05 23:56:00\n1050030\t960001\tProduction Data Validation (2 Weeks)\tprod:data-quality\t0\t2026-06-05 19:06:35\t2026-06-05 23:56:00\n1050031\t960001\tProduction Data Validation (2 Weeks)\tprod:timeliness\t0\t2026-06-05 19:06:35\t2026-06-05 23:56:00\n1050038\t960001\tProduction Data Validation (2 Weeks)\tprod:adjustments\t0\t2026-06-05 19:06:35\t2026-06-05 23:56:00\n1050034\t960001\tProduction Data Validation (2 Weeks)\tprod:addendum\t0\t2026-06-05 19:06:35\t2026-06-05 23:56:00\n1050033\t960001\tProduction Data Validation (2 Weeks)\tprod:stat\t0\t2026-06-05 19:06:35\t2026-06-05 23:56:00\n1050032\t960001\tProduction Data Validation (2 Weeks)\tprod:normal-wf\t0\t2026-06-05 19:06:35\t2026-06-05 23:56:00\n1050035\t960001\tProduction Data Validation (2 Weeks)\tprod:cancel\t0\t2026-06-05 19:06:35\t2026-06-05 23:56:00\n1050036\t960001\tProduction Data Validation (2 Weeks)\tprod:downtime\t0\t2026-06-05 19:06:35\t2026-06-05 23:56:00\n1050029\t960001\tProduction Data Validation (2 Weeks)\tprod:start\t0\t2026-06-05 19:06:35\t2026-06-05 23:51:00\n1050027\t960001\tEnd-to-End Testing\ttest:perf\t0\t2026-06-05 19:06:35\t2026-06-05 23:51:00\n1050028\t960001\tEnd-to-End Testing\ttest:signoff\t0\t2026-06-05 19:06:35\t2026-06-05 23:51:00\n1050022\t960001\tTraining & Go-Live Preparation\ttrain:users\t0\t2026-06-05 19:06:35\t2026-06-05 23:46:00\n1050023\t960001\tTraining & Go-Live Preparation\ttrain:downtime\t0\t2026-06-05 19:06:35\t2026-06-05 23:46:00\n",
+  "stderr": "",
+  "execution_time_ms": 275
+}

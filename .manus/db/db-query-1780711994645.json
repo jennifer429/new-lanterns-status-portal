@@ -1,0 +1,26 @@
+{
+  "query": "SELECT \n  ir.questionId,\n  SUBSTRING(ir.response, 1, 100) as response_preview\nFROM intakeResponses ir\nWHERE ir.organizationId = (SELECT id FROM organizations WHERE slug = 'rmca')\n  AND ir.questionId LIKE 'IW.%'\nORDER BY ir.questionId;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT \n  ir.questionId,\n  SUBSTRING(ir.response, 1, 100) as response_preview\nFROM intakeResponses ir\nWHERE ir.organizationId = (SELECT id FROM organizations WHERE slug = 'rmca')\n  AND ir.questionId LIKE 'IW.%'\nORDER BY ir.questionId;",
+  "rows": [
+    {
+      "questionId": "IW.orders_description",
+      "response_preview": "Orders originate in Altera Paragon and route as HL7 ORM via Corepoint → DataFirst/Silverback → New L"
+    },
+    {
+      "questionId": "IW.priors_description",
+      "response_preview": "Priors retrieved on-demand from RMC PACS via Silverback DICOM Q/R (no bulk preload). Prior-report re"
+    },
+    {
+      "questionId": "IW.reports_description",
+      "response_preview": "Signed reports flow from New Lantern as HL7 ORU back through Silverback → Corepoint → Paragon for fi"
+    },
+    {
+      "questionId": "IW.tech_sheets_dicom_wrapped",
+      "response_preview": "yes"
+    }
+  ],
+  "messages": [],
+  "stdout": "questionId\tresponse_preview\nIW.orders_description\tOrders originate in Altera Paragon and route as HL7 ORM via Corepoint → DataFirst/Silverback → New L\nIW.priors_description\tPriors retrieved on-demand from RMC PACS via Silverback DICOM Q/R (no bulk preload). Prior-report re\nIW.reports_description\tSigned reports flow from New Lantern as HL7 ORU back through Silverback → Corepoint → Paragon for fi\nIW.tech_sheets_dicom_wrapped\tyes\n",
+  "stderr": "",
+  "execution_time_ms": 272
+}
