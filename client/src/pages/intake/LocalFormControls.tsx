@@ -30,7 +30,7 @@ export function LocalInput({
       setLocal(value);
     }
   }, [value]);
-  const isFilled = local.trim().length > 0;
+  const isFilled = typeof local === 'string' && local.trim().length > 0;
   return (
     <div className="relative">
       <Input
@@ -73,7 +73,7 @@ export function LocalTextarea({
       setLocal(value);
     }
   }, [value]);
-  const isFilled = local.trim().length > 0;
+  const isFilled = typeof local === 'string' && local.trim().length > 0;
   return (
     <div className="relative">
       <Textarea
