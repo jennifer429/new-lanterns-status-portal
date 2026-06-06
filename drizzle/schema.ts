@@ -772,3 +772,65 @@ export const connectivityCache = mysqlTable("connectivityCache", {
 });
 export type ConnectivityCache = typeof connectivityCache.$inferSelect;
 export type InsertConnectivityCache = typeof connectivityCache.$inferInsert;
+
+/**
+ * Workflow Pathways — structured per-org state for swim-lane diagrams
+ * (Orders / Images / Priors / Reports). Holds the "what" that was previously
+ * either packed into an intakeResponses JSON blob or not persisted at all.
+ *
+ * One row per (organizationId, workflowType, pathId). pathId values come from
+ * the swim-lane definitions (e.g. "ordersFromRIS", "imagesFromModality"); the
+ * special pathId "__summary" holds the per-workflow description + selected
+ * systems list (used by the IntegrationWorkflows intake UI).
+ */
+export const workflowPathways = mysqlTable("workflowPathways", {
+  id: int("id").autoincrement().primaryKey(),
+  organizationId: int("organizationId").notNull(), // FK to organizations.id
+  workflowType: varchar("workflowType", { length: 20 }).notNull(), // 'orders' | 'images' | 'priors' | 'reports'
+  pathId: varchar("pathId", { length: 100 }).notNull(), // swim-lane pathway key
+  enabled: tinyint("enabled").default(0).notNull(), // 1 = pathway in scope for this org
+  sourceSystem: varchar("sourceSystem", { length: 255 }),
+  middlewareSystem: varchar("middlewareSystem", { length: 255 }),
+  destinationSystem: varchar("destinationSystem", { length: 255 }),
+  systems: text("systems"), // JSON array of system names (used by the __summary row)
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type WorkflowPathway = typeof workflowPathways.$inferSelect;
+export type InsertWorkflowPathway = typeof workflowPathways.$inferInsert;
+
+/**
+ * Task Definitions — MySQL cache of the Notion "Task Definitions" database.
+ * The portal reads tasks from this table; the every-5-min Notion sync upserts
+ * rows and soft-inactivates rows that have disappeared from Notion (so historic
+ * taskCompletion rows referencing them are not orphaned).
+ *
+ * taskId is the stable string key referenced from the rest of the schema
+ * (taskCompletion.taskId, taskOrgAssignment.taskId, etc.).
+ */
+export const taskDefinitions = mysqlTable("taskDefinitions", {
+  id: int("id").autoincrement().primaryKey(),
+  taskId: varchar("taskId", { length: 100 }).notNull().unique(), // e.g. "hl7:orm"
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  sectionId: varchar("sectionId", { length: 50 }), // e.g. "hl7"
+  sectionTitle: varchar("sectionTitle", { length: 255 }),
+  sectionDuration: varchar("sectionDuration", { length: 50 }),
+  swimLanes: json("swimLanes"), // string[] — e.g. ["orders","reports"]
+  dependsOn: json("dependsOn"), // string[] of taskId values
+  sortOrder: int("sortOrder").default(0).notNull(),
+  intakeLink: varchar("intakeLink", { length: 500 }),
+  intakeLinkLabel: varchar("intakeLinkLabel", { length: 255 }),
+  specLink: varchar("specLink", { length: 500 }),
+  specLinkLabel: varchar("specLinkLabel", { length: 255 }),
+  isActive: tinyint("isActive").default(1).notNull(), // 0 = soft-deleted (missing from Notion)
+  notionPageId: varchar("notionPageId", { length: 64 }), // back-reference for debugging
+  notionLastEdited: timestamp("notionLastEdited"), // last_edited_time from Notion
+  syncedAt: timestamp("syncedAt").defaultNow().notNull(), // last time this row was touched by the sync
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type TaskDefinition = typeof taskDefinitions.$inferSelect;
+export type InsertTaskDefinition = typeof taskDefinitions.$inferInsert;

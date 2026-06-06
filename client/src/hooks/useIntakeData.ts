@@ -52,6 +52,12 @@ export function useIntakeData(slug: string, clientSlug: string) {
     { enabled: !!slug }
   );
 
+  // Workflow pathway summaries — canonical source for integration-workflows progress
+  const { data: workflowPathwayRows = [] } = trpc.workflowPathways.list.useQuery(
+    { organizationSlug: slug || "" },
+    { enabled: !!slug }
+  );
+
   // Fetch contacts and systems from normalized tables (source of truth from Notion)
   const { data: contactsData } = trpc.contacts.getForOrg.useQuery(
     { organizationSlug: slug || "" },
@@ -148,6 +154,10 @@ export function useIntakeData(slug: string, clientSlug: string) {
   const createConnRow = trpc.connectivity.createRow.useMutation();
   const updateConnRow = trpc.connectivity.updateRow.useMutation();
   const archiveConnRow = trpc.connectivity.archiveRow.useMutation();
+
+  const upsertWorkflowPathway = trpc.workflowPathways.upsert.useMutation({
+    onSuccess: () => utils.workflowPathways.list.invalidate({ organizationSlug: slug || "" }),
+  });
 
   // ── Derived state ────────────────────────────────────────────────────────────
 
@@ -295,8 +305,13 @@ export function useIntakeData(slug: string, clientSlug: string) {
     if (section.type === "integration-workflows") {
       const wfKeys = ["orders", "images", "priors", "reports"] as const;
       const completedWorkflows = wfKeys.filter((wf) => {
-        const v = responses[`IW.${wf}_description`];
-        return v && String(v).trim().length > 0;
+        const row = workflowPathwayRows.find(
+          (r) => r.workflowType === wf && r.pathId === "__summary",
+        );
+        if (row?.notes && row.notes.trim().length > 0) return true;
+        // Fallback for pre-migration data still living in intakeResponses
+        const legacy = responses[`IW.${wf}_description`];
+        return !!(legacy && String(legacy).trim().length > 0);
       }).length;
       return Math.round((completedWorkflows / 4) * 100);
     }
@@ -495,6 +510,25 @@ export function useIntakeData(slug: string, clientSlug: string) {
       });
     });
 
+    // Workflow pathway summaries now live in workflowPathways, not responses.
+    // Project them back into IW.<wf>_description / IW.<wf>_systems so the
+    // export stays round-trippable with the import path.
+    for (const row of workflowPathwayRows) {
+      if (row.pathId !== "__summary") continue;
+      const wf = row.workflowType;
+      if (row.notes && row.notes.trim().length > 0) {
+        exportResponses[`IW.${wf}_description`] = row.notes;
+      }
+      if (row.systems) {
+        try {
+          const parsed = JSON.parse(row.systems);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            exportResponses[`IW.${wf}_systems`] = parsed;
+          }
+        } catch { /* ignore malformed */ }
+      }
+    }
+
     const payload = {
       exported: new Date().toISOString(),
       org: slug,
@@ -608,9 +642,34 @@ export function useIntakeData(slug: string, clientSlug: string) {
       isImportingRef.current = true;
       setResponses((prev) => ({ ...prev, ...importedResponses }));
 
-      // Save all imported responses to the server
-      await Promise.all(
-        Object.entries(importedResponses).map(([questionId, value]) =>
+      // Route primary workflow summaries into workflowPathways (canonical).
+      // Everything else (including secondary IW.* keys like historic_results,
+      // tech_sheets, overlay_pacs, ct_dose) continues going to intakeResponses.
+      const primaries = ["orders", "images", "priors", "reports"] as const;
+      const summaryPatch: Record<string, { description?: string; systems?: string[] }> = {};
+      const regularEntries: [string, unknown][] = [];
+      for (const [qid, value] of Object.entries(importedResponses)) {
+        const descMatch = primaries.find((wf) => qid === `IW.${wf}_description`);
+        const sysMatch = primaries.find((wf) => qid === `IW.${wf}_systems`);
+        if (descMatch) {
+          (summaryPatch[descMatch] ||= {}).description = String(value ?? "");
+        } else if (sysMatch) {
+          let arr: string[] = [];
+          if (Array.isArray(value)) arr = value.filter((s): s is string => typeof s === "string");
+          else if (typeof value === "string") {
+            try {
+              const parsed = JSON.parse(value);
+              if (Array.isArray(parsed)) arr = parsed.filter((s): s is string => typeof s === "string");
+            } catch { /* ignore */ }
+          }
+          (summaryPatch[sysMatch] ||= {}).systems = arr;
+        } else {
+          regularEntries.push([qid, value]);
+        }
+      }
+
+      await Promise.all([
+        ...regularEntries.map(([questionId, value]) =>
           saveMutation.mutateAsync({
             organizationSlug: slug,
             questionId,
@@ -618,8 +677,18 @@ export function useIntakeData(slug: string, clientSlug: string) {
               typeof value === "object" ? JSON.stringify(value) : String(value),
             userEmail: user?.email || "",
           })
-        )
-      );
+        ),
+        ...Object.entries(summaryPatch).map(([wf, patch]) =>
+          upsertWorkflowPathway.mutateAsync({
+            organizationSlug: slug,
+            workflowType: wf as (typeof primaries)[number],
+            pathId: "__summary",
+            enabled: true,
+            ...(patch.description !== undefined ? { notes: patch.description } : {}),
+            ...(patch.systems !== undefined ? { systems: patch.systems } : {}),
+          })
+        ),
+      ]);
 
       // Import saves are complete. Local state is already correct.
       // No need to invalidate/refetch since hasHydratedRef prevents
