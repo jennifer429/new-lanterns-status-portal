@@ -624,6 +624,7 @@
   - [x] Log warnings when new columns appear in Notion (existing `validateSchema` warnings + new alert)
   - [x] Alert owner when unmapped columns detected (throttled once/day)
   - [x] Provide actionable next steps (alert body links to KNOWN_COLUMNS + data dictionary §8)
+  - [x] Suppress alerts for known Notion-only columns (Jun 6) — Added NOTION_ONLY_COLUMNS list to exclude auto-generated/metadata columns from triggering alerts
 
 - [x] **Fix 4: Create DATA_DICTIONARY.md** — added §8 "Notion sync field mapping" to `docs/data-dictionary.md` (the existing root `DATA_DICTIONARY.md` is the DB-schema dictionary; §8 is the Notion↔MySQL field-flow dictionary the design review asked for)
   - [x] Centralized field-flow definition (single source of truth for sync mappings)
