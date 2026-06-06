@@ -16,6 +16,7 @@ import { aiRouter } from "./routers/ai";
 import { exportsRouter } from "./routers/exports";
 import { proceduralLibraryRouter } from "./routers/proceduralLibrary";
 import { swimlaneRouter } from "./routers/swimlane";
+import { workflowPathwaysRouter } from "./routers/workflowPathways";
 import { syncHealthRouter } from "./routers/syncHealth";
 import { backfillRouter } from "./routers/backfill";
 import { contactsRouter } from "./routers/contacts";
@@ -52,6 +53,7 @@ export const appRouter = router({
   exports: exportsRouter,
   proceduralLibrary: proceduralLibraryRouter,
   swimlane: swimlaneRouter,
+  workflowPathways: workflowPathwaysRouter,
   syncHealth: syncHealthRouter,
   backfill: backfillRouter,
   contacts: contactsRouter,

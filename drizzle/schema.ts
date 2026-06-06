@@ -772,3 +772,31 @@ export const connectivityCache = mysqlTable("connectivityCache", {
 });
 export type ConnectivityCache = typeof connectivityCache.$inferSelect;
 export type InsertConnectivityCache = typeof connectivityCache.$inferInsert;
+
+/**
+ * Workflow Pathways — structured per-org state for swim-lane diagrams
+ * (Orders / Images / Priors / Reports). Holds the "what" that was previously
+ * either packed into an intakeResponses JSON blob or not persisted at all.
+ *
+ * One row per (organizationId, workflowType, pathId). pathId values come from
+ * the swim-lane definitions (e.g. "ordersFromRIS", "imagesFromModality"); the
+ * special pathId "__summary" holds the per-workflow description + selected
+ * systems list (used by the IntegrationWorkflows intake UI).
+ */
+export const workflowPathways = mysqlTable("workflowPathways", {
+  id: int("id").autoincrement().primaryKey(),
+  organizationId: int("organizationId").notNull(), // FK to organizations.id
+  workflowType: varchar("workflowType", { length: 20 }).notNull(), // 'orders' | 'images' | 'priors' | 'reports'
+  pathId: varchar("pathId", { length: 100 }).notNull(), // swim-lane pathway key
+  enabled: tinyint("enabled").default(0).notNull(), // 1 = pathway in scope for this org
+  sourceSystem: varchar("sourceSystem", { length: 255 }),
+  middlewareSystem: varchar("middlewareSystem", { length: 255 }),
+  destinationSystem: varchar("destinationSystem", { length: 255 }),
+  systems: text("systems"), // JSON array of system names (used by the __summary row)
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type WorkflowPathway = typeof workflowPathways.$inferSelect;
+export type InsertWorkflowPathway = typeof workflowPathways.$inferInsert;
