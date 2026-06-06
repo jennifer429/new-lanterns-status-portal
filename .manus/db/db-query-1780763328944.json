@@ -1,0 +1,28 @@
+{
+  "query": "SELECT DISTINCT clientId FROM organizations WHERE clientId IS NOT NULL ORDER BY clientId;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT DISTINCT clientId FROM organizations WHERE clientId IS NOT NULL ORDER BY clientId;",
+  "rows": [
+    {
+      "clientId": "1"
+    },
+    {
+      "clientId": "2"
+    },
+    {
+      "clientId": "210001"
+    },
+    {
+      "clientId": "300001"
+    },
+    {
+      "clientId": "1260001"
+    },
+    {
+      "clientId": "1650001"
+    }
+  ],
+  "messages": [],
+  "stdout": "clientId\n1\n2\n210001\n300001\n1260001\n1650001\n",
+  "stderr": "",
+  "execution_time_ms": 266
+}

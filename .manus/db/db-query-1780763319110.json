@@ -1,0 +1,25 @@
+{
+  "query": "SELECT id, slug, name FROM organizations WHERE name LIKE '%Rad%' OR slug LIKE '%rad%' ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, slug, name FROM organizations WHERE name LIKE '%Rad%' OR slug LIKE '%rad%' ORDER BY id;",
+  "rows": [
+    {
+      "id": "480001",
+      "slug": "radsinc",
+      "name": "RaDS Inc"
+    },
+    {
+      "id": "510001",
+      "slug": "RaDS Inc- Pilot",
+      "name": "RaDS Inc- Pilot"
+    },
+    {
+      "id": "990001",
+      "slug": "RMCA",
+      "name": "RMC Anniston Radiology"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tslug\tname\n480001\tradsinc\tRaDS Inc\n510001\tRaDS Inc- Pilot\tRaDS Inc- Pilot\n990001\tRMCA\tRMC Anniston Radiology\n",
+  "stderr": "",
+  "execution_time_ms": 260
+}

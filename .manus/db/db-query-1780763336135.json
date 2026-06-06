@@ -1,0 +1,160 @@
+{
+  "query": "SELECT id, slug, name, clientId FROM organizations WHERE clientId IS NOT NULL ORDER BY clientId;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT id, slug, name, clientId FROM organizations WHERE clientId IS NOT NULL ORDER BY clientId;",
+  "rows": [
+    {
+      "id": "60007",
+      "slug": "munson",
+      "name": "Munson Medical Center",
+      "clientId": "1"
+    },
+    {
+      "id": "60008",
+      "slug": "jcrhc",
+      "name": "JCRHC",
+      "clientId": "1"
+    },
+    {
+      "id": "60009",
+      "slug": "baycare",
+      "name": "Baycare",
+      "clientId": "1"
+    },
+    {
+      "id": "1830003",
+      "slug": "Banner Churchill",
+      "name": "Banner Churchill",
+      "clientId": "1"
+    },
+    {
+      "id": "1830002",
+      "slug": "ERA/Intermountain Health",
+      "name": "ERA/Intermountain Health",
+      "clientId": "1"
+    },
+    {
+      "id": "1830001",
+      "slug": "Renown",
+      "name": "Renown",
+      "clientId": "1"
+    },
+    {
+      "id": "480001",
+      "slug": "radsinc",
+      "name": "RaDS Inc",
+      "clientId": "1"
+    },
+    {
+      "id": "1200001",
+      "slug": "Honor",
+      "name": "HonorHealth",
+      "clientId": "1"
+    },
+    {
+      "id": "1020001",
+      "slug": "SJMC",
+      "name": "SJMC St Joseph Medical Center",
+      "clientId": "1"
+    },
+    {
+      "id": "990001",
+      "slug": "RMCA",
+      "name": "RMC Anniston Radiology",
+      "clientId": "2"
+    },
+    {
+      "id": "1410001",
+      "slug": "RAID-Bigfork",
+      "name": "RAID - Bigfork Valley Hospital",
+      "clientId": "2"
+    },
+    {
+      "id": "960001",
+      "slug": "nmhs",
+      "name": "NMHS - Northern Mississippi Health Services",
+      "clientId": "2"
+    },
+    {
+      "id": "240001",
+      "slug": "RRAL",
+      "name": "RRAL",
+      "clientId": "2"
+    },
+    {
+      "id": "240002",
+      "slug": "Boulder",
+      "name": "BRI - BCO",
+      "clientId": "2"
+    },
+    {
+      "id": "450001",
+      "slug": "new2",
+      "name": "NewOrg2 - Corrected",
+      "clientId": "2"
+    },
+    {
+      "id": "1380001",
+      "slug": "FRPI",
+      "name": "BRI - FRPI (Front Range Preventive Imaging)",
+      "clientId": "2"
+    },
+    {
+      "id": "1350001",
+      "slug": "LifeCare",
+      "name": "RAID Altru - LifeCare Medical Center",
+      "clientId": "2"
+    },
+    {
+      "id": "1350002",
+      "slug": "RAID",
+      "name": "RAID - Life Care Medical Center",
+      "clientId": "2"
+    },
+    {
+      "id": "510001",
+      "slug": "RaDS Inc- Pilot",
+      "name": "RaDS Inc- Pilot",
+      "clientId": "210001"
+    },
+    {
+      "id": "630002",
+      "slug": "marshallmedical",
+      "name": "Marshall Medical",
+      "clientId": "210001"
+    },
+    {
+      "id": "1170001",
+      "slug": "Lodi Memorial",
+      "name": " Lodi Memorial",
+      "clientId": "210001"
+    },
+    {
+      "id": "630001",
+      "slug": "sanramon",
+      "name": "San Ramon Hospital",
+      "clientId": "210001"
+    },
+    {
+      "id": "600001",
+      "slug": "hca-flwest",
+      "name": "HCA - Florida West",
+      "clientId": "300001"
+    },
+    {
+      "id": "1860001",
+      "slug": "RAYUS",
+      "name": "RAYUS",
+      "clientId": "1260001"
+    },
+    {
+      "id": "2250001",
+      "slug": "testhospital",
+      "name": "Test Hospital",
+      "clientId": "1650001"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tslug\tname\tclientId\n60007\tmunson\tMunson Medical Center\t1\n60008\tjcrhc\tJCRHC\t1\n60009\tbaycare\tBaycare\t1\n1830003\tBanner Churchill\tBanner Churchill\t1\n1830002\tERA/Intermountain Health\tERA/Intermountain Health\t1\n1830001\tRenown\tRenown\t1\n480001\tradsinc\tRaDS Inc\t1\n1200001\tHonor\tHonorHealth\t1\n1020001\tSJMC\tSJMC St Joseph Medical Center\t1\n990001\tRMCA\tRMC Anniston Radiology\t2\n1410001\tRAID-Bigfork\tRAID - Bigfork Valley Hospital\t2\n960001\tnmhs\tNMHS - Northern Mississippi Health Services\t2\n240001\tRRAL\tRRAL\t2\n240002\tBoulder\tBRI - BCO\t2\n450001\tnew2\tNewOrg2 - Corrected\t2\n1380001\tFRPI\tBRI - FRPI (Front Range Preventive Imaging)\t2\n1350001\tLifeCare\tRAID Altru - LifeCare Medical Center\t2\n1350002\tRAID\tRAID - Life Care Medical Center\t2\n510001\tRaDS Inc- Pilot\tRaDS Inc- Pilot\t210001\n630002\tmarshallmedical\tMarshall Medical\t210001\n1170001\tLodi Memorial\t Lodi Memorial\t210001\n630001\tsanramon\tSan Ramon Hospital\t210001\n600001\thca-flwest\tHCA - Florida West\t300001\n1860001\tRAYUS\tRAYUS\t1260001\n2250001\ttesthospital\tTest Hospital\t1650001\n",
+  "stderr": "",
+  "execution_time_ms": 256
+}

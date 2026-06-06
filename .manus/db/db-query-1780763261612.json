@@ -1,0 +1,29 @@
+{
+  "query": "SELECT * FROM users WHERE email='melissa.jacobs@radiologyone.com';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT * FROM users WHERE email='melissa.jacobs@radiologyone.com';",
+  "rows": [
+    {
+      "id": "6060036",
+      "openId": "MHcawHvjftTuAD6mHekJ8t",
+      "name": "melissa.jacobs",
+      "email": "melissa.jacobs@radiologyone.com",
+      "loginMethod": "email",
+      "role": "user",
+      "createdAt": "2026-02-24 07:19:06",
+      "updatedAt": "2026-04-24 02:46:00",
+      "lastSignedIn": "2026-02-24 07:21:07",
+      "organizationId": "NULL",
+      "passwordHash": "$2b$10$gRmjOlK/E9L2fOxNQVeld.mPL/4zeq60vAngNS9lZtsIGgM4tR2am",
+      "lastLoginAt": "NULL",
+      "clientId": "NULL",
+      "isActive": "1",
+      "invitedAt": "NULL",
+      "inviteToken": "f8fc8d1887af20815cb2e6414024c9eb85d980c066e66df1d54b017541ab7936",
+      "inviteTokenExpiresAt": "2026-05-01 02:46:00"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\topenId\tname\temail\tloginMethod\trole\tcreatedAt\tupdatedAt\tlastSignedIn\torganizationId\tpasswordHash\tlastLoginAt\tclientId\tisActive\tinvitedAt\tinviteToken\tinviteTokenExpiresAt\n6060036\tMHcawHvjftTuAD6mHekJ8t\tmelissa.jacobs\tmelissa.jacobs@radiologyone.com\temail\tuser\t2026-02-24 07:19:06\t2026-04-24 02:46:00\t2026-02-24 07:21:07\tNULL\t$2b$10$gRmjOlK/E9L2fOxNQVeld.mPL/4zeq60vAngNS9lZtsIGgM4tR2am\tNULL\tNULL\t1\tNULL\tf8fc8d1887af20815cb2e6414024c9eb85d980c066e66df1d54b017541ab7936\t2026-05-01 02:46:00\n",
+  "stderr": "",
+  "execution_time_ms": 264
+}
