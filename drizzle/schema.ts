@@ -800,3 +800,37 @@ export const workflowPathways = mysqlTable("workflowPathways", {
 
 export type WorkflowPathway = typeof workflowPathways.$inferSelect;
 export type InsertWorkflowPathway = typeof workflowPathways.$inferInsert;
+
+/**
+ * Task Definitions — MySQL cache of the Notion "Task Definitions" database.
+ * The portal reads tasks from this table; the every-5-min Notion sync upserts
+ * rows and soft-inactivates rows that have disappeared from Notion (so historic
+ * taskCompletion rows referencing them are not orphaned).
+ *
+ * taskId is the stable string key referenced from the rest of the schema
+ * (taskCompletion.taskId, taskOrgAssignment.taskId, etc.).
+ */
+export const taskDefinitions = mysqlTable("taskDefinitions", {
+  id: int("id").autoincrement().primaryKey(),
+  taskId: varchar("taskId", { length: 100 }).notNull().unique(), // e.g. "hl7:orm"
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  sectionId: varchar("sectionId", { length: 50 }), // e.g. "hl7"
+  sectionTitle: varchar("sectionTitle", { length: 255 }),
+  sectionDuration: varchar("sectionDuration", { length: 50 }),
+  swimLanes: json("swimLanes"), // string[] — e.g. ["orders","reports"]
+  dependsOn: json("dependsOn"), // string[] of taskId values
+  sortOrder: int("sortOrder").default(0).notNull(),
+  intakeLink: varchar("intakeLink", { length: 500 }),
+  intakeLinkLabel: varchar("intakeLinkLabel", { length: 255 }),
+  specLink: varchar("specLink", { length: 500 }),
+  specLinkLabel: varchar("specLinkLabel", { length: 255 }),
+  isActive: tinyint("isActive").default(1).notNull(), // 0 = soft-deleted (missing from Notion)
+  notionPageId: varchar("notionPageId", { length: 64 }), // back-reference for debugging
+  notionLastEdited: timestamp("notionLastEdited"), // last_edited_time from Notion
+  syncedAt: timestamp("syncedAt").defaultNow().notNull(), // last time this row was touched by the sync
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type TaskDefinition = typeof taskDefinitions.$inferSelect;
+export type InsertTaskDefinition = typeof taskDefinitions.$inferInsert;

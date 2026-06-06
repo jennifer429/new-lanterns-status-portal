@@ -16,6 +16,7 @@ import { Client } from "@notionhq/client";
 import { runNotionSyncBack } from "./notionSyncBack";
 import { runContactsSystemsSync } from "./notionSyncContacts";
 import { runTaskValidationSyncBack } from "./notionSyncBackTasks";
+import { runTaskDefsSync } from "./notionSyncTaskDefs";
 import { processRetryQueue } from "./notionRetryQueue";
 import { runReconciliation } from "./notionReconciliation";
 import { runDataQualityCheck, type DataQualityResult } from "./dataQualityCheck";
@@ -32,6 +33,7 @@ export interface LastSyncedTimestamps {
   questionnaire: string | null;
   contactsSystems: string | null;
   taskValidation: string | null;
+  taskDefs: string | null;
   lastFullSync: string | null;
 }
 
@@ -39,6 +41,7 @@ const lastSynced: LastSyncedTimestamps = {
   questionnaire: null,
   contactsSystems: null,
   taskValidation: null,
+  taskDefs: null,
   lastFullSync: null,
 };
 
@@ -91,6 +94,7 @@ interface HourlyStats {
   systems: { fetched: number; upserted: number; failed: number };
   tasks: { fetched: number; upserted: number; failed: number };
   validation: { fetched: number; upserted: number; failed: number };
+  taskDefs: { fetched: number; upserted: number; inactivated: number; failed: number };
   errors: string[];
   totalDurationMs: number;
 }
@@ -105,6 +109,7 @@ function resetHourlyStats(): HourlyStats {
     systems: { fetched: 0, upserted: 0, failed: 0 },
     tasks: { fetched: 0, upserted: 0, failed: 0 },
     validation: { fetched: 0, upserted: 0, failed: 0 },
+    taskDefs: { fetched: 0, upserted: 0, inactivated: 0, failed: 0 },
     errors: [],
     totalDurationMs: 0,
   };
@@ -473,6 +478,32 @@ export function startCronJobs(): void {
     } catch (error: any) {
       hourlyStats.errors.push(`CS: ${error.message?.substring(0, 100)}`);
       console.error("[cron] Contacts/Systems sync failed:", error);
+    }
+  });
+
+  // Task Definitions Notion → MySQL sync: every 5 minutes (offset by 4 min;
+  // shares minute slot 4 with the local staleness check below — no collision
+  // since staleness only touches in-memory state).
+  cron.schedule("4,9,14,19,24,29,34,39,44,49,54,59 * * * *", async () => {
+    const start = Date.now();
+    try {
+      const result = await runTaskDefsSync();
+      hourlyStats.taskDefs.fetched += result.fetched;
+      hourlyStats.taskDefs.upserted += result.upserted;
+      hourlyStats.taskDefs.inactivated += result.inactivated;
+      hourlyStats.taskDefs.failed += result.failed;
+      hourlyStats.totalDurationMs += Date.now() - start;
+      lastSynced.taskDefs = new Date().toISOString();
+      if (result.errors.length > 0) {
+        hourlyStats.errors.push(`TD: ${result.errors[0].substring(0, 80)}`);
+      }
+      console.log(
+        `[cron] Task Definitions sync — ${result.upserted} upserted / ` +
+        `${result.inactivated} inactivated / ${result.failed} failed`
+      );
+    } catch (error: any) {
+      hourlyStats.errors.push(`TD: ${error.message?.substring(0, 100)}`);
+      console.error("[cron] Task Definitions sync failed:", error);
     }
   });
 
