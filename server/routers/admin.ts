@@ -723,6 +723,26 @@ export const adminRouter = router({
 
       const { id, ...updates } = input;
 
+      // Get the organization to check permissions
+      const [org] = await db.select().from(organizations).where(eq(organizations.id, id));
+      if (!org) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      }
+
+      // Partner admins can only update their own partner's organizations...
+      if (ctx.user.clientId && org.clientId !== ctx.user.clientId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot update other partner's organizations" });
+      }
+
+      // ...and may not reassign an organization to a different partner.
+      if (
+        ctx.user.clientId &&
+        updates.clientId !== undefined &&
+        updates.clientId !== ctx.user.clientId
+      ) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot move organization to another partner" });
+      }
+
       await db.update(organizations).set(updates).where(eq(organizations.id, id));
 
       return { success: true };
