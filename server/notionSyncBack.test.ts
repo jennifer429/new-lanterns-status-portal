@@ -6,6 +6,7 @@ import {
   validateSchema,
   shouldRunReconciliation,
   fullReconciliation,
+  dedupeRowsByKey,
   getSyncHealth,
   KNOWN_COLUMNS,
   type ColumnMapping,
@@ -49,16 +50,20 @@ function selectProp(name: string) {
   return { type: "select", select: { name } };
 }
 
-function questionnairePage(id: string, slug: string, questionId: string, answer: string) {
+function questionnairePageEdited(id: string, slug: string, questionId: string, answer: string, lastEdited: string) {
   return {
     id,
-    last_edited_time: "2026-06-05T00:00:00.000Z",
+    last_edited_time: lastEdited,
     properties: {
       Slug: richText(slug),
       "Question ID": richText(questionId),
       Answer: richText(answer),
     },
   };
+}
+
+function questionnairePage(id: string, slug: string, questionId: string, answer: string) {
+  return questionnairePageEdited(id, slug, questionId, answer, "2026-06-05T00:00:00.000Z");
 }
 
 // ---------------------------------------------------------------------------
@@ -257,6 +262,42 @@ describe("Phase 2 — fullReconciliation", () => {
     const deps: ReconciliationDeps = { getOrgId: async () => null, getMysqlAnswer: async () => null };
     const result = await fullReconciliation(client, mapping, deps);
     expect(result.missingInMysql).toEqual([]);
+  });
+});
+
+describe("Phase 2 — dedupeRowsByKey (duplicate Notion rows)", () => {
+  it("keeps the most-recently-edited row per (slug, questionId)", () => {
+    const rows = [
+      { slug: "RMCA", questionId: "IW.reports_description", answer: "old", lastEdited: "2026-05-19T19:48:00.000Z" },
+      { slug: "RMCA", questionId: "IW.reports_description", answer: "newest", lastEdited: "2026-06-06T02:00:00.000Z" },
+      { slug: "RMCA", questionId: "IW.reports_description", answer: "mid", lastEdited: "2026-05-19T20:00:00.000Z" },
+    ];
+    const deduped = dedupeRowsByKey(rows);
+    expect(deduped).toHaveLength(1);
+    expect(deduped[0].answer).toBe("newest");
+  });
+
+  it("keeps distinct (slug, questionId) pairs separate", () => {
+    const rows = [
+      { slug: "RMCA", questionId: "IW.orders_description", answer: "a", lastEdited: "2026-06-06T02:00:00.000Z" },
+      { slug: "RMCA", questionId: "IW.priors_description", answer: "b", lastEdited: "2026-06-06T02:00:00.000Z" },
+      { slug: "NMHS", questionId: "IW.orders_description", answer: "c", lastEdited: "2026-06-06T02:00:00.000Z" },
+    ];
+    expect(dedupeRowsByKey(rows)).toHaveLength(3);
+  });
+
+  it("collapses reconciliation duplicates so a missing row is reported once", async () => {
+    // Notion holds the same RMCA reports row 3 times; MySQL has none.
+    const pages = [
+      questionnairePageEdited("p1", "RMCA", "IW.reports_description", "v1", "2026-05-19T19:48:00.000Z"),
+      questionnairePageEdited("p2", "RMCA", "IW.reports_description", "v2", "2026-06-06T02:00:00.000Z"),
+      questionnairePageEdited("p3", "RMCA", "IW.reports_description", "v3", "2026-05-19T20:00:00.000Z"),
+    ];
+    const deps: ReconciliationDeps = { getOrgId: async () => 7, getMysqlAnswer: async () => null };
+    const result = await fullReconciliation(makeClient(pages), KNOWN_COLUMNS, deps);
+    expect(result.totalRowsChecked).toBe(3); // all rows scanned
+    expect(result.missingInMysql).toHaveLength(1); // but reported once
+    expect(result.missingInMysql[0].pageId).toBe("p2"); // the newest-edited canonical page
   });
 });
 

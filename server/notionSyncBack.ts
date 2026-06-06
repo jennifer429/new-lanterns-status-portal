@@ -453,7 +453,33 @@ async function fetchChangedRows(
     throw error;
   }
 
-  return results;
+  // Collapse duplicate Notion rows for the same org+question (newest edit wins).
+  return dedupeRowsByKey(results);
+}
+
+/**
+ * Collapse rows that share the same (slug, questionId) down to a single row, keeping the
+ * one with the most recent `lastEdited`. Notion can hold duplicate questionnaire rows for
+ * the same org+question (e.g. multiple "Reports workflow description" pages); without this,
+ * upserts are non-deterministic (last-processed wins) and the reconciliation "stale" check
+ * flip-flops. Newest-edited wins so the canonical answer is the one synced.
+ */
+export function dedupeRowsByKey<T extends { slug: string; questionId: string; lastEdited?: string }>(
+  rows: T[]
+): T[] {
+  const byKey = new Map<string, T>();
+  for (const row of rows) {
+    const key = `${row.slug}::${row.questionId}`;
+    const existing = byKey.get(key);
+    if (!existing) {
+      byKey.set(key, row);
+      continue;
+    }
+    const existingTs = Date.parse(existing.lastEdited || "") || 0;
+    const candidateTs = Date.parse(row.lastEdited || "") || 0;
+    if (candidateTs >= existingTs) byKey.set(key, row);
+  }
+  return Array.from(byKey.values());
 }
 
 /**
@@ -535,7 +561,7 @@ async function upsertAnswer(orgId: number, questionId: string, answer: string): 
 
 export interface ReconciliationResult {
   missingInMysql: Array<{ pageId: string; slug: string; questionId: string }>;
-  staleSyncedRows: Array<{ orgId: number; questionId: string; lastSyncedAt: Date; lastEditedInNotion: Date }>;
+  staleSyncedRows: Array<{ pageId: string; orgId: number; questionId: string; lastSyncedAt: Date; lastEditedInNotion: Date }>;
   totalRowsChecked: number;
 }
 
@@ -581,6 +607,8 @@ export async function fullReconciliation(
   }
 
   try {
+    // First pass: collect every candidate row from Notion (paginating through all).
+    const candidates: Array<{ pageId: string; slug: string; questionId: string; answer: string; lastEdited: string }> = [];
     let cursor: string | undefined = undefined;
 
     do {
@@ -600,28 +628,38 @@ export async function fullReconciliation(
         const answer = fields.answer || "";
 
         if (!slug || !questionId) continue;
-
-        const orgId = await getOrgId(slug);
-        if (!orgId) continue;
-
-        const mysqlAnswer = await getAnswer(orgId, questionId);
-
-        if (mysqlAnswer === null) {
-          // Present in Notion, missing in MySQL → data loss to restore.
-          missingInMysql.push({ pageId: page.id, slug, questionId });
-        } else if (mysqlAnswer !== answer) {
-          // MySQL value doesn't match Notion → stale.
-          staleSyncedRows.push({
-            orgId,
-            questionId,
-            lastSyncedAt: new Date(page.last_edited_time),
-            lastEditedInNotion: new Date(page.last_edited_time),
-          });
-        }
+        candidates.push({ pageId: page.id, slug, questionId, answer, lastEdited: page.last_edited_time || "" });
       }
 
       cursor = response.has_more ? response.next_cursor : undefined;
     } while (cursor);
+
+    // Collapse duplicate Notion rows for the same org+question (newest edit wins) so the
+    // comparison against MySQL is deterministic and the stale check doesn't flip-flop.
+    const deduped = dedupeRowsByKey(candidates);
+
+    // Second pass: compare each canonical row against MySQL.
+    for (const row of deduped) {
+      const orgId = await getOrgId(row.slug);
+      if (!orgId) continue;
+
+      const mysqlAnswer = await getAnswer(orgId, row.questionId);
+
+      if (mysqlAnswer === null) {
+        // Present in Notion, missing in MySQL → data loss to restore.
+        missingInMysql.push({ pageId: row.pageId, slug: row.slug, questionId: row.questionId });
+      } else if (mysqlAnswer !== row.answer) {
+        // MySQL value doesn't match Notion → stale.
+        const edited = new Date(row.lastEdited);
+        staleSyncedRows.push({
+          pageId: row.pageId,
+          orgId,
+          questionId: row.questionId,
+          lastSyncedAt: edited,
+          lastEditedInNotion: edited,
+        });
+      }
+    }
   } catch (error) {
     console.error("[notion-sync] Full reconciliation failed:", error);
   }
@@ -769,7 +807,7 @@ export async function runNotionSyncBack(): Promise<SyncResult> {
         // Refresh stale rows
         for (const row of reconciliation.staleSyncedRows) {
           try {
-            const page = await client.pages.retrieve({ page_id: (row as any).pageId }) as any;
+            const page = await client.pages.retrieve({ page_id: row.pageId }) as any;
             const fields = await extractFieldsFromRow(page, columnMapping);
             const answer = fields.answer || "";
             // Don't blank a non-empty MySQL value with an empty Notion value.
