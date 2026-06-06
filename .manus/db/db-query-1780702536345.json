@@ -1,0 +1,152 @@
+{
+  "query": "SELECT questionId, response FROM intakeResponses WHERE organizationId = 990001 ORDER BY questionId;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT questionId, response FROM intakeResponses WHERE organizationId = 990001 ORDER BY questionId;",
+  "rows": [
+    {
+      "questionId": "__question_na:A.contacts",
+      "response": "false"
+    },
+    {
+      "questionId": "__question_na:CF.2",
+      "response": "true"
+    },
+    {
+      "questionId": "__question_na:L.10",
+      "response": "true"
+    },
+    {
+      "questionId": "__question_na:L.2",
+      "response": "true"
+    },
+    {
+      "questionId": "__question_na:L.3",
+      "response": "true"
+    },
+    {
+      "questionId": "__question_na:L.8",
+      "response": "true"
+    },
+    {
+      "questionId": "__question_na:L.9",
+      "response": "true"
+    },
+    {
+      "questionId": "A.6",
+      "response": "No"
+    },
+    {
+      "questionId": "A.contacts",
+      "response": "{\"it\":{\"name\":\"John Jordan\",\"phone\":\"256-235-5976\",\"email\":\"jjordan@rmccares.org\",\"notes\":\"IT / networking; works with Waylon Hyde on VPN setup\"},\"admin\":{\"name\":\"Tracie Schmiedl\",\"phone\":\"256-235-5177\",\"email\":\"tschmiedl@rmccares.org\",\"notes\":\"Primary contact for user lists, procedure codes, credentialing, training coordination, and chargemaster spreadsheets. Owes (per 4/23): AE titles for DICOM testing, example ORU messages for CT lung/Dynacad breast MRI/mammogram, and full patient registration test packs with images.\"},\"radiologist\":{\"name\":\"Pete Furlow\",\"phone\":\"205-235-5862\",\"email\":\"pfurlow@rmccares.org\",\"notes\":\"Main contact for New Lantern portal, document uploads, and HL7 / interface coordination. Pete is RMCA's project/interface lead rather than a reading radiologist. Reading radiologists are TRC — David Shulman, MD attended the 4/23 weekly. Consider repointing this contact slot to Shulman.\"},\"additional_contacts\":{\"project_manager_trc\":{\"name\":\"Rhonda Bennett\",\"phone\":\"205-343-0916\",\"email\":\"rbennett@tuscrad.com\",\"notes\":\"TRC Senior PM — project lead\"},\"coo_trc\":{\"name\":\"Leigh Ann Hobson\",\"phone\":\"205-343-0950\",\"email\":\"lhobson@tuscrad.com\",\"notes\":\"TRC COO — include on all project emails. Owns RMCA org code description cleanup in Exam Code Nexus and nuclear licensing radiologist list.\"},\"hl7_interface_analyst\":{\"name\":\"Randy Wilson\",\"phone\":\"\",\"email\":\"randy.wilson@rmccares.org\",\"notes\":\"RMCA HL7 interface analyst — developing ORM/ORU/ADT interfaces. Sent first successful test HL7 messages on 4/23.\"},\"credentialing\":{\"name\":\"Jasmine\",\"phone\":\"\",\"email\":\"\",\"notes\":\"RMCA credentialing contact; biweekly specialized credentialing calls proposed\"},\"trc_reading_radiologist\":{\"name\":\"David Shulman, MD\",\"phone\":\"\",\"email\":\"dshulman@tuscrad.com\",\"notes\":\"TRC reading radiologist; attended 4/23 weekly project meeting\"},\"trc_exam_code_lead\":{\"name\":\"Elizabeth Hamilton\",\"phone\":\"\",\"email\":\"ehamilton@tuscrad.com\",\"notes\":\"TRC; owns exam code mapping in Exam Code Nexus"
+    },
+    {
+      "questionId": "ARCH.diagram",
+      "response": "No formal diagram on file yet. Jim Conyers (DataFirst) to map/diagram DICOM router workflows incl. Silverback Light configuration and send/receive data flows (action item 5/28). Text flow: RMC PACS + Paragon → Corepoint → Scipiotech VPN → Silverback → New Lantern (ORM/ADT/DICOM in; ORU + Q/R back)."
+    },
+    {
+      "questionId": "ARCH.systems",
+      "response": "[{\"id\":\"3ac90d6e-b2ab-47ad-9b4a-3326826e2193\",\"name\":\"Change\",\"type\":\"PACS\",\"description\":\"\"},{\"id\":\"95cd8ed9-746d-46b1-b918-3258868e2a18\",\"name\":\"Change\",\"type\":\"VNA\",\"description\":\"\"},{\"id\":\"ff0a7d56-c12c-4aa3-b8f1-8839b04fdce0\",\"name\":\"Silverback\",\"type\":\"Router\",\"description\":\"\"},{\"id\":\"b2297e9e-27b3-4f81-81d9-8b30f0555e27\",\"name\":\"Paragon\",\"type\":\"EHR\",\"description\":\"\"},{\"id\":\"e51755a7-9e6f-4b0a-a860-b85a6857cd8d\",\"name\":\"Cloverleaf\",\"type\":\"Integration Engine\",\"description\":\"\"},{\"id\":\"ab47d80c-ebed-42d6-a694-302a64cf069c\",\"name\":\"Paragon\",\"type\":\"RIS\",\"description\":\"\"}]"
+    },
+    {
+      "questionId": "CF.1",
+      "response": "Procedure codes received from RMC (Tracie Schmiedl, 4/17) including Oxford Mediplex PO codes; AI-mapped by NL; under Leigh Ann Hobson review/validation before template integration. A few codes used-but-not-interpreted flagged."
+    },
+    {
+      "questionId": "D.1",
+      "response": "Yes"
+    },
+    {
+      "questionId": "D.2",
+      "response": "2026-06-24"
+    },
+    {
+      "questionId": "D.3",
+      "response": "[\"CT\",\"MRI\",\"X-Ray\",\"Ultrasound\",\"Nuclear Medicine\",\"Mammography\"]"
+    },
+    {
+      "questionId": "D.4",
+      "response": ""
+    },
+    {
+      "questionId": "E.1",
+      "response": ""
+    },
+    {
+      "questionId": "G.5",
+      "response": ""
+    },
+    {
+      "questionId": "G.6",
+      "response": ""
+    },
+    {
+      "questionId": "H.1",
+      "response": "1 connection point with 2 route-based VPN tunnels (primary and secondary) for redundancy and failover. VPN setup coordinated by Scipiotech (Chris Nail, Alex Bentley) with RMCA technical resources John Jordan and Waylon Hyde. Primary and secondary VPNs confirmed online as of 4/9; Silverback connectivity confirmed via pings on 4/9."
+    },
+    {
+      "questionId": "H.2",
+      "response": "Regional Medical Center of Anniston (RMCA) — rmccares.org"
+    },
+    {
+      "questionId": "H.3",
+      "response": "None noted"
+    },
+    {
+      "questionId": "IW.tech_sheets_dicom_wrapped",
+      "response": "yes"
+    },
+    {
+      "questionId": "L.11",
+      "response": "Current RMCA downtime workflow:"
+    },
+    {
+      "questionId": "L.2",
+      "response": ""
+    },
+    {
+      "questionId": "L.3",
+      "response": ""
+    },
+    {
+      "questionId": "L.4",
+      "response": "Tentative Go-Live: June 24, 2026"
+    }
+  ],
+  "messages": [
+    "Update (4/23): HL7 inbound to Silverback confirmed live on port 2119. First test ADT messages flowing successfully as of morning of 4/23. Per-customer port segmentation on Silverback↔New Lantern side: 7080 (RMCA), 7090 (Rural), 7053 (others). Reconcile with Corepoint test/prod ports 20862/30862 noted under ARCH.systems — these are likely different layers (Corepoint↔Silverback vs. Silverback↔NL); confirm with Jim Conyers / Anthony Daniello.",
+    "Sites/locations under RMCA umbrella:",
+    "- RMC Hospital (Anniston, AL) — main hospital facility",
+    "- RMC Tyler Center — shares chargemaster with the Hospital",
+    "- Oxford Mediplex (Oxford, AL) — separate chargemaster, codes prefixed with \"OM\" or \"OX OU\"; CPT codes carry a \"PO\" modifier indicating off-campus performance",
+    "- Roanoke Clinic — NO HL7 feed; requires separate workflow for order creation and data transfer (to be addressed in a dedicated breakout call)",
+    "Mammography unit: Hologic with Genius AI (MQSA compliance coordination required).",
+    "- During HL7 downtime, radiologists read without HL7. Orders are created manually using a downtime DICOM order number (currently P360 generates a downtime order).",
+    "- When the system comes back online, orders are matched manually to the correct patient/study.",
+    "Proposed integration with New Lantern:",
+    "- Use New Lantern's downtime workflow module, which uses predefined MRN or accession numbers during outages to track orders and maintain continuity. Leigh Ann confirmed a recent downtime event was handled smoothly with this protocol.",
+    "- For manual downtime entries, the convention is Date + Time + Initials on orders.",
+    "- RMCA to designate an on-site contact during downtime events to coordinate with New Lantern support, print reports, and manage issues on the ground. Pete and John to be included in downtime/workflow coordination conversations (per Tracie's 4/16 action item).",
+    "- Extended downtime scenarios (planned or unplanned >X hours), mammography-specific downtime handling, and Roanoke Clinic's order creation workflow (no HL7 feed) all to be addressed in a dedicated downtime breakout call.",
+    "Open items:",
+    "- Leigh Ann to provide downtime workflow module documentation for mammography and downtime procedural handling.",
+    "- Dedicated downtime + Roanoke Clinic workflow breakout call to be scheduled (Rhonda coordinating).",
+    "- Send RMCA's detailed downtime workflow document to New Lantern.",
+    "Key milestones:",
+    "- HL7 test environment target completion: April 17, 2026 (Randy Wilson leading)",
+    "- Connectivity configurations complete: June 1, 2026 (Silverback managed)",
+    "- Live ADT feed start: ~2 weeks before go-live (early June) to build historical patient data for validation and training",
+    "- Weekly project meetings: Thursdays at 10:00 AM Central Time (Teams)",
+    "- Biweekly credentialing calls with Jasmine (proposed)",
+    "- Prostate CAD workflow sidebar: Thursday 5/1 at 11 AM CT (Tracie, Leigh Ann, Rhonda)",
+    "Status as of 4/30:",
+    "- VPN tunnels online ✓ (4/9)",
+    "- HL7 inbound/outbound channels built by Anthony at Silverback ✓ (4/23)",
+    "- First test ADT messages flowing ✓ (4/23)",
+    "- ORM/ORU end-to-end: in progress, blocked on Jim's transformer fixes (PV111 prefixing + OBR accession copy) being completed same-day 4/23",
+    "- Procedure codes received from NL → Leigh Ann → forwarded to Elizabeth for template updates ✓",
+    "- DICOM testing: not yet started; pending AE titles from Tracie + ECHO testing by Jim/Alec",
+    "- Exam Code Nexus UI deployed; Leigh Ann actively cleaning up RMCA org code descriptions"
+  ],
+  "stdout": "questionId\tresponse\n__question_na:A.contacts\tfalse\n__question_na:CF.2\ttrue\n__question_na:L.10\ttrue\n__question_na:L.2\ttrue\n__question_na:L.3\ttrue\n__question_na:L.8\ttrue\n__question_na:L.9\ttrue\nA.6\tNo\nA.contacts\t{\"it\":{\"name\":\"John Jordan\",\"phone\":\"256-235-5976\",\"email\":\"jjordan@rmccares.org\",\"notes\":\"IT / networking; works with Waylon Hyde on VPN setup\"},\"admin\":{\"name\":\"Tracie Schmiedl\",\"phone\":\"256-235-5177\",\"email\":\"tschmiedl@rmccares.org\",\"notes\":\"Primary contact for user lists, procedure codes, credentialing, training coordination, and chargemaster spreadsheets. Owes (per 4/23): AE titles for DICOM testing, example ORU messages for CT lung/Dynacad breast MRI/mammogram, and full patient registration test packs with images.\"},\"radiologist\":{\"name\":\"Pete Furlow\",\"phone\":\"205-235-5862\",\"email\":\"pfurlow@rmccares.org\",\"notes\":\"Main contact for New Lantern portal, document uploads, and HL7 / interface coordination. Pete is RMCA's project/interface lead rather than a reading radiologist. Reading radiologists are TRC — David Shulman, MD attended the 4/23 weekly. Consider repointing this contact slot to Shulman.\"},\"additional_contacts\":{\"project_manager_trc\":{\"name\":\"Rhonda Bennett\",\"phone\":\"205-343-0916\",\"email\":\"rbennett@tuscrad.com\",\"notes\":\"TRC Senior PM — project lead\"},\"coo_trc\":{\"name\":\"Leigh Ann Hobson\",\"phone\":\"205-343-0950\",\"email\":\"lhobson@tuscrad.com\",\"notes\":\"TRC COO — include on all project emails. Owns RMCA org code description cleanup in Exam Code Nexus and nuclear licensing radiologist list.\"},\"hl7_interface_analyst\":{\"name\":\"Randy Wilson\",\"phone\":\"\",\"email\":\"randy.wilson@rmccares.org\",\"notes\":\"RMCA HL7 interface analyst — developing ORM/ORU/ADT interfaces. Sent first successful test HL7 messages on 4/23.\"},\"credentialing\":{\"name\":\"Jasmine\",\"phone\":\"\",\"email\":\"\",\"notes\":\"RMCA credentialing contact; biweekly specialized credentialing calls proposed\"},\"trc_reading_radiologist\":{\"name\":\"David Shulman, MD\",\"phone\":\"\",\"email\":\"dshulman@tuscrad.com\",\"notes\":\"TRC reading radiologist; attended 4/23 weekly project meeting\"},\"trc_exam_code_lead\":{\"name\":\"Elizabeth Hamilton\",\"phone\":\"\",\"email\":\"ehamilton@tuscrad.com\",\"notes\":\"TRC; owns exam code mapping in Exam Code Nexus\nARCH.diagram\tNo formal diagram on file yet. Jim Conyers (DataFirst) to map/diagram DICOM router workflows incl. Silverback Light configuration and send/receive data flows (action item 5/28). Text flow: RMC PACS + Paragon → Corepoint → Scipiotech VPN → Silverback → New Lantern (ORM/ADT/DICOM in; ORU + Q/R back).\nARCH.systems\t[{\"id\":\"3ac90d6e-b2ab-47ad-9b4a-3326826e2193\",\"name\":\"Change\",\"type\":\"PACS\",\"description\":\"\"},{\"id\":\"95cd8ed9-746d-46b1-b918-3258868e2a18\",\"name\":\"Change\",\"type\":\"VNA\",\"description\":\"\"},{\"id\":\"ff0a7d56-c12c-4aa3-b8f1-8839b04fdce0\",\"name\":\"Silverback\",\"type\":\"Router\",\"description\":\"\"},{\"id\":\"b2297e9e-27b3-4f81-81d9-8b30f0555e27\",\"name\":\"Paragon\",\"type\":\"EHR\",\"description\":\"\"},{\"id\":\"e51755a7-9e6f-4b0a-a860-b85a6857cd8d\",\"name\":\"Cloverleaf\",\"type\":\"Integration Engine\",\"description\":\"\"},{\"id\":\"ab47d80c-ebed-42d6-a694-302a64cf069c\",\"name\":\"Paragon\",\"type\":\"RIS\",\"description\":\"\"}]\nCF.1\tProcedure codes received from RMC (Tracie Schmiedl, 4/17) including Oxford Mediplex PO codes; AI-mapped by NL; under Leigh Ann Hobson review/validation before template integration. A few codes used-but-not-interpreted flagged.\nD.1\tYes\nD.2\t2026-06-24\nD.3\t[\"CT\",\"MRI\",\"X-Ray\",\"Ultrasound\",\"Nuclear Medicine\",\"Mammography\"]\nD.4\t\nE.1\t\nG.5\t\nG.6\t\nH.1\t1 connection point with 2 route-based VPN tunnels (primary and secondary) for redundancy and failover. VPN setup coordinated by Scipiotech (Chris Nail, Alex Bentley) with RMCA technical resources John Jordan and Waylon Hyde. Primary and secondary VPNs confirmed online as of 4/9; Silverback connectivity confirmed via pings on 4/9.\n\nUpdate (4/23): HL7 inbound to Silverback confirmed live on port 2119. First test ADT messages flowing successfully as of morning of 4/23. Per-customer port segmentation on Silverback↔New Lantern side: 7080 (RMCA), 7090 (Rural), 7053 (others). Reconcile with Corepoint test/prod ports 20862/30862 noted under ARCH.systems — these are likely different layers (Corepoint↔Silverback vs. Silverback↔NL); confirm with Jim Conyers / Anthony Daniello.\nH.2\tRegional Medical Center of Anniston (RMCA) — rmccares.org\n\nSites/locations under RMCA umbrella:\n- RMC Hospital (Anniston, AL) — main hospital facility\n- RMC Tyler Center — shares chargemaster with the Hospital\n- Oxford Mediplex (Oxford, AL) — separate chargemaster, codes prefixed with \"OM\" or \"OX OU\"; CPT codes carry a \"PO\" modifier indicating off-campus performance\n- Roanoke Clinic — NO HL7 feed; requires separate workflow for order creation and data transfer (to be addressed in a dedicated breakout call)\n\nMammography unit: Hologic with Genius AI (MQSA compliance coordination required).\nH.3\tNone noted\nIW.tech_sheets_dicom_wrapped\tyes\nL.11\tCurrent RMCA downtime workflow:\n- During HL7 downtime, radiologists read without HL7. Orders are created manually using a downtime DICOM order number (currently P360 generates a downtime order).\n- When the system comes back online, orders are matched manually to the correct patient/study.\n\nProposed integration with New Lantern:\n- Use New Lantern's downtime workflow module, which uses predefined MRN or accession numbers during outages to track orders and maintain continuity. Leigh Ann confirmed a recent downtime event was handled smoothly with this protocol.\n- For manual downtime entries, the convention is Date + Time + Initials on orders.\n- RMCA to designate an on-site contact during downtime events to coordinate with New Lantern support, print reports, and manage issues on the ground. Pete and John to be included in downtime/workflow coordination conversations (per Tracie's 4/16 action item).\n- Extended downtime scenarios (planned or unplanned >X hours), mammography-specific downtime handling, and Roanoke Clinic's order creation workflow (no HL7 feed) all to be addressed in a dedicated downtime breakout call.\n\nOpen items:\n- Leigh Ann to provide downtime workflow module documentation for mammography and downtime procedural handling.\n- Dedicated downtime + Roanoke Clinic workflow breakout call to be scheduled (Rhonda coordinating).\n- Send RMCA's detailed downtime workflow document to New Lantern.\nL.2\t\nL.3\t\nL.4\tTentative Go-Live: June 24, 2026\n\nKey milestones:\n- HL7 test environment target completion: April 17, 2026 (Randy Wilson leading)\n- Connectivity configurations complete: June 1, 2026 (Silverback managed)\n- Live ADT feed start: ~2 weeks before go-live (early June) to build historical patient data for validation and training\n- Weekly project meetings: Thursdays at 10:00 AM Central Time (Teams)\n- Biweekly credentialing calls with Jasmine (proposed)\n- Prostate CAD workflow sidebar: Thursday 5/1 at 11 AM CT (Tracie, Leigh Ann, Rhonda)\n\nStatus as of 4/30:\n- VPN tunnels online ✓ (4/9)\n- HL7 inbound/outbound channels built by Anthony at Silverback ✓ (4/23)\n- First test ADT messages flowing ✓ (4/23)\n- ORM/ORU end-to-end: in progress, blocked on Jim's transformer fixes (PV111 prefixing + OBR accession copy) being completed same-day 4/23\n- Procedure codes received from NL → Leigh Ann → forwarded to Elizabeth for template updates ✓\n- DICOM testing: not yet started; pending AE titles from Tracie + ECHO testing by Jim/Alec\n- Exam Code Nexus UI deployed; Leigh Ann actively cleaning up RMCA org code descriptions\n",
+  "stderr": "",
+  "execution_time_ms": 282
+}
