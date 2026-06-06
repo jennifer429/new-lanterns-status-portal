@@ -6,7 +6,7 @@
  */
 
 import { publicProcedure, adminProcedure, router } from "../_core/trpc";
-import { getSyncHealth, runNotionSyncBack } from "../notionSyncBack";
+import { getSyncHealth, getSchemaHealth, runNotionSyncBack } from "../notionSyncBack";
 import { runContactsSystemsSync } from "../notionSyncContacts";
 import { runTaskValidationSyncBack } from "../notionSyncBackTasks";
 import { getLastSyncedTimestamps } from "../cron";
@@ -42,6 +42,14 @@ export const syncHealthRouter = router({
       retryQueue: queueStats,
       reconciliation: reconciliationHistory,
     };
+  }),
+
+  /**
+   * Inspect the detected Notion schema + validation report — admin only.
+   * Surfaces dynamically-detected columns and any schema drift warnings.
+   */
+  getSchema: adminProcedure.query(async () => {
+    return getSchemaHealth();
   }),
 
   /**
