@@ -574,10 +574,11 @@
 
 ### Immediate Fixes (This Week)
 
-- [ ] **Fix 1: Update notionSyncBack.ts to handle new workflow fields**
-  - Add field mappings: `Orders Description` → `IW.orders_description`, etc.
-  - Extract all mapped columns from Notion properties
-  - Test with RMCA data to verify workflow descriptions sync
+- [x] **Fix 1: Update notionSyncBack.ts to handle new workflow fields**
+  - [x] Added field mappings: `Orders Description` → `IW.orders_description`, `Reports Description` → `IW.reports_description`, `Priors Description` → `IW.priors_description`
+  - [x] Extract all mapped columns from Notion properties
+  - [ ] Verify column names match Notion schema (may need adjustment)
+  - [ ] Test with RMCA data to verify workflow descriptions sync
 
 - [ ] **Fix 2: Add type checking at sync boundaries**
   - Validate answer types before upsert (string, JSON, boolean)

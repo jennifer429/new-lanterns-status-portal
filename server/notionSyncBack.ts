@@ -171,11 +171,29 @@ async function fetchChangedRows(
         const slug = props?.["Slug"]?.rich_text?.[0]?.plain_text || 
                      props?.["Institution Group"]?.select?.name || "";
         const questionId = props?.["Question ID"]?.rich_text?.[0]?.plain_text || "";
-        const answer = props?.["Answer"]?.rich_text?.[0]?.plain_text || "";
         const lastEdited = page.last_edited_time || "";
+
+        // Primary answer field
+        const answer = props?.["Answer"]?.rich_text?.[0]?.plain_text || "";
+
+        // Workflow description fields (extracted as separate rows)
+        const ordersDescription = props?.["Orders Description"]?.rich_text?.[0]?.plain_text || "";
+        const reportsDescription = props?.["Reports Description"]?.rich_text?.[0]?.plain_text || "";
+        const priorsDescription = props?.["Priors Description"]?.rich_text?.[0]?.plain_text || "";
 
         if (slug && questionId) {
           results.push({ pageId: page.id, slug, questionId, answer, lastEdited });
+        }
+
+        // Add workflow description rows if they exist
+        if (slug && ordersDescription) {
+          results.push({ pageId: page.id, slug, questionId: "IW.orders_description", answer: ordersDescription, lastEdited });
+        }
+        if (slug && reportsDescription) {
+          results.push({ pageId: page.id, slug, questionId: "IW.reports_description", answer: reportsDescription, lastEdited });
+        }
+        if (slug && priorsDescription) {
+          results.push({ pageId: page.id, slug, questionId: "IW.priors_description", answer: priorsDescription, lastEdited });
         }
       }
 
