@@ -3,7 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { router, publicProcedure, protectedProcedure } from "../_core/trpc";
 import { requireDb } from "../db";
 import { dispatch } from "../notionSyncDispatcher";
-import { intakeResponses, intakeFileAttachments, organizations, questions, onboardingFeedback, clients, partnerTemplates, partnerTaskTemplates, orgCustomTasks, workflowPathways } from "../../drizzle/schema";
+import { intakeResponses, intakeFileAttachments, organizations, questions, onboardingFeedback, clients, partnerTemplates, partnerTaskTemplates, orgCustomTasks, templateTaskCompletion, workflowPathways } from "../../drizzle/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { uploadToGoogleDrive } from "./files";
 import { resolveFileUrl } from "../googleDrive";
@@ -1311,5 +1311,88 @@ export const intakeRouter = router({
         .where(eq(orgCustomTasks.id, input.taskId));
 
       return { success: true };
+    }),
+
+  // ---------------------------------------------------------------------------
+  // Per-org completion state for partner template tasks
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Get the per-org completion state for partner template tasks.
+   * Returns the rows so the client can build the set of completed template IDs.
+   */
+  getTemplateTaskCompletion: publicProcedure
+    .input(z.object({ organizationSlug: z.string() }))
+    .query(async ({ input }) => {
+      const db = await requireDb();
+
+      const [org] = await db
+        .select({ id: organizations.id })
+        .from(organizations)
+        .where(eq(organizations.slug, input.organizationSlug))
+        .limit(1);
+
+      if (!org) return [];
+
+      return db
+        .select()
+        .from(templateTaskCompletion)
+        .where(eq(templateTaskCompletion.organizationId, org.id));
+    }),
+
+  /**
+   * Toggle completion state of a partner template task for a specific org.
+   * Upserts on (organizationId, templateTaskId): creates a completed row the
+   * first time, then flips isComplete on subsequent calls.
+   */
+  toggleTemplateTask: publicProcedure
+    .input(z.object({
+      organizationSlug: z.string(),
+      templateTaskId: z.number(),
+      userEmail: z.string().email().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+
+      const [org] = await db
+        .select({ id: organizations.id })
+        .from(organizations)
+        .where(eq(organizations.slug, input.organizationSlug))
+        .limit(1);
+
+      if (!org) throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+
+      const [existing] = await db
+        .select()
+        .from(templateTaskCompletion)
+        .where(and(
+          eq(templateTaskCompletion.organizationId, org.id),
+          eq(templateTaskCompletion.templateTaskId, input.templateTaskId),
+        ))
+        .limit(1);
+
+      if (existing) {
+        const nextComplete = existing.isComplete ? 0 : 1;
+        await db
+          .update(templateTaskCompletion)
+          .set({
+            isComplete: nextComplete,
+            completedAt: nextComplete ? new Date() : null,
+            completedBy: nextComplete ? (input.userEmail || null) : null,
+          })
+          .where(eq(templateTaskCompletion.id, existing.id));
+
+        return { templateTaskId: input.templateTaskId, isComplete: !!nextComplete };
+      }
+
+      await db.insert(templateTaskCompletion).values({
+        organizationId: org.id,
+        templateTaskId: input.templateTaskId,
+        isComplete: 1,
+        completedAt: new Date(),
+        completedBy: input.userEmail || null,
+      });
+
+      return { templateTaskId: input.templateTaskId, isComplete: true };
     }),
 });
