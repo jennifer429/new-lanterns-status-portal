@@ -716,13 +716,13 @@
 
 ### Tier 2: UX Polish & Real Estate
 
-- [ ] **Empty states** — add "No specs uploaded yet" / "Fill this workflow" guidance on blank pages
-- [ ] **Remove ProgressHero duplication** — sidebar already shows same 3 percentages; remove from Home
-- [ ] **Consolidate Intake chrome** — reduce Breadcrumb + Header + Section title stacking (3 levels before content)
-- [ ] **Fix Connectivity page layout** — expand table from 40% width to full width
+- [x] **Empty states** — add "No specs uploaded yet" / "Fill this workflow" guidance on blank pages
+- [x] **Remove ProgressHero duplication** — sidebar already shows same 3 percentages; remove from Home
+- [x] **Consolidate Intake chrome** — reduce Breadcrumb + Header + Section title stacking (3 levels before content)
+- [x] **Fix Connectivity page layout** — expand table from 40% width to full width
 
 ### Tier 3: Branding & Content Consistency
 
-- [ ] **Standardize branding** — use "Status Portal" everywhere (not "Customer Implementation Portal")
-- [ ] **Rename Home section** — "Onboarding Progress" (not "Implementation Progress" which is vague)
-- [ ] **Add section descriptions** — clarify Integration Workflows / Connectivity / HL7 & DICOM (overlap confuses first-time users)
+- [x] **Standardize branding** — use "Status Portal" everywhere (not "Customer Implementation Portal")
+- [x] **Rename Home section** — "Onboarding Progress" (not "Implementation Progress" which is vague)
+- [x] **Add section descriptions** — clarify Integration Workflows / Connectivity / HL7 & DICOM (overlap confuses first-time users)
