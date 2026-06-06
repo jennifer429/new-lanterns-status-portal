@@ -703,3 +703,26 @@
 
 - [x] Deleted 7 local stray branches (create_ckpt_*, rebase_*, claude/relaxed-ritchie-FVOWS)
 - [x] Disabled auto-ping that was causing issues (commented out startSelfPing() in server/_core/index.ts)
+
+
+## Go-Live Audit Fixes (CRITICAL — ship-blockers)
+
+### Tier 1: Data Loss & Trust Issues
+
+- [x] **Tasks page persistence** — template-defined tasks survive refresh (not just session state)
+- [ ] **Intake progress metric** — count answered questions, not visited sections
+- [ ] **Form field indicators** — show answered vs unanswered questions visually (checkmark/color/badge)
+- [ ] **Terminology** — rename "Testing Checklist" → "Validation Checklist" and "Set status to Tested" → "Mark Validated"
+
+### Tier 2: UX Polish & Real Estate
+
+- [ ] **Empty states** — add "No specs uploaded yet" / "Fill this workflow" guidance on blank pages
+- [ ] **Remove ProgressHero duplication** — sidebar already shows same 3 percentages; remove from Home
+- [ ] **Consolidate Intake chrome** — reduce Breadcrumb + Header + Section title stacking (3 levels before content)
+- [ ] **Fix Connectivity page layout** — expand table from 40% width to full width
+
+### Tier 3: Branding & Content Consistency
+
+- [ ] **Standardize branding** — use "Status Portal" everywhere (not "Customer Implementation Portal")
+- [ ] **Rename Home section** — "Onboarding Progress" (not "Implementation Progress" which is vague)
+- [ ] **Add section descriptions** — clarify Integration Workflows / Connectivity / HL7 & DICOM (overlap confuses first-time users)
