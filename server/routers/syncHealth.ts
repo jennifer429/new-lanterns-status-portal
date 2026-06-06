@@ -12,6 +12,7 @@ import { runTaskValidationSyncBack } from "../notionSyncBackTasks";
 import { getLastSyncedTimestamps } from "../cron";
 import { getQueueStats } from "../notionRetryQueue";
 import { getReconciliationHistory } from "../notionReconciliation";
+import { runDataQualityCheck, getLastDataQualityResult } from "../dataQualityCheck";
 import { z } from "zod";
 
 export const syncHealthRouter = router({
@@ -41,7 +42,17 @@ export const syncHealthRouter = router({
       lastSynced,
       retryQueue: queueStats,
       reconciliation: reconciliationHistory,
+      dataQuality: getLastDataQualityResult(),
     };
+  }),
+
+  /**
+   * Run the data-quality integrity check on demand — admin only.
+   * Returns orphan/duplicate findings across the MySQL tables and the
+   * Notion-sourced caches. The result is also cached for the dashboard.
+   */
+  runDataQualityCheck: adminProcedure.mutation(async () => {
+    return runDataQualityCheck();
   }),
 
   /**

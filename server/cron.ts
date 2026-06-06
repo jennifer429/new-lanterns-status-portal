@@ -18,6 +18,7 @@ import { runContactsSystemsSync } from "./notionSyncContacts";
 import { runTaskValidationSyncBack } from "./notionSyncBackTasks";
 import { processRetryQueue } from "./notionRetryQueue";
 import { runReconciliation } from "./notionReconciliation";
+import { runDataQualityCheck, type DataQualityResult } from "./dataQualityCheck";
 import { runStartupRecovery } from "./startupRecovery";
 import { notifyOwner } from "./_core/notification";
 import { ENV } from "./_core/env";
@@ -257,6 +258,61 @@ async function writeReconciliationToNotionLog(result: { checked: number; outOfSy
   });
 
   console.log(`[cron] Reconciliation logged to Notion — ${result.outOfSync} out of sync`);
+}
+
+/**
+ * Run the data-quality check and surface findings.
+ * Writes to the Notion Sync Log + notifies the owner only when there are
+ * FAIL/WARN findings (a clean run is logged to the console and nowhere else,
+ * consistent with the rest of the sync-log noise-reduction strategy).
+ */
+async function runAndReportDataQuality(): Promise<DataQualityResult> {
+  const result = await runDataQualityCheck();
+  const issues = result.failed + result.warnings;
+
+  if (issues === 0) {
+    console.log(`[cron] Data-quality check clean — ${result.passed} checks passed (${result.durationMs}ms)`);
+    return result;
+  }
+
+  const failFindings = result.findings.filter((f) => f.status === "FAIL");
+  const warnFindings = result.findings.filter((f) => f.status === "WARN");
+  const detailLines = [...failFindings, ...warnFindings]
+    .slice(0, 15)
+    .map((f) => `${f.status === "FAIL" ? "❌" : "⚠️"} ${f.test}${f.detail ? " — " + f.detail : ""}`);
+  const details = [
+    `Passed: ${result.passed}`,
+    `Failed: ${result.failed}`,
+    `Warnings: ${result.warnings}`,
+    "",
+    ...detailLines,
+  ].join("\n");
+
+  await writeToNotionSyncLog({
+    runLabel: `🩺 Data Quality — ${result.failed} fail / ${result.warnings} warn`,
+    status: result.failed > 0 ? "Failed" : "Partial",
+    rowsFetched: result.passed + result.failed + result.warnings,
+    rowsUpdated: 0,
+    rowsFailed: result.failed,
+    rowsSkipped: result.warnings,
+    durationMs: result.durationMs,
+    errorDetails: details,
+  });
+
+  // Only page the owner on hard FAILs (a constraint-backed invariant broke).
+  // WARN-only runs are typically transient Notion-cache orphans during sync.
+  if (result.failed > 0) {
+    notifyOwner({
+      title: "🩺 Data Quality Check — FAIL findings",
+      content:
+        `The daily data-quality check found ${result.failed} FAIL and ${result.warnings} WARN finding(s).\n\n` +
+        details +
+        `\n\nSee drizzle/manual/README.md for cleanup guidance.`,
+    }).catch((err) => console.error("[cron] Failed to send data-quality alert:", err));
+  }
+
+  console.warn(`[cron] Data-quality check found issues — ${result.failed} fail, ${result.warnings} warn`);
+  return result;
 }
 
 /**
@@ -504,6 +560,23 @@ export function startCronJobs(): void {
     }
   });
 
+  // Data-quality check: daily at 2:15 AM UTC (low-traffic window).
+  // Detects residual orphan/duplicate rows the deployed constraints can't catch
+  // (e.g. Notion-sourced contacts/systems caches). Notifies owner on FAIL.
+  cron.schedule("15 2 * * *", async () => {
+    try {
+      await runAndReportDataQuality();
+    } catch (error) {
+      console.error("[cron] Data-quality check failed:", error);
+    }
+  });
+
+  // Run once shortly after startup so the dashboard has a result without waiting
+  // for the nightly run. Delayed 60s to let the DB pool warm up first.
+  setTimeout(() => {
+    runAndReportDataQuality().catch((err) => console.error("[cron] Initial data-quality check failed:", err));
+  }, 60_000);
+
   console.log("[cron] Registered: Notion sync-back (every 5 minutes)");
   console.log("[cron] Registered: Contacts/Systems sync (every 5 minutes, offset +2)");
   console.log("[cron] Registered: Task/Validation sync-back (every 5 minutes, offset +3)");
@@ -513,4 +586,5 @@ export function startCronJobs(): void {
   console.log("[cron] Registered: Hourly reconciliation (at :30 past each hour) → logs to Notion on issues");
   console.log("[cron] Registered: Daily summary (midnight UTC) → always writes to Notion");
   console.log("[cron] Registered: Sync log purge (every 3 days at 3:00 AM, entries > 7 days)");
+  console.log("[cron] Registered: Data-quality check (daily at 2:15 AM UTC) → logs to Notion + notifies on FAIL");
 }
