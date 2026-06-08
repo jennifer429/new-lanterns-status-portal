@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { transformSectionProgress } from "@/lib/adminUtils";
+import { computeOverallProgress } from "@shared/overallProgress";
 import { VAL_PHASES } from "@/hooks/useHomeData";
 import { QuestionnairePhaseCard } from "@/pages/home/QuestionnairePhaseCard";
 import { TestingPhaseCard } from "@/pages/home/TestingPhaseCard";
@@ -64,38 +65,52 @@ function computeOrgStats(orgMetrics: Metric | undefined) {
   const sectionProg = transformSectionProgress(orgMetrics?.sectionProgress);
   const sectionsComplete = sectionProg.filter(s => s.progress === 100).length;
   const totalSections = sectionProg.length || 6;
-  const qPct = totalSections > 0 ? Math.round((sectionsComplete / totalSections) * 100) : 0;
 
   const ts = (orgMetrics as any)?.taskStats;
   const tsDone = ts?.completed ?? 0;
-  const tsTotal = ts ? (ts.total - (ts.notApplicable ?? 0)) : 0;
-  // No applicable items left (e.g. all marked N/A at go-live) ⇒ nothing to do ⇒ 100%.
-  const tsPct = tsTotal > 0 ? Math.round((tsDone / tsTotal) * 100) : (ts?.total > 0 ? 100 : 0);
+  const tsInProg = ts?.inProgress ?? 0;
+  const tsBlocked = ts?.blocked ?? 0;
+  const tsNa = ts?.notApplicable ?? 0;
+  const tsTotalAll = ts?.total ?? 0;
 
   const vs = (orgMetrics as any)?.validationStats;
   const vsPass = vs?.pass ?? 0;
   const vsInProg = vs?.inProgress ?? 0;
   const vsFail = vs?.fail ?? 0;
   const vsBlocked = vs?.blocked ?? 0;
-  const vsTotal = vs ? (vs.total - (vs.na ?? 0)) : 0;
-  const vsPct = vsTotal > 0 ? Math.round(((vsPass + vsInProg * 0.5 + vsFail * 0.25 + vsBlocked * 0.25) / vsTotal) * 100) : (vs?.total > 0 ? 100 : 0);
 
-  const overallPct = Math.round(qPct * 0.4 + vsPct * 0.3 + tsPct * 0.3);
+  // Single shared formula — see shared/overallProgress.
+  const { qPct: qPctRaw, vPct, iPct, overallPct } = computeOverallProgress({
+    completedSections: sectionsComplete,
+    totalSections,
+    validation: {
+      pass: vsPass,
+      fail: vsFail,
+      inProgress: vsInProg,
+      blocked: vsBlocked,
+      na: vs?.na ?? 0,
+      total: vs?.total ?? 0,
+    },
+    tasks: {
+      completed: tsDone,
+      inProgress: tsInProg,
+      blocked: tsBlocked,
+      na: tsNa,
+      total: tsTotalAll,
+    },
+  });
+  const qPct = Math.round(qPctRaw);
+  const vsPct = Math.round(vPct);
+  const tsPct = Math.round(iPct);
+  const tsWeighted = tsPct; // task-card headline uses the same shared score
 
   // Per-section in-progress / not-started counts (same basis as the site card).
   const spVals = Object.values((orgMetrics as any)?.sectionProgress ?? {}) as Array<{ completed: number; total: number }>;
   const qInProgressSections = spVals.filter(s => s.completed > 0 && s.completed < s.total).length;
   const qNotStartedSections = spVals.filter(s => s.completed === 0).length;
 
-  // Task list — weighted % to match the site's TaskListPhaseCard headline.
-  const tsInProg = ts?.inProgress ?? 0;
-  const tsBlocked = ts?.blocked ?? 0;
-  const tsNa = ts?.notApplicable ?? 0;
-  const tsTotalAll = ts?.total ?? 0;
+  // Applicable / open counts kept for the phase-card breakdowns.
   const implApplicable = Math.max(0, tsTotalAll - tsNa);
-  const tsWeighted = implApplicable > 0
-    ? Math.round(((tsDone + tsInProg * 0.5 + tsBlocked * 0.25) / implApplicable) * 100)
-    : (tsTotalAll > 0 ? 100 : 0);
   const implOpenCount = Math.max(0, tsTotalAll - tsDone - tsInProg - tsBlocked - tsNa);
 
   const valTotal = vs?.total ?? 28;
