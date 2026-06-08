@@ -432,7 +432,7 @@ export function startCronJobs(): void {
     });
 
   // Questionnaire Notion → MySQL sync: every 5 minutes
-  cron.schedule("*/5 * * * *", async () => {
+  // DISABLED: cron.schedule("*/5 * * * *", async () => {
     const start = Date.now();
     try {
       const result = await runNotionSyncBack();
@@ -453,7 +453,7 @@ export function startCronJobs(): void {
   });
 
   // Contacts & Systems Notion → MySQL sync: every 5 minutes (offset by 2 min)
-  cron.schedule("2,7,12,17,22,27,32,37,42,47,52,57 * * * *", async () => {
+  // DISABLED: cron.schedule("2,7,12,17,22,27,32,37,42,47,52,57 * * * *", async () => {
     const start = Date.now();
     try {
       const result = await runContactsSystemsSync();
@@ -484,7 +484,7 @@ export function startCronJobs(): void {
   // Task Definitions Notion → MySQL sync: every 5 minutes (offset by 4 min;
   // shares minute slot 4 with the local staleness check below — no collision
   // since staleness only touches in-memory state).
-  cron.schedule("4,9,14,19,24,29,34,39,44,49,54,59 * * * *", async () => {
+  // DISABLED: cron.schedule("4,9,14,19,24,29,34,39,44,49,54,59 * * * *", async () => {
     const start = Date.now();
     try {
       const result = await runTaskDefsSync();
@@ -508,7 +508,7 @@ export function startCronJobs(): void {
   });
 
   // Task Completions & Validation Results Notion → MySQL sync: every 5 minutes (offset by 3 min)
-  cron.schedule("3,8,13,18,23,28,33,38,43,48,53,58 * * * *", async () => {
+  // DISABLED: cron.schedule("3,8,13,18,23,28,33,38,43,48,53,58 * * * *", async () => {
     const start = Date.now();
     try {
       const result = await runTaskValidationSyncBack();
@@ -533,7 +533,7 @@ export function startCronJobs(): void {
   });
 
   // Hourly flush: aggregate stats, write to Notion only on failure/partial
-  cron.schedule("0 * * * *", async () => {
+  // DISABLED: cron.schedule("0 * * * *", async () => {
     try {
       const statsToFlush = { ...hourlyStats };
       hourlyStats = resetHourlyStats();
@@ -544,12 +544,12 @@ export function startCronJobs(): void {
   });
 
   // Staleness check: every 5 minutes, check if sync is stale and notify owner
-  cron.schedule("4,9,14,19,24,29,34,39,44,49,54,59 * * * *", () => {
+  // DISABLED: cron.schedule("4,9,14,19,24,29,34,39,44,49,54,59 * * * *", () => {
     checkStalenessAndNotify();
   });
 
   // Retry queue: process failed dual-writes every 5 minutes (offset by 1 min)
-  cron.schedule("1,6,11,16,21,26,31,36,41,46,51,56 * * * *", async () => {
+  // DISABLED: cron.schedule("1,6,11,16,21,26,31,36,41,46,51,56 * * * *", async () => {
     try {
       await processRetryQueue();
     } catch (error: any) {
@@ -559,7 +559,7 @@ export function startCronJobs(): void {
 
   // Hourly reconciliation: compare MySQL ↔ Notion timestamps, flag drift, notify owner
   // Also writes to Notion Sync Log when out-of-sync rows are found
-  cron.schedule("30 * * * *", async () => {
+  // DISABLED: cron.schedule("30 * * * *", async () => {
     try {
       const result = await runReconciliation();
       console.log(`[cron] Reconciliation complete — checked: ${result.checked}, out of sync: ${result.outOfSync}`);
@@ -574,7 +574,7 @@ export function startCronJobs(): void {
   });
 
   // Daily summary: always writes once at midnight UTC (proof of life)
-  cron.schedule("0 0 * * *", async () => {
+  // DISABLED: cron.schedule("0 0 * * *", async () => {
     try {
       await writeDailySummary();
     } catch (error) {
@@ -583,7 +583,7 @@ export function startCronJobs(): void {
   });
 
   // Purge old Sync Log entries: every 3 days at 3:00 AM
-  cron.schedule("0 3 */3 * *", async () => {
+  // DISABLED: cron.schedule("0 3 */3 * *", async () => {
     try {
       await purgeSyncLogEntries();
     } catch (error) {
@@ -594,7 +594,7 @@ export function startCronJobs(): void {
   // Data-quality check: daily at 2:15 AM UTC (low-traffic window).
   // Detects residual orphan/duplicate rows the deployed constraints can't catch
   // (e.g. Notion-sourced contacts/systems caches). Notifies owner on FAIL.
-  cron.schedule("15 2 * * *", async () => {
+  // DISABLED: cron.schedule("15 2 * * *", async () => {
     try {
       await runAndReportDataQuality();
     } catch (error) {
