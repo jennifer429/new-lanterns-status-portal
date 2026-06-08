@@ -36,9 +36,6 @@ const SYNC_LOG_DATABASE_ID = ENV.notionSyncLogDataSourceId || "";
 // Sync Config uses pages.retrieve/update (page_id), no data_source needed
 const SYNC_CONFIG_PAGE_ID = ENV.notionSyncConfigPageId || "";
 
-console.log("[notionSyncBack] ENV.notionDataSourceId:", ENV.notionDataSourceId);
-console.log("[notionSyncBack] QUESTIONNAIRE_DATA_SOURCE_ID:", QUESTIONNAIRE_DATA_SOURCE_ID);
-
 const MAX_CONSECUTIVE_FAILURES_BEFORE_ALERT = 3;
 // Full reconciliation runs at most once per this interval (incremental still runs every cycle).
 const RECONCILIATION_INTERVAL_MS = 60 * 60 * 1000; // 1 hour

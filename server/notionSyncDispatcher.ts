@@ -61,12 +61,11 @@ import {
 
 /**
  * Fire-and-forget wrapper. Logs errors but never throws.
- * DISABLED: All sync-on-save calls are disabled. Background cron jobs handle syncing.
  */
 function fireAndForget(fn: () => Promise<boolean>, label: string): void {
-  // Disabled to prevent hammering Notion API
-  // Background cron jobs will handle syncing instead
-  console.debug(`[sync-dispatch] ${label} skipped (disabled for background sync)`);
+  fn().catch((err) => {
+    console.error(`[sync-dispatch] ${label} failed:`, err?.message || err);
+  });
 }
 
 /**
