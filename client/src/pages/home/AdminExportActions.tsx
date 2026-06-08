@@ -5,20 +5,29 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FileDown, Loader2, Printer, Mail } from "lucide-react";
+import { FileDown, Loader2, Printer, Mail, Send } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 
 interface AdminExportActionsProps {
   orgSlug: string;
   onEmailPreviewOpen: () => void;
+  onSendUpdate: () => void;
 }
 
-export function AdminExportActions({ orgSlug, onEmailPreviewOpen }: AdminExportActionsProps) {
+export function AdminExportActions({ orgSlug, onEmailPreviewOpen, onSendUpdate }: AdminExportActionsProps) {
   const [exportLoading, setExportLoading] = useState<"pdf" | "email" | null>(null);
 
   return (
     <div className="flex items-center justify-end gap-2">
+      <Button
+        size="sm"
+        className="text-xs gap-1.5"
+        onClick={onSendUpdate}
+      >
+        <Send className="w-3.5 h-3.5" />
+        Send status update
+      </Button>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
