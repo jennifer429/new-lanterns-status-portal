@@ -33,6 +33,7 @@ import { questionnaireSections } from "@shared/questionnaireData";
 import { calculateProgress, getIncompleteVisibleQuestionIds } from "@shared/progressCalculation";
 import { SECTION_DEFS as TASK_SECTION_DEFS } from "@shared/taskDefs";
 import { computeNextUpTasks, computeNextUpTests } from "@shared/nextUp";
+import { computeOverallProgress } from "@shared/overallProgress";
 
 // ---------------------------------------------------------------------------
 // Validation phase definitions (mirrors client-side)
@@ -278,14 +279,6 @@ async function gatherOrgData(orgSlug: string): Promise<OrgExportData> {
     (t) => implMap[t.id]?.blocked && !implMap[t.id]?.notApplicable
   ).length;
   const implOpen = implTotal - implCompleted - implNa - implInProgress - implBlocked;
-  const implWeighted =
-    implTotal > 0
-      ? Math.round(
-          ((implCompleted + implNa + implInProgress * 0.5 + implBlocked * 0.25) /
-            implTotal) *
-            100
-        )
-      : 0;
 
   const implTasks = allTaskDefs.map((t) => {
     const r = implMap[t.id];
@@ -350,17 +343,29 @@ async function gatherOrgData(orgSlug: string): Promise<OrgExportData> {
     phaseOffset++;
   }
   const valNotTested = valTotal - valPassed - valFailed - valInProg - valBlocked - valNa;
-  const valWeighted =
-    valTotal > 0
-      ? Math.round(
-          ((valPassed + valNa + valFailed * 0.25 + valInProg * 0.5 + valBlocked * 0.25) /
-            valTotal) *
-            100
-        )
-      : 0;
 
-  // Overall
-  const overallPct = Math.round(qPct * 0.4 + valWeighted * 0.3 + implWeighted * 0.3);
+  // Single shared formula — see shared/overallProgress.
+  const { vPct, iPct, overallPct } = computeOverallProgress({
+    completedSections,
+    totalSections,
+    validation: {
+      pass: valPassed,
+      fail: valFailed,
+      inProgress: valInProg,
+      blocked: valBlocked,
+      na: valNa,
+      total: valTotal,
+    },
+    tasks: {
+      completed: implCompleted,
+      inProgress: implInProgress,
+      blocked: implBlocked,
+      na: implNa,
+      total: implTotal,
+    },
+  });
+  const valWeighted = Math.round(vPct);
+  const implWeighted = Math.round(iPct);
 
   return {
     org: {

@@ -4,6 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { type ConnectivityRow } from "@/components/ConnectivityTable";
 import { questionnaireSections } from "@shared/questionnaireData";
 import { calculateProgress } from "@shared/progressCalculation";
+import { computeOverallProgress } from "@shared/overallProgress";
 import { SECTION_DEFS as TASK_SECTION_DEFS } from "@shared/taskDefs";
 import { computeNextUpSections, computeNextUpTests, computeNextUpTasks } from "@shared/nextUp";
 
@@ -278,21 +279,30 @@ export function useHomeData(orgSlug: string) {
   // ── Validation "next up" tests ───────────────────────────────────────────
   const nextUpTests = computeNextUpTests(valResults as any);
 
-  // ── Weighted progress ────────────────────────────────────────────────────
+  // ── Weighted progress (single shared formula — see shared/overallProgress) ──
+  // Applicable counts kept for the phase-card breakdowns (N/A is shown apart).
   const implApplicable = implTotal - implNaCount;
-  const implWeightedScore = implApplicable > 0
-    ? ((implCompleted + implInProgressCount * 0.5 + implBlockedCount * 0.25) / implApplicable) * 100
-    : 0;
-
   const valApplicable = 28 - valNaCount;
-  const valWeightedScore = valApplicable > 0
-    ? ((valCompleted + valFailedCount * 0.25 + valInProgressCount * 0.5 + valBlockedCount * 0.25) / valApplicable) * 100
-    : 0;
 
-  const qPct = totalSections > 0 ? (completedSections / totalSections) * 100 : 0;
-  const vPct = valWeightedScore;
-  const iPct = implWeightedScore;
-  const overallPct = Math.round(qPct * 0.4 + vPct * 0.3 + iPct * 0.3);
+  const { qPct, vPct, iPct, overallPct } = computeOverallProgress({
+    completedSections,
+    totalSections,
+    validation: {
+      pass: valCompleted,
+      fail: valFailedCount,
+      inProgress: valInProgressCount,
+      blocked: valBlockedCount,
+      na: valNaCount,
+      total: valTotal,
+    },
+    tasks: {
+      completed: implCompleted,
+      inProgress: implInProgressCount,
+      blocked: implBlockedCount,
+      na: implNaCount,
+      total: implTotal,
+    },
+  });
 
   const qDone = completedSections === totalSections && totalSections > 0;
   const vDone = valCompleted === valTotal && valTotal > 0;
