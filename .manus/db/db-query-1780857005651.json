@@ -1,0 +1,42 @@
+{
+  "query": "\nSELECT \n  'questions' as tableName, COUNT(*) as rowCount FROM questions\nUNION ALL\nSELECT 'responses', COUNT(*) FROM responses\nUNION ALL\nSELECT 'contacts', COUNT(*) FROM contacts\nUNION ALL\nSELECT 'systems', COUNT(*) FROM systems\nUNION ALL\nSELECT 'taskDefinitions', COUNT(*) FROM taskDefinitions\nUNION ALL\nSELECT 'taskCompletion', COUNT(*) FROM taskCompletion\nUNION ALL\nSELECT 'validationResults', COUNT(*) FROM validationResults\nUNION ALL\nSELECT 'workflowPathways', COUNT(*) FROM workflowPathways;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute \nSELECT \n  'questions' as tableName, COUNT(*) as rowCount FROM questions\nUNION ALL\nSELECT 'responses', COUNT(*) FROM responses\nUNION ALL\nSELECT 'contacts', COUNT(*) FROM contacts\nUNION ALL\nSELECT 'systems', COUNT(*) FROM systems\nUNION ALL\nSELECT 'taskDefinitions', COUNT(*) FROM taskDefinitions\nUNION ALL\nSELECT 'taskCompletion', COUNT(*) FROM taskCompletion\nUNION ALL\nSELECT 'validationResults', COUNT(*) FROM validationResults\nUNION ALL\nSELECT 'workflowPathways', COUNT(*) FROM workflowPathways;\n",
+  "rows": [
+    {
+      "tableName": "taskDefinitions",
+      "rowCount": "39"
+    },
+    {
+      "tableName": "questions",
+      "rowCount": "80"
+    },
+    {
+      "tableName": "systems",
+      "rowCount": "77"
+    },
+    {
+      "tableName": "responses",
+      "rowCount": "75"
+    },
+    {
+      "tableName": "contacts",
+      "rowCount": "85"
+    },
+    {
+      "tableName": "validationResults",
+      "rowCount": "251"
+    },
+    {
+      "tableName": "workflowPathways",
+      "rowCount": "0"
+    },
+    {
+      "tableName": "taskCompletion",
+      "rowCount": "332"
+    }
+  ],
+  "messages": [],
+  "stdout": "tableName\trowCount\ntaskDefinitions\t39\nquestions\t80\nsystems\t77\nresponses\t75\ncontacts\t85\nvalidationResults\t251\nworkflowPathways\t0\ntaskCompletion\t332\n",
+  "stderr": "",
+  "execution_time_ms": 271
+}

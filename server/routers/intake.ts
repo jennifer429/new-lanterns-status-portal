@@ -204,20 +204,8 @@ export const intakeRouter = router({
         throw error;
       }
 
-      // Sync answer to Notion (fire-and-forget, don't block the response)
-      syncAnswerToNotion(org.slug, input.questionId, input.response, input.userEmail)
-        .catch(err => console.error('[notion] sync answer error:', err.message));
-
-      // If this is CONN.endpoints, also sync to the Integration Connection Registry
-      if (input.questionId === 'CONN.endpoints') {
-        try {
-          const endpoints = JSON.parse(input.response);
-          if (Array.isArray(endpoints) && endpoints.length > 0) {
-            syncConnectivityToNotion(org.slug, org.name, endpoints)
-              .catch(err => console.error('[connectivity-sync] auto-sync error:', err.message));
-          }
-        } catch { /* not valid JSON, skip */ }
-      }
+      // Note: Sync to Notion is now handled by background cron jobs, not on user save
+      // This keeps user saves fast and doesn't block on Notion API calls
 
       return { success: true, action: "upserted" };
     }),
@@ -278,20 +266,7 @@ export const intakeRouter = router({
           throw error;
         }
 
-        // Sync each answer to Notion (fire-and-forget)
-        syncAnswerToNotion(org.slug, questionIdStr, responseStr, userEmail)
-          .catch(err => console.error('[notion] batch sync error:', err.message));
-
-        // If this is CONN.endpoints, also sync to the Integration Connection Registry
-        if (questionIdStr === 'CONN.endpoints') {
-          try {
-            const endpoints = JSON.parse(responseStr);
-            if (Array.isArray(endpoints) && endpoints.length > 0) {
-              syncConnectivityToNotion(org.slug, org.name, endpoints)
-                .catch(err => console.error('[connectivity-sync] batch auto-sync error:', err.message));
-            }
-          } catch { /* not valid JSON, skip */ }
-        }
+        // Note: Sync to Notion is now handled by background cron jobs, not on user save
 
         saved++;
       }
@@ -521,9 +496,7 @@ export const intakeRouter = router({
           notes: `Questionnaire Q: ${input.questionId}`,
         }).catch(() => {});
 
-        // Sync file to Notion Files column (fire-and-forget)
-        syncFileToNotion(org.slug, input.questionId, input.fileName, fileUrl)
-          .catch(err => console.error('[notion] file sync error:', err.message));
+        // Note: Sync to Notion is now handled by background cron jobs, not on user save
 
         return {
           success: true,
