@@ -130,7 +130,7 @@ export const intakeRouter = router({
 
       // Get all responses for this organization from intakeResponses table
       // This table stores questionId as varchar (e.g., "H.1", "A.2") directly
-      const responsesData = await db
+      const rawResponses = await db
         .select({
           id: intakeResponses.id,
           organizationId: intakeResponses.organizationId,
@@ -143,6 +143,29 @@ export const intakeRouter = router({
         })
         .from(intakeResponses)
         .where(eq(intakeResponses.organizationId, org.id));
+
+      // De-dupe by questionId, keeping the most-recently-updated row.
+      // saveResponse relies on `ON DUPLICATE KEY UPDATE`, which only updates in
+      // place if the uq_intake_org_question unique key actually exists in the DB.
+      // If migration 0058 failed to add it (it errors on pre-existing duplicate
+      // rows), every save appends a NEW row instead — and this unordered read can
+      // then return a stale/empty duplicate, making an answer "not stick" on
+      // reload. Keeping the newest row makes the read deterministic regardless of
+      // whether the unique key is present in this environment.
+      const latestByQuestion = new Map<string, (typeof rawResponses)[number]>();
+      for (const r of rawResponses) {
+        const prev = latestByQuestion.get(r.questionId);
+        if (!prev) {
+          latestByQuestion.set(r.questionId, r);
+          continue;
+        }
+        const rTime = r.updatedAt?.getTime() ?? 0;
+        const prevTime = prev.updatedAt?.getTime() ?? 0;
+        if (rTime > prevTime || (rTime === prevTime && r.id > prev.id)) {
+          latestByQuestion.set(r.questionId, r);
+        }
+      }
+      const responsesData = Array.from(latestByQuestion.values());
 
       // Include organization name in each response
       const responsesWithOrgName = responsesData.map(r => ({
