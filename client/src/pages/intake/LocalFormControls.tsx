@@ -1,5 +1,9 @@
-// Local-state wrappers so typing doesn't re-render the whole page.
-// They update global state only on blur.
+// Local-state wrappers so typing stays snappy. The input is driven by local
+// state, but every change is also pushed up to global state (and committed on
+// blur) so the parent's `responses` is always current. Committing only on blur
+// caused a race: clicking "Save & Continue"/"Complete" read a stale snapshot,
+// so the field you just typed looked empty (false "Required" error) and the
+// edit could be lost on navigation — especially on the last page.
 import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,7 +40,11 @@ export function LocalInput({
       <Input
         type={type}
         value={local}
-        onChange={(e) => setLocal(e.target.value)}
+        onChange={(e) => {
+          setLocal(e.target.value);
+          committed.current = e.target.value;
+          onCommit(e.target.value);
+        }}
         onBlur={() => { committed.current = local; onCommit(local); }}
         placeholder={placeholder}
         className={cn(
@@ -78,7 +86,11 @@ export function LocalTextarea({
     <div className="relative">
       <Textarea
         value={local}
-        onChange={(e) => setLocal(e.target.value)}
+        onChange={(e) => {
+          setLocal(e.target.value);
+          committed.current = e.target.value;
+          onCommit(e.target.value);
+        }}
         onBlur={() => { committed.current = local; onCommit(local); }}
         placeholder={placeholder}
         className={cn(

@@ -17,6 +17,14 @@ export function useIntakeData(slug: string, clientSlug: string) {
   const [connRows, setConnRows] = useState<ConnectivityRow[]>([]);
   const notionPageIds = useRef<Set<string>>(new Set());
   const isImportingRef = useRef(false);
+  // Serialized snapshot of what's already persisted, keyed by questionId.
+  // Used to auto-save ONLY changed answers instead of re-saving everything on
+  // every keystroke (and on initial load), which previously flooded MySQL and
+  // Notion with redundant writes.
+  const lastSavedRef = useRef<Record<string, string>>({});
+
+  const serializeResponse = (value: any): string =>
+    typeof value === "object" ? JSON.stringify(value) : String(value);
 
   // ── tRPC queries ─────────────────────────────────────────────────────────────
 
@@ -233,6 +241,13 @@ export function useIntakeData(slug: string, clientSlug: string) {
         }
       });
       setResponses(loadedResponses);
+      // Seed the saved-snapshot so freshly-loaded answers aren't re-saved by the
+      // auto-save effect below (which only persists keys that actually changed).
+      const baseline: Record<string, string> = {};
+      Object.entries(loadedResponses).forEach(([qid, value]) => {
+        baseline[qid] = serializeResponse(value);
+      });
+      lastSavedRef.current = baseline;
       hasHydratedRef.current = true;
 
       // Load N/A question state from saved responses
@@ -259,13 +274,24 @@ export function useIntakeData(slug: string, clientSlug: string) {
     if (isImportingRef.current) return;
 
     const timer = setTimeout(() => {
-      setSaveStatus("saving");
+      // Only persist answers whose serialized value differs from what's already
+      // saved — avoids re-writing the entire questionnaire on every keystroke.
+      const changed: Array<[string, string]> = [];
       Object.entries(responses).forEach(([questionId, value]) => {
+        const serialized = serializeResponse(value);
+        if (lastSavedRef.current[questionId] !== serialized) {
+          changed.push([questionId, serialized]);
+        }
+      });
+      if (changed.length === 0) return;
+
+      setSaveStatus("saving");
+      changed.forEach(([questionId, serialized]) => {
+        lastSavedRef.current[questionId] = serialized;
         saveMutation.mutate({
           organizationSlug: slug,
           questionId,
-          response:
-            typeof value === "object" ? JSON.stringify(value) : String(value),
+          response: serialized,
           userEmail: user?.email || "",
         });
       });
@@ -689,6 +715,12 @@ export function useIntakeData(slug: string, clientSlug: string) {
           })
         ),
       ]);
+
+      // Record imported answers in the saved-snapshot so the auto-save effect
+      // doesn't redundantly re-save them once importing unblocks.
+      regularEntries.forEach(([questionId, value]) => {
+        lastSavedRef.current[questionId] = serializeResponse(value);
+      });
 
       // Import saves are complete. Local state is already correct.
       // No need to invalidate/refetch since hasHydratedRef prevents

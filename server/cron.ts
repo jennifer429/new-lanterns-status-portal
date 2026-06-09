@@ -417,6 +417,17 @@ export function startCronJobs(): void {
   }
   cronJobsRegistered = true;
 
+  // ─── Notion sync gate ──────────────────────────────────────────────────────
+  // All Notion-touching cron jobs are disabled to stop Notion API rate-limiting;
+  // the site runs MySQL-only. They are gated behind this single flag so the file
+  // stays syntactically valid (a previous attempt commented out only the
+  // `cron.schedule(...)` opening lines, leaving orphaned function bodies and an
+  // unmatched `});` — a syntax error that crashed the server on startup). Flip
+  // this to true (or wire it to an env var) once the rate-limit-safe sync
+  // pipeline is in place.
+  const NOTION_SYNC_ENABLED = false;
+
+  if (NOTION_SYNC_ENABLED) {
   // Run startup recovery first: catch up on any unconfirmed rows before cron jobs begin
   runStartupRecovery()
     .then((stats) => {
@@ -591,9 +602,16 @@ export function startCronJobs(): void {
     }
   });
 
+  } else {
+    console.log(
+      "[cron] Notion sync DISABLED (NOTION_SYNC_ENABLED=false) — running MySQL-only to avoid API rate-limiting"
+    );
+  }
+
   // Data-quality check: daily at 2:15 AM UTC (low-traffic window).
   // Detects residual orphan/duplicate rows the deployed constraints can't catch
   // (e.g. Notion-sourced contacts/systems caches). Notifies owner on FAIL.
+  // MySQL-only — safe to keep running while Notion sync is disabled.
   cron.schedule("15 2 * * *", async () => {
     try {
       await runAndReportDataQuality();
@@ -608,14 +626,5 @@ export function startCronJobs(): void {
     runAndReportDataQuality().catch((err) => console.error("[cron] Initial data-quality check failed:", err));
   }, 60_000);
 
-  console.log("[cron] Registered: Notion sync-back (every 5 minutes)");
-  console.log("[cron] Registered: Contacts/Systems sync (every 5 minutes, offset +2)");
-  console.log("[cron] Registered: Task/Validation sync-back (every 5 minutes, offset +3)");
-  console.log("[cron] Registered: Hourly flush to Notion Sync Log (failures/partial only)");
-  console.log("[cron] Registered: Staleness check (every 5 minutes, offset +4)");
-  console.log("[cron] Registered: Retry queue (every 5 minutes, offset +1)");
-  console.log("[cron] Registered: Hourly reconciliation (at :30 past each hour) → logs to Notion on issues");
-  console.log("[cron] Registered: Daily summary (midnight UTC) → always writes to Notion");
-  console.log("[cron] Registered: Sync log purge (every 3 days at 3:00 AM, entries > 7 days)");
-  console.log("[cron] Registered: Data-quality check (daily at 2:15 AM UTC) → logs to Notion + notifies on FAIL");
+  console.log("[cron] Registered: Data-quality check (daily at 2:15 AM UTC) → notifies on FAIL");
 }
