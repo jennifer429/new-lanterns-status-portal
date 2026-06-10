@@ -27,6 +27,7 @@ import { TestingPhaseCard } from "./home/TestingPhaseCard";
 import { TaskListPhaseCard } from "./home/TaskListPhaseCard";
 import { DocumentsCard } from "./home/DocumentsCard";
 import { EmailPreviewDialog } from "./home/EmailPreviewDialog";
+import { StatusEmailDialog } from "./admin/StatusEmailDialog";
 
 export default function Home() {
   const [, paramsNew] = useRoute("/org/:clientSlug/:slug");
@@ -43,6 +44,7 @@ export default function Home() {
   const [adhocOpen, setAdhocOpen] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<{ src: string; alt: string } | null>(null);
   const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
+  const [statusEmailOpen, setStatusEmailOpen] = useState(false);
 
   const data = useHomeData(orgSlug);
   const activePhase = data.activePhase as
@@ -226,11 +228,12 @@ export default function Home() {
           diagramFilesCount={data.diagramFiles.length}
         />
 
-        {/* ── EXPORT ACTIONS (admin only) ── */}
+        {/* ── EXPORT ACTIONS (admin + partner admin only) ── */}
         {currentUser?.role === "admin" && (
           <AdminExportActions
             orgSlug={orgSlug}
             onEmailPreviewOpen={() => setEmailPreviewOpen(true)}
+            onSendUpdate={() => setStatusEmailOpen(true)}
           />
         )}
 
@@ -303,6 +306,15 @@ export default function Home() {
         open={emailPreviewOpen}
         onOpenChange={setEmailPreviewOpen}
       />
+
+      {/* ── SEND STATUS UPDATE DIALOG (admin + partner admin only) ── */}
+      {currentUser?.role === "admin" && (
+        <StatusEmailDialog
+          org={statusEmailOpen ? { slug: orgSlug, name: data.orgName } : null}
+          open={statusEmailOpen}
+          onOpenChange={setStatusEmailOpen}
+        />
+      )}
     </div>
   );
 }
