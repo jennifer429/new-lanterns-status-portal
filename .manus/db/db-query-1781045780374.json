@@ -1,0 +1,15 @@
+{
+  "query": "SELECT \n  (SELECT COUNT(*) FROM workflowPathways) as workflowPathways_count,\n  (SELECT COUNT(*) FROM taskDefinitions) as taskDefinitions_count,\n  (SELECT COUNT(*) FROM templateTaskCompletion) as templateTaskCompletion_count;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 27oV2HNhPbfG1Yy.f6bc15b848e8 --database hgGEXRHUCG7apwzJRKH7LF --execute SELECT \n  (SELECT COUNT(*) FROM workflowPathways) as workflowPathways_count,\n  (SELECT COUNT(*) FROM taskDefinitions) as taskDefinitions_count,\n  (SELECT COUNT(*) FROM templateTaskCompletion) as templateTaskCompletion_count;",
+  "rows": [
+    {
+      "workflowPathways_count": "0",
+      "taskDefinitions_count": "39",
+      "templateTaskCompletion_count": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "workflowPathways_count\ttaskDefinitions_count\ttemplateTaskCompletion_count\n0\t39\t0\n",
+  "stderr": "",
+  "execution_time_ms": 504
+}
