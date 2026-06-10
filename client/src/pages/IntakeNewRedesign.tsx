@@ -267,17 +267,15 @@ export default function IntakeNewRedesign() {
               {currentSectionData?.type === "integration-workflows" ? (
                 <IntegrationWorkflows
                   values={responses}
+                  // Update local state only. Persistence is handled by the
+                  // debounced auto-save effect in useIntakeData (saves changed
+                  // keys after 1s), exactly like the standard text questions.
+                  // Saving on every keystroke here made the secondary fields
+                  // (historic results, tech sheets, overlay PACS, CT dose) hit
+                  // MySQL/Notion per character — and double-saved, since the
+                  // auto-save effect re-persisted the same key afterward.
                   onChange={(key, value) => {
                     setResponses((prev) => ({ ...prev, [key]: value }));
-                    if (slug && user?.email) {
-                      saveMutation.mutate({
-                        organizationSlug: slug,
-                        questionId: key,
-                        response:
-                          typeof value === "object" ? JSON.stringify(value) : String(value),
-                        userEmail: user.email,
-                      });
-                    }
                   }}
                   organizationId={org?.id ?? 0}
                   organizationSlug={slug}
