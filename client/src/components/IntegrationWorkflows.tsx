@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -146,7 +146,50 @@ function WorkflowBlock({
   onDescriptionChange,
   onSystemsChange,
 }: WorkflowBlockProps) {
-  const isFilled = !!(descriptionValue && descriptionValue.trim().length > 0);
+  // `descriptionValue` is derived from the workflowPathways server query, which
+  // only updates after the upsert mutation succeeds and the query refetches.
+  // Binding the textarea directly to it meant every keystroke was gated on a
+  // network round-trip — characters after the first couple didn't appear and
+  // deletes lagged. Mirror it in local state so typing is instant, and debounce
+  // the upstream save (flushing on blur/unmount so edits aren't lost when the
+  // user navigates with "Save & Continue").
+  const [localDesc, setLocalDesc] = useState(descriptionValue);
+  const committedRef = useRef(descriptionValue);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onDescriptionChangeRef = useRef(onDescriptionChange);
+  onDescriptionChangeRef.current = onDescriptionChange;
+
+  // Re-sync from the server value only when it changes externally (initial load,
+  // import) — never while the user is mid-edit (committedRef tracks local edits).
+  useEffect(() => {
+    if (descriptionValue !== committedRef.current) {
+      committedRef.current = descriptionValue;
+      setLocalDesc(descriptionValue);
+    }
+  }, [descriptionValue]);
+
+  const flush = useCallback(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+      onDescriptionChangeRef.current(committedRef.current);
+    }
+  }, []);
+
+  // Flush any pending save on unmount (e.g. navigating to the next section).
+  useEffect(() => flush, [flush]);
+
+  const handleChange = (val: string) => {
+    setLocalDesc(val);
+    committedRef.current = val;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      debounceRef.current = null;
+      onDescriptionChangeRef.current(val);
+    }, 500);
+  };
+
+  const isFilled = !!(localDesc && localDesc.trim().length > 0);
 
   return (
     <div className={cn('space-y-3 p-5 rounded-xl border bg-card transition-colors', isFilled && 'border-primary/50')}>
@@ -159,8 +202,9 @@ function WorkflowBlock({
       </div>
       <p className="text-sm text-muted-foreground">{description}</p>
       <Textarea
-        value={descriptionValue}
-        onChange={(e) => onDescriptionChange(e.target.value)}
+        value={localDesc}
+        onChange={(e) => handleChange(e.target.value)}
+        onBlur={flush}
         placeholder={placeholder}
         rows={5}
         className="resize-y"
