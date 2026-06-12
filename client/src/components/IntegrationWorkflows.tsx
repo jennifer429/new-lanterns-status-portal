@@ -254,7 +254,38 @@ export function IntegrationWorkflows({ values, onChange, organizationId, organiz
     { enabled: !!organizationSlug, refetchOnWindowFocus: false },
   );
   const upsertPathway = trpc.workflowPathways.upsert.useMutation({
-    onSuccess: () => utils.workflowPathways.list.invalidate({ organizationSlug }),
+    onMutate: async (newData) => {
+      // Cancel any pending refetches
+      await utils.workflowPathways.list.cancel({ organizationSlug });
+      
+      // Snapshot the previous data
+      const previousData = utils.workflowPathways.list.getData({ organizationSlug });
+      
+      // Optimistically update the cache
+      utils.workflowPathways.list.setData(
+        { organizationSlug },
+        (old) => {
+          if (!old) return old;
+          const existing = old.findIndex(
+            (row) => row.workflowType === newData.workflowType && row.pathId === newData.pathId
+          );
+          if (existing >= 0) {
+            const updated = [...old];
+            updated[existing] = { ...updated[existing], ...newData };
+            return updated;
+          }
+          return [...old, newData as any];
+        }
+      );
+      
+      return { previousData };
+    },
+    onError: (err, newData, context) => {
+      // Revert on error
+      if (context?.previousData) {
+        utils.workflowPathways.list.setData({ organizationSlug }, context.previousData);
+      }
+    },
   });
 
   const summaries = (() => {

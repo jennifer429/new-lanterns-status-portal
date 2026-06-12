@@ -106,3 +106,4 @@ temp/
 *.sqlite
 *.sqlite3
 package-lock.json
+.project-config.json
