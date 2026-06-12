@@ -59,7 +59,15 @@ async function startServer() {
   }
 
   const preferredPort = parseInt(process.env.PORT || "3000");
-  const port = await findAvailablePort(preferredPort);
+  // In production the platform injects PORT and its health check targets that
+  // exact port — bind to it directly. Falling back to a different port (the dev
+  // convenience below) makes the container "boot" but never answer the health
+  // check, which the platform reports as a deploy TIMEOUT. Only scan for a free
+  // port in development. See docs/deploy-runbook.md (silent-failure mode C).
+  const port =
+    process.env.NODE_ENV === "production"
+      ? preferredPort
+      : await findAvailablePort(preferredPort);
 
   if (port !== preferredPort) {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);

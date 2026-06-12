@@ -80,12 +80,12 @@ export function QuestionRenderer({
           />
           {isEmpty && !isNa && (
             <div className="absolute -left-6 top-1/2 -translate-y-1/2">
-              <AlertCircle className="w-4 h-4 text-red-500" title="Unanswered" />
+              <AlertCircle className="w-4 h-4 text-red-500" aria-label="Unanswered" />
             </div>
           )}
           {isNa && (
             <div className="absolute -left-6 top-1/2 -translate-y-1/2">
-              <CheckCircle2 className="w-4 h-4 text-gray-400" title="Marked N/A" />
+              <CheckCircle2 className="w-4 h-4 text-gray-400" aria-label="Marked N/A" />
             </div>
           )}
         </div>
@@ -104,12 +104,12 @@ export function QuestionRenderer({
           />
           {isEmpty && !isNa && (
             <div className="absolute -left-6 top-3">
-              <AlertCircle className="w-4 h-4 text-red-500" title="Unanswered" />
+              <AlertCircle className="w-4 h-4 text-red-500" aria-label="Unanswered" />
             </div>
           )}
           {isNa && (
             <div className="absolute -left-6 top-3">
-              <CheckCircle2 className="w-4 h-4 text-gray-400" title="Marked N/A" />
+              <CheckCircle2 className="w-4 h-4 text-gray-400" aria-label="Marked N/A" />
             </div>
           )}
         </div>
@@ -137,12 +137,12 @@ export function QuestionRenderer({
           </Select>
           {isEmpty && !isNa && (
             <div className="absolute -left-6 top-1/2 -translate-y-1/2">
-              <AlertCircle className="w-4 h-4 text-red-500" title="Unanswered" />
+              <AlertCircle className="w-4 h-4 text-red-500" aria-label="Unanswered" />
             </div>
           )}
           {isNa && (
             <div className="absolute -left-6 top-1/2 -translate-y-1/2">
-              <CheckCircle2 className="w-4 h-4 text-gray-400" title="Marked N/A" />
+              <CheckCircle2 className="w-4 h-4 text-gray-400" aria-label="Marked N/A" />
             </div>
           )}
         </div>
