@@ -269,12 +269,17 @@ export function IntegrationWorkflows({ values, onChange, organizationId, organiz
           const existing = old.findIndex(
             (row) => row.workflowType === newData.workflowType && row.pathId === newData.pathId
           );
+          // Transform systems array to JSON string to match server format
+          const transformedData = {
+            ...newData,
+            systems: newData.systems ? JSON.stringify(newData.systems) : newData.systems,
+          };
           if (existing >= 0) {
             const updated = [...old];
-            updated[existing] = { ...updated[existing], ...newData };
+            updated[existing] = { ...updated[existing], ...transformedData };
             return updated;
           }
-          return [...old, newData as any];
+          return [...old, transformedData as any];
         }
       );
       
